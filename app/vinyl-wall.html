@@ -248,6 +248,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .whyadd:hover{border-color:var(--brass);color:var(--ink)}
 .facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px 18px;margin:18px 0 0}
 .facts dt{font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:5px}
+.facts .wide{grid-column:1/-1}
 .facts dd{margin:0;font-size:14px;overflow-wrap:anywhere}
 .sheet-head .art .cover,.sheet-head .art .gen{aspect-ratio:1;height:auto}
 .sheet-head .art .gen .t{font-size:18px}
@@ -268,6 +269,7 @@ input.mono{font-family:var(--mono);font-size:13px}
 .log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
 .log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
 .log .x{border:0;background:none;color:var(--ink-2);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px}
+.log li.nolog{display:block}
 .log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
 .addlog{display:flex;gap:8px;margin-top:10px}
 .addlog input{flex:1}
@@ -426,7 +428,7 @@ function sleeve(r){
 let recordsLoaded=false;
 function renderWelcome(){
   const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0;
-  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show);
+  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show); $(".tally").hidden=show;
   if(!show) return;
   $("#wStepDiscogs").classList.toggle("done",settings?.discogs?.status==="ok");
   $("#wStepGear").classList.toggle("done",gear.some(g=>!g.example));
@@ -454,6 +456,14 @@ $("#scrim").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId!==null)closeSheet()});
 $("#addBtn").addEventListener("click",()=>openSheet(null));
 
+function ownLinks(r){
+  const q=encodeURIComponent(`${r.artist} ${r.title}`);
+  return [
+    r.discogsId?[r.status==="ordered"?"The edition you ordered":"Your pressing",`https://www.discogs.com/release/${encodeURIComponent(r.discogsId)}`]:[r.status==="ordered"?"Find the edition":"Find your pressing",`https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`],
+    r.discogsId?["What it sells for",`https://www.discogs.com/sell/history/${encodeURIComponent(r.discogsId)}`]:["Past sales (Popsike)",`https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+    ["Other pressings",`https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`]
+  ].filter((x,i,a)=>a.findIndex(y=>y[1]===x[1])===i).map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+}
 function linkSet(r){
   const q=encodeURIComponent(`${r.artist} ${r.title}`);
   const qv=encodeURIComponent(`${r.artist} ${r.title} vinyl LP`);
@@ -491,7 +501,8 @@ function factsHTML(r){
   else{const g=[r.mediaGrade,r.sleeveGrade].filter(Boolean);if(g.length)f.push(["Grades",esc(r.mediaGrade||"—")+" / "+esc(r.sleeveGrade||"—")]);
     const b=[r.shop,r.acquired?shortDate(r.acquired):"",r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
     if(r.matrix)f.push(["Runout",`<span class="mono">${esc(r.matrix)}</span>`])}
-  return f.length?`<dl class="facts">${f.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`:"";
+  const wide=v=>v.replace(/<[^>]+>/g,"").length>22;
+  return f.length?`<dl class="facts">${f.map(([k,v])=>`<div${wide(v)?' class="wide"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`:"";
 }
 function openSheet(id,keepScroll){
   const isNew=id===null;
@@ -514,14 +525,13 @@ function openSheet(id,keepScroll){
   ${isNew?"":`<div class="viewpart">
     ${r.why?`<blockquote class="why">${esc(r.why)}</blockquote>`:`<button class="whyadd editonly" type="button" id="whyAdd">${wish||ord?"Why do you want this one? Add a few words…":"Why is this one on the wall? Add a few words…"}</button>`}
     ${factsHTML(r)}
-    <div class="actions editonly" style="margin-top:14px"><button class="btn small" type="button" id="editBtn">Edit details</button></div>
   </div>`}
 
   <fieldset class="editpart"><legend>The record</legend>
     <div class="grid2">
-      <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="Kind of Blue"></label>
-      <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="Miles Davis"></label>
-      <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="1959"></label>
+      <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="e.g. Kind of Blue"></label>
+      <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="e.g. Miles Davis"></label>
+      <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="e.g. 1959"></label>
       <label class="f">Runtime (min)<input id="f-runtime" class="mono" inputmode="numeric" value="${esc(r.runtime)}" placeholder="Looked up automatically"></label>
       <label class="f">Status<select id="f-status"><option value="own" ${!wish&&!ord?"selected":""}>Own it (on the wall)</option><option value="ordered" ${ord?"selected":""}>On order (on the way)</option><option value="wish" ${wish?"selected":""}>Want it (the hunt)</option></select></label>
     </div>
@@ -532,8 +542,8 @@ function openSheet(id,keepScroll){
     </div>
   </fieldset>
 
-  <fieldset class="editpart"><legend>Why it's on the wall</legend>
-    <textarea id="f-why" placeholder="What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it.">${esc(r.why)}</textarea>
+  <fieldset class="editpart"><legend>${wish||ord?"Why you want it":"Why it's on the wall"}</legend>
+    <textarea id="f-why" placeholder="${wish||ord?"What drew you to it: the track that hooked you, a show, who recommended it.":"What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it."}">${esc(r.why)}</textarea>
   </fieldset>
 
   ${ord?`<fieldset class="editpart"><legend>The order</legend>
@@ -553,8 +563,8 @@ function openSheet(id,keepScroll){
 
   <fieldset class="editpart"><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
     <div class="grid2">
-      <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="Columbia"></label>
-      <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="CS 8163"></label>
+      <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="e.g. Columbia"></label>
+      <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="e.g. CS 8163"></label>
       <label class="f" style="grid-column:1/-1">Pressing / edition<input id="f-press" value="${esc(r.pressing)}" placeholder="${wish?"e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye":"e.g. 2015 Analogue Productions 45rpm reissue"}"></label>
       ${ord?"":wish?`
       <label class="f">Budget (USD)<input id="f-budget" class="mono" inputmode="decimal" value="${esc(r.budget)}" placeholder="60"></label>
@@ -569,19 +579,19 @@ function openSheet(id,keepScroll){
   </fieldset>
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
-  <fieldset class="viewonly"><legend>Listening log</legend>
+  <fieldset class="viewonly" id="logFs"><legend>${wish||ord?"Notes":"Listening log"}</legend>
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
-    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="Side B hit different tonight…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
-    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
+    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Side B hit different tonight…"}" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li class="nolog"><p class="hint" style="margin:0">${ord?"No notes yet. Track shipping updates or anything about the order.":wish?"No notes yet. Keep track of stores you checked and prices you saw.":"No plays logged yet. Log a listen or a thought."}</p><span></span></li>`}</ul>
   </fieldset>
 
-  ${wish?`<fieldset class="viewonly"><legend>Find it</legend>
+  ${wish?`<fieldset class="viewonly" id="findFs"><legend>Find it</legend>
     <div class="links">${linkSet(r)}</div>
     <div class="research" id="research">${researchHTML(r.research)}</div>
     <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
-  </fieldset>`:`<fieldset class="viewonly"><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
+  </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
 
   <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
@@ -598,6 +608,7 @@ function openSheet(id,keepScroll){
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
   s.classList.toggle("viewing",!editing);
+  if(wish&&$("#findFs")&&$("#logFs")) $("#logFs").before($("#findFs"));
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll) s.scrollTop=0;
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
@@ -609,7 +620,6 @@ function openSheet(id,keepScroll){
     s.querySelectorAll("input:not([type=file]):not(#f-note),textarea,select").forEach(el=>el.addEventListener("input",()=>schedule(r,el.id==="f-status")));
     const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
     $("#modeBtn").addEventListener("click",()=>setMode(!editing));
-    $("#editBtn").addEventListener("click",()=>setMode(true,"f-title"));
     if($("#whyAdd")) $("#whyAdd").addEventListener("click",()=>setMode(true,"f-why"));
     $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
@@ -927,7 +937,7 @@ function openGearItem(id,keepScroll){
     <span class="saved" id="saved"></span>
   </fieldset>
   <fieldset><legend>Log</legend>
-    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li><time>—</time><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
+    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li class="nolog"><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
     <form class="addlog editonly" id="g-noteForm"><input id="g-note" placeholder="Set tracking force to 3.5 g…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
   </fieldset>
   ${g.tracks&&recent.length?`<fieldset><legend>Recent plays</legend><ul class="log">${recent.map(p=>`<li><time>${esc(p.d)}</time><p>${esc(p.title||"Manual entry")}</p><span class="hint" style="margin:0;font-family:var(--mono)">${esc(p.min)} min</span></li>`).join("")}</ul></fieldset>`:""}
