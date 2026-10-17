@@ -38,6 +38,7 @@ Make a fresh, empty directory and download into it (keep the same relative paths
 ```
 app/vinyl-wall.html
 app/tools/discogs_sync.py
+app/tools/discogs_import.py
 app/backgrounds/listening-room.jpg
 app/backgrounds/crate-digging.jpg
 app/backgrounds/coffee-shop.jpg
@@ -56,6 +57,7 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
   ```json
   {
     "tools/discogs_sync.py": {"from": "app/tools/discogs_sync.py", "contentType": "text/plain"},
+    "tools/discogs_import.py": {"from": "app/tools/discogs_import.py", "contentType": "text/plain"},
     "backgrounds/listening-room.jpg": "app/backgrounds/listening-room.jpg",
     "backgrounds/crate-digging.jpg": "app/backgrounds/crate-digging.jpg",
     "backgrounds/coffee-shop.jpg": "app/backgrounds/coffee-shop.jpg",
@@ -120,7 +122,7 @@ Tell the person, briefly:
 
 1. Their wall is ready (the publish card has the link). It's private to them.
 2. **Add a record** with **Add a record**; leave cover, year and label blank and they're filled in automatically within a few minutes. The first time, the page asks permission to start Claude tasks: allow it.
-3. **Connect Discogs (optional):** open **Settings** (gear icon) → enter their Discogs username and a personal access token from discogs.com/settings/developers → **Save token**. The token never needs to go through the chat.
+3. **Connect Discogs (optional):** open **Settings** (gear icon) → enter their Discogs username and a personal access token from discogs.com/settings/developers → **Save token**. The token never needs to go through the chat. If they already keep their records on Discogs, once the connection shows as verified they can tap **Import from Discogs** in Settings to bring their collection and wantlist onto the wall.
 4. **Equipment:** tap the Gear pill to add their turntable, cartridge and stylus, and rename "My setup".
 5. Backgrounds and the title are under **Settings**.
 
