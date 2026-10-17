@@ -1,0 +1,964 @@
+<title>Vinyl Wall</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: a listening-room wall. Walnut rails with brass clips run across each row; sleeves hang from them.
+   Two walls: what's owned ("On the wall") and what's being hunted ("The hunt"). Detail opens in a side sheet. */
+:root{
+  --wall:#dde2dc; --wall-2:#cfd6cf; --ink:#1b2220; --ink-2:#4b5753; --line:#b9c3bc;
+  --rail:#6a462b; --rail-hi:#8b6140; --brass:#a77a2c; --accent:#2c5c4f; --accent-ink:#f2f5f1;
+  --paper:#f6f4ec; --paper-ink:#2a2622; --someday:#56708f; --someday-ink:#f3f6fa; --sheet:#eef1ec; --want:#9b3b2a; --shadow:rgba(20,28,25,.28);
+  --vinyl:#111312; --groove:#2a2d2b;
+  --display:"Big Shoulders Display","Arial Narrow",Impact,sans-serif;
+  --body:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --wall:#141a19; --wall-2:#1b2321; --ink:#e6ebe6; --ink-2:#a3b0aa; --line:#2f3a37;
+  --rail:#5a3b24; --rail-hi:#7b5434; --brass:#c99c4a; --accent:#7fb8a4; --accent-ink:#0f1614;
+  --paper:#e9e4d6; --paper-ink:#2a2622; --someday:#9db3cf; --someday-ink:#141c26; --sheet:#1a2120; --want:#e08a74; --shadow:rgba(0,0,0,.55);
+  --vinyl:#050606; --groove:#1d201f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --wall:#141a19; --wall-2:#1b2321; --ink:#e6ebe6; --ink-2:#a3b0aa; --line:#2f3a37;
+  --rail:#5a3b24; --rail-hi:#7b5434; --brass:#c99c4a; --accent:#7fb8a4; --accent-ink:#0f1614;
+  --paper:#e9e4d6; --paper-ink:#2a2622; --someday:#9db3cf; --someday-ink:#141c26; --sheet:#1a2120; --want:#e08a74; --shadow:rgba(0,0,0,.55);
+  --vinyl:#050606; --groove:#1d201f; color-scheme:dark}
+
+*{box-sizing:border-box}
+html,body{overflow-x:hidden;max-width:100%}
+body{background:var(--wall);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;min-height:100vh}
+/* Backgrounds: each preset is built from the theme tokens so it reads in light and dark. Tiles in Settings reuse the same classes. */
+.bg-pegboard{background-image:radial-gradient(var(--wall-2) 1px,transparent 1.4px);background-size:22px 22px}
+.bg-plain{background-image:none}
+.bg-grooves{background-image:repeating-radial-gradient(circle at 112% -12%,var(--wall) 0 3px,color-mix(in srgb,var(--wall-2) 80%,var(--line)) 3px 4px)}
+.bg-walnut{background-image:repeating-linear-gradient(90deg,transparent 0 178px,color-mix(in srgb,var(--rail) 45%,var(--wall)) 178px 180px),
+  repeating-linear-gradient(90deg,color-mix(in srgb,var(--rail) 22%,var(--wall)) 0 4px,color-mix(in srgb,var(--rail) 32%,var(--wall)) 4px 6px,color-mix(in srgb,var(--rail) 18%,var(--wall)) 6px 13px,color-mix(in srgb,var(--rail) 27%,var(--wall)) 13px 15px)}
+.bg-foam{background-image:radial-gradient(circle at 50% 50%,var(--wall) 0 28%,color-mix(in srgb,var(--wall-2) 70%,var(--line)) 72%);background-size:34px 34px}
+.bg-sunburst{background-image:repeating-conic-gradient(from 0deg at 50% -20%,var(--wall) 0 4deg,var(--wall-2) 4deg 8deg)}
+.bg-spines{background-image:repeating-linear-gradient(90deg,var(--wall) 0 11px,var(--wall-2) 11px 13px,var(--wall) 13px 29px,color-mix(in srgb,var(--line) 70%,var(--wall)) 29px 30px,var(--wall) 30px 41px,var(--wall-2) 41px 47px)}
+.bg-felt{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .45 0 0 0 0 .45 0 0 0 .38 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+.bg-crates{background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent)),url("backgrounds/crate-digging.jpg");background-size:cover;background-position:center 40%;background-attachment:fixed}
+.bg-listening{background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent)),url("backgrounds/listening-room.jpg");background-size:cover;background-position:center;background-attachment:fixed}
+.bg-cafe{background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent)),url("backgrounds/coffee-shop.jpg");background-size:cover;background-position:center;background-attachment:fixed}
+.bg-tavern{background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,55%),transparent)),url("backgrounds/coffee-shop-2.jpg");background-size:cover;background-position:center;background-attachment:fixed}
+@media (max-width:640px){body.bg-listening,body.bg-crates,body.bg-cafe,body.bg-tavern{background-attachment:scroll}}
+.bgtile .sw.bg-listening,.bgtile .sw.bg-crates,.bgtile .sw.bg-cafe,.bgtile .sw.bg-tavern{background-attachment:scroll}
+.bg-grille{background-image:radial-gradient(circle,color-mix(in srgb,var(--ink) 16%,transparent) 1.5px,transparent 2px),radial-gradient(circle,color-mix(in srgb,var(--ink) 16%,transparent) 1.5px,transparent 2px),
+  linear-gradient(color-mix(in srgb,var(--wall-2) 60%,var(--wall)),color-mix(in srgb,var(--wall-2) 60%,var(--wall)));background-size:9px 9px,9px 9px,auto;background-position:0 0,4.5px 4.5px,0 0}
+.bgtile .sw.bg-grille{background-size:9px 9px,9px 9px,auto}
+body.bg-photo{background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,70%),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,70%),transparent)),var(--bg-url);
+  background-size:cover;background-position:center;background-attachment:fixed}
+@media (max-width:640px){body.bg-photo{background-attachment:scroll}}
+.bggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
+.bgtile{position:relative;display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer;font:inherit;text-align:left;min-width:0}
+.bgtile .sw{display:block;aspect-ratio:4/3;max-width:100%;border-radius:8px;border:1px solid var(--line);background-color:var(--wall);background-position:center;background-size:cover}
+.bgtile .sw.bg-pegboard{background-size:22px 22px}.bgtile .sw.bg-foam{background-size:34px 34px}
+.bgtile[aria-pressed="true"] .sw{outline:2px solid var(--accent);outline-offset:2px}
+.bgtile:focus-visible .sw{outline:2px solid var(--brass);outline-offset:2px}
+.bgtile .nm{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
+.bgtile .rm{position:absolute;top:6px;right:6px;border:0;border-radius:999px;width:24px;height:24px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:14px;line-height:24px;padding:0}
+.iconbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;padding:0}
+.iconbtn:hover{border-color:var(--ink-2)} .iconbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.iconbtn svg{width:18px;height:18px}
+.headtools{display:flex;gap:8px;align-items:center}
+.secret{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.secret input{flex:1;min-width:0}
+.tokstate{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--wall)}
+.tokstate .mask{font:500 14px var(--mono);letter-spacing:.08em}
+.sheet a{color:var(--accent)}
+.sec-note{font-size:13px;color:var(--ink-2);line-height:1.5;margin:10px 0 0}
+.sec-note li{margin:3px 0}
+input[type=range]{padding:0;border:0;background:none}
+.wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header.top{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px 20px;align-items:start;margin-bottom:28px}
+header.top>.headtext{grid-column:1;grid-row:1/span 2;min-width:0}
+header.top>.headtext .tally{margin-top:12px;flex-wrap:wrap}
+header.top>.headtools{grid-column:2;grid-row:1;justify-self:end}
+header.top>.actions{grid-column:2;grid-row:2;justify-self:end;align-self:end;justify-content:flex-end}
+header.top>.headtext .tally{column-gap:16px;row-gap:4px}
+@media (max-width:640px){
+  h2 small{display:block;margin:6px 0 0;line-height:1.4}
+  header.top{grid-template-columns:minmax(0,1fr) auto;gap:14px 12px}
+  header.top>.headtext{grid-column:1/-1;grid-row:1}
+  header.top>.headtools{grid-column:1;grid-row:2;justify-self:start;align-self:center}
+  header.top>.actions{grid-column:2;grid-row:2;justify-self:end;align-self:center}
+}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:.9;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+.sub{color:var(--ink-2);margin:6px 0 0;max-width:56ch}
+.tally{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;gap:18px;font-variant-numeric:tabular-nums}
+.tally b{color:var(--ink);font-weight:500}
+.btn{font:600 14px/1 var(--body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:10px 16px;cursor:pointer}
+.btn:hover{border-color:var(--ink-2)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.small{padding:7px 12px;font-size:13px}
+.btn.danger{color:var(--want);border-color:currentColor}
+.btn:focus-visible,a:focus-visible,.sleeve-btn:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+section.wallsec{margin-top:36px}
+.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:26px;margin:0}
+h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink-2);margin-left:10px;font-weight:400}
+
+/* the rack: each row draws its own rail via the item tops */
+.rack{overflow-x:clip;overflow-y:visible;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));column-gap:0;row-gap:26px;padding-top:4px}
+.slot{position:relative;padding:30px 14px 0;min-width:0}
+.slot::before{content:"";position:absolute;left:0;right:0;top:10px;height:9px;
+  background:linear-gradient(var(--rail-hi),var(--rail) 60%,color-mix(in srgb,var(--rail) 70%,#000));box-shadow:0 3px 6px var(--shadow)}
+.hanger{position:relative;transform-origin:50% -18px;transition:transform .5s cubic-bezier(.3,1.6,.5,1)}
+.slot:nth-child(odd) .hanger{transform:rotate(-1.1deg)}
+.slot:nth-child(even) .hanger{transform:rotate(.9deg)}
+@media (hover:hover){.slot:hover .hanger{transform:rotate(0) translateY(2px)}}
+.clip{position:absolute;top:-22px;left:50%;width:26px;height:24px;margin-left:-13px;z-index:3;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--brass) 70%,#000),var(--brass) 40%,color-mix(in srgb,var(--brass) 60%,#fff) 55%,var(--brass) 75%);
+  border-radius:3px 3px 5px 5px;box-shadow:0 2px 3px var(--shadow)}
+.clip::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:2px;background:rgba(0,0,0,.25);border-radius:2px}
+.sleeve-btn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;text-align:left;color:inherit;position:relative}
+.sleeve-box{position:relative;aspect-ratio:1;max-width:100%}
+.disc{position:absolute;inset:3% 3% 3% 3%;border-radius:50%;z-index:0;
+  background:radial-gradient(circle,var(--disc-label,#c33) 0 16%,var(--vinyl) 16.5% 18%,transparent 18%),
+  repeating-radial-gradient(circle,var(--vinyl) 0 2px,var(--groove) 2px 3px);
+  transition:transform .5s cubic-bezier(.2,.8,.2,1);box-shadow:0 4px 10px var(--shadow)}
+.disc::after{content:"";position:absolute;inset:0;border-radius:50%;background:conic-gradient(from 30deg,transparent 0 10%,rgba(255,255,255,.12) 14%,transparent 20% 60%,rgba(255,255,255,.08) 64%,transparent 70%)}
+@media (hover:hover){.slot:hover .disc{transform:translateX(28%)}}
+.cover{position:relative;z-index:1;width:100%;height:100%;object-fit:cover;display:block;border-radius:2px;
+  box-shadow:0 1px 0 rgba(255,255,255,.15) inset,0 10px 18px -6px var(--shadow),0 2px 4px var(--shadow)}
+.gen{position:relative;z-index:1;width:100%;height:100%;display:flex;flex-direction:column;justify-content:space-between;padding:12px;border-radius:2px;
+  color:#fff;box-shadow:0 10px 18px -6px var(--shadow),0 2px 4px var(--shadow);overflow:hidden}
+.gen .t{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:24px;line-height:.95;overflow-wrap:anywhere}
+.gen .a{font-family:var(--mono);font-size:11px;opacity:.85}
+.cap{padding:10px 2px 0;min-width:0}
+.cap .t{font-weight:600;font-size:14px;line-height:1.25;overflow-wrap:anywhere}
+.cap .a{color:var(--ink-2);font-size:13px;overflow-wrap:anywhere}
+.cap .meta{font-family:var(--mono);font-size:11px;color:var(--ink-2);margin-top:2px}
+.tag{position:absolute;z-index:4;right:-4px;max-width:calc(100% + 4px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;bottom:18%;background:var(--paper);color:var(--paper-ink);font:500 11px/1 var(--mono);
+  padding:6px 8px 6px 14px;border-radius:2px 4px 4px 2px;box-shadow:0 3px 6px var(--shadow);transform:rotate(6deg);text-transform:uppercase;letter-spacing:.06em;
+  clip-path:polygon(8px 0,100% 0,100% 100%,8px 100%,0 50%)}
+.tag::before{content:"";position:absolute;left:6px;top:50%;width:4px;height:4px;margin-top:-2px;border-radius:50%;background:var(--wall)}
+.tag.ship{background:var(--accent);color:var(--accent-ink)}
+.pill.ord{color:var(--brass)}
+.tag.p3{background:var(--someday);color:var(--someday-ink)}
+.tag.p1{background:var(--want);color:#fff}
+.example.finding{top:auto;bottom:6px;background:var(--accent);color:var(--accent-ink)}
+.auto{color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-left:6px}
+.example{position:absolute;z-index:4;left:6px;top:6px;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.6);color:#fff;padding:4px 6px;border-radius:2px}
+.empty{border:1.5px dashed var(--line);border-radius:6px;padding:28px 20px;color:var(--ink-2);margin-top:18px;max-width:640px}
+.status{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:12px;min-height:1.2em}
+
+/* sheet */
+.scrim{position:fixed;inset:0;background:rgba(8,12,11,.45);z-index:20;opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.on{opacity:1;pointer-events:auto}
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--sheet);z-index:21;overflow-y:auto;
+  transform:translateX(102%);transition:transform .32s cubic-bezier(.2,.8,.2,1);box-shadow:-10px 0 30px var(--shadow);
+  padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) 20px}
+.sheet{visibility:hidden}
+.sheet.on{transform:none;visibility:visible}
+.sheet-head{display:flex;gap:16px;align-items:flex-start}
+.sheet-head .art{width:132px;flex:none;position:relative}
+.sheet-head .art .cover,.sheet-head .art .gen{aspect-ratio:1;height:auto}
+.sheet-head .art .gen .t{font-size:18px}
+.sheet h3{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:34px;line-height:.95;margin:0;text-wrap:balance;overflow-wrap:anywhere}
+.sheet .by{color:var(--ink-2);margin-top:4px}
+.closex{margin-left:auto;flex:none}
+.pill{display:inline-block;font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:5px 8px;border-radius:999px;border:1px solid currentColor;margin-top:10px}
+.pill.own{color:var(--accent)} .pill.wish{color:var(--want)}
+fieldset{border:0;border-top:1px solid var(--line);margin:22px 0 0;padding:16px 0 0;min-width:0}
+legend{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2);padding-right:10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media (max-width:460px){.grid2{grid-template-columns:1fr}.sheet-head .art{width:96px}.sheet h3{font-size:26px}}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);min-width:0}
+input,textarea,select{font:inherit;font-size:14px;color:var(--ink);background:var(--wall);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:80px;line-height:1.5}
+input.mono{font-family:var(--mono);font-size:13px}
+.log{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:10px}
+.log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
+.log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.log .x{border:0;background:none;color:var(--ink-2);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px}
+.log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.addlog{display:flex;gap:8px;margin-top:10px}
+.addlog input{flex:1}
+.links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+.links a{font:500 13px/1 var(--body);color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 12px}
+.links a:hover{border-color:var(--ink-2)}
+.research{margin-top:12px;font-size:14px}
+.research h4{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 6px}
+.research ul{margin:0;padding-left:18px}
+.research li{margin:4px 0}
+.research .when{font:12px var(--mono);color:var(--ink-2)}
+.hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
+.confirm{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px}
+.confirm.on{display:flex}
+.saved{font:12px var(--mono);color:var(--ink-2)}
+.ro .editonly{display:none!important}
+.stylus{display:inline-flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:999px;padding:7px 12px 7px 11px;background:transparent;color:var(--ink);cursor:pointer;font:500 13px/1 var(--body)}
+.stylus:hover{border-color:var(--ink-2)}
+.stylus,.stylus .lbl,.stylus .hrs{white-space:nowrap}
+.headtools .iconbtn{flex:none}
+@media (max-width:480px){.stylus .lsetup{display:none}.stylus .meter{width:56px}}
+.stylus:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.stylus .lbl{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2)}
+.meter{position:relative;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.stylus .meter{width:72px}
+.meter i{position:absolute;inset:0 auto 0 0;border-radius:3px;background:var(--accent)}
+.meter.warn i{background:var(--brass)} .meter.bad i{background:var(--want)}
+.stylus .hrs{font:500 12px/1 var(--mono);font-variant-numeric:tabular-nums}
+.gauge{margin-top:14px}
+.gauge .meter{height:12px;border-radius:6px;overflow:visible;background:linear-gradient(90deg,var(--line) 0 60%,color-mix(in srgb,var(--brass) 35%,var(--line)) 60% 100%)}
+.gauge .meter i{border-radius:6px}
+.gauge .ticks{position:relative;height:18px;font:11px/1 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.gauge .ticks span{position:absolute;top:6px;transform:translateX(-50%)}
+.gauge .ticks span:first-child{transform:none} .gauge .ticks span:last-child{transform:translateX(-100%)}
+.gauge .mark{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--ink-2);opacity:.6}
+.bignum{font-family:var(--display);font-weight:800;font-size:44px;line-height:1;font-variant-numeric:tabular-nums}
+.bignum small{font:500 13px var(--body);color:var(--ink-2);margin-left:6px}
+.state{display:inline-block;font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;padding:5px 8px;border-radius:999px;border:1px solid currentColor;color:var(--accent);margin-left:10px;vertical-align:middle}
+.state.warn{color:var(--brass)} .state.bad{color:var(--want)}
+.glist{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px}
+.gcard{display:flex;flex-direction:column;gap:6px;text-align:left;border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--wall);color:var(--ink);cursor:pointer;font:inherit;min-width:0}
+.gcard:hover{border-color:var(--ink-2)} .gcard:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.gcard .gt{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2)}
+.gcard .gn{font-weight:600;overflow-wrap:anywhere}
+.gcard .gm{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.gcard .gm .meter{width:70px}
+.gcard .hrs{font:500 12px/1 var(--mono);font-variant-numeric:tabular-nums}
+.gcard .state{margin-left:0}
+fieldset.gsec{margin-top:44px;padding-top:20px}
+fieldset.gsec>p.hint{margin-bottom:16px}
+.actions>select{width:auto;max-width:100%;flex:0 1 auto}
+.ghead{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 8px}
+.ghead:first-child{margin-top:0}
+.setups{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px;align-items:center}
+.chip{position:relative;cursor:pointer}
+.chip input{position:absolute;opacity:0;inset:0;margin:0;cursor:pointer}
+.chip span{display:inline-block;font:500 13px/1 var(--body);padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2)}
+.chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.chip input:focus-visible+span{outline:2px solid var(--brass);outline-offset:2px}
+.plays{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
+.plays .hint{margin:0}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<div class="wrap" id="app">
+  <header class="top">
+    <div class="headtext">
+      <h1 id="pageTitle">My Vinyl Wall</h1>
+      <div class="tally"><span><b id="nOwn">0</b> on the wall</span><span><b id="nOrd">0</b> on the way</span><span><b id="nWish">0</b> in the hunt</span></div>
+    </div>
+    <div class="headtools"><button class="stylus" id="stylusBtn" type="button" aria-label="Equipment and stylus wear"><span class="lbl" id="gearLbl">Gear</span><span class="meter" id="stylusMeter"><i style="width:0%"></i></span><span class="hrs" id="stylusHrs">—</span></button>
+      <button class="iconbtn editonly" id="settingsBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+    <div class="actions">
+      <button class="btn primary editonly" id="addBtn" type="button">Add a record</button>
+    </div>
+  </header>
+
+  <section class="wallsec" aria-labelledby="h-own">
+    <div class="sec-head"><h2 id="h-own">On the wall<small>owned · then on order by expected arrival</small></h2></div>
+    <div class="rack" id="rackOwn"></div>
+    <div class="empty" id="emptyOwn" hidden>Nothing hanging yet. Add a record you own, or mark one from the hunt as acquired.</div>
+  </section>
+
+  <section class="wallsec" aria-labelledby="h-wish">
+    <div class="sec-head"><h2 id="h-wish">The hunt<small>wishlist · by priority</small></h2></div>
+    <div class="rack" id="rackWish"></div>
+    <div class="empty" id="emptyWish" hidden>No records on the hunt. Add one you want and set a target pressing.</div>
+  </section>
+  <div class="status" id="status">Loading the wall…</div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<aside class="sheet" id="sheet" aria-modal="true" role="dialog" aria-labelledby="sTitle"></aside>
+
+<script>
+(function(){
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const GRADES=["","M","NM","VG+","VG","G+","G","F","P"];
+let db=null,assets=null,sample=null,mcp=null,canEdit=false;
+let lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
+const SYNCED=new Set(["title","artist","status","pressing","matrix","shop","acquired","paid","why","mediaGrade","sleeveGrade","priority","budget","orderDate","orderStatus","eta","discogsId","deleted"]);
+let records=[],openId=null,saveTimer=null,baseline={},creating=false,newId=null;
+let gear=[],gearWriting=Promise.resolve(),pendingGear=0;
+const GEAR_TYPES={
+  turntable:{label:"Turntable",tracks:true},
+  cartridge:{label:"Cartridge",tracks:true},
+  stylus:{label:"Stylus",tracks:true,ratedLow:300,ratedHigh:500,hint:"Most styluses are rated for a few hundred hours. Check the maker's spec."},
+  preamp:{label:"Phono preamp",tracks:false},
+  amp:{label:"Amplifier / receiver",tracks:false},
+  speakers:{label:"Speakers",tracks:false},
+  headphones:{label:"Headphones",tracks:false},
+  mat:{label:"Slipmat",tracks:false},
+  belt:{label:"Drive belt",tracks:true},
+  cleaning:{label:"Cleaning gear",tracks:false},
+  other:{label:"Other",tracks:false}};
+const GEAR_ORDER=Object.keys(GEAR_TYPES);
+
+function hash(s){let h=0;for(const c of s)h=(h*31+c.charCodeAt(0))|0;return Math.abs(h)}
+function labelColor(r){const h=hash((r.title||"")+(r.artist||""))%360;return `hsl(${h} 60% 45%)`}
+function coverHTML(r){
+  if(r.coverAsset) return `<img class="cover" alt="${esc(r.title)} cover" src="/_blob/${esc(r.coverAsset)}" loading="lazy">`;
+  const h=hash((r.title||"")+(r.artist||""))%360;
+  return `<div class="gen" style="background:linear-gradient(150deg,hsl(${h} 45% 32%),hsl(${(h+40)%360} 50% 18%))"><div class="t">${esc(r.title||"Untitled")}</div><div class="a">${esc(r.artist||"")}</div></div>`;
+}
+function today(){const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
+const OSTAT={preorder:"Pre-order",ordered:"Ordered",shipped:"Shipped",delayed:"Delayed"};
+function shortDate(d){if(!d)return "";const t=new Date(d+"T12:00");return isNaN(t)?d:t.toLocaleDateString(undefined,{month:"short",day:"numeric"})}
+function trackUrl(c,n){if(!n)return "";if(/^https?:\/\//i.test(n.trim()))return n.trim();const q=encodeURIComponent(n);c=(c||"").toLowerCase();
+  if(c.includes("usps"))return "https://tools.usps.com/go/TrackConfirmAction?tLabels="+q;
+  if(c.includes("ups"))return "https://www.ups.com/track?tracknum="+q;
+  if(c.includes("fedex"))return "https://www.fedex.com/fedextrack/?trknbr="+q;
+  if(c.includes("dhl"))return "https://www.dhl.com/us-en/home/tracking.html?tracking-id="+q;
+  return "https://www.google.com/search?q="+encodeURIComponent((c?c+" ":"")+"tracking "+n)}
+
+function sleeve(r){
+  const meta=[r.year,r.label].filter(Boolean).join(" · ");
+  const tag=r.status==="ordered"?`<span class="tag ship">${OSTAT[r.orderStatus||"ordered"]}${r.eta?" · "+esc(shortDate(r.eta)):""}</span>`:r.status==="wish"?`<span class="tag ${r.priority==1?"p1":r.priority==3?"p3":""}">${r.priority==1?"Top want":r.priority==3?"Someday":"Want"}${r.budget?" · ≤$"+esc(r.budget):""}</span>`:"";
+  return `<div class="slot"><div class="hanger"><span class="clip" aria-hidden="true"></span>
+    <button class="sleeve-btn" type="button" data-id="${esc(r.id)}" aria-label="Open ${esc(r.title)} by ${esc(r.artist)}">
+      <div class="sleeve-box"><div class="disc" style="--disc-label:${labelColor(r)}"></div>${coverHTML(r)}${tag}${r.example?'<span class="example">Example</span>':""}${r.needsEnrich?'<span class="example finding">Finding cover…</span>':""}</div>
+      <div class="cap"><div class="t">${esc(r.title)}</div><div class="a">${esc(r.artist)}</div>${meta?`<div class="meta">${esc(meta)}</div>`:""}</div>
+    </button></div></div>`;
+}
+
+function render(){
+  {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
+  const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
+  $("#nOrd").textContent=ord.length;
+  const own=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").sort((a,b)=>(a.added||0)-(b.added||0));
+  const wish=records.filter(r=>r.status==="wish").sort((a,b)=>(a.priority||2)-(b.priority||2)||(a.added||0)-(b.added||0));
+  $("#rackOwn").innerHTML=own.concat(ord).map(sleeve).join("");
+  $("#rackWish").innerHTML=wish.map(sleeve).join("");
+  $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
+  $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
+  if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
+}
+
+document.addEventListener("click",e=>{
+  const b=e.target.closest(".sleeve-btn"); if(b) openSheet(b.dataset.id);
+});
+$("#scrim").addEventListener("click",closeSheet);
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId!==null)closeSheet()});
+$("#addBtn").addEventListener("click",()=>openSheet(null));
+
+function linkSet(r){
+  const q=encodeURIComponent(`${r.artist} ${r.title}`);
+  const qv=encodeURIComponent(`${r.artist} ${r.title} vinyl LP`);
+  return [
+    ["Discogs releases",`https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
+    ["Discogs marketplace",`https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
+    ["eBay",`https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
+    ["MusicStack",`https://www.musicstack.com/search.cgi?find=${q}&t=0&media=LP`],
+    ["Popsike (past sales)",`https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+    ["Record stores near me",`https://www.google.com/maps/search/record+store`]
+  ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+}
+
+function researchHTML(res){
+  if(!res) return `<p class="hint">Ask Claude for the pressings worth owning, what to check in a listing, and a rough price picture. It answers from its own knowledge, so confirm details on Discogs before buying.</p>`;
+  const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
+  return `<div class="when">Researched ${esc(res.at||"")}</div>
+    ${res.summary?`<p>${esc(res.summary)}</p>`:""}
+    ${res.pressings?.length?`<h4>Pressings to look for</h4>${list(res.pressings)}`:""}
+    ${res.check?.length?`<h4>What to check in a listing</h4>${list(res.check)}`:""}
+    ${res.where?.length?`<h4>Where to look</h4>${list(res.where)}`:""}
+    ${res.price?`<h4>Price picture</h4><p>${esc(res.price)}</p>`:""}`;
+}
+
+function openSheet(id,keepScroll){
+  const isNew=id===null;
+  const r=isNew?{status:"wish",priority:2,notes:[]}:records.find(x=>x.id===id); if(!r) return;
+  openId=isNew?"__new":id; if(isNew){newId=null;creating=false}
+  const s=$("#sheet"); const wish=r.status==="wish"; const ord=r.status==="ordered";
+  const ostatOpts=Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("");
+  const gradeOpts=v=>GRADES.map(g=>`<option ${g===(v||"")?"selected":""} value="${g}">${g||"—"}</option>`).join("");
+  s.innerHTML=`
+  <div class="sheet-head">
+    ${isNew?"":`<div class="art"><div class="sleeve-box"><div class="disc" style="--disc-label:${labelColor(r)}"></div>${coverHTML(r)}</div></div>`}
+    <div style="min-width:0;flex:1">
+      <h3 id="sTitle">${isNew?"Add a record":esc(r.title)}</h3>
+      ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"On the way":wish?"On the hunt":"On the wall"}</span>`}
+    </div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button>
+  </div>
+
+  <fieldset><legend>The record</legend>
+    <div class="grid2">
+      <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="Kind of Blue"></label>
+      <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="Miles Davis"></label>
+      <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="1959"></label>
+      <label class="f">Runtime (min)<input id="f-runtime" class="mono" inputmode="numeric" value="${esc(r.runtime)}" placeholder="Looked up automatically"></label>
+      <label class="f">Status<select id="f-status"><option value="own" ${!wish&&!ord?"selected":""}>Own it (on the wall)</option><option value="ordered" ${ord?"selected":""}>On order (on the way)</option><option value="wish" ${wish?"selected":""}>Want it (the hunt)</option></select></label>
+    </div>
+    <div class="actions editonly" style="margin-top:12px">
+      <label class="btn small" for="f-cover" style="display:inline-block">${r.coverAsset?"Replace cover":"Upload cover"}</label>
+      <input type="file" id="f-cover" accept="image/*" hidden>
+      ${isNew?`<span class="hint" style="margin:0">Leave it blank and the cover, year and label are looked up after you hang it.</span>`:`<button class="btn small" type="button" id="enrichBtn" ${r.needsEnrich?"disabled":""}>${r.needsEnrich?"Looking it up…":"Find cover &amp; details"}</button>`}
+    </div>
+  </fieldset>
+
+  <fieldset><legend>Why it's on the wall</legend>
+    <textarea id="f-why" placeholder="What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it.">${esc(r.why)}</textarea>
+  </fieldset>
+
+  ${ord?`<fieldset><legend>The order</legend>
+    <div class="grid2">
+      <label class="f">Bought from<input id="f-shop" value="${esc(r.shop)}" placeholder="Band webstore, Rough Trade, Discogs seller…"></label>
+      <label class="f">Order status<select id="f-ostat">${ostatOpts}</select></label>
+      <label class="f">Ordered on<input id="f-odate" type="date" value="${esc(r.orderDate)}"></label>
+      <label class="f">Expected<input id="f-eta" type="date" value="${esc(r.eta)}"></label>
+      <label class="f">Order #<input id="f-onum" class="mono" value="${esc(r.orderNum)}"></label>
+      <label class="f">Price paid (USD)<input id="f-paid" class="mono" inputmode="decimal" value="${esc(r.paid)}" placeholder="incl. shipping"></label>
+      <label class="f">Carrier<input id="f-carrier" value="${esc(r.carrier)}" placeholder="USPS, UPS, FedEx, DHL"></label>
+      <label class="f">Tracking #<input id="f-track" class="mono" value="${esc(r.tracking)}"></label>
+      <label class="f" style="grid-column:1/-1">Order notes<textarea id="f-onotes" placeholder="Variant chosen, signed insert, bundle, shipping window, who to contact if it's late…">${esc(r.orderNotes)}</textarea></label>
+    </div>
+    ${r.tracking?`<div class="links" style="margin-top:12px"><a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a></div>`:""}
+  </fieldset>`:""}
+
+  <fieldset><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
+    <div class="grid2">
+      <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="Columbia"></label>
+      <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="CS 8163"></label>
+      <label class="f" style="grid-column:1/-1">Pressing / edition<input id="f-press" value="${esc(r.pressing)}" placeholder="${wish?"e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye":"e.g. 2015 Analogue Productions 45rpm reissue"}"></label>
+      ${ord?"":wish?`
+      <label class="f">Budget (USD)<input id="f-budget" class="mono" inputmode="decimal" value="${esc(r.budget)}" placeholder="60"></label>
+      <label class="f">Priority<select id="f-prio"><option value="1" ${r.priority==1?"selected":""}>Top want</option><option value="2" ${(r.priority||2)==2?"selected":""}>Want</option><option value="3" ${r.priority==3?"selected":""}>Someday</option></select></label>`:`
+      <label class="f">Media grade<select id="f-mg">${gradeOpts(r.mediaGrade)}</select></label>
+      <label class="f">Sleeve grade<select id="f-sg">${gradeOpts(r.sleeveGrade)}</select></label>
+      <label class="f">Acquired<input id="f-acq" type="date" value="${esc(r.acquired)}"></label>
+      <label class="f">Paid (USD)<input id="f-paid" class="mono" inputmode="decimal" value="${esc(r.paid)}"></label>
+      <label class="f" style="grid-column:1/-1">Bought from<input id="f-shop" value="${esc(r.shop)}" placeholder="Where this copy came from"></label>`}
+      ${ord?"":`<label class="f" style="grid-column:1/-1">Matrix / runout<input id="f-matrix" class="mono" value="${esc(r.matrix)}" placeholder="Etched in the dead wax, side A"></label>`}
+    </div>
+  </fieldset>
+
+  ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
+  <fieldset><legend>Listening log</legend>
+    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
+    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="Side B hit different tonight…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+    ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
+    ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
+      <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
+  </fieldset>
+
+  ${wish?`<fieldset><legend>Find it</legend>
+    <div class="links">${linkSet(r)}</div>
+    <div class="research" id="research">${researchHTML(r.research)}</div>
+    <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
+  </fieldset>`:`<fieldset><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
+
+  <fieldset><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
+
+  <div class="actions editonly" style="margin-top:24px">
+    ${ord?`<button class="btn primary" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
+    ${wish?`<button class="btn primary" type="button" id="ordBtn">I ordered it</button><button class="btn" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
+    <button class="btn danger small" type="button" id="delBtn">Remove</button>
+    <span class="saved" id="saved"></span>
+  </div>
+  <div class="confirm" id="delConfirm"><span>Remove ${esc(r.title)} and its notes for good?</span><button class="btn danger small" type="button" id="delYes">Remove</button><button class="btn small" type="button" id="delNo">Keep it</button></div>`}
+  `;
+  const AF=r.autoFilled||[];const FMAP={"f-artist":"artist","f-year":"year","f-label":"label","f-runtime":"runtime"};
+  for(const [fid,k] of Object.entries(FMAP)){if(AF.includes(k)){const el=document.getElementById(fid);if(el&&el.parentElement)el.parentElement.firstChild.after(Object.assign(document.createElement("span"),{className:"auto",textContent:"auto-filled"}))}}
+  s.classList.toggle("ro",!canEdit);
+  s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
+  $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll) s.scrollTop=0;
+  $("#closeBtn").addEventListener("click",closeSheet);
+  if(!keepScroll) $("#closeBtn").focus();
+  baseline=isNew?{}:collect(r);
+
+  if(isNew){
+    $("#createBtn").addEventListener("click",()=>createRecord());
+  } else {
+    s.querySelectorAll("input:not([type=file]):not(#f-note),textarea,select").forEach(el=>el.addEventListener("input",()=>schedule(r,el.id==="f-status")));
+    $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
+      const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
+    s.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>logPlay(r,b.dataset.play)));
+    s.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const notes=[...(r.notes||[])];notes.splice(+b.dataset.del,1);write(r.id,{notes},true)}));
+    $("#delBtn").addEventListener("click",()=>$("#delConfirm").classList.add("on"));
+    $("#delNo").addEventListener("click",()=>$("#delConfirm").classList.remove("on"));
+    $("#delYes").addEventListener("click",async()=>{try{
+      if(r.discogsSync&&r.discogsSync.rid){await db.collection("records").doc(r.id).update({deleted:true,needsSync:true});syncDirty=true;flash("Removed. Taking it off Discogs too.")}
+      else await db.collection("records").doc(r.id).delete();
+      closeSheet()}catch(e){flash("Couldn't remove it: "+e.message)}});
+    if($("#copyRunout")) $("#copyRunout").addEventListener("click",async()=>{const t=runoutText(r);const el=$("#runoutText");
+      try{await navigator.clipboard.writeText(t);$("#copyStatus").textContent="Copied. Paste it into the release's edit form on Discogs."}
+      catch(e){el.hidden=false;el.select();$("#copyStatus").textContent="Select-all is on. Copy it manually."}});
+    if($("#gotBtn")) $("#gotBtn").addEventListener("click",()=>{
+      const notes=[...(r.notes||[]),{d:today(),t:"Found it. Moved to the wall."}];
+      write(r.id,{...collect(r),status:"own",acquired:today(),notes},true);
+    });
+    if($("#ordBtn")) $("#ordBtn").addEventListener("click",()=>{
+      write(r.id,{...collect(r),status:"ordered",orderStatus:"ordered",orderDate:today(),notes:[...(r.notes||[]),{d:today(),t:"Ordered."}]},true)});
+    if($("#arrBtn")) $("#arrBtn").addEventListener("click",()=>{
+      const d=collect(r);
+      write(r.id,{...d,status:"own",acquired:today(),orderStatus:"delivered",notes:[...(r.notes||[]),{d:today(),t:"Arrived"+(r.shop?" from "+r.shop:"")+". Hung it on the wall."}]},true)});
+    if($("#enrichBtn")) $("#enrichBtn").addEventListener("click",async()=>{await write(r.id,{needsEnrich:true},true);enrich(r)});
+    if($("#resBtn")) $("#resBtn").addEventListener("click",()=>research(r));
+  }
+  const fc=$("#f-cover"); if(fc) fc.addEventListener("change",()=>uploadCover(isNew?null:r,fc.files[0]));
+}
+
+function closeSheet(){clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+
+function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
+function collect(r){
+  const o={title:val("f-title"),artist:val("f-artist"),year:val("f-year"),status:val("f-status"),why:document.getElementById("f-why")?.value??"",
+    label:val("f-label"),catalog:val("f-cat"),pressing:val("f-press"),matrix:val("f-matrix")};
+  if(document.getElementById("f-runtime")){const n=parseInt(val("f-runtime"),10);o.runtime=isNaN(n)?"":n}
+  if(document.getElementById("f-budget")){o.budget=val("f-budget");o.priority=+val("f-prio")}
+  if(document.getElementById("f-mg")){o.mediaGrade=val("f-mg");o.sleeveGrade=val("f-sg");o.acquired=val("f-acq")}
+  if(document.getElementById("f-paid")) o.paid=val("f-paid");
+  if(document.getElementById("f-discogs")){const n=parseInt((val("f-discogs")||"").replace(/\D/g,""),10);o.discogsId=isNaN(n)?"":n}
+  if(document.getElementById("f-shop")) o.shop=val("f-shop");
+  if(document.getElementById("f-ostat")){o.orderStatus=val("f-ostat");o.orderDate=val("f-odate");o.eta=val("f-eta");o.orderNum=val("f-onum");o.carrier=val("f-carrier");o.tracking=val("f-track");o.orderNotes=document.getElementById("f-onotes").value}
+  for(const k in o) if(o[k]===undefined) delete o[k];
+  return o;
+}
+let pending=null;
+function schedule(r,reopen){
+  const all=collect(r),data={};
+  for(const k in all) if(all[k]!==baseline[k]) data[k]=all[k];
+  const prev=pending&&pending.id===r.id?pending.data:{};
+  Object.assign(baseline,data);
+  const merged={...prev,...data};
+  if(Array.isArray(r.autoFilled)&&r.autoFilled.length&&Object.keys(merged).some(k=>r.autoFilled.includes(k))){merged.autoFilled=r.autoFilled.filter(k=>!(k in merged));}
+  if(!Object.keys(merged).length) return;
+  pending={id:r.id,data:merged,reopen:reopen||(pending&&pending.reopen)};
+  const sv=document.getElementById("saved"); if(sv) sv.textContent="Editing…";
+  clearTimeout(saveTimer); saveTimer=setTimeout(flushPending,reopen?50:700);
+}
+function flushPending(){if(!pending)return;const p=pending;pending=null;write(p.id,p.data,p.reopen)}
+let writing=Promise.resolve();
+function write(id,data,reopen){
+  if(Object.keys(data).some(k=>SYNCED.has(k))){data={...data,needsSync:true};syncDirty=true;
+    clearTimeout(syncTimer);syncTimer=setTimeout(()=>{if(syncDirty){syncDirty=false;fireTask()}},20000);}
+  writing=writing.then(async()=>{
+    try{await db.collection("records").doc(id).update(data);
+      const local=records.find(x=>x.id===id); if(local) Object.assign(local,data);
+      const sv=document.getElementById("saved"); if(sv) sv.textContent="Saved";
+      if(reopen&&openId===id) openSheet(id);
+    }catch(e){flash("Couldn't save: "+(e.message||e.code))}
+  });
+  return writing;
+}
+async function createRecord(){
+  const d=collect({}); if(!d.title||!d.artist){$("#saved").textContent="Album and artist are needed.";return}
+  const doc={...d,notes:[],added:Date.now(),priority:d.priority||2};
+  if(pendingCover) doc.coverAsset=pendingCover;
+  if(!doc.coverAsset||!doc.year||!doc.label) doc.needsEnrich=true;
+  const cb=$("#createBtn"); if(creating||(cb&&cb.disabled))return; creating=true; if(cb){cb.disabled=true;cb.textContent="Hanging…"}
+  const key=(doc.artist+"|"+doc.title).toLowerCase();
+  const dupe=records.find(x=>(x.artist+"|"+x.title).toLowerCase()===key&&Date.now()-(x.added||0)<120000);
+  if(dupe){creating=false;openSheet(dupe.id);return}
+  if(!newId) newId=db.collection("records").doc().id;
+  try{const ref=db.collection("records").doc(newId);await ref.set(doc);newId=null;creating=false;pendingCover=null;if(!records.some(x=>x.id===ref.id))records.push({id:ref.id,...doc});render();openSheet(ref.id);if(doc.needsEnrich)enrich({id:ref.id,...doc})}
+  catch(e){creating=false;$("#saved").textContent="Couldn't add it: "+(e.message||e.code);if(cb){cb.disabled=false;cb.textContent="Hang it"}}
+}
+let pendingCover=null;
+async function uploadCover(r,file){
+  if(!file) return; if(!assets){flash("Cover uploads aren't available in this view.");return}
+  const sv=document.getElementById("saved"); if(sv) sv.textContent="Uploading cover…";
+  try{const a=await assets.upload(file);
+    if(r){await write(r.id,{coverAsset:a.id,needsEnrich:false,autoFilled:(r.autoFilled||[]).filter(k=>k!=="coverAsset")},true)} else {pendingCover=a.id; if(sv) sv.textContent="Cover ready. It'll hang with the record."}
+  }catch(e){if(sv) sv.textContent="Upload failed: "+(e.message||e.code)}
+}
+
+async function research(r){
+  const st=$("#resStatus"),btn=$("#resBtn");
+  if(!sample){st.textContent="Research isn't available in this view. Ask Claude in chat instead.";return}
+  btn.disabled=true; st.textContent="Digging through the crates…";
+  const prompt=`You are a record-collecting expert advising a buyer in the US who wants one great vinyl copy of an album they love front to back.
+Album: "${r.title}" by ${r.artist}${r.year?` (${r.year})`:""}.
+Their target pressing notes: ${r.pressing||"none yet"}. Budget: ${r.budget?"$"+r.budget:"not set"}.
+Return JSON only, with keys:
+"summary": one or two sentences on the best buying strategy for this album,
+"pressings": 3-5 strings, each naming a specific worthwhile pressing (label, year, catalog number if known, and why it is good or what to avoid),
+"check": 3-5 strings on what to verify in a listing for this album (matrix/runout clues, label variations, common defects, counterfeits),
+"where": 3-5 strings on where to look (marketplaces, kinds of shops, reissue labels, timing like Record Store Day),
+"price": one string giving rough US price ranges by pressing and condition, stating that prices move and should be checked on Discogs sales history.
+Be specific but say plainly when unsure. No markdown.`;
+  try{
+    const res=await sample.json(prompt,{modelTier:"complex"});
+    const data={at:today(),summary:String(res.summary||""),pressings:(res.pressings||[]).map(String),check:(res.check||[]).map(String),where:(res.where||[]).map(String),price:String(res.price||"")};
+    await write(r.id,{research:data},true);
+  }catch(e){
+    st.textContent=e.code==="not_granted"?"Research needs permission. Allow Claude for this page and try again.":e.code==="rate_limited"?"Too many requests right now. Try again in a minute.":"Research didn't come back: "+(e.message||e.code);
+    btn.disabled=false;
+  }
+}
+
+function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
+async function fireTask(){
+  if(!mcp){flash("Background updates aren't available in this view. Ask Claude in chat to sync.");return}
+  const wait=lastFire+60000-Date.now();
+  if(wait>0){clearTimeout(fireTimer);fireTimer=setTimeout(fireTask,wait+500);return}
+  lastFire=Date.now();
+  // each install stores the id of its own background task in settings (written during setup)
+  const taskId=settings.taskId; if(!taskId){lastFire=0;flash("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");return}
+  try{await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:taskId},{cache:false})}
+  catch(e){lastFire=0;flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
+}
+function runoutText(r){
+  return `Matrix / Runout: ${r.matrix||""}\n(Observed on my copy: ${[r.pressing,r.catalog].filter(Boolean).join(", ")}.)`;
+}
+function discogsHTML(r){
+  const s=r.discogsSync||{};const id=r.discogsId;
+  let st=r.needsSync?"Waiting to sync…":s.state==="synced"?`Synced to your ${s.where==="collection"?"collection":"wantlist"} · ${esc(s.at)}`:s.state==="no-match"?esc(s.msg):s.state==="error"?"Sync failed: "+esc(s.msg):"Not synced yet";
+  return `<div class="grid2">
+      <label class="f">Release number<input id="f-discogs" class="mono" inputmode="numeric" value="${esc(id)}" placeholder="From the Discogs URL"></label>
+      <div class="f" style="justify-content:flex-end">${id?`<div class="links"><a href="https://www.discogs.com/release/${esc(id)}" target="_blank" rel="noopener">Open on Discogs ↗</a></div>`:""}</div>
+    </div>
+    <p class="hint">${st}${r.discogsMatch?` · matched by ${esc(r.discogsMatch)}`:""}</p>
+    ${r.discogsMatch&&/master|first/.test(r.discogsMatch)?`<p class="hint">This points at a general release of the album. Paste the number of your exact pressing when you know it.</p>`:""}
+    ${r.status==="own"&&r.matrix?`<div class="actions editonly" style="margin-top:8px"><button class="btn small" type="button" id="copyRunout">Copy runout for a Discogs submission</button><span class="saved" id="copyStatus"></span></div>
+    <textarea id="runoutText" readonly hidden style="margin-top:8px">${esc(runoutText(r))}</textarea>`:""}`;
+}
+function gHours(g){return (+g.startHours||0)+(+g.minutes||0)/60}
+function gState(g){const h=gHours(g),lo=+g.ratedLow||0,hi=+g.ratedHigh||0;
+  if(g.status==="retired")return{cls:"",label:"Retired",msg:`Retired${g.retired?" "+g.retired:""} at ${fmtH(h)} h.`};
+  if(!g.tracks)return{cls:"",label:"In use",msg:""};
+  if(!lo&&!hi)return{cls:"",label:"Tracking",msg:"No rated life set. Hours are logged for reference."};
+  const top=hi||lo;
+  if(hi&&h>=hi)return{cls:"bad",label:"Replace now",msg:`Past the ${hi} h upper rating.`};
+  if(lo&&h>=lo)return{cls:"bad",label:"Replace window",msg:hi?`Inside the ${lo}–${hi} h replacement window.`:`Past the ${lo} h rating.`};
+  if(lo&&h>=lo*.8)return{cls:"warn",label:"Getting close",msg:`About ${Math.round(lo-h)} h until the ${lo} h mark. A good time to order a spare.`};
+  return{cls:"",label:"Healthy",msg:`About ${Math.round((lo||top)-h)} h until the ${lo||top} h mark.`}}
+function fmtH(h){return h<10?h.toFixed(1):Math.round(h).toString()}
+function gName(g){return g.name||GEAR_TYPES[g.type]?.label||"Equipment"}
+const ALL_SETUPS="*";
+let setupDocs=[];
+// setups are named groups of gear (their own collection). Gear points at one by id, or at "*" for shared gear.
+function setups(){return setupDocs.slice().sort((a,b)=>(a.added||0)-(b.added||0))}
+function setupById(id){return setupDocs.find(x=>x.id===id)}
+function setupName(id){return id===ALL_SETUPS?"Shared":(setupById(id)?.name||"No setup")}
+function multiSetup(){return setups().length>1}
+function lastSetup(){let v=null;try{v=localStorage.getItem("rw.lastSetup")}catch(e){}const list=setups().map(x=>x.id);return list.includes(v)?v:list[0]}
+// gear with no (or a deleted) setup counts toward every play, like shared gear, until it's assigned
+function inSetup(g,id){return g.setup===id||g.setup===ALL_SETUPS||!setupById(g.setup)}
+function rememberSetup(v){try{localStorage.setItem("rw.lastSetup",v)}catch(e){}}
+function activeGear(){return gear.filter(g=>g.status!=="retired").sort((a,b)=>GEAR_ORDER.indexOf(a.type)-GEAR_ORDER.indexOf(b.type)||(a.added||0)-(b.added||0))}
+function worstGear(){const rated=activeGear().filter(g=>g.tracks&&(+g.ratedLow||+g.ratedHigh));
+  return rated.sort((a,b)=>gHours(b)/(+b.ratedLow||+b.ratedHigh)-gHours(a)/(+a.ratedLow||+a.ratedHigh))[0]||null}
+function renderGearBtn(){
+  const btn=$("#stylusBtn"); if(!btn) return;
+  const w=worstGear(),m=$("#stylusMeter");
+  $("#gearLbl").textContent=w?GEAR_TYPES[w.type]?.label||"Gear":"Gear";
+  if(w){const S=gState(w),hi=+w.ratedHigh||+w.ratedLow;m.hidden=false;m.className="meter "+S.cls;m.firstElementChild.style.width=Math.min(100,gHours(w)/hi*100)+"%";
+    $("#stylusHrs").textContent=fmtH(gHours(w))+" h";btn.title=`${gName(w)}${multiSetup()?" ("+setupName(w.setup)+")":""}: ${S.label}, ${fmtH(gHours(w))} h`;
+    if(multiSetup()&&setupById(w.setup))$("#gearLbl").innerHTML=esc(GEAR_TYPES[w.type]?.label||"Gear")+`<span class="lsetup"> · ${esc(setupName(w.setup))}</span>`}
+  else{m.hidden=true;const n=activeGear().length;$("#stylusHrs").textContent=n?n+" item"+(n>1?"s":""):"Add your setup";btn.title="Equipment"}
+}
+function saveGear(id,data){
+  const i=gear.findIndex(g=>g.id===id); if(i>=0)gear[i]={...gear[i],...data}; else gear.push({id,...data});
+  renderGearBtn();
+  pendingGear++;
+  // capture the full document now: a snapshot arriving before this write runs would otherwise replace it with stale data
+  const payload=Object.fromEntries(Object.entries(gear.find(g=>g.id===id)).filter(([k])=>k!=="id"));
+  gearWriting=gearWriting.then(()=>db.collection("gear").doc(id).set(payload)).finally(()=>{pendingGear--})
+    .catch(e=>flash("Couldn't save equipment: "+(e.message||e.code)));
+  return gearWriting;
+}
+async function logPlay(r,kind){
+  const rt=+r.runtime||40, min=kind==="side"?Math.round(rt/2):rt;
+  const has=setups().length>0;
+  const setup=has?(multiSetup()?(document.querySelector('input[name="playSetup"]:checked')?.value??lastSetup()):setups()[0].id):null;
+  if(multiSetup()) rememberSetup(setup);
+  const extra=(document.getElementById("f-note")?.value||"").trim();
+  const t=(kind==="side"?"Played one side":"Played the whole album")+(has?` on ${setupName(setup)}`:"")+` (~${min} min)`+(extra?". "+extra:"");
+  const tracked=activeGear().filter(g=>g.tracks&&(!has||inSetup(g,setup)));
+  for(const g of tracked) saveGear(g.id,{installed:g.installed||today(),minutes:(+g.minutes||0)+min,plays:[...(g.plays||[]),{d:today(),id:r.id,title:r.title,min,...(has?{setup}:{})}].slice(-200)});
+  await write(r.id,{notes:[...(r.notes||[]),{d:today(),t}]},true);
+  const w=worstGear();
+  flash(tracked.length?`Logged ${min} min on ${tracked.length} piece${tracked.length>1?"s":""} of gear.`+(w?` ${gName(w)} at ${fmtH(gHours(w))} h${gState(w).cls?" · "+gState(w).label:""}.`:""):`Logged the listen. Add your gear to track wear.`);
+}
+function gearCard(g){const S=gState(g),hi=+g.ratedHigh||+g.ratedLow;
+  return `<button class="gcard" type="button" data-gear="${esc(g.id)}"><div class="gt">${esc(GEAR_TYPES[g.type]?.label||"Other")}</div><div class="gn">${esc(gName(g))}</div>
+    ${g.tracks?`<div class="gm">${hi?`<span class="meter ${S.cls}"><i style="width:${Math.min(100,gHours(g)/hi*100)}%"></i></span>`:""}<span class="hrs">${fmtH(gHours(g))} h${hi?` / ${hi}`:""}</span>${S.cls?`<span class="state ${S.cls}">${S.label}</span>`:""}</div>`:`<div class="gm hint" style="margin:0">${g.installed?"Since "+esc(g.installed):"Not hours-tracked"}</div>`}</button>`}
+function openGear(keepScroll){
+  openId="__gear";
+  const s=$("#sheet"),act=activeGear(),ret=gear.filter(g=>g.status==="retired");
+  const groups=setups().map(x=>({id:x.id,title:x.name,note:x.note,items:act.filter(g=>g.setup===x.id),edit:true}));
+  const shared=act.filter(g=>g.setup===ALL_SETUPS), loose=act.filter(g=>g.setup!==ALL_SETUPS&&!setupById(g.setup));
+  if(loose.length) groups.push({id:"",title:"Not in a setup",note:"Open each piece and choose its setup.",items:loose});
+  const typeOpts=GEAR_ORDER.map(k=>`<option value="${k}">${GEAR_TYPES[k].label}</option>`).join("");
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Equipment</h3><div class="by">Your setups, and how much play each piece has seen</div></div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  ${groups.map(G=>`<fieldset><legend>${esc(G.title)}</legend>
+    ${G.note?`<p class="hint" style="margin-top:0">${esc(G.note)}</p>`:""}
+    <div class="glist">${G.items.map(gearCard).join("")||`<p class="hint" style="margin:0">No equipment in this setup yet.</p>`}</div>
+    ${G.edit?`<div class="actions editonly" style="margin-top:12px"><select class="g-newtype" data-setup="${esc(G.id)}" aria-label="Equipment type">${typeOpts}</select><button class="btn small primary" type="button" data-addgear="${esc(G.id)}">Add equipment</button><button class="btn small" type="button" data-editsetup="${esc(G.id)}">Rename or edit setup</button></div>`:""}
+  </fieldset>`).join("")||`<fieldset><legend>Setups</legend><p class="hint">Start by adding a setup: a turntable and the gear that plays with it.</p></fieldset>`}
+  <fieldset class="gsec"><legend>Additional setups</legend>
+    <p class="hint" style="margin-top:0">Have another turntable somewhere else? Give it its own setup so its plays and wear are tracked separately.</p>
+    <div class="actions editonly"><button class="btn small" type="button" id="g-addsetup">Add a setup</button></div>
+  </fieldset>
+  <fieldset class="gsec"><legend>Shared equipment</legend>
+    <p class="hint" style="margin-top:0">Gear used with every setup, like speakers, headphones or a cleaning kit. Plays on any setup count toward it.</p>
+    ${shared.length?`<div class="glist">${shared.map(gearCard).join("")}</div>`:""}
+    <div class="actions editonly" style="margin-top:${shared.length?12:0}px"><select id="g-sharedtype" aria-label="Shared equipment type">${typeOpts}</select><button class="btn small" type="button" id="g-addshared">Add shared equipment</button></div>
+  </fieldset>
+
+  ${ret.length?`<fieldset><legend>Retired</legend><div class="glist">${ret.map(gearCard).join("")}</div></fieldset>`:""}`;
+  s.classList.toggle("ro",!canEdit);
+  $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
+  $("#closeBtn").addEventListener("click",closeSheet);
+  s.querySelectorAll("[data-gear]").forEach(b=>b.addEventListener("click",()=>openGearItem(b.dataset.gear)));
+  const newGear=(type,setup)=>{const T=GEAR_TYPES[type],id=db.collection("gear").doc().id;
+    saveGear(id,{type,name:"",setup,status:"active",tracks:!!T.tracks,ratedLow:T.ratedLow||"",ratedHigh:T.ratedHigh||"",installed:today(),startHours:0,minutes:0,plays:[],notes:[],added:Date.now()}).then(()=>openGearItem(id))};
+  s.querySelectorAll("[data-addgear]").forEach(b=>b.addEventListener("click",()=>newGear(s.querySelector(`.g-newtype[data-setup="${b.dataset.addgear}"]`).value,b.dataset.addgear)));
+  const as=$("#g-addshared"); if(as) as.addEventListener("click",()=>newGear(val("g-sharedtype"),ALL_SETUPS));
+  s.querySelectorAll("[data-editsetup]").forEach(b=>b.addEventListener("click",()=>openSetup(b.dataset.editsetup)));
+  $("#g-addsetup").addEventListener("click",async()=>{const id=db.collection("setups").doc().id;const n=setups().length;
+    const doc={name:n?"Setup "+(n+1):"My setup",note:"",added:Date.now()};setupDocs.push({id,...doc});
+    try{await db.collection("setups").doc(id).set(doc)}catch(e){flash("Couldn't add the setup: "+(e.message||e.code))}openSetup(id)});
+}
+function openSetup(id){
+  const x=setupById(id); if(!x) return openGear();
+  openId="__setup:"+id;
+  const s=$("#sheet"),items=activeGear().filter(g=>g.setup===id);
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">${esc(x.name)}</h3><div class="by">Setup · ${items.length} piece${items.length===1?"":"s"} of equipment</div></div>
+    <button class="btn small" type="button" id="g-back">All gear</button><button class="btn small closex" type="button" id="closeBtn" style="margin-left:6px">Close</button></div>
+  <fieldset><legend>Setup</legend><div class="grid2">
+    <label class="f" style="grid-column:1/-1">Name<input id="su-name" value="${esc(x.name)}" placeholder="e.g. Office, Living room"></label>
+    <label class="f" style="grid-column:1/-1">Notes<textarea id="su-note" placeholder="Where it lives, what's connected to what…">${esc(x.note)}</textarea></label>
+  </div><span class="saved" id="saved"></span></fieldset>
+  <div class="actions editonly" style="margin-top:24px"><button class="btn danger small" type="button" id="su-del">Delete setup</button></div>
+  <div class="confirm" id="su-confirm"><span>${items.length?`Move its ${items.length} piece${items.length===1?"":"s"} of equipment out of any setup and delete ${esc(x.name)}?`:`Delete ${esc(x.name)}?`}</span><button class="btn danger small" type="button" id="su-yes">Delete</button><button class="btn small" type="button" id="su-no">Cancel</button></div>`;
+  s.classList.toggle("ro",!canEdit);
+  s.querySelectorAll("input,textarea").forEach(el=>{if(!canEdit)el.disabled=true});
+  $("#scrim").classList.add("on"); s.classList.add("on"); s.scrollTop=0; $("#su-name").focus();
+  $("#closeBtn").addEventListener("click",closeSheet); $("#g-back").addEventListener("click",()=>openGear());
+  let t=null; const save=()=>{clearTimeout(t);t=setTimeout(async()=>{const d={name:val("su-name")||"Untitled setup",note:document.getElementById("su-note").value,added:x.added||Date.now()};
+    Object.assign(x,d); renderGearBtn();
+    try{await db.collection("setups").doc(id).set(d);const sv=$("#saved");if(sv)sv.textContent="Saved"}catch(e){flash("Couldn't save the setup: "+(e.message||e.code))}},600)};
+  ["su-name","su-note"].forEach(k=>document.getElementById(k).addEventListener("input",save));
+  $("#su-del").addEventListener("click",()=>$("#su-confirm").classList.add("on"));
+  $("#su-no").addEventListener("click",()=>$("#su-confirm").classList.remove("on"));
+  $("#su-yes").addEventListener("click",async()=>{for(const g of items) saveGear(g.id,{setup:""});
+    setupDocs=setupDocs.filter(y=>y.id!==id); try{await db.collection("setups").doc(id).delete()}catch(e){flash("Couldn't delete: "+(e.message||e.code))} openGear()});
+}
+function openGearItem(id,keepScroll){
+  const g=gear.find(x=>x.id===id); if(!g) return openGear();
+  openId="__gear:"+id;
+  const T=GEAR_TYPES[g.type]||GEAR_TYPES.other,S=gState(g),h=gHours(g),lo=+g.ratedLow||0,hi=+g.ratedHigh||0,top=hi||lo;
+  const s=$("#sheet"),recent=(g.plays||[]).slice(-12).reverse(),notes=g.notes||[];
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">${esc(gName(g))}</h3><div class="by">${esc(T.label)}${g.status==="retired"?" · retired "+esc(g.retired||""):""}</div></div>
+    <button class="btn small" type="button" id="g-back">All gear</button><button class="btn small closex" type="button" id="closeBtn" style="margin-left:6px">Close</button></div>
+  ${g.tracks?`<fieldset><legend>Play time</legend>
+    <div><span class="bignum">${fmtH(h)}<small>hours played</small></span>${S.cls||top?`<span class="state ${S.cls}">${S.label}</span>`:""}</div>
+    ${top?`<div class="gauge"><div class="meter ${S.cls}"><i style="width:${Math.min(100,h/top*100)}%"></i>${lo&&hi?`<span class="mark" style="left:${lo/hi*100}%"></span>`:""}</div>
+      <div class="ticks"><span style="left:0">0 h</span>${lo&&hi?`<span style="left:${lo/hi*100}%">${lo} h</span>`:""}<span style="left:100%">${top} h</span></div></div>`:""}
+    ${S.msg?`<p class="hint">${esc(S.msg)}</p>`:""}
+    <form class="addlog editonly" id="g-addForm" style="margin-top:12px"><input id="g-addmin" class="mono" inputmode="numeric" placeholder="Minutes played off the wall, e.g. 45"><button class="btn small" type="submit">Add time</button></form>
+  </fieldset>`:""}
+  <fieldset><legend>Details</legend>
+    <div class="grid2">
+      <label class="f">Type<select id="g-type">${GEAR_ORDER.map(k=>`<option value="${k}" ${k===g.type?"selected":""}>${GEAR_TYPES[k].label}</option>`).join("")}</select></label>
+      <label class="f">Make &amp; model<input id="g-name" value="${esc(g.name)}" placeholder="e.g. Audio-Technica ATN3600L"></label>
+      <label class="f" style="grid-column:1/-1">Setup<select id="g-setup">${setups().map(x=>`<option value="${esc(x.id)}" ${g.setup===x.id?"selected":""}>${esc(x.name)}</option>`).join("")}
+        <option value="${ALL_SETUPS}" ${g.setup===ALL_SETUPS?"selected":""}>Shared by all setups</option>${!setupById(g.setup)&&g.setup!==ALL_SETUPS?`<option value="" selected>Not in a setup</option>`:""}</select></label>
+      <label class="f">In use since<input id="g-installed" type="date" value="${esc(g.installed)}"></label>
+      <label class="f">Bought from<input id="g-shop" value="${esc(g.shop)}"></label>
+      <label class="f">Paid (USD)<input id="g-paid" class="mono" inputmode="decimal" value="${esc(g.paid)}"></label>
+      <label class="f">Warranty until<input id="g-warranty" type="date" value="${esc(g.warranty)}"></label>
+      <label class="f" style="grid-column:1/-1">Setup notes<textarea id="g-specs" placeholder="Tracking force, settings, part numbers, what it pairs with…">${esc(g.specs)}</textarea></label>
+      <label class="f" style="grid-column:1/-1;flex-direction:row;align-items:center;gap:8px"><input id="g-tracks" type="checkbox" style="width:auto" ${g.tracks?"checked":""}> Track play hours</label>
+      ${g.tracks?`<label class="f">Rated life from (h)<input id="g-lo" class="mono" inputmode="numeric" value="${esc(g.ratedLow)}" placeholder="optional"></label>
+      <label class="f">Rated life to (h)<input id="g-hi" class="mono" inputmode="numeric" value="${esc(g.ratedHigh)}" placeholder="optional"></label>
+      <label class="f">Hours before tracking<input id="g-start" class="mono" inputmode="decimal" value="${esc(g.startHours)}" placeholder="0"></label>`:""}
+    </div>
+    <p class="hint">"Shared by all setups" is for gear used with every turntable, like speakers or a cleaning kit.</p>
+    ${g.tracks&&T.hint?`<p class="hint">${esc(T.hint)}</p>`:""}
+    ${g.tracks?`<p class="hint">If it wasn't new when you started tracking, estimate its earlier hours above.</p>`:""}
+    <span class="saved" id="saved"></span>
+  </fieldset>
+  <fieldset><legend>Log</legend>
+    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li><time>—</time><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
+    <form class="addlog editonly" id="g-noteForm"><input id="g-note" placeholder="Set tracking force to 3.5 g…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+  </fieldset>
+  ${g.tracks&&recent.length?`<fieldset><legend>Recent plays</legend><ul class="log">${recent.map(p=>`<li><time>${esc(p.d)}</time><p>${esc(p.title||"Manual entry")}</p><span class="hint" style="margin:0;font-family:var(--mono)">${esc(p.min)} min</span></li>`).join("")}</ul></fieldset>`:""}
+  <div class="actions editonly" style="margin-top:24px">
+    ${g.status==="retired"?`<button class="btn" type="button" id="g-reactivate">Put back in use</button>`:`<button class="btn primary" type="button" id="g-replace">Replace with a new one</button><button class="btn small" type="button" id="g-retire">Retire</button>`}
+    <button class="btn danger small" type="button" id="g-delBtn">Delete</button></div>
+  <div class="confirm" id="g-confirm"><span id="g-cmsg"></span><button class="btn primary small" type="button" id="g-yes">Yes</button><button class="btn small" type="button" id="g-no">Cancel</button></div>`;
+  s.classList.toggle("ro",!canEdit);
+  s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
+  $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
+  $("#closeBtn").addEventListener("click",closeSheet); $("#g-back").addEventListener("click",()=>openGear());
+  let t=null;
+  const num=k=>{const v=parseFloat(val(k));return isNaN(v)?"":v};
+  const saveFields=(reopen)=>{clearTimeout(t);t=setTimeout(()=>{const d={setup:val("g-setup")||"",type:val("g-type"),name:val("g-name"),installed:val("g-installed"),shop:val("g-shop"),paid:val("g-paid"),warranty:val("g-warranty"),specs:document.getElementById("g-specs").value,tracks:document.getElementById("g-tracks").checked};
+    if(document.getElementById("g-lo")){d.ratedLow=num("g-lo");d.ratedHigh=num("g-hi");d.startHours=num("g-start")||0}
+    if(d.tracks&&!g.tracks&&!g.ratedLow&&!g.ratedHigh){const P=GEAR_TYPES[d.type];d.ratedLow=P.ratedLow||"";d.ratedHigh=P.ratedHigh||""}
+    saveGear(g.id,d).then(()=>{if(reopen)openGearItem(g.id,true);else{const sv=$("#saved");if(sv)sv.textContent="Saved"}})},reopen?50:600)};
+  s.querySelectorAll("#g-name,#g-installed,#g-shop,#g-paid,#g-warranty,#g-specs,#g-lo,#g-hi,#g-start").forEach(el=>el.addEventListener("input",()=>saveFields(false)));
+  ["g-type","g-tracks","g-setup"].forEach(k=>document.getElementById(k).addEventListener("change",()=>saveFields(true)));
+  const af=$("#g-addForm"); if(af) af.addEventListener("submit",e=>{e.preventDefault();const m=parseInt(val("g-addmin"),10);if(!m||m<1)return;
+    saveGear(g.id,{minutes:(+g.minutes||0)+m,plays:[...(g.plays||[]),{d:today(),title:"Manual entry",min:m}].slice(-200)}).then(()=>openGearItem(g.id,true))});
+  $("#g-noteForm").addEventListener("submit",e=>{e.preventDefault();const tx=val("g-note");if(!tx)return;saveGear(g.id,{notes:[...notes,{d:today(),t:tx}]}).then(()=>openGearItem(g.id,true))});
+  s.querySelectorAll("[data-gdel]").forEach(b=>b.addEventListener("click",()=>{const n=[...notes];n.splice(+b.dataset.gdel,1);saveGear(g.id,{notes:n}).then(()=>openGearItem(g.id,true))}));
+  let action=null; const ask=(msg,fn)=>{action=fn;$("#g-cmsg").textContent=msg;$("#g-confirm").classList.add("on")};
+  $("#g-no").addEventListener("click",()=>$("#g-confirm").classList.remove("on"));
+  $("#g-yes").addEventListener("click",()=>{if(action)action()});
+  const rp=$("#g-replace"); if(rp) rp.addEventListener("click",()=>ask(`Retire this ${T.label.toLowerCase()} at ${fmtH(h)} h and start a fresh one at 0 h today?`,async()=>{
+    await saveGear(g.id,{status:"retired",retired:today(),notes:[...notes,{d:today(),t:`Retired at ${fmtH(h)} h. Replaced with a new one.`}]});
+    const nid=db.collection("gear").doc().id;
+    await saveGear(nid,{type:g.type,name:g.name,status:"active",tracks:g.tracks,ratedLow:g.ratedLow,ratedHigh:g.ratedHigh,specs:g.specs||"",installed:today(),startHours:0,minutes:0,plays:[],notes:[{d:today(),t:"Installed as a replacement."}],added:Date.now()});
+    openGearItem(nid)}));
+  const rt=$("#g-retire"); if(rt) rt.addEventListener("click",()=>ask(`Retire ${gName(g)}? It stops gaining play time and moves to Retired.`,()=>saveGear(g.id,{status:"retired",retired:today()}).then(()=>openGear())));
+  const ra=$("#g-reactivate"); if(ra) ra.addEventListener("click",()=>saveGear(g.id,{status:"active",retired:""}).then(()=>openGearItem(g.id,true)));
+  $("#g-delBtn").addEventListener("click",()=>ask(`Delete ${gName(g)} and its log for good?`,async()=>{gear=gear.filter(x=>x.id!==g.id);renderGearBtn();
+    try{await db.collection("gear").doc(g.id).delete()}catch(e){flash("Couldn't delete: "+(e.message||e.code))}openGear()}));
+}
+$("#stylusBtn").addEventListener("click",()=>openGear());
+// ---------- Settings: title, background, Discogs
+const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
+const DEFAULT_TITLE="My Vinyl Wall";
+const DEFAULT_BG="listening";
+// softened photo presets and their credits (shown in Settings, repeated in the README)
+const PHOTO_PRESETS={
+  listening:`Listening room photo, softened.`,
+  crates:`Record shop photo, softened.`,
+  cafe:`Coffee shop photo, softened.`,
+  tavern:`Tavern photo, softened.`};
+let settings={},myId=null,userCap=null;
+document.body.classList.add("bg-"+DEFAULT_BG);
+function applySettings(){
+  const t=(settings.title||"").trim()||DEFAULT_TITLE;
+  $("#pageTitle").textContent=t; document.title=t;
+  const b=document.body; [...b.classList].filter(c=>c.startsWith("bg-")).forEach(c=>b.classList.remove(c));
+  const bg=settings.bg||{kind:"preset",preset:DEFAULT_BG};
+  if(bg.kind==="photo"&&bg.assetId){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
+  else{b.classList.add("bg-"+(BG_PRESETS.some(x=>x[0]===bg.preset)?bg.preset:DEFAULT_BG));b.style.removeProperty("--bg-url");
+    if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",(settings.dim??55)+"%");else b.style.removeProperty("--bg-dim")}
+}
+let settingsWriting=Promise.resolve();
+function saveSettings(patch){
+  settings={...settings,...patch}; applySettings();
+  const payload={...settings};
+  settingsWriting=settingsWriting.then(()=>db.doc("settings/site").set(payload)).catch(e=>flash("Couldn't save settings: "+(e.message||e.code)));
+  return settingsWriting;
+}
+function secretRef(){return myId?db.collection("data/users/"+myId).doc("discogs"):null}
+function tokenStatusHTML(dz){
+  if(!dz.hasToken) return "";
+  const st=dz.status==="ok"?`<span class="state">Verified${dz.verifiedUser?" as "+esc(dz.verifiedUser):""}</span>`:dz.status==="error"?`<span class="state bad">Not accepted</span>`:`<span class="state warn">Checking…</span>`;
+  return `<div class="tokstate"><span class="mask">••••••••${esc(dz.last4||"")}</span>${st}<span class="hint" style="margin:0">Saved ${esc(dz.savedAt||"")}${dz.checkedAt?" · checked "+esc(dz.checkedAt):""}</span></div>
+    ${dz.status==="error"&&dz.msg?`<p class="hint" style="color:var(--want)">${esc(dz.msg)}</p>`:""}`;
+}
+function openSettings(keepScroll){
+  openId="__settings";
+  const s=$("#sheet"),bg=settings.bg||{kind:"preset",preset:DEFAULT_BG},uploads=settings.uploads||[],dz=settings.discogs||{};
+  const tile=(key,label,cls,sel,extra="")=>`<div class="bgtile" role="button" tabindex="0" data-bg="${esc(key)}" aria-pressed="${sel}"><span class="sw ${cls}"${extra}></span><span class="nm">${esc(label)}</span></div>`;
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, and your Discogs connection</div></div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  <fieldset><legend>Page</legend>
+    <label class="f">Title<input id="st-title" value="${esc(settings.title||"")}" placeholder="${DEFAULT_TITLE}" maxlength="60"></label>
+    <span class="saved" id="saved"></span>
+  </fieldset>
+  <fieldset><legend>Background</legend>
+    <div class="bggrid">
+      ${BG_PRESETS.map(([k,l])=>tile("preset:"+k,l,"bg-"+k,bg.kind!=="photo"&&(bg.preset||DEFAULT_BG)===k)).join("")}
+      ${uploads.map(u=>`<div class="bgtile" role="button" tabindex="0" data-bg="photo:${esc(u.id)}" aria-pressed="${bg.kind==="photo"&&bg.assetId===u.id}"><span class="sw" style="background-image:url('/_blob/${esc(u.id)}')"></span><span class="nm">${esc(u.name||"Your photo")}</span>${assets?`<button class="rm" type="button" data-rmbg="${esc(u.id)}" aria-label="Remove this background">×</button>`:""}</div>`).join("")}
+    </div>
+    ${assets?`<div class="actions" style="margin-top:14px"><label class="btn small" for="st-upload">Upload your own</label><input type="file" id="st-upload" accept="image/jpeg,image/png,image/webp" hidden><span class="saved" id="bgStatus"></span></div>`:`<p class="hint">Uploading your own background isn't available in this view.</p>`}
+    ${bg.kind==="photo"||PHOTO_PRESETS[bg.preset]?`<label class="f" style="margin-top:14px">Soften photo so records stay readable <input id="st-dim" type="range" min="20" max="90" step="5" value="${esc(settings.dim??(bg.kind==="photo"?70:55))}"></label>`:""}
+    ${bg.kind!=="photo"&&PHOTO_PRESETS[bg.preset]?`<p class="hint">${PHOTO_PRESETS[bg.preset]}</p>`:""}
+    <div class="confirm" id="bg-confirm"><span>Remove this background for good?</span><button class="btn danger small" type="button" id="bg-yes">Remove</button><button class="btn small" type="button" id="bg-no">Cancel</button></div>
+  </fieldset>
+  <fieldset><legend>Discogs</legend>
+    <p class="hint" style="margin-top:0">Connect your Discogs account to keep your collection and wantlist in sync with the wall.</p>
+    <div class="grid2" style="margin-top:10px">
+      <label class="f" style="grid-column:1/-1">Discogs username<input id="st-duser" value="${esc(dz.username||"")}" placeholder="your-discogs-name" autocomplete="off" spellcheck="false"></label>
+    </div>
+    <div style="margin-top:12px">${tokenStatusHTML(dz)}</div>
+    <div id="tokEntry" ${dz.hasToken?"hidden":""} style="margin-top:12px">
+      <label class="f" for="st-token">Personal access token</label>
+      <div class="secret" style="margin-top:4px"><input id="st-token" type="password" class="mono" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Paste your token">
+        <button class="btn small" type="button" id="st-show">Show</button><button class="btn small primary" type="button" id="st-savetok">Save token</button></div>
+      <p class="hint">Create one at <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener">discogs.com/settings/developers</a> → Generate new token.</p>
+    </div>
+    ${dz.hasToken?`<div class="actions" style="margin-top:12px"><button class="btn small" type="button" id="st-replace">Replace token</button><button class="btn small" type="button" id="st-recheck">Check again</button><button class="btn danger small" type="button" id="st-remove">Remove token</button></div>`:""}
+    <div class="confirm" id="tok-confirm"><span>Remove your token? Syncing with Discogs stops until you add one again.</span><button class="btn danger small" type="button" id="tok-yes">Remove</button><button class="btn small" type="button" id="tok-no">Cancel</button></div>
+    <span class="saved" id="tokStatus"></span>
+    <ul class="sec-note">
+      <li>Your token is saved in your private space on this page. People you share the wall with can't read it, and it isn't stored in the page itself or with your records.</li>
+      <li>It's never shown again after you save it; only its last four characters appear here.</li>
+      <li>Only the background sync reads it, to update your Discogs collection and wantlist.</li>
+      <li>You can revoke it at any time on Discogs, and you should if you think it's been exposed.</li>
+    </ul>
+  </fieldset>`;
+  s.classList.toggle("ro",!canEdit);
+  s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
+  $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
+  $("#closeBtn").addEventListener("click",closeSheet);
+  let t=null;
+  $("#st-title").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(()=>saveSettings({title:val("st-title")}).then(()=>{const sv=$("#saved");if(sv)sv.textContent="Saved"}),500)});
+  const pick=el=>{const [kind,v]=el.dataset.bg.split(":");saveSettings({bg:kind==="photo"?{kind:"photo",assetId:v}:{kind:"preset",preset:v}}).then(()=>openSettings(true))};
+  s.querySelectorAll(".bgtile").forEach(el=>{el.addEventListener("click",e=>{if(e.target.closest(".rm"))return;pick(el)});el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(el)}})});
+  const dim=$("#st-dim"); if(dim){dim.addEventListener("input",()=>{document.body.style.setProperty("--bg-dim",dim.value+"%")});dim.addEventListener("change",()=>saveSettings({dim:+dim.value}))}
+  const up=$("#st-upload"); if(up) up.addEventListener("change",async()=>{const f=up.files[0];if(!f)return;const st=$("#bgStatus");
+    if(f.size>15*1024*1024){st.textContent="That image is over 15 MB. Try a smaller one.";return}
+    st.textContent="Uploading…";
+    try{const a=await assets.upload(f);await saveSettings({uploads:[...(settings.uploads||[]),{id:a.id,name:(f.name||"Your photo").replace(/\.[^.]+$/,"").slice(0,40)}],bg:{kind:"photo",assetId:a.id},dim:settings.dim??70});openSettings(true)}
+    catch(e){st.textContent="Upload failed: "+(e.message||e.code)}});
+  let rmId=null;
+  s.querySelectorAll("[data-rmbg]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();rmId=b.dataset.rmbg;$("#bg-confirm").classList.add("on")}));
+  $("#bg-no").addEventListener("click",()=>$("#bg-confirm").classList.remove("on"));
+  $("#bg-yes").addEventListener("click",async()=>{const id=rmId;if(!id)return;
+    const patch={uploads:(settings.uploads||[]).filter(u=>u.id!==id)};if(settings.bg?.assetId===id)patch.bg={kind:"preset",preset:DEFAULT_BG};
+    await saveSettings(patch);try{await assets.delete(id)}catch(e){}openSettings(true)});
+  let tu=null;
+  $("#st-duser").addEventListener("input",()=>{clearTimeout(tu);tu=setTimeout(()=>{const u=val("st-duser");saveSettings({discogs:{...(settings.discogs||{}),username:u,...(settings.discogs?.hasToken?{status:"pending"}:{})}});if(settings.discogs?.hasToken)fireTask()},800)});
+  const tok=$("#st-token");
+  $("#st-show").addEventListener("click",()=>{tok.type=tok.type==="password"?"text":"password";$("#st-show").textContent=tok.type==="password"?"Show":"Hide"});
+  $("#st-savetok").addEventListener("click",async()=>{const v=tok.value.trim(),st=$("#tokStatus");
+    if(!/^[A-Za-z0-9]{20,64}$/.test(v)){st.textContent="That doesn't look like a Discogs token. It should be a long string of letters and numbers.";return}
+    if(!val("st-duser")){st.textContent="Add your Discogs username first.";return}
+    const ref=secretRef(); if(!ref){st.textContent="Sign in to claude.ai to save your token.";return}
+    st.textContent="Saving…";
+    try{await ref.set({token:v,savedAt:new Date().toISOString()});tok.value="";
+      await saveSettings({discogs:{username:val("st-duser"),hasToken:true,last4:v.slice(-4),savedAt:today(),status:"pending",msg:"",verifiedUser:"",checkedAt:""}});
+      fireTask();openSettings(true)}
+    catch(e){st.textContent="Couldn't save the token: "+(e.message||e.code)}});
+  const rp=$("#st-replace"); if(rp) rp.addEventListener("click",()=>{$("#tokEntry").hidden=false;$("#st-token").focus()});
+  const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
+  const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
+  $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
+  $("#tok-yes").addEventListener("click",async()=>{try{const ref=secretRef();if(ref)await ref.delete();
+    await saveSettings({discogs:{username:settings.discogs?.username||"",hasToken:false,last4:"",status:"",msg:"",verifiedUser:"",savedAt:"",checkedAt:""}});openSettings(true)}
+    catch(e){$("#tokStatus").textContent="Couldn't remove it: "+(e.message||e.code)}});
+}
+$("#settingsBtn").addEventListener("click",()=>openSettings());
+function flash(m){$("#status").textContent=m}
+
+async function boot(){
+  const [d,u,a,sm,m]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp")].map(p=>p.catch(()=>null)));
+  db=d;assets=a;sample=sm;mcp=m;userCap=u;
+  if(!db){flash("Open this page signed in to claude.ai to see the wall.");$("#addBtn").hidden=true;return}
+  canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
+  document.getElementById("app").classList.toggle("ro",!canEdit);
+  try{myId=u?await u.id():null}catch(e){myId=null}
+  db.doc("settings/site").onSnapshot(snap=>{settings=snap.exists?{...snap.data()}:{};applySettings();
+    const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if(openId==="__settings"&&!typing)openSettings(true)},()=>{});
+  db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
+    const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if(typing)return; if(openId==="__gear")openGear(true)},()=>{});
+  db.collection("gear").onSnapshot(snap=>{if(pendingGear>0)return;gear=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
+    const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+    if(typing)return; if(openId==="__gear")openGear(true); else if(String(openId).startsWith("__gear:"))openGearItem(String(openId).slice(7),true)},()=>{});
+  db.collection("records").onSnapshot(snap=>{
+    const before=openId&&openId!=="__new"?JSON.stringify(records.find(x=>x.id===openId)):null;
+    records=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>!x.deleted);
+    render();
+    if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
+      const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
+      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash(records.length?"":"The wall is empty. Add your first record.");
+    if(records.length) flash("");
+  },e=>flash("Couldn't load the wall: "+e.message));
+}
+if(window.claude&&claude.use) boot(); else {flash("This page runs inside claude.ai.");}
+})();
+</script>
