@@ -277,11 +277,24 @@ input.mono{font-family:var(--mono);font-size:13px}
 .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .links a{font:500 13px/1 var(--body);color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 12px}
 .links a:hover{border-color:var(--ink-2)}
-.research{margin-top:14px;font-size:14px}
-.research h4{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 6px}
-.research ul{margin:0;padding-left:18px}
-.research li{margin:4px 0}
-.research .when{font:12px var(--mono);color:var(--ink-2)}
+.research{margin-top:14px;font-size:13px;line-height:1.45}
+.reslog{display:grid;gap:8px}
+.resentry{border:1px solid var(--line);border-radius:10px;padding:0 12px}
+.resentry summary{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:baseline;padding:9px 0;cursor:pointer;list-style:none}
+.resentry summary::-webkit-details-marker{display:none}
+.resentry summary::after{content:"▸";color:var(--ink-2);transition:transform .15s}
+.resentry[open] summary::after{transform:rotate(90deg)}
+.resentry summary time{font:12px var(--mono);color:var(--ink-2);white-space:nowrap}
+.resentry summary span{font-size:14px;min-width:0}
+.resentry summary:focus-visible{outline:2px solid var(--brass);outline-offset:2px;border-radius:6px}
+.resbody{padding:0 0 10px;border-top:1px solid var(--line)}
+.resbody p{margin:8px 0 0}
+.resbody p:first-child{margin-top:8px}
+.linkbtn{background:none;border:0;padding:0;margin-top:10px;font:inherit;font-size:12px;color:var(--ink-2);text-decoration:underline;cursor:pointer}
+.linkbtn:hover{color:var(--want)}
+.research h4{font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:10px 0 3px}
+.research ul{margin:0;padding-left:16px}
+.research li{margin:1px 0}
 .hint{font-size:12px;color:var(--ink-2);margin:6px 0 0}
 .confirm{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;font-size:13px}
 .confirm.on{display:flex}
@@ -489,15 +502,27 @@ function linkSet(r){
   ].map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
 }
 
-function researchHTML(res){
-  if(!res) return "";
+/* Research history: newest first. Older walls kept a single `research` object; it reads as one entry. */
+function researchEntries(r){
+  const log=Array.isArray(r.researchLog)?r.researchLog:[];
+  return log.length?log:(r.research?[{id:"legacy",...r.research}]:[]);
+}
+function firstSentence(t){t=String(t||"").trim();const m=t.match(/^.+?[.!?](\s|$)/);return (m?m[0]:t).trim().slice(0,140)}
+const openResearch=new Set();
+function researchHTML(r){
+  const items=researchEntries(r); if(!items.length) return "";
   const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
-  return `<div class="when">Researched ${esc(res.at||"")} · from Claude's own knowledge, so check details on Discogs before buying</div>
-    ${res.summary?`<p>${esc(res.summary)}</p>`:""}
-    ${res.pressings?.length?`<h4>Pressings to look for</h4>${list(res.pressings)}`:""}
-    ${res.check?.length?`<h4>What to check in a listing</h4>${list(res.check)}`:""}
-    ${res.where?.length?`<h4>Where to look</h4>${list(res.where)}`:""}
-    ${res.price?`<h4>Price picture</h4><p>${esc(res.price)}</p>`:""}`;
+  return `<div class="reslog">${items.map((e,i)=>{const key=e.id||String(i);return `<details class="resentry" data-res="${esc(key)}" ${openResearch.has(r.id+":"+key)?"open":""}>
+    <summary><time>${esc(shortDate(e.at)||e.at||"")}</time><span>${esc(e.headline||firstSentence(e.summary)||"Research notes")}</span></summary>
+    <div class="resbody">
+      ${(()=>{const sm=String(e.summary||"").trim();const body=e.headline?sm:sm.slice(firstSentence(sm).length).trim();return body?`<p>${esc(body)}</p>`:""})()}
+      ${e.pressings?.length?`<h4>Pressings</h4>${list(e.pressings)}`:""}
+      ${e.check?.length?`<h4>Check in a listing</h4>${list(e.check)}`:""}
+      ${e.where?.length?`<h4>Where to look</h4>${list(e.where)}`:""}
+      ${e.price?`<h4>Price</h4><p>${esc(e.price)}</p>`:""}
+      <button class="linkbtn editonly" type="button" data-resdel="${esc(key)}">Remove this research</button>
+    </div></details>`}).join("")}</div>
+    <p class="hint">From Claude's own knowledge. Check details on Discogs before buying.</p>`;
 }
 
 let sheetMode={id:null,edit:false},newDraft=null;
@@ -603,10 +628,10 @@ function openSheet(id,keepScroll){
     <div class="links">${linkSet(r)}</div>
   </fieldset>
   <fieldset class="viewonly" id="resFs"><legend>Research it</legend>
-    <div class="actions editonly"><button class="btn small" type="button" id="resBtn">${r.research?"Research again with Claude":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
-    ${r.research?`<div class="research" id="research">${researchHTML(r.research)}</div>`:""}
+    <div class="actions editonly"><button class="btn small" type="button" id="resBtn">${researchEntries(r).length?"Research again with Claude":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
+    ${researchEntries(r).length?`<div class="research" id="research">${researchHTML(r)}</div>`:""}
   </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div></fieldset>
-  ${r.research?`<fieldset class="viewonly"><legend>Research it</legend><div class="research">${researchHTML(r.research)}</div></fieldset>`:""}`}
+  ${researchEntries(r).length?`<fieldset class="viewonly"><legend>Research it</legend><div class="research">${researchHTML(r)}</div></fieldset>`:""}`}
 
   <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
@@ -662,6 +687,10 @@ function openSheet(id,keepScroll){
       write(r.id,{...d,status:"own",acquired:today(),orderStatus:"delivered",notes:[...(r.notes||[]),{d:today(),t:"Arrived"+(r.shop?" from "+r.shop:"")+". Hung it on the wall."}]},true)});
     if($("#enrichBtn")) $("#enrichBtn").addEventListener("click",async()=>{await write(r.id,{needsEnrich:true},true);enrich(r)});
     if($("#resBtn")) $("#resBtn").addEventListener("click",()=>research(r));
+    s.querySelectorAll(".resentry").forEach(d=>d.addEventListener("toggle",()=>{const k=r.id+":"+d.dataset.res;d.open?openResearch.add(k):openResearch.delete(k)}));
+    s.querySelectorAll("[data-resdel]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resdel;
+      const rest=researchEntries(r).filter((e,i)=>(e.id||String(i))!==k);
+      write(r.id,{researchLog:rest,research:null},true)}));
   }
   const fc=$("#f-cover"); if(fc) fc.addEventListener("change",()=>uploadCover(isNew?null:r,fc.files[0]));
 }
@@ -752,16 +781,17 @@ async function research(r){
 Album: "${r.title}" by ${r.artist}${r.year?` (${r.year})`:""}.
 Their target pressing notes: ${r.pressing||"none yet"}. Budget: ${r.budget?"$"+r.budget:"not set"}.
 Return JSON only, with keys:
-"summary": one or two sentences on the best buying strategy for this album,
-"pressings": 3-5 strings, each naming a specific worthwhile pressing (label, year, catalog number if known, and why it is good or what to avoid),
-"check": 3-5 strings on what to verify in a listing for this album (matrix/runout clues, label variations, common defects, counterfeits),
-"where": 3-5 strings on where to look (marketplaces, kinds of shops, reissue labels, timing like Record Store Day),
-"price": one string giving rough US price ranges by pressing and condition, stating that prices move and should be checked on Discogs sales history.
-Be specific but say plainly when unsure. No markdown.`;
+"headline": one short sentence (at most 14 words) with the single most useful takeaway, e.g. which pressing to hunt,
+"summary": one or two short sentences on the buying strategy,
+"pressings": 2-4 strings, each a specific worthwhile pressing (label, year, catalog number if known) and why, at most 18 words each,
+"check": 2-3 strings on what to verify in a listing (runout clues, label variations, defects, counterfeits), at most 14 words each,
+"where": 2-3 short strings on where to look, at most 10 words each,
+"price": one short sentence with rough US price ranges.
+Be specific, be brief, and say plainly when unsure. No markdown.`;
   try{
     const res=await sample.json(prompt,{modelTier:"complex"});
-    const data={at:today(),summary:String(res.summary||""),pressings:(res.pressings||[]).map(String),check:(res.check||[]).map(String),where:(res.where||[]).map(String),price:String(res.price||"")};
-    await write(r.id,{research:data},true);
+    const data={id:Date.now().toString(36),at:today(),headline:String(res.headline||""),summary:String(res.summary||""),pressings:(res.pressings||[]).map(String),check:(res.check||[]).map(String),where:(res.where||[]).map(String),price:String(res.price||"")};
+    await write(r.id,{researchLog:[data,...researchEntries(r)].slice(0,10),research:null},true);
   }catch(e){
     st.textContent=e.code==="not_granted"?"Research needs permission. Allow Claude for this page and try again.":e.code==="rate_limited"?"Too many requests right now. Try again in a minute.":"Research didn't come back: "+(e.message||e.code);
     btn.disabled=false;
