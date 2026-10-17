@@ -26,14 +26,14 @@ If something's missing, Claude tells you before building anything.
 
 ## Features
 
-- **The wall.** Owned records hang on walnut rails with brass clips; orders on the way hang behind them, sorted by expected arrival. Hover (or tap) a sleeve to open it.
+- **The wall.** Owned records hang from iron rings on a weathered barnwood plank; orders on the way hang behind them, sorted by expected arrival. Hover (or tap) a sleeve to open it.
 - **The hunt.** A wishlist with priorities (Top want, Want, Someday), a budget, and a target pressing. One-click search links (Discogs, eBay, MusicStack, Popsike) and optional research from Claude on which pressings to look for.
 - **Automatic details.** Add just an artist and album: the cover, year, label and runtime are looked up for you.
 - **Your copy.** Media and sleeve grades, catalog number, pressing, matrix/runout, where you bought it and what you paid.
 - **Orders.** Store, order number, status, expected date, carrier and tracking link. "It arrived" moves it to the wall.
 - **Listening log.** Dated notes per record, plus "Played the whole album" / "Played one side".
 - **Equipment.** Turntables, cartridges, styluses, speakers and more, grouped into setups (e.g. Office, Living room) with shared gear. Plays add hours to the right gear; styluses warn you as they approach their rated life.
-- **Discogs sync (optional).** Owned records go to your Discogs collection with grades and notes; the hunt and orders go to your wantlist.
+- **Discogs sync (optional).** Owned records go to your Discogs collection with grades and notes; the hunt and orders go to your wantlist. Already on Discogs? Import your collection and wantlist in one tap.
 - **Make it yours.** Rename the wall and pick a background: softened photos of a listening room, a record shop, a coffee shop or a tavern, or patterns like speaker grille and walnut paneling. Or upload your own.
 - Works on phones, and in light and dark mode.
 
@@ -51,7 +51,7 @@ Discogs sync uses a personal access token (Discogs → Settings → Developers �
 - Only the background task reads it, passes it to the sync script through an environment variable, and deletes its temporary copy when done.
 - Revoke it on Discogs at any time.
 
-The sync only writes to *your* collection and wantlist. It never deletes collection items it didn't add, and it can't edit Discogs' shared release database (the Discogs API doesn't allow that); the record sheet has a button to copy your runout notes for a manual Discogs submission.
+The sync only writes to *your* collection and wantlist, and the import only adds records to your wall; it never changes ones already there. It never deletes collection items it didn't add, and it can't edit Discogs' shared release database (the Discogs API doesn't allow that); the record sheet has a button to copy your runout notes for a manual Discogs submission.
 
 ## What's in this repo
 
@@ -59,6 +59,7 @@ The sync only writes to *your* collection and wantlist. It never deletes collect
 |---|---|
 | `app/vinyl-wall.html` | The wall itself: one self-contained page |
 | `app/tools/discogs_sync.py` | One-way sync from the wall to your Discogs collection and wantlist |
+| `app/tools/discogs_import.py` | One-time import of an existing Discogs collection and wantlist onto the wall |
 | `app/backgrounds/` | The softened photo backgrounds |
 | `tasks/background-task.md` | Instructions for the background task (covers, runtimes, Discogs) |
 | `SETUP.md` | Step-by-step instructions Claude follows to install or update a wall |

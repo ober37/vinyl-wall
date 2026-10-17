@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a listening-room wall. Walnut rails with brass clips run across each row; sleeves hang from them.
+/* Layout: a listening-room wall. A weathered barnwood plank with iron rings runs across each row; sleeves hang from them.
    Two walls: what's owned ("On the wall") and what's being hunted ("The hunt"). Detail opens in a side sheet. */
 :root{
   --wall:#dde2dc; --wall-2:#cfd6cf; --ink:#1b2220; --ink-2:#4b5753; --line:#b9c3bc;
@@ -74,6 +74,8 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .tokstate{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--wall)}
 .tokstate .mask{font:500 14px var(--mono);letter-spacing:.08em}
 .sheet a{color:var(--accent)}
+.importbox{margin-top:18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px}
+.importbox .hint{margin-top:4px}
 .sec-note{font-size:13px;color:var(--ink-2);line-height:1.5;margin:10px 0 0}
 .sec-note li{margin:3px 0}
 input[type=range]{padding:0;border:0;background:none}
@@ -122,7 +124,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
   background:linear-gradient(90deg,color-mix(in srgb,var(--brass) 70%,#000),var(--brass) 40%,color-mix(in srgb,var(--brass) 60%,#fff) 55%,var(--brass) 75%);
   border-radius:3px 3px 5px 5px;box-shadow:0 2px 3px var(--shadow)}
 .clip::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:2px;background:rgba(0,0,0,.25);border-radius:2px}
-/* Rail styles (body.rail-*). Walnut rail + brass clip above is the default; each style restyles the same two pieces:
+/* Rail styles (body.rail-*). The base rules above draw a walnut rail + brass clip; barnwood (rail-barn) is the default style. Each style restyles the same two pieces:
    .slot::before is the rail, .clip is what holds the sleeve. */
 /* Twine and clothespins */
 .rail-twine .slot::before{top:15px;height:3px;border-radius:2px;
@@ -353,7 +355,7 @@ fieldset.gsec>p.hint{margin-bottom:16px}
     <p>Hang the records you'd keep top to bottom. Add one with just the artist and album: the cover, year, label and runtime are looked up for you.</p>
     <ol class="steps">
       <li><b>Add your first record</b><span>Something you own, or one you're hunting for.</span><button class="btn primary small editonly" type="button" data-welcome="add">Add a record</button></li>
-      <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
+      <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync, and can bring in records you've already listed there.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
       <li id="wStepGear"><b>Add your turntable and stylus</b><span>Optional. Plays add up so you know when a stylus is wearing out.</span><button class="btn small editonly" type="button" data-welcome="gear">Set up equipment</button></li>
     </ol>
   </section>
@@ -1063,9 +1065,15 @@ function openSettings(keepScroll){
     <ul class="sec-note">
       <li>Your token is saved in your private space on this page. People you share the wall with can't read it, and it isn't stored in the page itself or with your records.</li>
       <li>It's never shown again after you save it; only its last four characters appear here.</li>
-      <li>Only the background sync reads it, to update your Discogs collection and wantlist.</li>
+      <li>Only the background task reads it, to sync your collection and wantlist and to import from Discogs when you ask.</li>
       <li>You can revoke it at any time on Discogs, and you should if you think it's been exposed.</li>
     </ul>
+    ${dz.status==="ok"?`<div class="importbox">
+      <b>Bring in what's already on Discogs</b>
+      <p class="hint">Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes.</p>
+      <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-import" ${dz.importRequested?"disabled":""}>${dz.importRequested?"Importing…":"Import from Discogs"}</button>
+        <span class="saved">${dz.importRequested?"This takes a few minutes. New records appear on the wall as they come in.":esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>
+    </div>`:""}
   </fieldset>`;
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
@@ -1101,6 +1109,8 @@ function openSettings(keepScroll){
       fireTask();openSettings(true)}
     catch(e){st.textContent="Couldn't save the token: "+(e.message||e.code)}});
   const rp=$("#st-replace"); if(rp) rp.addEventListener("click",()=>{$("#tokEntry").hidden=false;$("#st-token").focus()});
+  const im=$("#st-import"); if(im) im.addEventListener("click",()=>{im.disabled=true;
+    saveSettings({discogs:{...settings.discogs,importRequested:true}}).then(()=>{fireTask();openSettings(true)})});
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
   const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
   $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
@@ -1120,7 +1130,7 @@ async function boot(){
   try{myId=u?await u.id():null}catch(e){myId=null}
   db.doc("settings/site").onSnapshot(snap=>{settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true)},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome()},()=>{});
   db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(typing)return; if(openId==="__gear")openGear(true)},()=>{});
