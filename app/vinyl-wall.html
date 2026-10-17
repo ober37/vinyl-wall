@@ -277,7 +277,7 @@ input.mono{font-family:var(--mono);font-size:13px}
 .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .links a{font:500 13px/1 var(--body);color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 12px}
 .links a:hover{border-color:var(--ink-2)}
-.research{margin-top:12px;font-size:14px}
+.research{margin-top:14px;font-size:14px}
 .research h4{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 6px}
 .research ul{margin:0;padding-left:18px}
 .research li{margin:4px 0}
@@ -490,9 +490,9 @@ function linkSet(r){
 }
 
 function researchHTML(res){
-  if(!res) return `<p class="hint">Ask Claude for the pressings worth owning, what to check in a listing, and a rough price picture. It answers from its own knowledge, so confirm details on Discogs before buying.</p>`;
+  if(!res) return "";
   const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
-  return `<div class="when">Researched ${esc(res.at||"")}</div>
+  return `<div class="when">Researched ${esc(res.at||"")} · from Claude's own knowledge, so check details on Discogs before buying</div>
     ${res.summary?`<p>${esc(res.summary)}</p>`:""}
     ${res.pressings?.length?`<h4>Pressings to look for</h4>${list(res.pressings)}`:""}
     ${res.check?.length?`<h4>What to check in a listing</h4>${list(res.check)}`:""}
@@ -601,9 +601,12 @@ function openSheet(id,keepScroll){
 
   ${wish?`<fieldset class="viewonly" id="findFs"><legend>Find it</legend>
     <div class="links">${linkSet(r)}</div>
-    <div class="research" id="research">${researchHTML(r.research)}</div>
-    <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
-  </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
+  </fieldset>
+  <fieldset class="viewonly" id="resFs"><legend>Research it</legend>
+    <div class="actions editonly"><button class="btn small" type="button" id="resBtn">${r.research?"Research again with Claude":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
+    ${r.research?`<div class="research" id="research">${researchHTML(r.research)}</div>`:""}
+  </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div></fieldset>
+  ${r.research?`<fieldset class="viewonly"><legend>Research it</legend><div class="research">${researchHTML(r.research)}</div></fieldset>`:""}`}
 
   <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
@@ -620,7 +623,7 @@ function openSheet(id,keepScroll){
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
   s.classList.toggle("viewing",!editing);
-  if(wish&&$("#findFs")&&$("#logFs")) $("#logFs").before($("#findFs"));
+  if(wish&&$("#findFs")&&$("#logFs")){$("#logFs").before($("#findFs"));$("#findFs").after($("#resFs"))}
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll) s.scrollTop=0;
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
