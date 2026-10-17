@@ -79,7 +79,7 @@ def artist_of(bi):
     return " ".join(p for p in parts if p).replace(" ,", ",").strip() or "Unknown artist"
 
 
-def pressing_of(bi):
+def pressing_of(bi, limit=120):
     bits = []
     for f in bi.get("formats", []):
         d = [x for x in f.get("descriptions", []) if x not in ("Album",)]
@@ -87,7 +87,15 @@ def pressing_of(bi):
             d.append(f["text"])
         if d:
             bits.append(", ".join(d))
-    return "; ".join(bits)[:120]
+    out = ""
+    for i, b in enumerate(bits):  # keep whole parts only, never cut mid-word
+        nxt = (out + "; " + b) if out else b
+        if len(nxt) > limit:
+            if out:
+                return out + "; +%d more" % (len(bits) - i)
+            return b[:limit].rsplit(" ", 1)[0].rstrip(",;") + "…"
+        out = nxt
+    return out
 
 
 def today():
