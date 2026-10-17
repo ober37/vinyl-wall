@@ -1,0 +1,22 @@
+name: Release
+# Tags and publishes a GitHub release whenever VERSION on main names a version that isn't tagged yet.
+on:
+  push:
+    branches: [main]
+    paths: [VERSION]
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Create tag and release if missing
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="v$(tr -d '[:space:]' < VERSION)"
+          if gh release view "$v" >/dev/null 2>&1; then echo "$v already released"; exit 0; fi
+          gh release create "$v" --target "$GITHUB_SHA" --title "Vinyl Wall $v" \
+            --notes "Set up: paste into Claude: Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/${GITHUB_REPOSITORY}/$v/SETUP.md"
