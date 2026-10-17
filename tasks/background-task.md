@@ -22,7 +22,7 @@ D2. In the working directory, fetch the import script with the Artifact tool: ac
 D3. `list` the "records" collection with out_dir "<workdir>/db-import".
 D4. Run in one shell command: DISCOGS_TOKEN="$(cat <workdir>/tokfile)" DISCOGS_USER=<user> python3 -I <workdir>/tools/discogs_import.py <workdir>/db-import <workdir>/imports.json
 D5. Apply every entry of imports.json with ArtifactData action "batch" (up to 50 per call; pass each entry's op, collection, doc_id and data exactly; these are new documents, so no if_version).
-D6. `get` "settings"/"site" and `update` it (if_version = its version) with discogs fields only: importRequested {"__delete__": true}, importedAt = now as "YYYY-MM-DD HH:MM UTC", importMsg = the script's one-line report (or "Import failed: <short reason>" on an error, still clearing importRequested). Keep the rest of the document.
+D6. `get` "settings"/"site" and `update` it (if_version = its version) with discogs fields only: importRequested {"__delete__": true}, importRequestedAt {"__delete__": true}, importedAt = now as "YYYY-MM-DD HH:MM UTC", importMsg = the script's one-line report (or "Import failed: <short reason>" on an error, still clearing importRequested). Keep the rest of the document.
 D7. Imported records have needsEnrich set, so part A fills in their covers and runtimes in this same run.
 
 PART C — Discogs sync (one-way, wall → Discogs)

@@ -799,6 +799,17 @@ Be specific, be brief, and say plainly when unsure. No markdown.`;
 }
 
 function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
+/* Runs started with no accompanying message sometimes ended without doing anything, so every start says what's waiting. */
+function pendingWork(){
+  const dz=settings.discogs||{},live=records.filter(r=>!r.deleted&&!r.example),w=[];
+  if(dz.hasToken&&(!dz.status||dz.status==="pending")) w.push("verify the Discogs connection (Part B)");
+  if(dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
+  const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).map(r=>`"${r.title}"`);
+  if(enrich.length) w.push(`fill covers and details (Part A) for ${enrich.slice(0,8).join(", ")}${enrich.length>8?` and ${enrich.length-8} more`:""}`);
+  const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
+  if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
+  return "Started from the wall. Waiting now: "+(w.length?w.join("; "):"nothing specific; run every part and do whatever is pending")+". Work through every part in the usual order.";
+}
 async function fireTask(){
   if(!mcp){flash("Background updates aren't available in this view. Ask Claude in chat to sync.");return}
   const wait=lastFire+60000-Date.now();
@@ -806,7 +817,7 @@ async function fireTask(){
   lastFire=Date.now();
   // each install stores the id of its own background task in settings (written during setup)
   const taskId=settings.taskId; if(!taskId){lastFire=0;flash("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");return}
-  try{await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:taskId},{cache:false})}
+  try{await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:taskId,text:pendingWork()},{cache:false})}
   catch(e){lastFire=0;flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
 }
 function runoutText(r){
@@ -1097,7 +1108,8 @@ function openSettings(keepScroll){
       <b>Bring in what's already on Discogs</b>
       <p class="hint">Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes.</p>
       <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-import" ${dz.importRequested?"disabled":""}>${dz.importRequested?"Importing…":"Import from Discogs"}</button>
-        <span class="saved">${dz.importRequested?"This takes a few minutes. New records appear on the wall as they come in.":esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>
+        ${dz.importRequested&&Date.now()-(dz.importRequestedAt||0)>10*60000?`<button class="btn small editonly" type="button" id="st-import-retry">Try again</button>`:""}
+        <span class="saved">${dz.importRequested?(Date.now()-(dz.importRequestedAt||0)>10*60000?"This is taking longer than it should. Try again to restart it.":"This takes a few minutes. New records appear on the wall as they come in."):esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>
     </div>`:""}
   </fieldset>`;
   s.classList.toggle("ro",!canEdit);
@@ -1135,7 +1147,9 @@ function openSettings(keepScroll){
     catch(e){st.textContent="Couldn't save the token: "+(e.message||e.code)}});
   const rp=$("#st-replace"); if(rp) rp.addEventListener("click",()=>{$("#tokEntry").hidden=false;$("#st-token").focus()});
   const im=$("#st-import"); if(im) im.addEventListener("click",()=>{im.disabled=true;
-    saveSettings({discogs:{...settings.discogs,importRequested:true}}).then(()=>{fireTask();openSettings(true)})});
+    saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
+  const ir=$("#st-import-retry"); if(ir) ir.addEventListener("click",()=>{ir.disabled=true;
+    saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
   const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
   $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
