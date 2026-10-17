@@ -1107,9 +1107,9 @@ function openSettings(keepScroll){
     ${dz.status==="ok"?`<div class="importbox">
       <b>Bring in what's already on Discogs</b>
       <p class="hint">Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes.</p>
-      <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-import" ${dz.importRequested?"disabled":""}>${dz.importRequested?"Importing…":"Import from Discogs"}</button>
+      ${!mcp||!settings.taskId?`<p class="hint">Importing runs in the background, which isn't connected for this page. Open your own wall to import.</p>`:`<div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-import" ${dz.importRequested?"disabled":""}>${dz.importRequested?"Importing…":"Import from Discogs"}</button>
         ${dz.importRequested&&Date.now()-(dz.importRequestedAt||0)>10*60000?`<button class="btn small editonly" type="button" id="st-import-retry">Try again</button>`:""}
-        <span class="saved">${dz.importRequested?(Date.now()-(dz.importRequestedAt||0)>10*60000?"This is taking longer than it should. Try again to restart it.":"This takes a few minutes. New records appear on the wall as they come in."):esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>
+        <span class="saved">${dz.importRequested?(Date.now()-(dz.importRequestedAt||0)>10*60000?"This is taking longer than it should. Try again to restart it.":"This takes a few minutes. New records appear on the wall as they come in."):esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>`}
     </div>`:""}
   </fieldset>`;
   s.classList.toggle("ro",!canEdit);
