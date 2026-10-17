@@ -6,9 +6,10 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 ## Next
 
-1. **Release v0.2.0** so new installs (and friends testing) get the current version.
-2. **First real Discogs import** on a tester's wall; it has only run against simulated data.
-3. **Feedback channel** for testers (GitHub Issues).
+1. **Feedback channel** for testers (GitHub Issues).
+2. **First outside install** of v0.2.0 by a tester, from the setup link alone.
+
+Done in v0.2.0: release tagged; Discogs import tested on a real collection and wantlist.
 
 ## Ideas, roughly in order of fit
 
