@@ -241,7 +241,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .pill{white-space:nowrap}
 @media (max-width:460px){.sheet-head{flex-wrap:wrap}.headbtns{order:-1;width:100%;justify-content:flex-end;margin-bottom:-4px}}
 .sheet.viewing .editpart{display:none!important}
-.sheet:not(.viewing) .viewpart{display:none}
+.sheet:not(.viewing) .viewpart,.sheet:not(.viewing) .viewonly{display:none!important}
 .viewpart{margin-top:20px}
 .why{margin:0;padding:2px 0 2px 16px;border-left:3px solid var(--brass);font-size:17px;line-height:1.55;white-space:pre-wrap;text-wrap:pretty}
 .whyadd{display:block;width:100%;text-align:left;font:inherit;color:var(--ink-2);background:none;border:1px dashed var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
@@ -569,7 +569,7 @@ function openSheet(id,keepScroll){
   </fieldset>
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
-  <fieldset><legend>Listening log</legend>
+  <fieldset class="viewonly"><legend>Listening log</legend>
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
@@ -577,17 +577,17 @@ function openSheet(id,keepScroll){
     <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
   </fieldset>
 
-  ${wish?`<fieldset><legend>Find it</legend>
+  ${wish?`<fieldset class="viewonly"><legend>Find it</legend>
     <div class="links">${linkSet(r)}</div>
     <div class="research" id="research">${researchHTML(r.research)}</div>
     <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
-  </fieldset>`:`<fieldset><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
+  </fieldset>`:`<fieldset class="viewonly"><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
 
   <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
   <div class="actions editonly" style="margin-top:24px">
-    ${ord?`<button class="btn primary" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
-    ${wish?`<button class="btn primary" type="button" id="ordBtn">I ordered it</button><button class="btn" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
+    ${ord?`<button class="btn primary viewonly" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
+    ${wish?`<button class="btn primary viewonly" type="button" id="ordBtn">I ordered it</button><button class="btn viewonly" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
     <button class="btn danger small editpart" type="button" id="delBtn">Remove</button>
     <span class="saved" id="saved"></span>
   </div>
