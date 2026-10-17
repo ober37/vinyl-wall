@@ -40,6 +40,9 @@ Most played, last spun, and stylus hours by record, from the existing play log.
 ### Research notes (#7)
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
 
+### Export and import from a file (#10)
+Back up the library as JSON or a spreadsheet CSV, and bring records in from a backup, a CSV or a Discogs export file.
+
 ### Show when background work hit a usage limit (#3)
 Say so plainly instead of waiting out the 15-minute timeout.
 
