@@ -76,8 +76,6 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .sheet a{color:var(--accent)}
 .importbox{margin-top:18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px}
 .importbox .hint{margin-top:4px}
-.sec-note{font-size:13px;color:var(--ink-2);line-height:1.5;margin:10px 0 0}
-.sec-note li{margin:3px 0}
 input[type=range]{padding:0;border:0;background:none}
 .wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -1062,12 +1060,6 @@ function openSettings(keepScroll){
     ${dz.hasToken?`<div class="actions" style="margin-top:12px"><button class="btn small" type="button" id="st-replace">Replace token</button><button class="btn small" type="button" id="st-recheck">Check again</button><button class="btn danger small" type="button" id="st-remove">Remove token</button></div>`:""}
     <div class="confirm" id="tok-confirm"><span>Remove your token? Syncing with Discogs stops until you add one again.</span><button class="btn danger small" type="button" id="tok-yes">Remove</button><button class="btn small" type="button" id="tok-no">Cancel</button></div>
     <span class="saved" id="tokStatus"></span>
-    <ul class="sec-note">
-      <li>Your token is saved in your private space on this page. People you share the wall with can't read it, and it isn't stored in the page itself or with your records.</li>
-      <li>It's never shown again after you save it; only its last four characters appear here.</li>
-      <li>Only the background task reads it, to sync your collection and wantlist and to import from Discogs when you ask.</li>
-      <li>You can revoke it at any time on Discogs, and you should if you think it's been exposed.</li>
-    </ul>
     ${dz.status==="ok"?`<div class="importbox">
       <b>Bring in what's already on Discogs</b>
       <p class="hint">Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes.</p>
