@@ -122,6 +122,9 @@ def base_record(bi, status, ms):
            "pressing": pressing_of(bi), "discogsId": bi["id"], "discogsMatch": "imported from Discogs",
            "notes": [], "why": "", "added": ms, "needsEnrich": True, "importedFrom": "discogs",
            "autoFilled": ["year", "label"]}
+    img = bi.get("cover_image") or ""
+    if img.startswith("https://") and "spacer.gif" not in img:
+        rec["coverHint"] = img  # Discogs' own picture of this exact pressing; part A tries it first
     return rec
 
 
