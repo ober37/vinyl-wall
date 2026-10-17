@@ -121,6 +121,51 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
   background:linear-gradient(90deg,color-mix(in srgb,var(--brass) 70%,#000),var(--brass) 40%,color-mix(in srgb,var(--brass) 60%,#fff) 55%,var(--brass) 75%);
   border-radius:3px 3px 5px 5px;box-shadow:0 2px 3px var(--shadow)}
 .clip::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:2px;background:rgba(0,0,0,.25);border-radius:2px}
+/* Rail styles (body.rail-*). Walnut rail + brass clip above is the default; each style restyles the same two pieces:
+   .slot::before is the rail, .clip is what holds the sleeve. */
+/* Twine and clothespins */
+.rail-twine .slot::before{top:15px;height:3px;border-radius:2px;
+  background:repeating-linear-gradient(118deg,#c9a46e 0 2px,#9c7746 2px 4px,#b48c58 4px 6px);box-shadow:0 2px 2px var(--shadow)}
+.rail-twine .hanger{transform-origin:50% -14px}
+.rail-twine .slot:nth-child(odd) .hanger{transform:rotate(-2deg)}
+.rail-twine .slot:nth-child(even) .hanger{transform:rotate(1.6deg)}
+.rail-twine .slot:nth-child(3n) .hanger{transform:rotate(-.6deg)}
+.rail-twine .clip{width:14px;height:42px;margin-left:-7px;top:-27px;border-radius:2px 2px 3px 3px;
+  background:linear-gradient(90deg,#b8935e,#e2c896 35%,#d4b47d 60%,#a98451);box-shadow:1px 2px 3px var(--shadow)}
+.rail-twine .clip::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-.5px;background:rgba(70,45,20,.45)}
+.rail-twine .clip::after{left:-2px;right:-2px;top:13px;bottom:auto;height:5px;border-radius:2px;
+  background:linear-gradient(#d7dade,#8e9399 55%,#5f646a)}
+/* Barnwood plank and iron hooks */
+.rail-barn .slot::before{top:4px;height:20px;
+  background:radial-gradient(circle at 12px 50%,#26231f 0 2px,rgba(255,255,255,.18) 2.6px,transparent 3.2px),
+    radial-gradient(circle at calc(100% - 12px) 50%,#26231f 0 2px,rgba(255,255,255,.18) 2.6px,transparent 3.2px),
+    repeating-linear-gradient(180deg,rgba(0,0,0,.10) 0 1px,transparent 1px 3px,rgba(255,255,255,.05) 3px 4px,transparent 4px 7px),
+    linear-gradient(#8d7b66,#6f604f 55%,#564a3d);
+  box-shadow:0 4px 8px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12),inset 0 -1px 0 rgba(0,0,0,.35)}
+.rail-barn .slot+.slot::before{border-left:1px solid rgba(0,0,0,.35)}
+.rail-barn .clip{width:26px;height:26px;margin-left:-13px;top:-14px;background:none;box-shadow:none;border-radius:50%;
+  border:4px solid #3b3936;border-top-color:#8a857e;border-left-color:#5a5651;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+.rail-barn .clip::after{left:50%;right:auto;width:12px;margin-left:-6px;top:-14px;bottom:auto;height:10px;border-radius:2px;
+  background:radial-gradient(circle at 50% 50%,#6a6a6a 0 1.2px,transparent 1.8px),linear-gradient(#3b3b3b,#151515);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+/* Iron pipe and leather straps */
+.rail-pipe .slot::before{top:11px;height:12px;
+  background:linear-gradient(#6d7277,#3a3e42 45%,#1f2225 80%,#2c3034);box-shadow:0 4px 7px var(--shadow)}
+.rail-pipe .hanger{transform-origin:50% -16px}
+.rail-pipe .clip{width:17px;height:38px;margin-left:-8.5px;top:-26px;border-radius:4px 4px 3px 3px;
+  background:linear-gradient(90deg,#5c3519,#8d5730 45%,#7a4826 70%,#5a3318);box-shadow:0 2px 3px var(--shadow)}
+.rail-pipe .clip::before{content:"";position:absolute;inset:3px 3px 12px;border:1px dashed rgba(240,214,170,.55);border-radius:2px}
+.rail-pipe .clip::after{left:50%;right:auto;width:7px;height:7px;margin-left:-3.5px;bottom:3px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#f3d58e,#b8862f 60%,#6e4c17)}
+/* Shaker peg rail and picture wire */
+.rail-peg .slot::before{top:2px;height:15px;
+  background:repeating-linear-gradient(178deg,rgba(0,0,0,.05) 0 1px,transparent 1px 4px),
+    linear-gradient(#c79a62,#a87845 55%,#8a5f33);box-shadow:0 4px 7px var(--shadow),inset 0 1px 0 rgba(255,255,255,.2)}
+.rail-peg .hanger{transform-origin:50% -20px}
+.rail-peg .clip{width:15px;height:15px;margin-left:-7.5px;top:-24px;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,#e6be86,#b07c45 55%,#7c522a);box-shadow:0 3px 4px var(--shadow)}
+.rail-peg .clip::after{display:none}
+.rail-peg .hanger::before{content:"";position:absolute;left:10%;right:10%;top:-18px;height:20px;z-index:2;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23c49a5e' stroke-width='2.2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;background-size:100% 100%}
 .sleeve-btn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;text-align:left;color:inherit;position:relative}
 .sleeve-box{position:relative;aspect-ratio:1;max-width:100%}
 .disc{position:absolute;inset:3% 3% 3% 3%;border-radius:50%;z-index:0;
@@ -162,7 +207,20 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .sheet{visibility:hidden}
 .sheet.on{transform:none;visibility:visible}
 .sheet-head{display:flex;gap:16px;align-items:flex-start}
-.sheet-head .art{width:132px;flex:none;position:relative}
+.sheet-head .art{width:132px;flex:none;position:relative;transition:width .25s ease}
+.sheet.viewing .sheet-head .art{width:176px}
+.headbtns{display:flex;gap:6px;flex:none}
+.pill{white-space:nowrap}
+@media (max-width:460px){.sheet-head{flex-wrap:wrap}.headbtns{order:-1;width:100%;justify-content:flex-end;margin-bottom:-4px}}
+.sheet.viewing .editpart{display:none!important}
+.sheet:not(.viewing) .viewpart{display:none}
+.viewpart{margin-top:20px}
+.why{margin:0;padding:2px 0 2px 16px;border-left:3px solid var(--brass);font-size:17px;line-height:1.55;white-space:pre-wrap;text-wrap:pretty}
+.whyadd{display:block;width:100%;text-align:left;font:inherit;color:var(--ink-2);background:none;border:1px dashed var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
+.whyadd:hover{border-color:var(--brass);color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px 18px;margin:18px 0 0}
+.facts dt{font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:5px}
+.facts dd{margin:0;font-size:14px;overflow-wrap:anywhere}
 .sheet-head .art .cover,.sheet-head .art .gen{aspect-ratio:1;height:auto}
 .sheet-head .art .gen .t{font-size:18px}
 .sheet h3{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:34px;line-height:.95;margin:0;text-wrap:balance;overflow-wrap:anywhere}
@@ -173,7 +231,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 fieldset{border:0;border-top:1px solid var(--line);margin:22px 0 0;padding:16px 0 0;min-width:0}
 legend{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2);padding-right:10px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:460px){.grid2{grid-template-columns:1fr}.sheet-head .art{width:96px}.sheet h3{font-size:26px}}
+@media (max-width:460px){.grid2{grid-template-columns:1fr}.sheet-head .art{width:96px}.sheet.viewing .sheet-head .art{width:120px}.sheet h3{font-size:26px}}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);min-width:0}
 input,textarea,select{font:inherit;font-size:14px;color:var(--ink);background:var(--wall);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
 textarea{resize:vertical;min-height:80px;line-height:1.5}
@@ -371,10 +429,27 @@ function researchHTML(res){
     ${res.price?`<h4>Price picture</h4><p>${esc(res.price)}</p>`:""}`;
 }
 
+let sheetMode={id:null,edit:false};
+function factsHTML(r){
+  const wish=r.status==="wish",ord=r.status==="ordered",f=[];
+  const lab=[r.label,r.catalog].filter(Boolean).join(" · "); if(lab)f.push(["Label",esc(lab)]);
+  if(r.pressing)f.push([wish?"Target pressing":ord?"Edition":"Pressing",esc(r.pressing)]);
+  if(r.runtime)f.push(["Runtime",esc(r.runtime)+" min"]);
+  if(wish){f.push(["Priority",r.priority==1?"Top want":r.priority==3?"Someday":"Want"]);if(r.budget)f.push(["Budget","$"+esc(r.budget)])}
+  else if(ord){if(r.shop)f.push(["From",esc(r.shop)]);
+    f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(shortDate(r.eta)):"")]);
+    if(r.tracking)f.push(["Tracking",`<a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a>`])}
+  else{const g=[r.mediaGrade,r.sleeveGrade].filter(Boolean);if(g.length)f.push(["Grades",esc(r.mediaGrade||"—")+" / "+esc(r.sleeveGrade||"—")]);
+    const b=[r.shop,r.acquired?shortDate(r.acquired):"",r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
+    if(r.matrix)f.push(["Runout",`<span class="mono">${esc(r.matrix)}</span>`])}
+  return f.length?`<dl class="facts">${f.map(([k,v])=>`<div><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`:"";
+}
 function openSheet(id,keepScroll){
   const isNew=id===null;
   const r=isNew?{status:"wish",priority:2,notes:[]}:records.find(x=>x.id===id); if(!r) return;
   openId=isNew?"__new":id; if(isNew){newId=null;creating=false}
+  if(sheetMode.id!==id) sheetMode={id,edit:false};
+  const editing=isNew||sheetMode.edit;
   const s=$("#sheet"); const wish=r.status==="wish"; const ord=r.status==="ordered";
   const ostatOpts=Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("");
   const gradeOpts=v=>GRADES.map(g=>`<option ${g===(v||"")?"selected":""} value="${g}">${g||"—"}</option>`).join("");
@@ -385,10 +460,15 @@ function openSheet(id,keepScroll){
       <h3 id="sTitle">${isNew?"Add a record":esc(r.title)}</h3>
       ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"On the way":wish?"On the hunt":"On the wall"}</span>`}
     </div>
-    <button class="btn small closex" type="button" id="closeBtn">Close</button>
+    <div class="headbtns">${isNew?"":`<button class="btn small editonly" type="button" id="modeBtn">${editing?"Done":"Edit"}</button>`}<button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   </div>
+  ${isNew?"":`<div class="viewpart">
+    ${r.why?`<blockquote class="why">${esc(r.why)}</blockquote>`:`<button class="whyadd editonly" type="button" id="whyAdd">${wish||ord?"Why do you want this one? Add a few words…":"Why is this one on the wall? Add a few words…"}</button>`}
+    ${factsHTML(r)}
+    <div class="actions editonly" style="margin-top:14px"><button class="btn small" type="button" id="editBtn">Edit details</button></div>
+  </div>`}
 
-  <fieldset><legend>The record</legend>
+  <fieldset class="editpart"><legend>The record</legend>
     <div class="grid2">
       <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="Kind of Blue"></label>
       <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="Miles Davis"></label>
@@ -403,11 +483,11 @@ function openSheet(id,keepScroll){
     </div>
   </fieldset>
 
-  <fieldset><legend>Why it's on the wall</legend>
+  <fieldset class="editpart"><legend>Why it's on the wall</legend>
     <textarea id="f-why" placeholder="What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it.">${esc(r.why)}</textarea>
   </fieldset>
 
-  ${ord?`<fieldset><legend>The order</legend>
+  ${ord?`<fieldset class="editpart"><legend>The order</legend>
     <div class="grid2">
       <label class="f">Bought from<input id="f-shop" value="${esc(r.shop)}" placeholder="Band webstore, Rough Trade, Discogs seller…"></label>
       <label class="f">Order status<select id="f-ostat">${ostatOpts}</select></label>
@@ -422,7 +502,7 @@ function openSheet(id,keepScroll){
     ${r.tracking?`<div class="links" style="margin-top:12px"><a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a></div>`:""}
   </fieldset>`:""}
 
-  <fieldset><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
+  <fieldset class="editpart"><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
     <div class="grid2">
       <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="Columbia"></label>
       <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="CS 8163"></label>
@@ -441,11 +521,11 @@ function openSheet(id,keepScroll){
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
   <fieldset><legend>Listening log</legend>
-    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
-    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="Side B hit different tonight…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
+    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="Side B hit different tonight…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
   </fieldset>
 
   ${wish?`<fieldset><legend>Find it</legend>
@@ -454,12 +534,12 @@ function openSheet(id,keepScroll){
     <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
   </fieldset>`:`<fieldset><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
 
-  <fieldset><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
+  <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
   <div class="actions editonly" style="margin-top:24px">
     ${ord?`<button class="btn primary" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
     ${wish?`<button class="btn primary" type="button" id="ordBtn">I ordered it</button><button class="btn" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
-    <button class="btn danger small" type="button" id="delBtn">Remove</button>
+    <button class="btn danger small editpart" type="button" id="delBtn">Remove</button>
     <span class="saved" id="saved"></span>
   </div>
   <div class="confirm" id="delConfirm"><span>Remove ${esc(r.title)} and its notes for good?</span><button class="btn danger small" type="button" id="delYes">Remove</button><button class="btn small" type="button" id="delNo">Keep it</button></div>`}
@@ -468,6 +548,7 @@ function openSheet(id,keepScroll){
   for(const [fid,k] of Object.entries(FMAP)){if(AF.includes(k)){const el=document.getElementById(fid);if(el&&el.parentElement)el.parentElement.firstChild.after(Object.assign(document.createElement("span"),{className:"auto",textContent:"auto-filled"}))}}
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
+  s.classList.toggle("viewing",!editing);
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll) s.scrollTop=0;
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
@@ -477,6 +558,10 @@ function openSheet(id,keepScroll){
     $("#createBtn").addEventListener("click",()=>createRecord());
   } else {
     s.querySelectorAll("input:not([type=file]):not(#f-note),textarea,select").forEach(el=>el.addEventListener("input",()=>schedule(r,el.id==="f-status")));
+    const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
+    $("#modeBtn").addEventListener("click",()=>setMode(!editing));
+    $("#editBtn").addEventListener("click",()=>setMode(true,"f-title"));
+    if($("#whyAdd")) $("#whyAdd").addEventListener("click",()=>setMode(true,"f-why"));
     $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
     s.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>logPlay(r,b.dataset.play)));
