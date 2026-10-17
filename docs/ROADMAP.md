@@ -14,7 +14,9 @@ Done in v0.2.0: release tagged; Discogs import tested on a real collection and w
 
 ## Ideas, roughly in order of fit
 
-### Local record shops: "it's in stock near you"
+Each one is a [GitHub issue labeled enhancement](https://github.com/ober37/vinyl-wall/issues?q=is%3Aissue+label%3Aenhancement) with the details needed to build it.
+
+### Local record shops: "it's in stock near you" (#1)
 Many independent shops publish their inventory online, and several run the same storefront software, with product pages addressed by barcode (for example `…/UPC/093624843276`). That makes one integration cover many shops.
 
 - **Your shops:** a short list in Settings (name and website), e.g. Siren Records in McHenry.
@@ -23,21 +25,24 @@ Many independent shops publish their inventory online, and several run the same 
 - **On the wall:** a tag on the sleeve ("In stock at Siren · $39.98") and a line in the record's Find it section with a link to the shop's page.
 - **Care points:** respect each site's terms and keep requests light; treat listings as "call to confirm"; fall back to a title search for shops without barcode pages.
 
-### Price watch for the hunt
+### Price watch for the hunt (#2)
 Alert when a wanted pressing is listed on Discogs under your budget. Same background-task pattern as shop checks.
 
-### Sharing
+### Sharing (#4)
 A share image of the wall, and a view-only link for friends.
 
-### Wishlist as a gift list
+### Wishlist as a gift list (#5)
 A shareable page of the hunt (priorities, target pressings, where to buy) for birthdays and holidays.
 
-### Listening insights
+### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
 
-### Research notes
+### Research notes (#7)
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
 
+### Show when background work hit a usage limit (#3)
+Say so plainly instead of waiting out the 15-minute timeout.
+
 ### Smaller polish
-- Simpler "add equipment" flow (pick the type after tapping Add).
-- Rail style picker in Settings (walnut, twine, barnwood, pipe, peg are already in the code).
+- Simpler "add equipment" flow (pick the type after tapping Add) (#8).
+- Rail style picker in Settings (walnut, twine, barnwood, pipe, peg are already in the code) (#9).
