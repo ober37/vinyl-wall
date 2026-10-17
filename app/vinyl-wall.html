@@ -136,13 +136,21 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .rail-twine .clip::after{left:-2px;right:-2px;top:13px;bottom:auto;height:5px;border-radius:2px;
   background:linear-gradient(#d7dade,#8e9399 55%,#5f646a)}
 /* Barnwood plank and iron hooks */
-.rail-barn .slot::before{top:4px;height:20px;
-  background:radial-gradient(circle at 12px 50%,#26231f 0 2px,rgba(255,255,255,.18) 2.6px,transparent 3.2px),
-    radial-gradient(circle at calc(100% - 12px) 50%,#26231f 0 2px,rgba(255,255,255,.18) 2.6px,transparent 3.2px),
-    repeating-linear-gradient(180deg,rgba(0,0,0,.10) 0 1px,transparent 1px 3px,rgba(255,255,255,.05) 3px 4px,transparent 4px 7px),
-    linear-gradient(#8d7b66,#6f604f 55%,#564a3d);
-  box-shadow:0 4px 8px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12),inset 0 -1px 0 rgba(0,0,0,.35)}
-.rail-barn .slot+.slot::before{border-left:1px solid rgba(0,0,0,.35)}
+.rail-barn .slot::before{top:3px;height:21px;
+  background:
+    radial-gradient(circle at 12px 52%,#1c1916 0 1.8px,rgba(120,64,28,.55) 2.4px,rgba(120,64,28,.18) 4.5px,transparent 6px),
+    radial-gradient(circle at calc(100% - 12px) 48%,#1c1916 0 1.8px,rgba(120,64,28,.55) 2.4px,rgba(120,64,28,.18) 4.5px,transparent 6px),
+    radial-gradient(ellipse 13px 4px at var(--knot,64%) 58%,rgba(20,14,9,.7),rgba(20,14,9,.25) 60%,transparent 75%),
+    radial-gradient(ellipse 22px 7px at var(--knot,64%) 58%,transparent 45%,rgba(0,0,0,.18) 60%,transparent 80%),
+    linear-gradient(180deg,transparent 34%,rgba(0,0,0,.45) 34% 39%,transparent 39%) var(--crack,22%) 0/var(--crack-w,38%) 100% no-repeat,
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 31px,rgba(0,0,0,.09) 31px 37px,transparent 37px 73px,rgba(0,0,0,.05) 73px 76px,transparent 76px 109px),
+    repeating-linear-gradient(180deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px,rgba(255,255,255,.04) 3px 4px,transparent 4px 6px,rgba(0,0,0,.08) 6px 7px,transparent 7px 9px),
+    linear-gradient(#5e5244,#4a3f33 48%,#3a3128 85%,#2f2820);
+  box-shadow:0 5px 9px var(--shadow),inset 0 1px 0 rgba(255,255,255,.08),inset 0 -2px 0 rgba(0,0,0,.4)}
+.rail-barn .slot:nth-child(3n+2)::before{--knot:28%;--crack:58%;--crack-w:30%}
+.rail-barn .slot:nth-child(3n)::before{--knot:81%;--crack:8%;--crack-w:24%}
+.rail-barn .slot:nth-child(4n)::before{--crack-w:0%}
+.rail-barn .slot+.slot::before{border-left:1px solid rgba(0,0,0,.5)}
 .rail-barn .clip{width:26px;height:26px;margin-left:-13px;top:-14px;background:none;box-shadow:none;border-radius:50%;
   border:4px solid #3b3936;border-top-color:#8a857e;border-left-color:#5a5651;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
 .rail-barn .clip::after{left:50%;right:auto;width:12px;margin-left:-6px;top:-14px;bottom:auto;height:10px;border-radius:2px;
@@ -195,6 +203,26 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .example.finding{top:auto;bottom:6px;background:var(--accent);color:var(--accent-ink)}
 .auto{color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-left:6px}
 .example{position:absolute;z-index:4;left:6px;top:6px;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.6);color:#fff;padding:4px 6px;border-radius:2px}
+/* First run */
+.welcome{max-width:720px;margin:8px 0 40px;padding:28px 28px 24px;border-radius:14px;background:color-mix(in srgb,var(--sheet) 88%,transparent);
+  border:1px solid var(--line);box-shadow:0 10px 30px var(--shadow)}
+.welcome p{margin:10px 0 0;color:var(--ink-2);max-width:58ch}
+.steps{list-style:none;counter-reset:st;padding:0;margin:22px 0 0;display:grid;gap:12px}
+.steps li{counter-increment:st;display:grid;grid-template-columns:34px 1fr auto;grid-template-rows:auto auto;column-gap:14px;align-items:center;
+  padding:14px 0;border-top:1px solid var(--line)}
+.steps li::before{content:counter(st);grid-row:1/3;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  font:500 13px/1 var(--mono);border:1px solid var(--line);color:var(--ink-2)}
+.steps li b{font-weight:600}
+.steps li span{grid-column:2;color:var(--ink-2);font-size:13px}
+.steps li .btn{grid-column:3;grid-row:1/3}
+.steps li.done::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps li.done .btn{opacity:.6}
+@media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
+/* Small text stays readable over photo backgrounds */
+:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,h2 small,.cap .a,.cap .meta){
+  color:color-mix(in srgb,var(--ink-2) 55%,var(--ink));text-shadow:0 0 2px var(--wall),0 0 8px var(--wall),0 0 14px var(--wall)}
+/* Touch screens get no hover peek, so show a sliver of vinyl and a press response instead */
+@media (hover:none){.disc{transform:translateX(9%)}.sleeve-btn:active .sleeve-box{transform:scale(.975);transition:transform .12s}}
 .empty{border:1.5px dashed var(--line);border-radius:6px;padding:28px 20px;color:var(--ink-2);margin-top:18px;max-width:640px}
 .status{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:12px;min-height:1.2em}
 
@@ -317,6 +345,16 @@ fieldset.gsec>p.hint{margin-bottom:16px}
     </div>
   </header>
 
+  <section class="welcome" id="welcome" hidden aria-labelledby="h-welcome">
+    <h2 id="h-welcome">Start your wall</h2>
+    <p>Hang the records you'd keep top to bottom. Add one with just the artist and album: the cover, year, label and runtime are looked up for you.</p>
+    <ol class="steps">
+      <li><b>Add your first record</b><span>Something you own, or one you're hunting for.</span><button class="btn primary small editonly" type="button" data-welcome="add">Add a record</button></li>
+      <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
+      <li id="wStepGear"><b>Add your turntable and stylus</b><span>Optional. Plays add up so you know when a stylus is wearing out.</span><button class="btn small editonly" type="button" data-welcome="gear">Set up equipment</button></li>
+    </ol>
+  </section>
+
   <section class="wallsec" aria-labelledby="h-own">
     <div class="sec-head"><h2 id="h-own">On the wall<small>owned · then on order by expected arrival</small></h2></div>
     <div class="rack" id="rackOwn"></div>
@@ -385,6 +423,16 @@ function sleeve(r){
     </button></div></div>`;
 }
 
+let recordsLoaded=false;
+function renderWelcome(){
+  const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0;
+  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show);
+  if(!show) return;
+  $("#wStepDiscogs").classList.toggle("done",settings?.discogs?.status==="ok");
+  $("#wStepGear").classList.toggle("done",gear.some(g=>!g.example));
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
+  const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings(); else openGear()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
@@ -396,6 +444,7 @@ function render(){
   $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
   $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
+  renderWelcome();
 }
 
 document.addEventListener("click",e=>{
@@ -647,10 +696,23 @@ async function createRecord(){
   catch(e){creating=false;$("#saved").textContent="Couldn't add it: "+(e.message||e.code);if(cb){cb.disabled=false;cb.textContent="Hang it"}}
 }
 let pendingCover=null;
+/* Shrink an image before storing it: sleeves show covers at ~170px, so a phone photo or a 1400px scan is mostly wasted bytes.
+   Falls back to the original file if the browser can't decode it. */
+async function shrinkImage(file,max,quality){
+  try{
+    const bmp=await createImageBitmap(file); const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    if(k===1&&file.size<250*1024){bmp.close&&bmp.close();return file}
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height); bmp.close&&bmp.close();
+    const blob=await new Promise(res=>c.toBlob(res,"image/jpeg",quality));
+    if(!blob||blob.size>=file.size) return file;
+    return new File([blob],(file.name||"image").replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }catch(e){return file}
+}
 async function uploadCover(r,file){
   if(!file) return; if(!assets){flash("Cover uploads aren't available in this view.");return}
   const sv=document.getElementById("saved"); if(sv) sv.textContent="Uploading cover…";
-  try{const a=await assets.upload(file);
+  try{const a=await assets.upload(await shrinkImage(file,500,.82));
     if(r){await write(r.id,{coverAsset:a.id,needsEnrich:false,autoFilled:(r.autoFilled||[]).filter(k=>k!=="coverAsset")},true)} else {pendingCover=a.id; if(sv) sv.textContent="Cover ready. It'll hang with the record."}
   }catch(e){if(sv) sv.textContent="Upload failed: "+(e.message||e.code)}
 }
@@ -915,6 +977,7 @@ const PHOTO_PRESETS={
   tavern:`Tavern photo, softened.`};
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
+const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
 function applySettings(){
   const t=(settings.title||"").trim()||DEFAULT_TITLE;
   $("#pageTitle").textContent=t; document.title=t;
@@ -992,7 +1055,7 @@ function openSettings(keepScroll){
   const up=$("#st-upload"); if(up) up.addEventListener("change",async()=>{const f=up.files[0];if(!f)return;const st=$("#bgStatus");
     if(f.size>15*1024*1024){st.textContent="That image is over 15 MB. Try a smaller one.";return}
     st.textContent="Uploading…";
-    try{const a=await assets.upload(f);await saveSettings({uploads:[...(settings.uploads||[]),{id:a.id,name:(f.name||"Your photo").replace(/\.[^.]+$/,"").slice(0,40)}],bg:{kind:"photo",assetId:a.id},dim:settings.dim??70});openSettings(true)}
+    try{const a=await assets.upload(await shrinkImage(f,2000,.82));await saveSettings({uploads:[...(settings.uploads||[]),{id:a.id,name:(f.name||"Your photo").replace(/\.[^.]+$/,"").slice(0,40)}],bg:{kind:"photo",assetId:a.id},dim:settings.dim??70});openSettings(true)}
     catch(e){st.textContent="Upload failed: "+(e.message||e.code)}});
   let rmId=null;
   s.querySelectorAll("[data-rmbg]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();rmId=b.dataset.rmbg;$("#bg-confirm").classList.add("on")}));
@@ -1043,10 +1106,10 @@ async function boot(){
   db.collection("records").onSnapshot(snap=>{
     const before=openId&&openId!=="__new"?JSON.stringify(records.find(x=>x.id===openId)):null;
     records=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>!x.deleted);
-    render();
+    recordsLoaded=true; render();
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash(records.length?"":"The wall is empty. Add your first record.");
+      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");
     if(records.length) flash("");
   },e=>flash("Couldn't load the wall: "+e.message));
 }
