@@ -1,6 +1,7 @@
 <title>Vinyl Wall</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a listening-room wall. Walnut rails with brass clips run across each row; sleeves hang from them.
@@ -426,6 +427,17 @@ function sleeve(r){
 }
 
 let recordsLoaded=false;
+/* Keyed rendering: a sleeve is rebuilt only when its markup changes; otherwise the same element (and its loaded cover)
+   is kept and just moved into place. One edit or a sync of many records no longer redraws the whole wall. */
+const sleeveCache=new Map();
+function syncRack(rack,list){
+  const want=list.map(r=>{const h=sleeve(r);let c=sleeveCache.get(r.id);
+    if(!c||c.h!==h){const t=document.createElement("template");t.innerHTML=h.trim();c={h,el:t.content.firstElementChild};sleeveCache.set(r.id,c)}
+    return c.el});
+  const keep=new Set(want);
+  for(const n of [...rack.children]) if(!keep.has(n)) n.remove();
+  want.forEach((el,i)=>{if(rack.children[i]!==el) rack.insertBefore(el,rack.children[i]||null)});
+}
 function renderWelcome(){
   const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0;
   w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show); $(".tally").hidden=show;
@@ -441,8 +453,8 @@ function render(){
   $("#nOrd").textContent=ord.length;
   const own=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").sort((a,b)=>(a.added||0)-(b.added||0));
   const wish=records.filter(r=>r.status==="wish").sort((a,b)=>(a.priority||2)-(b.priority||2)||(a.added||0)-(b.added||0));
-  $("#rackOwn").innerHTML=own.concat(ord).map(sleeve).join("");
-  $("#rackWish").innerHTML=wish.map(sleeve).join("");
+  syncRack($("#rackOwn"),own.concat(ord)); syncRack($("#rackWish"),wish);
+  for(const id of sleeveCache.keys()) if(!records.some(r=>r.id===id)) sleeveCache.delete(id);
   $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
   $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
@@ -488,7 +500,7 @@ function researchHTML(res){
     ${res.price?`<h4>Price picture</h4><p>${esc(res.price)}</p>`:""}`;
 }
 
-let sheetMode={id:null,edit:false};
+let sheetMode={id:null,edit:false},newDraft=null;
 function factsHTML(r){
   const wish=r.status==="wish",ord=r.status==="ordered",f=[];
   const lab=[r.label,r.catalog].filter(Boolean).join(" · "); if(lab)f.push(["Label",esc(lab)]);
@@ -506,7 +518,7 @@ function factsHTML(r){
 }
 function openSheet(id,keepScroll){
   const isNew=id===null;
-  const r=isNew?{status:"wish",priority:2,notes:[]}:records.find(x=>x.id===id); if(!r) return;
+  const r=isNew?(newDraft||{status:"wish",priority:2,notes:[]}):records.find(x=>x.id===id); if(!r) return;
   openId=isNew?"__new":id; if(isNew){newId=null;creating=false}
   if(sheetMode.id!==id) sheetMode={id,edit:false};
   const editing=isNew||sheetMode.edit;
@@ -616,6 +628,8 @@ function openSheet(id,keepScroll){
 
   if(isNew){
     $("#createBtn").addEventListener("click",()=>createRecord());
+    // the form's sections depend on status (grades for owned, budget for the hunt, order details): redraw it, keeping what's typed
+    $("#f-status").addEventListener("change",()=>{newDraft={...collect({}),notes:[]};openSheet(null,true);$("#f-status").focus()});
   } else {
     s.querySelectorAll("input:not([type=file]):not(#f-note),textarea,select").forEach(el=>el.addEventListener("input",()=>schedule(r,el.id==="f-status")));
     const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
@@ -649,7 +663,7 @@ function openSheet(id,keepScroll){
   const fc=$("#f-cover"); if(fc) fc.addEventListener("change",()=>uploadCover(isNew?null:r,fc.files[0]));
 }
 
-function closeSheet(){clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 function collect(r){
@@ -702,7 +716,7 @@ async function createRecord(){
   const dupe=records.find(x=>(x.artist+"|"+x.title).toLowerCase()===key&&Date.now()-(x.added||0)<120000);
   if(dupe){creating=false;openSheet(dupe.id);return}
   if(!newId) newId=db.collection("records").doc().id;
-  try{const ref=db.collection("records").doc(newId);await ref.set(doc);newId=null;creating=false;pendingCover=null;if(!records.some(x=>x.id===ref.id))records.push({id:ref.id,...doc});render();openSheet(ref.id);if(doc.needsEnrich)enrich({id:ref.id,...doc})}
+  try{const ref=db.collection("records").doc(newId);await ref.set(doc);newId=null;creating=false;pendingCover=null;newDraft=null;if(!records.some(x=>x.id===ref.id))records.push({id:ref.id,...doc});render();openSheet(ref.id);if(doc.needsEnrich)enrich({id:ref.id,...doc})}
   catch(e){creating=false;$("#saved").textContent="Couldn't add it: "+(e.message||e.code);if(cb){cb.disabled=false;cb.textContent="Hang it"}}
 }
 let pendingCover=null;

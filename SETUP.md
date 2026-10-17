@@ -99,7 +99,8 @@ With `ArtifactData`, `set` the document `settings` / `site` on `WALL_URL`:
   "dim": 55,
   "uploads": [],
   "taskId": "<TASK_ID>",
-  "discogs": {}
+  "discogs": {},
+  "dataVersion": 2
 }
 ```
 
@@ -135,8 +136,12 @@ When the person asks to update their Vinyl Wall:
 2. Download the files for the requested release (step 2).
 3. Publish `app/vinyl-wall.html` **to the existing URL** with the same `files`. Omit `capabilities` unless the release notes say they changed. Never delete or rewrite the person's records, gear, setups, settings or private data.
 4. `get` `settings` / `site` to find `taskId`, then `update_trigger` that task with the new `tasks/background-task.md` text (with `{{WALL_URL}}` filled in). If `taskId` is missing or the task no longer exists, create a new one (step 4) and `update` `settings/site` with the new `taskId`.
-5. **Coming from v0.1.0:** that version could link records to a CD, DVD or single instead of a vinyl pressing. `list` `records` and, in one `batch`, `update` every document whose `discogsMatch` is exactly `"master main release"` with `{"discogsId": {"__delete__": true}, "discogsMatch": {"__delete__": true}, "needsSync": true}` (pin each to its version). Then start the background task once (`fire_trigger` with `taskId`): it re-matches those records to vinyl and swaps the wrong wantlist entries. Never touch records with any other `discogsMatch` value; the person chose those.
-6. **Coming from v0.1.x: shrink existing covers.** Older walls stored covers at full size (often 1000px, 100–300 KB). For each record with a `coverAsset` and no `coverOriginal`: read the asset (`Artifact` `action: "read"`, `path` = the asset id), shrink it in Python Pillow so the longest side is at most 500px, save as JPEG quality 82, upload it (`asset: true`), then `update` the record with `{"coverAsset": <new id>, "coverOriginal": <old id>}` (pin to its version; batch the updates). Skip a cover whose shrunk file isn't smaller. Don't delete the originals; `coverOriginal` keeps them recoverable.
+5. **Run data upgrades.** Read `dataVersion` from `settings/site` (missing means `1`). Run every upgrade below whose number is higher than that, in order, then `update` `settings/site` with `{"dataVersion": <highest number run>}`. Each upgrade is safe to re-run, but run each only once.
+
+   **Upgrade 2** (from v0.1.x):
+   - *Re-match non-vinyl Discogs links.* v0.1.0 could link records to a CD, DVD or single. `list` `records` and, in one `batch`, `update` every document whose `discogsMatch` is exactly `"master main release"` with `{"discogsId": {"__delete__": true}, "discogsMatch": {"__delete__": true}, "needsSync": true}` (pin each to its version). Never touch records with any other `discogsMatch` value; the person chose those. If any were updated, start the background task once (`fire_trigger` with `taskId`): it re-matches them to vinyl and swaps the wrong wantlist entries.
+   - *Shrink existing covers.* Older walls stored covers at full size (often 1000px, 100–300 KB). For each record with a `coverAsset` and no `coverOriginal`: read the asset (`Artifact` `action: "read"`, `path` = the asset id), shrink it in Python Pillow so the longest side is at most 500px, save as JPEG quality 82, upload it (`asset: true`), then `update` the record with `{"coverAsset": <new id>, "coverOriginal": <old id>}` (pin to its version; batch the updates). Skip a cover whose shrunk file isn't smaller. Don't delete the originals; `coverOriginal` keeps them recoverable.
+6. **Unused images (only if the person asks to tidy up).** List the page's assets (`Artifact` `action: "list"`, `scope: "assets"`) and find ids that no record (`coverAsset`, `coverOriginal`) and no setting (`settings/site` `bg.assetId`, `uploads[].id`) refers to. Show them to the person and delete only the ones they approve.
 7. Tell the person what changed in one or two lines.
 
 ## Removing a wall
