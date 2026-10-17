@@ -6,11 +6,11 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 ## Next
 
-1. **Feedback channel** for testers (GitHub Issues).
-2. **In-app updates.** The page carries its version number. On each run the background task checks the repo's latest tagged release and saves its version and notes to settings. Settings shows "Update available: vX.Y.Z" with the notes and an Update button. The button starts the background task with an update request, and the task follows that release's SETUP.md update steps: republish the page to the same link, keep all data, run data upgrades, refresh its own instructions. Only tagged releases are installed, never main, and nothing changes until the owner taps Update. Ship it before the next outside install so testers never need a manual update again.
-3. **First outside install** by a tester, from the setup link alone, ideally on the release that includes in-app updates.
+1. **First in-app update on a real wall** (v0.2.0 → latest), then confirm the page, data and background task all moved.
+2. **First outside install** by a tester, from the setup link alone.
 
-Done in v0.2.0: release tagged; Discogs import tested on a real collection and wantlist.
+Done in v0.3: in-app updates (Settings says an update is available; one tap installs the latest tagged release), feedback through GitHub Issues, a contributor guide and a browser preview harness.
+Done in v0.2: Discogs import, tested on a real collection and wantlist.
 
 ## Ideas, roughly in order of fit
 
