@@ -134,9 +134,11 @@ Mention which approval setting the background task got (from the `create_trigger
 
 When the person asks to update their Vinyl Wall:
 
+The wall's background task also runs these steps when the owner taps **Update** in Settings (background-task part E). In that case there's no one to ask: it does steps 2 to 5, skips step 6, and records the result in `settings/site` `update` instead of step 7.
+
 1. Find the existing artifact URL (`Artifact` `action: "list"`, or ask). Read it with `Artifact` `action: "read"` before publishing.
 2. Download the files for the requested release (step 2).
-3. Publish `app/vinyl-wall.html` **to the existing URL** with the same `files`. Omit `capabilities` unless the release notes say they changed. Never delete or rewrite the person's records, gear, setups, settings or private data.
+3. Publish `app/vinyl-wall.html` **to the existing URL** with the same `files`. Omit `capabilities` if the existing artifact already declares exactly the list in step 3 (the read shows what it declares); otherwise pass step 3's list. Never delete or rewrite the person's records, gear, setups, settings or private data.
 4. `get` `settings` / `site` to find `taskId`, then `update_trigger` that task with the new `tasks/background-task.md` text (with `{{WALL_URL}}` filled in). If `taskId` is missing or the task no longer exists, create a new one (step 4) and `update` `settings/site` with the new `taskId`.
 5. **Run data upgrades.** Read `dataVersion` from `settings/site` (missing means `1`). Run every upgrade below whose number is higher than that, in order, then `update` `settings/site` with `{"dataVersion": <highest number run>}`. Each upgrade is safe to re-run, but run each only once.
 

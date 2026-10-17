@@ -1,0 +1,19 @@
+name: Something isn't working
+description: Tell us what went wrong on your Vinyl Wall.
+labels: [problem]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what you saw instead. A screenshot helps.
+    validations:
+      required: true
+  - type: dropdown
+    id: device
+    attributes:
+      label: Where were you?
+      options: [Phone, Tablet, Computer]
+  - type: markdown
+    attributes:
+      value: "Please don't paste your Discogs token or anything private here. Issues are public."

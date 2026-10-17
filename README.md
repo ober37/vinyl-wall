@@ -14,7 +14,7 @@ Paste this into a new Claude conversation:
 
 Claude publishes the wall as your own private page, creates the background task that finds covers and syncs Discogs, and walks you through the rest. It takes a few minutes. Your records, notes and settings belong to your account only; nothing is shared with this project.
 
-To update later, ask Claude: *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.2.0/SETUP.md"* (with the newer version number).
+**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Tap **Update**; your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.2.0/SETUP.md"*, with the newest version number.)
 
 ### What your Claude setup needs
 
@@ -35,12 +35,17 @@ If something's missing, Claude tells you before building anything.
 - **Equipment.** Turntables, cartridges, styluses, speakers and more, grouped into setups (e.g. Office, Living room) with shared gear. Plays add hours to the right gear; styluses warn you as they approach their rated life.
 - **Discogs sync (optional).** Owned records go to your Discogs collection with grades and notes; the hunt and orders go to your wantlist. Already on Discogs? Import your collection and wantlist in one tap.
 - **Make it yours.** Rename the wall and pick a background: softened photos of a listening room, a record shop, a coffee shop or a tavern, or patterns like speaker grille and walnut paneling. Or upload your own.
+- **One-tap updates.** Settings tells you when a new version is out.
 - Works on phones, and in light and dark mode.
 
 | | |
 |---|---|
 | ![A record's sheet](docs/screenshots/record.png) | ![Equipment](docs/screenshots/equipment.png) |
 | ![Settings and backgrounds](docs/screenshots/settings.png) | ![Light mode](docs/screenshots/wall-light.png) |
+
+## Problems and ideas
+
+[Open an issue](https://github.com/ober37/vinyl-wall/issues/new/choose) to report something that isn't working or suggest an idea. There's also a link at the bottom of the wall's Settings. Issues are public, so never include your Discogs token.
 
 ## Your Discogs token
 

@@ -76,6 +76,11 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .sheet a{color:var(--accent)}
 .importbox{margin-top:18px;padding:14px 16px;border:1px solid var(--line);border-radius:10px}
 .importbox .hint{margin-top:4px}
+.updatebox{margin:0 0 18px;padding:14px 16px;border:1px solid var(--brass);border-radius:10px}
+.updatebox .hint{margin-top:4px}
+.feedback{margin:6px 0 4px}
+#settingsBtn{position:relative}
+#settingsBtn.hasupdate::after{content:"";position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px rgba(0,0,0,.45)}
 input[type=range]{padding:0;border:0;background:none}
 .wrap{max-width:1180px;margin:0 auto;padding-block:28px 64px;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
@@ -807,6 +812,9 @@ function pendingWork(){
   const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).map(r=>`"${r.title}"`);
   if(enrich.length) w.push(`fill covers and details (Part A) for ${enrich.slice(0,8).join(", ")}${enrich.length>8?` and ${enrich.length-8} more`:""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
+  const up=settings.update||{};
+  if(up.requested) w.push("update the wall to the latest release (Part E): settings/site update.requested is true");
+  else if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
   if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
   return "Started from the wall. Waiting now: "+(w.length?w.join("; "):"nothing specific; run every part and do whatever is pending")+". Work through every part in the usual order.";
 }
@@ -1036,6 +1044,8 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
+const APP_VERSION="0.2.0"; // stamped per release; must match VERSION (the release workflow checks)
+const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
 const PHOTO_PRESETS={
@@ -1054,6 +1064,30 @@ function applySettings(){
   if(bg.kind==="photo"&&bg.assetId){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
   else{b.classList.add("bg-"+(BG_PRESETS.some(x=>x[0]===bg.preset)?bg.preset:DEFAULT_BG));b.style.removeProperty("--bg-url");
     if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",(settings.dim??55)+"%");else b.style.removeProperty("--bg-dim")}
+}
+function newer(a,b){const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
+  for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false}
+/* Update state from the background task's release check (settings.update), compared with this page's own version. */
+function updateState(){
+  if(!mcp||!settings.taskId) return "";
+  const u=settings.update||{};
+  if(u.requested) return Date.now()-(u.requestedAt||0)>15*60000?"stalled":"updating";
+  if(newer(u.installed,APP_VERSION)) return "reload";
+  if(newer(u.latest,APP_VERSION)) return u.msg?"failed":"available";
+  return "";
+}
+function renderUpdateDot(){const b=$("#settingsBtn");if(!b)return;const st=updateState();b.classList.toggle("hasupdate",st==="available"||st==="failed"||st==="reload");
+  b.setAttribute("aria-label",st&&st!=="updating"&&st!=="stalled"?"Settings (update available)":"Settings")}
+function updateHTML(){
+  const st=updateState(),u=settings.update||{};
+  if(!st) return "";
+  const btn=(id,label)=>`<button class="btn small primary editonly" type="button" id="${id}">${label}</button>`;
+  const body={available:[`<b>An update is available</b>`,`<p class="hint">Updating keeps all your records, equipment and settings.</p>`,btn("st-update","Update")],
+    failed:[`<b>An update is available</b>`,`<p class="hint" style="color:var(--want)">The last try didn't finish: ${esc(u.msg)}</p>`,btn("st-update","Try again")],
+    updating:[`<b>Updating…</b>`,`<p class="hint">This takes a few minutes. Your wall keeps working while it runs.</p>`,""],
+    stalled:[`<b>Updating…</b>`,`<p class="hint">This is taking longer than it should. Try again to restart it.</p>`,btn("st-update","Try again")],
+    reload:[`<b>Update installed</b>`,`<p class="hint">Reload the page to see it.</p>`,`<button class="btn small primary" type="button" id="st-reload">Reload</button>`]}[st];
+  return `<div class="updatebox">${body[0]}${body[1]}${body[2]?`<div class="actions" style="margin-top:10px">${body[2]}</div>`:""}</div>`;
 }
 let settingsWriting=Promise.resolve();
 function saveSettings(patch){
@@ -1075,6 +1109,7 @@ function openSettings(keepScroll){
   const tile=(key,label,cls,sel,extra="")=>`<div class="bgtile" role="button" tabindex="0" data-bg="${esc(key)}" aria-pressed="${sel}"><span class="sw ${cls}"${extra}></span><span class="nm">${esc(label)}</span></div>`;
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, and your Discogs connection</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  ${updateHTML()}
   <fieldset><legend>Page</legend>
     <label class="f">Title<input id="st-title" value="${esc(settings.title||"")}" placeholder="${DEFAULT_TITLE}" maxlength="60"></label>
     <span class="saved" id="saved"></span>
@@ -1111,7 +1146,8 @@ function openSettings(keepScroll){
         ${dz.importRequested&&Date.now()-(dz.importRequestedAt||0)>10*60000?`<button class="btn small editonly" type="button" id="st-import-retry">Try again</button>`:""}
         <span class="saved">${dz.importRequested?(Date.now()-(dz.importRequestedAt||0)>10*60000?"This is taking longer than it should. Try again to restart it.":"This takes a few minutes. New records appear on the wall as they come in."):esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>`}
     </div>`:""}
-  </fieldset>`;
+  </fieldset>
+  <p class="hint feedback">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>`;
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
@@ -1150,6 +1186,11 @@ function openSettings(keepScroll){
     saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
   const ir=$("#st-import-retry"); if(ir) ir.addEventListener("click",()=>{ir.disabled=true;
     saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
+  const ub=$("#st-update"); if(ub) ub.addEventListener("click",()=>{ub.disabled=true;
+    saveSettings({update:{...(settings.update||{}),requested:true,requestedAt:Date.now(),msg:""}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
+  const rl=$("#st-reload"); if(rl) rl.addEventListener("click",()=>location.reload());
+  // check for a newer release at most once a day, when Settings is opened on the owner's own wall
+  if(canEdit&&mcp&&settings.taskId&&Date.now()-((settings.update||{}).checkedMs||0)>24*3600000&&!keepScroll) fireTask();
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
   const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
   $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
@@ -1169,7 +1210,7 @@ async function boot(){
   try{myId=u?await u.id():null}catch(e){myId=null}
   db.doc("settings/site").onSnapshot(snap=>{settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome()},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot()},()=>{});
   db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(typing)return; if(openId==="__gear")openGear(true)},()=>{});
