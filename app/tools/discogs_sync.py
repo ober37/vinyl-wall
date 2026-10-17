@@ -58,33 +58,100 @@ def norm(s):
     return "".join(c for c in (s or "").lower() if c.isalnum())
 
 
+def norm_name(s):
+    """Normalize an artist or title for matching: ignore 'the', '&'/'and', and Discogs' '(2)' and '*' suffixes."""
+    re = __import__("re")
+    s = re.sub(r"\s*\(\d+\)|\*", "", (s or "").lower()).replace("&", " and ")
+    words = [w for w in re.split(r"[^a-z0-9]+", s) if w and w != "the"]
+    return "".join(words) or norm(s)
+
+
+# Version formats that aren't the album on vinyl: singles, videos/bootlegs, promos, tests.
+SKIP_FMT = ("single", "unofficial", "promo", "test pressing", "sampler", "transcription", "white label")
+
+
+def vinyl_album(fmt):
+    f = (fmt or "").lower()
+    return not any(x in f for x in SKIP_FMT) and ("lp" in f or "album" in f)
+
+
+def hit_matches(h, artist, title, loose=False):
+    """Exact title match, or with loose=True one title containing the other ('Unplugged' / 'MTV Unplugged')."""
+    t = h.get("title", "")  # "Artist - Title"
+    if " - " not in t:
+        return False
+    a, ti = t.split(" - ", 1)
+    if artist and norm_name(a) != norm_name(artist):
+        return False
+    x, y = norm_name(ti), norm_name(title)
+    short, long_ = sorted((x, y), key=len)
+    if loose and short == norm_name(a):  # a self-titled record isn't a loose match for another title
+        return False
+    return x == y or (loose and len(short) >= 6 and len(short) >= 0.6 * len(long_) and short in long_)
+
+
+def vinyl_versions(master_id):
+    out, page = [], 1
+    while page <= 5:
+        r = call("GET", f"/masters/{master_id}/versions", {"format": "Vinyl", "per_page": 100, "page": page}) or {}
+        out += [v for v in r.get("versions", []) if "Vinyl" in (v.get("major_formats") or []) and vinyl_album(v.get("format"))]
+        if page >= r.get("pagination", {}).get("pages", 1):
+            break
+        page += 1
+    return out
+
+
+def pick_pressing(versions, main_release):
+    """The master's main release if it's an official vinyl LP, else the earliest original LP pressing."""
+    if any(v["id"] == main_release for v in versions):
+        return main_release, "vinyl: master main release"
+    def key(v):
+        f = (v.get("format") or "").lower()
+        yr = "".join(c for c in str(v.get("released") or "")[:4] if c.isdigit())
+        return ("reissue" in f or "repress" in f, int(yr) if len(yr) == 4 else 9999,
+                {"US": 0, "Europe": 1, "UK": 1}.get(v.get("country"), 2), v["id"])
+    return sorted(versions, key=key)[0]["id"], "vinyl: earliest original pressing"
+
+
 def find_release(d):
-    """Return (release_id, how) for a record without a discogsId."""
+    """Return (release_id, how) for a record without a discogsId. Only ever returns a vinyl album release."""
     artist, title = d.get("artist", ""), d.get("title", "")
     cat = (d.get("catalog") or "").strip()
     if cat:
         res = call("GET", "/database/search", {"type": "release", "catno": cat, "artist": artist,
                                                "release_title": title, "format": "Vinyl", "per_page": 25})
-        hits = res.get("results", [])
+        hits = [h for h in res.get("results", []) if vinyl_album(", ".join(h.get("format", [])))]
         press = norm(d.get("pressing"))
         for h in hits:
             if press and any(norm(f) and norm(f) in press for f in h.get("format", [])[2:]):
                 return h["id"], "catalog+pressing"
         if len(hits) == 1:
             return hits[0]["id"], "catalog"
-    res = call("GET", "/database/search", {"type": "master", "artist": artist, "release_title": title, "per_page": 10})
-    for h in res.get("results", []):
-        t = h.get("title", "")  # "Artist - Title"
-        if " - " in t and norm(t.split(" - ", 1)[1]) == norm(title):
-            m = call("GET", f"/masters/{h['id']}")
-            if m and m.get("main_release"):
-                return m["main_release"], "master main release"
+    # The album's master: among title+artist matches (singles, videos and bootlegs share album titles),
+    # take the one with the most official vinyl LP versions, then pick a pressing from those.
+    # Search by artist only too: Discogs' title search misses titles that differ slightly.
+    hits = call("GET", "/database/search", {"type": "master", "artist": artist, "release_title": title,
+                                            "per_page": 25}).get("results", [])
+    hits += call("GET", "/database/search", {"type": "master", "artist": artist, "per_page": 100}).get("results", [])
+    for loose in (False, True):
+        seen, cands = set(), []
+        for h in hits:
+            if h["id"] not in seen and hit_matches(h, artist, title, loose):
+                seen.add(h["id"]); cands.append(h)
+        best = None
+        for h in cands[:5]:
+            vs = vinyl_versions(h["id"])
+            if vs and (best is None or len(vs) > len(best[1])):
+                best = (h["id"], vs)
+        if best:
+            m = call("GET", f"/masters/{best[0]}") or {}
+            return pick_pressing(best[1], m.get("main_release"))
+    # No master (common for small or self-released records): a matching vinyl album release.
     res = call("GET", "/database/search", {"type": "release", "artist": artist, "release_title": title,
-                                           "format": "Vinyl", "per_page": 10})
+                                           "format": "Vinyl", "per_page": 25})
     for h in res.get("results", []):
-        t = h.get("title", "")
-        if " - " in t and norm(t.split(" - ", 1)[1]) == norm(title):
-            return h["id"], "first vinyl release"
+        if hit_matches(h, artist, title) and vinyl_album(", ".join(h.get("format", []))):
+            return h["id"], "vinyl: first matching release"
     return None, None
 
 
@@ -167,8 +234,11 @@ def sync_one(d, wants, sync):
     if not rid:
         rid, how = find_release(d)
         if not rid:
+            if sync.get("rid") and not sync.get("adopted"):  # was linked to something else: take it back off
+                drop(sync["rid"], sync, wants)
             return {"discogsSync": {"state": "no-match", "at": now(),
-                                    "msg": "No Discogs match found. Paste the release number from its Discogs URL."},
+                                    "msg": "No vinyl pressing found on Discogs. Paste the release number from its Discogs URL."},
+                    "discogsMatch": {"__delete__": True},
                     "needsSync": {"__delete__": True}}
         out["discogsId"] = rid
         out["discogsMatch"] = how
@@ -251,6 +321,10 @@ def main():
         sync = dict(d.get("discogsSync") or {})
         try:
             upd = sync_one(d, wants, sync)
+            if upd and isinstance(upd.get("discogsSync"), dict):
+                # DB updates merge nested objects, so fields dropped from discogsSync must be deleted explicitly
+                for k in (d.get("discogsSync") or {}):
+                    upd["discogsSync"].setdefault(k, {"__delete__": True})
             if upd is None:
                 writes.append({"op": "delete", "collection": "records", "doc_id": doc_id, "if_version": ver})
                 report.append(f"{d.get('title')}: removed from Discogs and the wall")

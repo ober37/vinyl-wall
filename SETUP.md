@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.1.0**. All file links below point at this tag. Replace `v0.1.0` only if the person asks for a different version.
+Release: **v0.1.1**. All file links below point at this tag. Replace `v0.1.1` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.1.0
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.1.1
 ```
 
 ---
@@ -135,7 +135,8 @@ When the person asks to update their Vinyl Wall:
 2. Download the files for the requested release (step 2).
 3. Publish `app/vinyl-wall.html` **to the existing URL** with the same `files`. Omit `capabilities` unless the release notes say they changed. Never delete or rewrite the person's records, gear, setups, settings or private data.
 4. `get` `settings` / `site` to find `taskId`, then `update_trigger` that task with the new `tasks/background-task.md` text (with `{{WALL_URL}}` filled in). If `taskId` is missing or the task no longer exists, create a new one (step 4) and `update` `settings/site` with the new `taskId`.
-5. Tell the person what changed in one or two lines.
+5. **Coming from v0.1.0:** that version could link records to a CD, DVD or single instead of a vinyl pressing. `list` `records` and, in one `batch`, `update` every document whose `discogsMatch` is exactly `"master main release"` with `{"discogsId": {"__delete__": true}, "discogsMatch": {"__delete__": true}, "needsSync": true}` (pin each to its version). Then start the background task once (`fire_trigger` with `taskId`): it re-matches those records to vinyl and swaps the wrong wantlist entries. Never touch records with any other `discogsMatch` value; the person chose those.
+6. Tell the person what changed in one or two lines.
 
 ## Removing a wall
 
