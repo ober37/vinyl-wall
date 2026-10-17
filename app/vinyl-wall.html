@@ -1,6 +1,7 @@
 <title>Vinyl Wall</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a listening-room wall. Walnut rails with brass clips run across each row; sleeves hang from them.
@@ -121,6 +122,59 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
   background:linear-gradient(90deg,color-mix(in srgb,var(--brass) 70%,#000),var(--brass) 40%,color-mix(in srgb,var(--brass) 60%,#fff) 55%,var(--brass) 75%);
   border-radius:3px 3px 5px 5px;box-shadow:0 2px 3px var(--shadow)}
 .clip::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:2px;background:rgba(0,0,0,.25);border-radius:2px}
+/* Rail styles (body.rail-*). Walnut rail + brass clip above is the default; each style restyles the same two pieces:
+   .slot::before is the rail, .clip is what holds the sleeve. */
+/* Twine and clothespins */
+.rail-twine .slot::before{top:15px;height:3px;border-radius:2px;
+  background:repeating-linear-gradient(118deg,#c9a46e 0 2px,#9c7746 2px 4px,#b48c58 4px 6px);box-shadow:0 2px 2px var(--shadow)}
+.rail-twine .hanger{transform-origin:50% -14px}
+.rail-twine .slot:nth-child(odd) .hanger{transform:rotate(-2deg)}
+.rail-twine .slot:nth-child(even) .hanger{transform:rotate(1.6deg)}
+.rail-twine .slot:nth-child(3n) .hanger{transform:rotate(-.6deg)}
+.rail-twine .clip{width:14px;height:42px;margin-left:-7px;top:-27px;border-radius:2px 2px 3px 3px;
+  background:linear-gradient(90deg,#b8935e,#e2c896 35%,#d4b47d 60%,#a98451);box-shadow:1px 2px 3px var(--shadow)}
+.rail-twine .clip::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-.5px;background:rgba(70,45,20,.45)}
+.rail-twine .clip::after{left:-2px;right:-2px;top:13px;bottom:auto;height:5px;border-radius:2px;
+  background:linear-gradient(#d7dade,#8e9399 55%,#5f646a)}
+/* Barnwood plank and iron hooks */
+.rail-barn .slot::before{top:3px;height:21px;
+  background:
+    radial-gradient(circle at 12px 52%,#1c1916 0 1.8px,rgba(120,64,28,.55) 2.4px,rgba(120,64,28,.18) 4.5px,transparent 6px),
+    radial-gradient(circle at calc(100% - 12px) 48%,#1c1916 0 1.8px,rgba(120,64,28,.55) 2.4px,rgba(120,64,28,.18) 4.5px,transparent 6px),
+    radial-gradient(ellipse 13px 4px at var(--knot,64%) 58%,rgba(20,14,9,.7),rgba(20,14,9,.25) 60%,transparent 75%),
+    radial-gradient(ellipse 22px 7px at var(--knot,64%) 58%,transparent 45%,rgba(0,0,0,.18) 60%,transparent 80%),
+    linear-gradient(180deg,transparent 34%,rgba(0,0,0,.45) 34% 39%,transparent 39%) var(--crack,22%) 0/var(--crack-w,38%) 100% no-repeat,
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 31px,rgba(0,0,0,.09) 31px 37px,transparent 37px 73px,rgba(0,0,0,.05) 73px 76px,transparent 76px 109px),
+    repeating-linear-gradient(180deg,rgba(0,0,0,.16) 0 1px,transparent 1px 3px,rgba(255,255,255,.04) 3px 4px,transparent 4px 6px,rgba(0,0,0,.08) 6px 7px,transparent 7px 9px),
+    linear-gradient(#5e5244,#4a3f33 48%,#3a3128 85%,#2f2820);
+  box-shadow:0 5px 9px var(--shadow),inset 0 1px 0 rgba(255,255,255,.08),inset 0 -2px 0 rgba(0,0,0,.4)}
+.rail-barn .slot:nth-child(3n+2)::before{--knot:28%;--crack:58%;--crack-w:30%}
+.rail-barn .slot:nth-child(3n)::before{--knot:81%;--crack:8%;--crack-w:24%}
+.rail-barn .slot:nth-child(4n)::before{--crack-w:0%}
+.rail-barn .slot+.slot::before{border-left:1px solid rgba(0,0,0,.5)}
+.rail-barn .clip{width:26px;height:26px;margin-left:-13px;top:-14px;background:none;box-shadow:none;border-radius:50%;
+  border:4px solid #3b3936;border-top-color:#8a857e;border-left-color:#5a5651;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
+.rail-barn .clip::after{left:50%;right:auto;width:12px;margin-left:-6px;top:-14px;bottom:auto;height:10px;border-radius:2px;
+  background:radial-gradient(circle at 50% 50%,#6a6a6a 0 1.2px,transparent 1.8px),linear-gradient(#3b3b3b,#151515);box-shadow:0 1px 2px rgba(0,0,0,.5)}
+/* Iron pipe and leather straps */
+.rail-pipe .slot::before{top:11px;height:12px;
+  background:linear-gradient(#6d7277,#3a3e42 45%,#1f2225 80%,#2c3034);box-shadow:0 4px 7px var(--shadow)}
+.rail-pipe .hanger{transform-origin:50% -16px}
+.rail-pipe .clip{width:17px;height:38px;margin-left:-8.5px;top:-26px;border-radius:4px 4px 3px 3px;
+  background:linear-gradient(90deg,#5c3519,#8d5730 45%,#7a4826 70%,#5a3318);box-shadow:0 2px 3px var(--shadow)}
+.rail-pipe .clip::before{content:"";position:absolute;inset:3px 3px 12px;border:1px dashed rgba(240,214,170,.55);border-radius:2px}
+.rail-pipe .clip::after{left:50%;right:auto;width:7px;height:7px;margin-left:-3.5px;bottom:3px;border-radius:50%;
+  background:radial-gradient(circle at 35% 35%,#f3d58e,#b8862f 60%,#6e4c17)}
+/* Shaker peg rail and picture wire */
+.rail-peg .slot::before{top:2px;height:15px;
+  background:repeating-linear-gradient(178deg,rgba(0,0,0,.05) 0 1px,transparent 1px 4px),
+    linear-gradient(#c79a62,#a87845 55%,#8a5f33);box-shadow:0 4px 7px var(--shadow),inset 0 1px 0 rgba(255,255,255,.2)}
+.rail-peg .hanger{transform-origin:50% -20px}
+.rail-peg .clip{width:15px;height:15px;margin-left:-7.5px;top:-24px;border-radius:50%;
+  background:radial-gradient(circle at 38% 35%,#e6be86,#b07c45 55%,#7c522a);box-shadow:0 3px 4px var(--shadow)}
+.rail-peg .clip::after{display:none}
+.rail-peg .hanger::before{content:"";position:absolute;left:10%;right:10%;top:-18px;height:20px;z-index:2;pointer-events:none;
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23c49a5e' stroke-width='2.2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;background-size:100% 100%}
 .sleeve-btn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;text-align:left;color:inherit;position:relative}
 .sleeve-box{position:relative;aspect-ratio:1;max-width:100%}
 .disc{position:absolute;inset:3% 3% 3% 3%;border-radius:50%;z-index:0;
@@ -150,6 +204,26 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .example.finding{top:auto;bottom:6px;background:var(--accent);color:var(--accent-ink)}
 .auto{color:var(--accent);font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;margin-left:6px}
 .example{position:absolute;z-index:4;left:6px;top:6px;font:500 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;background:rgba(0,0,0,.6);color:#fff;padding:4px 6px;border-radius:2px}
+/* First run */
+.welcome{max-width:720px;margin:8px 0 40px;padding:28px 28px 24px;border-radius:14px;background:color-mix(in srgb,var(--sheet) 88%,transparent);
+  border:1px solid var(--line);box-shadow:0 10px 30px var(--shadow)}
+.welcome p{margin:10px 0 0;color:var(--ink-2);max-width:58ch}
+.steps{list-style:none;counter-reset:st;padding:0;margin:22px 0 0;display:grid;gap:12px}
+.steps li{counter-increment:st;display:grid;grid-template-columns:34px 1fr auto;grid-template-rows:auto auto;column-gap:14px;align-items:center;
+  padding:14px 0;border-top:1px solid var(--line)}
+.steps li::before{content:counter(st);grid-row:1/3;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;
+  font:500 13px/1 var(--mono);border:1px solid var(--line);color:var(--ink-2)}
+.steps li b{font-weight:600}
+.steps li span{grid-column:2;color:var(--ink-2);font-size:13px}
+.steps li .btn{grid-column:3;grid-row:1/3}
+.steps li.done::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps li.done .btn{opacity:.6}
+@media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
+/* Small text stays readable over photo backgrounds */
+:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,h2 small,.cap .a,.cap .meta){
+  color:color-mix(in srgb,var(--ink-2) 55%,var(--ink));text-shadow:0 0 2px var(--wall),0 0 8px var(--wall),0 0 14px var(--wall)}
+/* Touch screens get no hover peek, so show a sliver of vinyl and a press response instead */
+@media (hover:none){.disc{transform:translateX(9%)}.sleeve-btn:active .sleeve-box{transform:scale(.975);transition:transform .12s}}
 .empty{border:1.5px dashed var(--line);border-radius:6px;padding:28px 20px;color:var(--ink-2);margin-top:18px;max-width:640px}
 .status{font-family:var(--mono);font-size:12px;color:var(--ink-2);margin-top:12px;min-height:1.2em}
 
@@ -162,7 +236,21 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .sheet{visibility:hidden}
 .sheet.on{transform:none;visibility:visible}
 .sheet-head{display:flex;gap:16px;align-items:flex-start}
-.sheet-head .art{width:132px;flex:none;position:relative}
+.sheet-head .art{width:132px;flex:none;position:relative;transition:width .25s ease}
+.sheet.viewing .sheet-head .art{width:176px}
+.headbtns{display:flex;gap:6px;flex:none}
+.pill{white-space:nowrap}
+@media (max-width:460px){.sheet-head{flex-wrap:wrap}.headbtns{order:-1;width:100%;justify-content:flex-end;margin-bottom:-4px}}
+.sheet.viewing .editpart{display:none!important}
+.sheet:not(.viewing) .viewpart,.sheet:not(.viewing) .viewonly{display:none!important}
+.viewpart{margin-top:20px}
+.why{margin:0;padding:2px 0 2px 16px;border-left:3px solid var(--brass);font-size:17px;line-height:1.55;white-space:pre-wrap;text-wrap:pretty}
+.whyadd{display:block;width:100%;text-align:left;font:inherit;color:var(--ink-2);background:none;border:1px dashed var(--line);border-radius:10px;padding:14px 16px;cursor:pointer}
+.whyadd:hover{border-color:var(--brass);color:var(--ink)}
+.facts{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px 18px;margin:18px 0 0}
+.facts dt{font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:5px}
+.facts .wide{grid-column:1/-1}
+.facts dd{margin:0;font-size:14px;overflow-wrap:anywhere}
 .sheet-head .art .cover,.sheet-head .art .gen{aspect-ratio:1;height:auto}
 .sheet-head .art .gen .t{font-size:18px}
 .sheet h3{font-family:var(--display);font-weight:800;text-transform:uppercase;font-size:34px;line-height:.95;margin:0;text-wrap:balance;overflow-wrap:anywhere}
@@ -173,7 +261,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 fieldset{border:0;border-top:1px solid var(--line);margin:22px 0 0;padding:16px 0 0;min-width:0}
 legend{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.12em;color:var(--ink-2);padding-right:10px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-@media (max-width:460px){.grid2{grid-template-columns:1fr}.sheet-head .art{width:96px}.sheet h3{font-size:26px}}
+@media (max-width:460px){.grid2{grid-template-columns:1fr}.sheet-head .art{width:96px}.sheet.viewing .sheet-head .art{width:120px}.sheet h3{font-size:26px}}
 label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--ink-2);min-width:0}
 input,textarea,select{font:inherit;font-size:14px;color:var(--ink);background:var(--wall);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
 textarea{resize:vertical;min-height:80px;line-height:1.5}
@@ -182,6 +270,7 @@ input.mono{font-family:var(--mono);font-size:13px}
 .log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
 .log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
 .log .x{border:0;background:none;color:var(--ink-2);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px}
+.log li.nolog{display:block}
 .log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
 .addlog{display:flex;gap:8px;margin-top:10px}
 .addlog input{flex:1}
@@ -259,6 +348,16 @@ fieldset.gsec>p.hint{margin-bottom:16px}
     </div>
   </header>
 
+  <section class="welcome" id="welcome" hidden aria-labelledby="h-welcome">
+    <h2 id="h-welcome">Start your wall</h2>
+    <p>Hang the records you'd keep top to bottom. Add one with just the artist and album: the cover, year, label and runtime are looked up for you.</p>
+    <ol class="steps">
+      <li><b>Add your first record</b><span>Something you own, or one you're hunting for.</span><button class="btn primary small editonly" type="button" data-welcome="add">Add a record</button></li>
+      <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
+      <li id="wStepGear"><b>Add your turntable and stylus</b><span>Optional. Plays add up so you know when a stylus is wearing out.</span><button class="btn small editonly" type="button" data-welcome="gear">Set up equipment</button></li>
+    </ol>
+  </section>
+
   <section class="wallsec" aria-labelledby="h-own">
     <div class="sec-head"><h2 id="h-own">On the wall<small>owned · then on order by expected arrival</small></h2></div>
     <div class="rack" id="rackOwn"></div>
@@ -327,17 +426,39 @@ function sleeve(r){
     </button></div></div>`;
 }
 
+let recordsLoaded=false;
+/* Keyed rendering: a sleeve is rebuilt only when its markup changes; otherwise the same element (and its loaded cover)
+   is kept and just moved into place. One edit or a sync of many records no longer redraws the whole wall. */
+const sleeveCache=new Map();
+function syncRack(rack,list){
+  const want=list.map(r=>{const h=sleeve(r);let c=sleeveCache.get(r.id);
+    if(!c||c.h!==h){const t=document.createElement("template");t.innerHTML=h.trim();c={h,el:t.content.firstElementChild};sleeveCache.set(r.id,c)}
+    return c.el});
+  const keep=new Set(want);
+  for(const n of [...rack.children]) if(!keep.has(n)) n.remove();
+  want.forEach((el,i)=>{if(rack.children[i]!==el) rack.insertBefore(el,rack.children[i]||null)});
+}
+function renderWelcome(){
+  const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0;
+  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show); $(".tally").hidden=show;
+  if(!show) return;
+  $("#wStepDiscogs").classList.toggle("done",settings?.discogs?.status==="ok");
+  $("#wStepGear").classList.toggle("done",gear.some(g=>!g.example));
+}
+document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
+  const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings(); else openGear()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
   $("#nOrd").textContent=ord.length;
   const own=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").sort((a,b)=>(a.added||0)-(b.added||0));
   const wish=records.filter(r=>r.status==="wish").sort((a,b)=>(a.priority||2)-(b.priority||2)||(a.added||0)-(b.added||0));
-  $("#rackOwn").innerHTML=own.concat(ord).map(sleeve).join("");
-  $("#rackWish").innerHTML=wish.map(sleeve).join("");
+  syncRack($("#rackOwn"),own.concat(ord)); syncRack($("#rackWish"),wish);
+  for(const id of sleeveCache.keys()) if(!records.some(r=>r.id===id)) sleeveCache.delete(id);
   $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
   $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
+  renderWelcome();
 }
 
 document.addEventListener("click",e=>{
@@ -347,6 +468,14 @@ $("#scrim").addEventListener("click",closeSheet);
 document.addEventListener("keydown",e=>{if(e.key==="Escape"&&openId!==null)closeSheet()});
 $("#addBtn").addEventListener("click",()=>openSheet(null));
 
+function ownLinks(r){
+  const q=encodeURIComponent(`${r.artist} ${r.title}`);
+  return [
+    r.discogsId?[r.status==="ordered"?"The edition you ordered":"Your pressing",`https://www.discogs.com/release/${encodeURIComponent(r.discogsId)}`]:[r.status==="ordered"?"Find the edition":"Find your pressing",`https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`],
+    r.discogsId?["What it sells for",`https://www.discogs.com/sell/history/${encodeURIComponent(r.discogsId)}`]:["Past sales (Popsike)",`https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+    ["Other pressings",`https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`]
+  ].filter((x,i,a)=>a.findIndex(y=>y[1]===x[1])===i).map(([t,u])=>`<a href="${u}" target="_blank" rel="noopener">${t} ↗</a>`).join("");
+}
 function linkSet(r){
   const q=encodeURIComponent(`${r.artist} ${r.title}`);
   const qv=encodeURIComponent(`${r.artist} ${r.title} vinyl LP`);
@@ -371,10 +500,28 @@ function researchHTML(res){
     ${res.price?`<h4>Price picture</h4><p>${esc(res.price)}</p>`:""}`;
 }
 
+let sheetMode={id:null,edit:false},newDraft=null;
+function factsHTML(r){
+  const wish=r.status==="wish",ord=r.status==="ordered",f=[];
+  const lab=[r.label,r.catalog].filter(Boolean).join(" · "); if(lab)f.push(["Label",esc(lab)]);
+  if(r.pressing)f.push([wish?"Target pressing":ord?"Edition":"Pressing",esc(r.pressing)]);
+  if(r.runtime)f.push(["Runtime",esc(r.runtime)+" min"]);
+  if(wish){f.push(["Priority",r.priority==1?"Top want":r.priority==3?"Someday":"Want"]);if(r.budget)f.push(["Budget","$"+esc(r.budget)])}
+  else if(ord){if(r.shop)f.push(["From",esc(r.shop)]);
+    f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(shortDate(r.eta)):"")]);
+    if(r.tracking)f.push(["Tracking",`<a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a>`])}
+  else{const g=[r.mediaGrade,r.sleeveGrade].filter(Boolean);if(g.length)f.push(["Grades",esc(r.mediaGrade||"—")+" / "+esc(r.sleeveGrade||"—")]);
+    const b=[r.shop,r.acquired?shortDate(r.acquired):"",r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
+    if(r.matrix)f.push(["Runout",`<span class="mono">${esc(r.matrix)}</span>`])}
+  const wide=v=>v.replace(/<[^>]+>/g,"").length>22;
+  return f.length?`<dl class="facts">${f.map(([k,v])=>`<div${wide(v)?' class="wide"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`:"";
+}
 function openSheet(id,keepScroll){
   const isNew=id===null;
-  const r=isNew?{status:"wish",priority:2,notes:[]}:records.find(x=>x.id===id); if(!r) return;
+  const r=isNew?(newDraft||{status:"wish",priority:2,notes:[]}):records.find(x=>x.id===id); if(!r) return;
   openId=isNew?"__new":id; if(isNew){newId=null;creating=false}
+  if(sheetMode.id!==id) sheetMode={id,edit:false};
+  const editing=isNew||sheetMode.edit;
   const s=$("#sheet"); const wish=r.status==="wish"; const ord=r.status==="ordered";
   const ostatOpts=Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("");
   const gradeOpts=v=>GRADES.map(g=>`<option ${g===(v||"")?"selected":""} value="${g}">${g||"—"}</option>`).join("");
@@ -385,14 +532,18 @@ function openSheet(id,keepScroll){
       <h3 id="sTitle">${isNew?"Add a record":esc(r.title)}</h3>
       ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"On the way":wish?"On the hunt":"On the wall"}</span>`}
     </div>
-    <button class="btn small closex" type="button" id="closeBtn">Close</button>
+    <div class="headbtns">${isNew?"":`<button class="btn small editonly" type="button" id="modeBtn">${editing?"Done":"Edit"}</button>`}<button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   </div>
+  ${isNew?"":`<div class="viewpart">
+    ${r.why?`<blockquote class="why">${esc(r.why)}</blockquote>`:`<button class="whyadd editonly" type="button" id="whyAdd">${wish||ord?"Why do you want this one? Add a few words…":"Why is this one on the wall? Add a few words…"}</button>`}
+    ${factsHTML(r)}
+  </div>`}
 
-  <fieldset><legend>The record</legend>
+  <fieldset class="editpart"><legend>The record</legend>
     <div class="grid2">
-      <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="Kind of Blue"></label>
-      <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="Miles Davis"></label>
-      <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="1959"></label>
+      <label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="e.g. Kind of Blue"></label>
+      <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="e.g. Miles Davis"></label>
+      <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="e.g. 1959"></label>
       <label class="f">Runtime (min)<input id="f-runtime" class="mono" inputmode="numeric" value="${esc(r.runtime)}" placeholder="Looked up automatically"></label>
       <label class="f">Status<select id="f-status"><option value="own" ${!wish&&!ord?"selected":""}>Own it (on the wall)</option><option value="ordered" ${ord?"selected":""}>On order (on the way)</option><option value="wish" ${wish?"selected":""}>Want it (the hunt)</option></select></label>
     </div>
@@ -403,11 +554,11 @@ function openSheet(id,keepScroll){
     </div>
   </fieldset>
 
-  <fieldset><legend>Why it's on the wall</legend>
-    <textarea id="f-why" placeholder="What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it.">${esc(r.why)}</textarea>
+  <fieldset class="editpart"><legend>${wish||ord?"Why you want it":"Why it's on the wall"}</legend>
+    <textarea id="f-why" placeholder="${wish||ord?"What drew you to it: the track that hooked you, a show, who recommended it.":"What makes this one special front to back. Favorite side, the track that hooked you, where you were when you first heard it."}">${esc(r.why)}</textarea>
   </fieldset>
 
-  ${ord?`<fieldset><legend>The order</legend>
+  ${ord?`<fieldset class="editpart"><legend>The order</legend>
     <div class="grid2">
       <label class="f">Bought from<input id="f-shop" value="${esc(r.shop)}" placeholder="Band webstore, Rough Trade, Discogs seller…"></label>
       <label class="f">Order status<select id="f-ostat">${ostatOpts}</select></label>
@@ -422,10 +573,10 @@ function openSheet(id,keepScroll){
     ${r.tracking?`<div class="links" style="margin-top:12px"><a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a></div>`:""}
   </fieldset>`:""}
 
-  <fieldset><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
+  <fieldset class="editpart"><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
     <div class="grid2">
-      <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="Columbia"></label>
-      <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="CS 8163"></label>
+      <label class="f">Label<input id="f-label" value="${esc(r.label)}" placeholder="e.g. Columbia"></label>
+      <label class="f">Catalog no.<input id="f-cat" class="mono" value="${esc(r.catalog)}" placeholder="e.g. CS 8163"></label>
       <label class="f" style="grid-column:1/-1">Pressing / edition<input id="f-press" value="${esc(r.pressing)}" placeholder="${wish?"e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye":"e.g. 2015 Analogue Productions 45rpm reissue"}"></label>
       ${ord?"":wish?`
       <label class="f">Budget (USD)<input id="f-budget" class="mono" inputmode="decimal" value="${esc(r.budget)}" placeholder="60"></label>
@@ -440,26 +591,26 @@ function openSheet(id,keepScroll){
   </fieldset>
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
-  <fieldset><legend>Listening log</legend>
-    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li><time>—</time><p class="hint" style="margin:0">No entries yet. Log a listen, a thought, a shop you checked.</p><span></span></li>`}</ul>
-    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="Side B hit different tonight…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+  <fieldset class="viewonly" id="logFs"><legend>${wish||ord?"Notes":"Listening log"}</legend>
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
+    <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Side B hit different tonight…"}" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
+    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li class="nolog"><p class="hint" style="margin:0">${ord?"No notes yet. Track shipping updates or anything about the order.":wish?"No notes yet. Keep track of stores you checked and prices you saw.":"No plays logged yet. Log a listen or a thought."}</p><span></span></li>`}</ul>
   </fieldset>
 
-  ${wish?`<fieldset><legend>Find it</legend>
+  ${wish?`<fieldset class="viewonly" id="findFs"><legend>Find it</legend>
     <div class="links">${linkSet(r)}</div>
     <div class="research" id="research">${researchHTML(r.research)}</div>
     <div class="actions editonly" style="margin-top:12px"><button class="btn small" type="button" id="resBtn">${r.research?"Research again":"Research with Claude"}</button><span class="saved" id="resStatus"></span></div>
-  </fieldset>`:`<fieldset><legend>Look it up</legend><div class="links">${linkSet(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
+  </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div>${r.research?`<div class="research">${researchHTML(r.research)}</div>`:""}</fieldset>`}
 
-  <fieldset><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
+  <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
   <div class="actions editonly" style="margin-top:24px">
-    ${ord?`<button class="btn primary" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
-    ${wish?`<button class="btn primary" type="button" id="ordBtn">I ordered it</button><button class="btn" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
-    <button class="btn danger small" type="button" id="delBtn">Remove</button>
+    ${ord?`<button class="btn primary viewonly" type="button" id="arrBtn">It arrived, hang it on the wall</button>`:""}
+    ${wish?`<button class="btn primary viewonly" type="button" id="ordBtn">I ordered it</button><button class="btn viewonly" type="button" id="gotBtn">I got it, hang it on the wall</button>`:""}
+    <button class="btn danger small editpart" type="button" id="delBtn">Remove</button>
     <span class="saved" id="saved"></span>
   </div>
   <div class="confirm" id="delConfirm"><span>Remove ${esc(r.title)} and its notes for good?</span><button class="btn danger small" type="button" id="delYes">Remove</button><button class="btn small" type="button" id="delNo">Keep it</button></div>`}
@@ -468,6 +619,8 @@ function openSheet(id,keepScroll){
   for(const [fid,k] of Object.entries(FMAP)){if(AF.includes(k)){const el=document.getElementById(fid);if(el&&el.parentElement)el.parentElement.firstChild.after(Object.assign(document.createElement("span"),{className:"auto",textContent:"auto-filled"}))}}
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
+  s.classList.toggle("viewing",!editing);
+  if(wish&&$("#findFs")&&$("#logFs")) $("#logFs").before($("#findFs"));
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll) s.scrollTop=0;
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
@@ -475,8 +628,13 @@ function openSheet(id,keepScroll){
 
   if(isNew){
     $("#createBtn").addEventListener("click",()=>createRecord());
+    // the form's sections depend on status (grades for owned, budget for the hunt, order details): redraw it, keeping what's typed
+    $("#f-status").addEventListener("change",()=>{newDraft={...collect({}),notes:[]};openSheet(null,true);$("#f-status").focus()});
   } else {
     s.querySelectorAll("input:not([type=file]):not(#f-note),textarea,select").forEach(el=>el.addEventListener("input",()=>schedule(r,el.id==="f-status")));
+    const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
+    $("#modeBtn").addEventListener("click",()=>setMode(!editing));
+    if($("#whyAdd")) $("#whyAdd").addEventListener("click",()=>setMode(true,"f-why"));
     $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
     s.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>logPlay(r,b.dataset.play)));
@@ -505,7 +663,7 @@ function openSheet(id,keepScroll){
   const fc=$("#f-cover"); if(fc) fc.addEventListener("change",()=>uploadCover(isNew?null:r,fc.files[0]));
 }
 
-function closeSheet(){clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 function collect(r){
@@ -558,14 +716,27 @@ async function createRecord(){
   const dupe=records.find(x=>(x.artist+"|"+x.title).toLowerCase()===key&&Date.now()-(x.added||0)<120000);
   if(dupe){creating=false;openSheet(dupe.id);return}
   if(!newId) newId=db.collection("records").doc().id;
-  try{const ref=db.collection("records").doc(newId);await ref.set(doc);newId=null;creating=false;pendingCover=null;if(!records.some(x=>x.id===ref.id))records.push({id:ref.id,...doc});render();openSheet(ref.id);if(doc.needsEnrich)enrich({id:ref.id,...doc})}
+  try{const ref=db.collection("records").doc(newId);await ref.set(doc);newId=null;creating=false;pendingCover=null;newDraft=null;if(!records.some(x=>x.id===ref.id))records.push({id:ref.id,...doc});render();openSheet(ref.id);if(doc.needsEnrich)enrich({id:ref.id,...doc})}
   catch(e){creating=false;$("#saved").textContent="Couldn't add it: "+(e.message||e.code);if(cb){cb.disabled=false;cb.textContent="Hang it"}}
 }
 let pendingCover=null;
+/* Shrink an image before storing it: sleeves show covers at ~170px, so a phone photo or a 1400px scan is mostly wasted bytes.
+   Falls back to the original file if the browser can't decode it. */
+async function shrinkImage(file,max,quality){
+  try{
+    const bmp=await createImageBitmap(file); const k=Math.min(1,max/Math.max(bmp.width,bmp.height));
+    if(k===1&&file.size<250*1024){bmp.close&&bmp.close();return file}
+    const c=document.createElement("canvas"); c.width=Math.round(bmp.width*k); c.height=Math.round(bmp.height*k);
+    c.getContext("2d").drawImage(bmp,0,0,c.width,c.height); bmp.close&&bmp.close();
+    const blob=await new Promise(res=>c.toBlob(res,"image/jpeg",quality));
+    if(!blob||blob.size>=file.size) return file;
+    return new File([blob],(file.name||"image").replace(/\.[^.]+$/,"")+".jpg",{type:"image/jpeg"});
+  }catch(e){return file}
+}
 async function uploadCover(r,file){
   if(!file) return; if(!assets){flash("Cover uploads aren't available in this view.");return}
   const sv=document.getElementById("saved"); if(sv) sv.textContent="Uploading cover…";
-  try{const a=await assets.upload(file);
+  try{const a=await assets.upload(await shrinkImage(file,500,.82));
     if(r){await write(r.id,{coverAsset:a.id,needsEnrich:false,autoFilled:(r.autoFilled||[]).filter(k=>k!=="coverAsset")},true)} else {pendingCover=a.id; if(sv) sv.textContent="Cover ready. It'll hang with the record."}
   }catch(e){if(sv) sv.textContent="Upload failed: "+(e.message||e.code)}
 }
@@ -780,7 +951,7 @@ function openGearItem(id,keepScroll){
     <span class="saved" id="saved"></span>
   </fieldset>
   <fieldset><legend>Log</legend>
-    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li><time>—</time><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
+    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li class="nolog"><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
     <form class="addlog editonly" id="g-noteForm"><input id="g-note" placeholder="Set tracking force to 3.5 g…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
   </fieldset>
   ${g.tracks&&recent.length?`<fieldset><legend>Recent plays</legend><ul class="log">${recent.map(p=>`<li><time>${esc(p.d)}</time><p>${esc(p.title||"Manual entry")}</p><span class="hint" style="margin:0;font-family:var(--mono)">${esc(p.min)} min</span></li>`).join("")}</ul></fieldset>`:""}
@@ -830,6 +1001,7 @@ const PHOTO_PRESETS={
   tavern:`Tavern photo, softened.`};
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
+const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
 function applySettings(){
   const t=(settings.title||"").trim()||DEFAULT_TITLE;
   $("#pageTitle").textContent=t; document.title=t;
@@ -907,7 +1079,7 @@ function openSettings(keepScroll){
   const up=$("#st-upload"); if(up) up.addEventListener("change",async()=>{const f=up.files[0];if(!f)return;const st=$("#bgStatus");
     if(f.size>15*1024*1024){st.textContent="That image is over 15 MB. Try a smaller one.";return}
     st.textContent="Uploading…";
-    try{const a=await assets.upload(f);await saveSettings({uploads:[...(settings.uploads||[]),{id:a.id,name:(f.name||"Your photo").replace(/\.[^.]+$/,"").slice(0,40)}],bg:{kind:"photo",assetId:a.id},dim:settings.dim??70});openSettings(true)}
+    try{const a=await assets.upload(await shrinkImage(f,2000,.82));await saveSettings({uploads:[...(settings.uploads||[]),{id:a.id,name:(f.name||"Your photo").replace(/\.[^.]+$/,"").slice(0,40)}],bg:{kind:"photo",assetId:a.id},dim:settings.dim??70});openSettings(true)}
     catch(e){st.textContent="Upload failed: "+(e.message||e.code)}});
   let rmId=null;
   s.querySelectorAll("[data-rmbg]").forEach(b=>b.addEventListener("click",e=>{e.stopPropagation();rmId=b.dataset.rmbg;$("#bg-confirm").classList.add("on")}));
@@ -958,10 +1130,10 @@ async function boot(){
   db.collection("records").onSnapshot(snap=>{
     const before=openId&&openId!=="__new"?JSON.stringify(records.find(x=>x.id===openId)):null;
     records=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>!x.deleted);
-    render();
+    recordsLoaded=true; render();
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash(records.length?"":"The wall is empty. Add your first record.");
+      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");
     if(records.length) flash("");
   },e=>flash("Couldn't load the wall: "+e.message));
 }
