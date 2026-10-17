@@ -1189,6 +1189,13 @@ function openSettings(keepScroll){
   const ub=$("#st-update"); if(ub) ub.addEventListener("click",()=>{ub.disabled=true;
     saveSettings({update:{...(settings.update||{}),requested:true,requestedAt:Date.now(),msg:""}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
   const rl=$("#st-reload"); if(rl) rl.addEventListener("click",()=>location.reload());
+  // redraw when a waiting update or import turns into "Try again", so it shows without reopening Settings
+  clearTimeout(window.__stallTimer);
+  {const up=settings.update||{},dzw=settings.discogs||{},due=[];
+    if(up.requested) due.push((up.requestedAt||0)+15*60000-Date.now());
+    if(dzw.importRequested) due.push((dzw.importRequestedAt||0)+10*60000-Date.now());
+    const next=due.filter(x=>x>0).sort((a,b)=>a-b)[0];
+    if(next) window.__stallTimer=setTimeout(()=>{if(openId==="__settings")openSettings(true);renderUpdateDot()},next+1000)}
   // check for a newer release at most once a day, when Settings is opened on the owner's own wall
   if(canEdit&&mcp&&settings.taskId&&Date.now()-((settings.update||{}).checkedMs||0)>24*3600000&&!keepScroll) fireTask();
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
