@@ -10,11 +10,11 @@ Your records hang on a rack with their real album covers. Keep a wishlist of the
 
 Paste this into a new Claude conversation:
 
-> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.1.1/SETUP.md
+> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.2.0/SETUP.md
 
 Claude publishes the wall as your own private page, creates the background task that finds covers and syncs Discogs, and walks you through the rest. It takes a few minutes. Your records, notes and settings belong to your account only; nothing is shared with this project.
 
-To update later, ask Claude: *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.1.1/SETUP.md"* (with the newer version number).
+To update later, ask Claude: *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.2.0/SETUP.md"* (with the newer version number).
 
 ### What your Claude setup needs
 
