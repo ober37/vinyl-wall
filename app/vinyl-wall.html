@@ -597,7 +597,7 @@ function openSheet(id,keepScroll){
     ${isNew?"":`<div class="art"><div class="sleeve-box"><div class="disc" style="--disc-label:${labelColor(r)}"></div>${coverHTML(r)}</div></div>`}
     <div style="min-width:0;flex:1">
       <h3 id="sTitle">${isNew?"Add a record":esc(r.title)}</h3>
-      ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"On the way":wish?"On the hunt":"On the wall"}</span>`}
+      ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"Ordered":wish?"Wanted":"Owned"}</span>`}
     </div>
     <div class="headbtns">${isNew?"":`<button class="btn small editonly" type="button" id="modeBtn">${editing?"Done":"Edit"}</button>`}<button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   </div>
@@ -612,7 +612,7 @@ function openSheet(id,keepScroll){
       <label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="e.g. Miles Davis"></label>
       <label class="f">Year<input id="f-year" class="mono" inputmode="numeric" value="${esc(r.year)}" placeholder="e.g. 1959"></label>
       <label class="f">Runtime (min)<input id="f-runtime" class="mono" inputmode="numeric" value="${esc(r.runtime)}" placeholder="Looked up automatically"></label>
-      <label class="f">Status<select id="f-status"><option value="own" ${!wish&&!ord?"selected":""}>Own it (on the wall)</option><option value="ordered" ${ord?"selected":""}>On order (on the way)</option><option value="wish" ${wish?"selected":""}>Want it (the hunt)</option></select></label>
+      <label class="f">Status<select id="f-status"><option value="own" ${!wish&&!ord?"selected":""}>Own it</option><option value="ordered" ${ord?"selected":""}>Ordered it</option><option value="wish" ${wish?"selected":""}>Want it</option></select></label>
     </div>
     <div class="actions editonly" style="margin-top:12px">
       <label class="btn small" for="f-cover" style="display:inline-block">${r.coverAsset?"Replace cover":"Upload cover"}</label>
