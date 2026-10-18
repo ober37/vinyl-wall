@@ -14,12 +14,21 @@ Done in v0.5: Settings says when an update is available and gives the sentence t
 Done in v0.3: feedback through GitHub Issues, a contributor guide and a browser preview harness.
 Done in v0.2: Discogs import, tested on a real collection and wantlist.
 
-## Ideas, roughly in order of fit
+Each item below is a [GitHub issue labeled enhancement](https://github.com/ober37/vinyl-wall/issues?q=is%3Aissue+label%3Aenhancement) with the details needed to build it.
 
-Each one is a [GitHub issue labeled enhancement](https://github.com/ober37/vinyl-wall/issues?q=is%3Aissue+label%3Aenhancement) with the details needed to build it.
+## 1.0
+
+Required for the 1.0 release ([milestone](https://github.com/ober37/vinyl-wall/milestone/1)).
 
 ### One wall with status badges and filters (#13)
 Replace "On the wall" and "The hunt" with one wall: owned, on order and wanted records hang together, status shows as a badge, and you filter by one or more badges.
+
+### Simpler "add equipment" flow (#8)
+Pick the type after tapping Add.
+
+## Future, roughly in order of fit
+
+On the roadmap, not scheduled for a release ([milestone](https://github.com/ober37/vinyl-wall/milestone/2)).
 
 ### Local record shops: "it's in stock near you" (#1)
 Many independent shops publish their inventory online, and several run the same storefront software, with product pages addressed by barcode (for example `…/UPC/093624843276`). That makes one integration cover many shops.
@@ -43,5 +52,4 @@ Most played, last spun, and stylus hours by record, from the existing play log.
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
 
 ### Smaller polish
-- Simpler "add equipment" flow (pick the type after tapping Add) (#8).
 - Rail style picker in Settings (walnut, twine, barnwood, pipe, peg are already in the code) (#9).
