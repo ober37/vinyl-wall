@@ -464,7 +464,8 @@ function coverHTML(r){
 function today(){const d=new Date();return new Date(d-d.getTimezoneOffset()*6e4).toISOString().slice(0,10)}
 const OSTAT={preorder:"Pre-order",ordered:"Ordered",shipped:"Shipped",delayed:"Delayed"};
 function shortDate(d){if(!d)return "";const t=new Date(d+"T12:00");return isNaN(t)?d:t.toLocaleDateString(undefined,{month:"short",day:"numeric"})}
-function trackUrl(c,n){if(!n)return "";if(/^https?:\/\//i.test(n.trim()))return n.trim();const q=encodeURIComponent(n);c=(c||"").toLowerCase();
+function trackUrl(c,n){if(!n)return "";if(/^https?:\/\//i.test(n.trim())){try{const u=new URL(n.trim());if(/^https?:$/.test(u.protocol))return u.href}catch(e){}}
+  const q=encodeURIComponent(n);c=(c||"").toLowerCase();
   if(c.includes("usps"))return "https://tools.usps.com/go/TrackConfirmAction?tLabels="+q;
   if(c.includes("ups"))return "https://www.ups.com/track?tracknum="+q;
   if(c.includes("fedex"))return "https://www.fedex.com/fedextrack/?trknbr="+q;
@@ -608,7 +609,7 @@ function factsHTML(r){
   if(wish){f.push(["Priority",r.priority==1?"Top want":r.priority==3?"Someday":"Want"]);if(r.budget)f.push(["Budget","$"+esc(r.budget)])}
   else if(ord){if(r.shop)f.push(["From",esc(r.shop)]);
     f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(shortDate(r.eta)):"")]);
-    if(r.tracking)f.push(["Tracking",`<a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a>`])}
+    if(r.tracking)f.push(["Tracking",`<a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track package ↗</a>`])}
   else{const g=[r.mediaGrade,r.sleeveGrade].filter(Boolean);if(g.length)f.push(["Grades",esc(r.mediaGrade||"—")+" / "+esc(r.sleeveGrade||"—")]);
     const b=[r.shop,r.acquired?shortDate(r.acquired):"",r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
     if(r.matrix)f.push(["Runout",`<span class="mono">${esc(r.matrix)}</span>`])}
@@ -669,7 +670,7 @@ function openSheet(id,keepScroll){
       <label class="f">Tracking #<input id="f-track" class="mono" value="${esc(r.tracking)}"></label>
       <label class="f" style="grid-column:1/-1">Order notes<textarea id="f-onotes" placeholder="Variant chosen, signed insert, bundle, shipping window, who to contact if it's late…">${esc(r.orderNotes)}</textarea></label>
     </div>
-    ${r.tracking?`<div class="links" style="margin-top:12px"><a href="${trackUrl(r.carrier,r.tracking)}" target="_blank" rel="noopener">Track package ↗</a></div>`:""}
+    ${r.tracking?`<div class="links" style="margin-top:12px"><a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track package ↗</a></div>`:""}
   </fieldset>`:""}
 
   <fieldset class="editpart"><legend>${ord?"Edition on order":wish?"Target pressing":"My copy"}</legend>
@@ -878,8 +879,8 @@ function pendingWork(){
   const dz=settings.discogs||{},live=records.filter(r=>!r.deleted&&!r.example),w=[];
   if(dz.hasToken&&(!dz.status||dz.status==="pending")) w.push("verify the Discogs connection (Part B)");
   if(dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-  const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).map(r=>`"${r.title}"`);
-  if(enrich.length) w.push(`fill covers and details (Part A) for ${enrich.slice(0,8).join(", ")}${enrich.length>8?` and ${enrich.length-8} more`:""}`);
+  const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).length;
+  if(enrich) w.push(`fill covers and details (Part A) for ${enrich} record${enrich>1?"s":""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
   const up=settings.update||{};
   if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
@@ -1143,7 +1144,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.9.0"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.9.1"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1158,16 +1159,18 @@ const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
 function fitTitle(){const h=$("#pageTitle");h.classList.remove("trunc");const cut=h.scrollWidth>h.clientWidth+1;
   h.classList.toggle("trunc",cut);if(cut)h.title=h.textContent;else h.removeAttribute("title")}
 addEventListener("resize",fitTitle);
+const okAsset=id=>typeof id==="string"&&/^[A-Za-z0-9_-]{1,64}$/.test(id);
 function applySettings(){
   const t=(settings.title||"").trim()||DEFAULT_TITLE;
   $("#pageTitle").textContent=t; document.title=t; fitTitle();
   const b=document.body; [...b.classList].filter(c=>c.startsWith("bg-")).forEach(c=>b.classList.remove(c));
   const bg=settings.bg||{kind:"preset",preset:DEFAULT_BG};
-  if(bg.kind==="photo"&&bg.assetId){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
+  if(bg.kind==="photo"&&okAsset(bg.assetId)){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
   else{b.classList.add("bg-"+(BG_PRESETS.some(x=>x[0]===bg.preset)?bg.preset:DEFAULT_BG));b.style.removeProperty("--bg-url");
     if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",(settings.dim??55)+"%");else b.style.removeProperty("--bg-dim")}
 }
-function newer(a,b){const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
+const PLAIN_VERSION=/^\d+\.\d+\.\d+$/;
+function newer(a,b){if(!PLAIN_VERSION.test(String(a||"").replace(/^v/,"")))return false;const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
   for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false}
 /* Updates. The background task checks GitHub for the latest release (settings.update.latest). Installing one replaces
    the page, which only Claude in chat can do, so Settings shows the sentence to send Claude, with a Copy button. */
@@ -1185,11 +1188,13 @@ function updateHTML(){
     <p class="mono askline" id="st-ask">${esc(updateAsk())}</p>
     <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-copyask">Copy</button><span class="saved" id="upStatus"></span></div></div>`;
 }
-let settingsWriting=Promise.resolve();
+let settingsWriting=Promise.resolve(),settingsExist=false;
+// only the changed fields are written, so a save never undoes what the background task wrote meanwhile
 function saveSettings(patch){
   settings={...settings,...patch}; applySettings();
-  const payload={...settings};
-  settingsWriting=settingsWriting.then(()=>db.doc("settings/site").set(payload)).catch(e=>flash("Couldn't save settings: "+(e.message||e.code)));
+  const ref=db.doc("settings/site"),payload=settingsExist?{...patch}:{...settings};
+  settingsWriting=settingsWriting.then(()=>settingsExist?ref.update(payload):ref.set(payload).then(()=>{settingsExist=true}))
+    .catch(e=>flash("Couldn't save settings: "+(e.message||e.code)));
   return settingsWriting;
 }
 function secretRef(){return myId?db.collection("data/users/"+myId).doc("discogs"):null}
@@ -1201,7 +1206,7 @@ function tokenStatusHTML(dz){
 }
 function openSettings(keepScroll){
   openId="__settings";
-  const s=$("#sheet"),bg=settings.bg||{kind:"preset",preset:DEFAULT_BG},uploads=settings.uploads||[],dz=settings.discogs||{};
+  const s=$("#sheet"),bg=settings.bg||{kind:"preset",preset:DEFAULT_BG},uploads=(settings.uploads||[]).filter(u=>okAsset(u?.id)),dz=settings.discogs||{};
   const tile=(key,label,cls,sel,extra="")=>`<div class="bgtile" role="button" tabindex="0" data-bg="${esc(key)}" aria-pressed="${sel}"><span class="sw ${cls}"${extra}></span><span class="nm">${esc(label)}</span></div>`;
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, your Discogs connection and your library</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
@@ -1254,6 +1259,7 @@ function openSettings(keepScroll){
   </fieldset>
   <fieldset><legend>Help</legend>
     <p class="hint" style="margin-top:0">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>
+    <p class="hint">Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make Editors can change it.</p>
     <p class="hint mono">Vinyl Wall ${APP_VERSION}</p>
   </fieldset>
   </div>`;
@@ -1383,13 +1389,21 @@ async function readLibrary(file){
   }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
   renderImport();
 }
+// what a record may carry in from a file: its own fields, never another wall's sync or lookup state
+const IMPORT_FIELDS=["title","artist","year","label","catalog","pressing","matrix","runtime","status","why","notes","shop","acquired","paid",
+  "mediaGrade","sleeveGrade","priority","budget","orderDate","orderStatus","eta","orderNum","carrier","tracking","orderNotes","discogsId",
+  "discogsMatch","coverAsset","coverOriginal","researchLog","added","autoFilled"];
+function importable(d){const r={};for(const k of IMPORT_FIELDS) if(d[k]!==undefined) r[k]=d[k];
+  if(!Array.isArray(r.notes)) r.notes=[];
+  r.needsSync=true;  // synced afresh to this wall's Discogs account, if it has one
+  return r}
 async function applyLibrary(){
   const p=libPlan;if(!p||libBusy)return;libPlan=null;libBusy=true;libStage="busy";libMsg="Bringing in your library…";renderImport();
   // a cover id only works on the wall that stored it: anything this wall doesn't hold is looked up again
   let stored=null;try{if(assets)stored=new Set((await assets.list()).assets.map(a=>a.id))}catch(e){}
   const has=id=>!!(id&&stored&&stored.has(id));
   const writes=[...p.setups.map(([id,d])=>["setups",id,d]),...p.gear.map(([id,d])=>["gear",id,d]),...p.recs.map(([id,d])=>{
-    const r={...d};if(!has(r.coverOriginal))delete r.coverOriginal;
+    const r=importable(d);if(!has(r.coverOriginal))delete r.coverOriginal;
     if(!has(r.coverAsset)){delete r.coverAsset;r.needsEnrich=true}
     return ["records",id,r]})];
   let done=0;
@@ -1546,7 +1560,7 @@ async function boot(){
   canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
   document.getElementById("app").classList.toggle("ro",!canEdit);
   try{myId=u?await u.id():null}catch(e){myId=null}
-  db.doc("settings/site").onSnapshot(snap=>{settings=snap.exists?{...snap.data()}:{};applySettings();
+  db.doc("settings/site").onSnapshot(snap=>{settingsExist=!!snap.exists;settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot()},()=>{});
   db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
@@ -1562,7 +1576,6 @@ async function boot(){
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
       if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");
-    if(records.length) flash("");
   },e=>flash("Couldn't load the wall: "+e.message));
 }
 if(window.claude&&claude.use) boot(); else {flash("This page runs inside claude.ai.");}

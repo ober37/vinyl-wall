@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.9.0**. All file links below point at this tag. Replace `v0.9.0` only if the person asks for a different version.
+Release: **v0.9.1**. All file links below point at this tag. Replace `v0.9.1` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.0
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.1
 ```
 
 ---
@@ -67,7 +67,7 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
 - `capabilities`:
   ```json
   {
-    "db": {},
+    "db": {"rules": [{"path": "", "write": "admin"}]},
     "user": {},
     "assets": {},
     "sample": {},
