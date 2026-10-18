@@ -45,8 +45,8 @@ body{background:var(--wall);color:var(--ink);font-family:var(--body);font-size:1
 .bg-cafe{--photo:url("backgrounds/coffee-shop.jpg")}
 .bg-tavern{--photo:url("backgrounds/coffee-shop-2.jpg")}
 .bg-shop{--photo:url("backgrounds/record-shop.jpg")}
-/* stock photos are the originals, softened only by the wall-colored wash; a tile shows them at the default (75%) */
-.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop{--dim-default:75%}
+/* stock photos are the originals, softened only by the wall-colored wash; a tile shows them at the default (83%) */
+.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop{--dim-default:83%}
 .bg-photo{--photo:var(--bg-url);--dim-default:70%}
 .bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop,.bg-photo,
 body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-tavern::before,body.bg-shop::before,body.bg-photo::before{
@@ -1159,9 +1159,9 @@ const PHOTO_PRESETS={
   shop:`Record shop photo.`,
   cafe:`Coffee shop photo.`,
   tavern:`Tavern photo, softened.`};
-/* A stock photo's slider runs 0-100 and lays the wall-colored wash at 50-95%: 0, 50 and 100 look like an uploaded
-   photo at 50%, 75% and 95%. An uploaded photo's slider is the wash itself (20-90%). */
-const stockDim=v=>v<=50?50+v/2:75+(v-50)*.4;
+/* A stock photo's slider runs 0-100 and lays the wall-colored wash at 70-95% (0, 50 and 100 give 70%, 83% and 95%);
+   anything lighter than 70% makes the photo too busy to read the wall over. An uploaded photo's slider is the wash itself (20-90%). */
+const stockDim=v=>{const t=40+v*.6;return Math.round((t<=50?50+t/2:75+(t-50)*.4)*10)/10};
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
 const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
