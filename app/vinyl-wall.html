@@ -1329,7 +1329,7 @@ async function boot(){
   db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(typing)return; if(openId==="__gear")openGear(true)},()=>{});
-  db.collection("gear").onSnapshot(snap=>{if(pendingGear>0)return;gear=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
+  db.collection("gear").onSnapshot(snap=>{if(pendingGear>0)return;gear=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();renderWelcome();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(typing)return; if(openId==="__gear")openGear(true); else if(String(openId).startsWith("__gear:"))openGearItem(String(openId).slice(7),true)},()=>{});
   db.collection("records").onSnapshot(snap=>{
