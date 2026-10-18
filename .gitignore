@@ -3,4 +3,3 @@ __pycache__/
 *.pyc
 dev/preview.html
 dev/backgrounds/
-dev/_blob/

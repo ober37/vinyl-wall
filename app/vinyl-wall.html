@@ -400,7 +400,7 @@ const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const GRADES=["","M","NM","VG+","VG","G+","G","F","P"];
 let db=null,assets=null,sample=null,mcp=null,canEdit=false;
-let selfCap=null,lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
+let lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
 const SYNCED=new Set(["title","artist","status","pressing","matrix","shop","acquired","paid","why","mediaGrade","sleeveGrade","priority","budget","orderDate","orderStatus","eta","discogsId","deleted"]);
 let records=[],openId=null,saveTimer=null,baseline={},creating=false,newId=null;
 let gear=[],gearWriting=Promise.resolve(),pendingGear=0;
@@ -814,9 +814,7 @@ function pendingWork(){
   if(enrich.length) w.push(`fill covers and details (Part A) for ${enrich.slice(0,8).join(", ")}${enrich.length>8?` and ${enrich.length-8} more`:""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
   const up=settings.update||{};
-  if(up.requested) w.push("get the latest release ready to install (Part E2): settings/site update.requested is true");
-  if(up.installed&&up.upgraded!==up.installed) w.push("finish the update to "+up.installed+" (Part E3)");
-  else if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
+  if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
   if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
   return "Started from the wall. Waiting now: "+(w.length?w.join("; "):"nothing specific; run every part and do whatever is pending")+". Work through every part in the usual order.";
 }
@@ -1046,7 +1044,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.4.1"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.5.0"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1069,74 +1067,21 @@ function applySettings(){
 }
 function newer(a,b){const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
   for(let i=0;i<3;i++){if((x[i]||0)!==(y[i]||0))return (x[i]||0)>(y[i]||0)}return false}
-/* Updates, in two steps. The background task can't replace the page, so on "Update" it downloads the release and
-   stores it with the wall (settings.update.staged = {version, asset}); "Install" then has the page save that version
-   over itself with the owner's own authority (the artifact capability). A release that needs new page permissions
-   can't install itself: the task sets update.needsChat and the owner asks Claude instead. */
-const PAGE_SHELL_HEAD='<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>\n';
-let installingNow=false;
+/* Updates. The background task checks GitHub for the latest release (settings.update.latest). Installing one replaces
+   the page, which only Claude in chat can do, so Settings shows the sentence to send Claude, with a Copy button. */
 function updateState(){
   if(!canEdit||!mcp||!settings.taskId) return "";
-  const u=settings.update||{};
-  if(installingNow) return "installing";
-  if(u.requested) return Date.now()-(u.requestedAt||0)>15*60000?"stalled":"updating";
-  if(u.staged&&newer(u.staged.version,APP_VERSION)) return selfCap?"ready":"chat";
-  if(u.needsChat&&newer(u.needsChat,APP_VERSION)) return "chat";
-  if(newer(u.installed,APP_VERSION)) return "reload";
-  if(newer(u.latest,APP_VERSION)) return u.msg?"failed":"available";
-  return "";
+  return newer((settings.update||{}).latest,APP_VERSION)?"available":"";
 }
-function renderUpdateDot(){const b=$("#settingsBtn");if(!b)return;const st=updateState(),on=["available","failed","ready","chat","reload"].includes(st);
+function renderUpdateDot(){const b=$("#settingsBtn");if(!b)return;const on=updateState()==="available";
   b.classList.toggle("hasupdate",on);b.setAttribute("aria-label",on?"Settings (update available)":"Settings")}
-function updateAsk(){const v=(settings.update||{}).needsChat||(settings.update||{}).latest||APP_VERSION;
-  return `Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v${v}/SETUP.md`}
+function updateAsk(){return `Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v${(settings.update||{}).latest}/SETUP.md`}
 function updateHTML(){
-  const st=updateState(),u=settings.update||{};
-  if(!st) return "";
-  const btn=(id,label)=>`<button class="btn small primary editonly" type="button" id="${id}">${label}</button>`;
-  const body={available:[`<b>An update is available</b>`,`<p class="hint">Updating keeps all your records, equipment and settings.</p>`,btn("st-update","Update")],
-    failed:[`<b>An update is available</b>`,`<p class="hint" style="color:var(--want)">The last try didn't finish: ${esc(u.msg)}</p>`,btn("st-update","Try again")],
-    updating:[`<b>Getting the update…</b>`,`<p class="hint">This takes a few minutes. Your wall keeps working while it runs.</p>`,""],
-    stalled:[`<b>Getting the update…</b>`,`<p class="hint">This is taking longer than it should. Try again to restart it.</p>`,btn("st-update","Try again")],
-    ready:[`<b>Update ready</b>`,u.msg?`<p class="hint" style="color:var(--want)">${esc(u.msg)}</p>`:`<p class="hint">Install it now. The page reloads, and your records, equipment and settings stay as they are.</p>`,btn("st-install",u.msg?"Try again":"Install")],
-    installing:[`<b>Installing…</b>`,`<p class="hint">The page reloads when it's done.</p>`,""],
-    chat:[`<b>An update is available</b>`,`<p class="hint">This one needs Claude to install. Start a chat with Claude and send:</p><p class="mono askline" id="st-ask">${esc(updateAsk())}</p>`,`<button class="btn small editonly" type="button" id="st-copyask">Copy</button>`],
-    reload:[`<b>Update installed</b>`,`<p class="hint">Reload the page to see it.</p>`,`<button class="btn small primary" type="button" id="st-reload">Reload</button>`]}[st];
-  return `<div class="updatebox">${body[0]}${body[1]}${body[2]?`<div class="actions" style="margin-top:10px">${body[2]}<span class="saved" id="upStatus"></span></div>`:""}</div>`;
-}
-async function installUpdate(btn){
-  const u=settings.update||{},s=u.staged||{};
-  btn.disabled=true;installingNow=true;openSettings(true);renderUpdateDot();
-  const fail=async(m,extra={})=>{installingNow=false;await saveSettings({update:{...(settings.update||{}),installing:"",msg:m,...extra}});openSettings(true);renderUpdateDot()};
-  let b;
-  try{const r=await fetch("/_blob/"+encodeURIComponent(s.asset||""));if(!r.ok)throw 0;b=await r.json()}
-  catch(e){return fail("Couldn't open the downloaded update. Try again to download it again.",{staged:null})}
-  if(!b||b.vinylWall!==1||b.version!==s.version||typeof b.page!=="string"||!b.page.includes(`const APP_VERSION="${s.version}"`))
-    return fail("The downloaded update didn't look right, so nothing was changed. Try again.",{staged:null});
-  try{
-    // the background task's instructions first, so they match the page that's about to be installed
-    if(typeof b.task==="string"&&b.task.length>200) await mcp.callTool("Claude Code Remote","update_trigger",{trigger_id:settings.taskId,prompt:b.task},{cache:false});
-    await saveSettings({update:{...(settings.update||{}),installing:s.version,msg:""}});
-    const page=/^<!doctype/i.test(b.page.trimStart())?b.page:PAGE_SHELL_HEAD+b.page+"\n</body></html>";
-    const files={"index.html":{content:page,contentType:"text/html"}};
-    for(const [path,text] of Object.entries(b.files||{})) if(/^tools\/[\w.-]+\.py$/.test(path)&&typeof text==="string") files[path]={content:text,contentType:"text/plain"};
-    try{await selfCap.publish(files)}
-    catch(e){if(["capability_disabled","capability_removed","invalid_content","transform_error"].includes(e&&e.code)) await selfCap.publish(page); else throw e}
-    location.reload();
-  }catch(e){
-    if(e&&e.code==="conflict") return; // the wall changed meanwhile; this view is reloading to it
-    fail(e&&(e.code==="not_writer"||e.code==="not_granted")?"Only the wall's owner can install updates.":"Installing didn't finish. Try again.");
-  }
-}
-/* After an install the new page finishes the bookkeeping: record the version, drop the downloaded copy, and start
-   the background task once so it runs any data upgrades the release brings. */
-async function finishInstall(){
-  const u=settings.update||{};
-  if(!canEdit||!u.installing||u.installing!==APP_VERSION) return;
-  const asset=(u.staged||{}).asset;
-  await saveSettings({update:{...u,installing:"",staged:null,needsChat:"",installed:APP_VERSION,installedAt:new Date().toISOString().slice(0,16).replace("T"," ")+" UTC",msg:""}});
-  if(asset&&assets) assets.delete(asset).catch(()=>{});
-  lastFire=0;fireTask();
+  if(!updateState()) return "";
+  return `<div class="updatebox"><b>An update is available</b>
+    <p class="hint">To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are.</p>
+    <p class="mono askline" id="st-ask">${esc(updateAsk())}</p>
+    <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-copyask">Copy</button><span class="saved" id="upStatus"></span></div></div>`;
 }
 let settingsWriting=Promise.resolve();
 function saveSettings(patch){
@@ -1235,16 +1180,11 @@ function openSettings(keepScroll){
     saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
   const ir=$("#st-import-retry"); if(ir) ir.addEventListener("click",()=>{ir.disabled=true;
     saveSettings({discogs:{...settings.discogs,importRequested:true,importRequestedAt:Date.now()}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
-  const ub=$("#st-update"); if(ub) ub.addEventListener("click",()=>{ub.disabled=true;
-    saveSettings({update:{...(settings.update||{}),requested:true,requestedAt:Date.now(),msg:"",staged:null,needsChat:""}}).then(()=>{lastFire=0;fireTask();openSettings(true)})});
-  const rl=$("#st-reload"); if(rl) rl.addEventListener("click",()=>location.reload());
-  const ins=$("#st-install"); if(ins) ins.addEventListener("click",()=>installUpdate(ins));
   const ca=$("#st-copyask"); if(ca) ca.addEventListener("click",async()=>{const t=updateAsk(),st=$("#upStatus");
     try{await navigator.clipboard.writeText(t);st.textContent="Copied"}catch(e){const el=$("#st-ask");const r=document.createRange();r.selectNodeContents(el);const sel=getSelection();sel.removeAllRanges();sel.addRange(r);st.textContent="Selected: copy it with your device's copy command"}});
-  // redraw when a waiting update or import turns into "Try again", so it shows without reopening Settings
+  // redraw when a waiting import turns into "Try again", so it shows without reopening Settings
   clearTimeout(window.__stallTimer);
-  {const up=settings.update||{},dzw=settings.discogs||{},due=[];
-    if(up.requested) due.push((up.requestedAt||0)+15*60000-Date.now());
+  {const dzw=settings.discogs||{},due=[];
     if(dzw.importRequested) due.push((dzw.importRequestedAt||0)+10*60000-Date.now());
     const next=due.filter(x=>x>0).sort((a,b)=>a-b)[0];
     if(next) window.__stallTimer=setTimeout(()=>{if(openId==="__settings")openSettings(true);renderUpdateDot()},next+1000)}
@@ -1261,15 +1201,15 @@ $("#settingsBtn").addEventListener("click",()=>openSettings());
 function flash(m){$("#status").textContent=m}
 
 async function boot(){
-  const [d,u,a,sm,m,sc]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp"),claude.use("artifact")].map(p=>p.catch(()=>null)));
-  db=d;assets=a;sample=sm;mcp=m;userCap=u;selfCap=sc;
+  const [d,u,a,sm,m]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp")].map(p=>p.catch(()=>null)));
+  db=d;assets=a;sample=sm;mcp=m;userCap=u;
   if(!db){flash("Open this page signed in to claude.ai to see the wall.");$("#addBtn").hidden=true;return}
   canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
   document.getElementById("app").classList.toggle("ro",!canEdit);
   try{myId=u?await u.id():null}catch(e){myId=null}
   db.doc("settings/site").onSnapshot(snap=>{settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); finishInstall()},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot()},()=>{});
   db.collection("setups").onSnapshot(snap=>{setupDocs=snap.docs.map(x=>({id:x.id,...x.data()}));renderGearBtn();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(typing)return; if(openId==="__gear")openGear(true)},()=>{});

@@ -6,10 +6,10 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 ## Next
 
-1. **First in-app update on a real wall** (v0.2.0 → latest), then confirm the page, data and background task all moved.
-2. **First outside install** by a tester, from the setup link alone.
+1. **First outside install** by a tester, from the setup link alone.
 
-Done in v0.3: in-app updates (Settings says an update is available; one tap installs the latest tagged release), feedback through GitHub Issues, a contributor guide and a browser preview harness.
+Done in v0.5: Settings says when an update is available and gives the sentence to send Claude (background runs can't replace the page or stage code for it, so installing goes through chat).
+Done in v0.3: feedback through GitHub Issues, a contributor guide and a browser preview harness.
 Done in v0.2: Discogs import, tested on a real collection and wantlist.
 
 ## Ideas, roughly in order of fit
