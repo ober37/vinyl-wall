@@ -10,7 +10,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix is something to ask 
 
 | Piece | What it does |
 |---|---|
-| `app/vinyl-wall.html` | The whole wall: one self-contained page published as a claude.ai artifact. It uses the artifact runtime (`window.claude.use(...)`): `db` (shared database), `user` (who's viewing), `assets` (cover and background uploads), `sample` (asks Claude for research) and `mcp` (starts the background task with `fire_trigger`). |
+| `app/vinyl-wall.html` | The whole wall: one self-contained page published as a claude.ai artifact. It uses the artifact runtime (`window.claude.use(...)`): `db` (shared database), `user` (who's viewing), `assets` (cover and background uploads), `sample` (asks Claude for research), `downloads` (hands the owner their exported library) and `mcp` (starts the background task with `fire_trigger`). |
 | Database | `records` (one doc per album), `settings/site` (title, background, `discogs`, `update`, `taskId`, `dataVersion`), `gear` and `setups` (equipment), and the private `data/users/<id>/discogs` doc that holds the Discogs token. |
 | `tasks/background-task.md` | The prompt of each owner's on-demand background task (a scheduled task with no schedule). Parts run in order: B verify Discogs, D import, A covers and details, C sync, E updates. The page starts it and says what's waiting (`pendingWork()`). |
 | `app/tools/*.py` | Scripts the background task runs: `discogs_sync.py` (wall → Discogs) and `discogs_import.py` (Discogs → wall). They're published with the page and read back by the task. |

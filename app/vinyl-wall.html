@@ -224,6 +224,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .steps li .btn{grid-column:3;grid-row:1/3}
 .steps li.done::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .steps li.done .btn{opacity:.6}
+.welcome .linkbtn{margin:0;font-size:inherit;color:var(--accent)}
 @media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
 /* Small text stays readable over photo backgrounds */
 :is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,h2 small,.cap .a,.cap .meta){
@@ -375,6 +376,7 @@ fieldset.gsec>p.hint{margin-bottom:16px}
       <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync, and can bring in records you've already listed there.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
       <li id="wStepGear"><b>Add your turntable and stylus</b><span>Optional. Plays add up so you know when a stylus is wearing out.</span><button class="btn small editonly" type="button" data-welcome="gear">Set up equipment</button></li>
     </ol>
+    <p class="editonly">Moving from another wall? <button class="linkbtn" type="button" data-welcome="import">Import your library</button></p>
   </section>
 
   <section class="wallsec" aria-labelledby="h-own">
@@ -393,13 +395,14 @@ fieldset.gsec>p.hint{margin-bottom:16px}
 
 <div class="scrim" id="scrim"></div>
 <aside class="sheet" id="sheet" aria-modal="true" role="dialog" aria-labelledby="sTitle"></aside>
+<input type="file" id="lib-file" accept=".json,application/json" hidden>
 
 <script>
 (function(){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const GRADES=["","M","NM","VG+","VG","G+","G","F","P"];
-let db=null,assets=null,sample=null,mcp=null,canEdit=false;
+let db=null,assets=null,sample=null,mcp=null,downloads=null,canEdit=false;
 let lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
 const SYNCED=new Set(["title","artist","status","pressing","matrix","shop","acquired","paid","why","mediaGrade","sleeveGrade","priority","budget","orderDate","orderStatus","eta","discogsId","deleted"]);
 let records=[],openId=null,saveTimer=null,baseline={},creating=false,newId=null;
@@ -465,7 +468,8 @@ function renderWelcome(){
   $("#wStepGear").classList.toggle("done",gear.some(g=>!g.example));
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
-  const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings(); else openGear()});
+  const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings();
+  else if(k==="import"){openSettings();$("#lib-file").click()} else openGear()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
@@ -1044,7 +1048,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.5.0"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.5.1"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1101,7 +1105,7 @@ function openSettings(keepScroll){
   openId="__settings";
   const s=$("#sheet"),bg=settings.bg||{kind:"preset",preset:DEFAULT_BG},uploads=settings.uploads||[],dz=settings.discogs||{};
   const tile=(key,label,cls,sel,extra="")=>`<div class="bgtile" role="button" tabindex="0" data-bg="${esc(key)}" aria-pressed="${sel}"><span class="sw ${cls}"${extra}></span><span class="nm">${esc(label)}</span></div>`;
-  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, and your Discogs connection</div></div>
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, your Discogs connection and your library</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   ${updateHTML()}
   <fieldset><legend>Page</legend>
@@ -1140,6 +1144,15 @@ function openSettings(keepScroll){
         ${dz.importRequested&&Date.now()-(dz.importRequestedAt||0)>10*60000?`<button class="btn small editonly" type="button" id="st-import-retry">Try again</button>`:""}
         <span class="saved">${dz.importRequested?(Date.now()-(dz.importRequestedAt||0)>10*60000?"This is taking longer than it should. Try again to restart it.":"This takes a few minutes. New records appear on the wall as they come in."):esc(dz.importMsg||"")}${!dz.importRequested&&dz.importedAt?` <span class="mono">(${esc(dz.importedAt)})</span>`:""}</span></div>`}
     </div>`:""}
+  </fieldset>
+  <fieldset class="editonly"><legend>Your library</legend>
+    <p class="hint" style="margin-top:0">Save your records, equipment and settings to a file you keep, or bring in a file you exported from a wall. Your Discogs token is never included.</p>
+    <div class="actions" style="margin-top:10px">
+      ${downloads?`<button class="btn small" type="button" id="lib-export" ${libBusy?"disabled":""}>Export your library</button>`:""}
+      <label class="btn small" for="lib-file">Import from a file</label>
+    </div>
+    <div class="confirm ${libPlan?"on":""}" id="lib-confirm"><span>${libPlan?esc(libSummary(libPlan)):""}</span><button class="btn primary small" type="button" id="lib-yes">Bring them in</button><button class="btn small" type="button" id="lib-no">Cancel</button></div>
+    <p class="hint" id="libStatus">${esc(libMsg)}</p>
   </fieldset>
   <p class="hint feedback">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>`;
   s.classList.toggle("ro",!canEdit);
@@ -1190,6 +1203,9 @@ function openSettings(keepScroll){
     if(next) window.__stallTimer=setTimeout(()=>{if(openId==="__settings")openSettings(true);renderUpdateDot()},next+1000)}
   // check for a newer release at most once a day, when Settings is opened on the owner's own wall
   if(canEdit&&mcp&&settings.taskId&&Date.now()-((settings.update||{}).checkedMs||0)>24*3600000&&!keepScroll) fireTask();
+  const ex=$("#lib-export"); if(ex) ex.addEventListener("click",exportLibrary);
+  $("#lib-yes").addEventListener("click",applyLibrary);
+  $("#lib-no").addEventListener("click",()=>{libPlan=null;libMsg="";openSettings(true)});
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
   const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
   $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
@@ -1198,11 +1214,86 @@ function openSettings(keepScroll){
     catch(e){$("#tokStatus").textContent="Couldn't remove it: "+(e.message||e.code)}});
 }
 $("#settingsBtn").addEventListener("click",()=>openSettings());
+// ---------- Your library: export everything to a file, and import a file made that way (#10)
+/* The file holds records, gear, setups and the page's look. Never the Discogs token (it isn't loaded here) or anything
+   tied to one wall: the task id, the Discogs connection, update state, data version. */
+let libPlan=null,libMsg="",libBusy=false;
+function nowUTC(){return new Date().toISOString().slice(0,16).replace("T"," ")+" UTC"}
+// same matching as app/tools/discogs_import.py: ignore case, punctuation, "the", "&"/"and", Discogs' "(2)" and "*"
+function libNorm(s){return String(s||"").toLowerCase().replace(/\s*\(\d+\)|\*/g,"").replace(/&/g," and ").split(/[^a-z0-9]+/).filter(w=>w&&w!=="the").join("")}
+function libRids(d){return [d.discogsId,d.discogsSync?.rid].map(v=>parseInt(v,10)).filter(Boolean)}
+function libCount(recs,gearN,setupN){const part=(n,one,many)=>n?`${n} ${n===1?one:many}`:"";
+  const a=[part(recs,"record","records"),part(gearN,"piece of equipment","pieces of equipment"),part(setupN,"setup","setups")].filter(Boolean);
+  return a.length>1?a.slice(0,-1).join(", ")+" and "+a[a.length-1]:a[0]||"nothing"}
+function libSummary(p){return `Adds ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+
+  (p.skipped?` ${p.skipped} record${p.skipped===1?" is":"s are"} already on the wall and will be skipped.`:"")}
+async function exportLibrary(){
+  const byId=list=>Object.fromEntries(list.filter(x=>!x.example&&!x.deleted).map(({id,...d})=>[id,d]));
+  const site={};for(const k of ["title","bg","dim"]) if(settings[k]!==undefined) site[k]=settings[k];
+  const file={vinylWall:1,exportedAt:nowUTC(),app:APP_VERSION,settings:{site},setups:byId(setupDocs),gear:byId(gear),records:byId(records)};
+  try{await downloads.save({filename:`vinyl-wall-${today()}.json`,data:JSON.stringify(file,null,1)});
+    libMsg=`Saved ${libCount(Object.keys(file.records).length,Object.keys(file.gear).length,Object.keys(file.setups).length)}.`}
+  catch(e){libMsg=e.code==="declined"?"":"Couldn't save the file: "+(e.message||e.code)}
+  if(openId==="__settings")openSettings(true);
+}
+async function readLibrary(file){
+  libPlan=null;
+  let snap=null;try{snap=JSON.parse(await file.text())}catch(e){}
+  if(!snap||!Number.isInteger(snap.vinylWall)||typeof snap.records!=="object"){libMsg="This file wasn't made by Export on a Vinyl Wall.";return openSettings(true)}
+  if(snap.vinylWall>1){libMsg="This file was made by a newer Vinyl Wall. Update this wall first, then import it.";return openSettings(true)}
+  try{
+    // every record, including ones marked deleted: they're on their way off Discogs, so don't bring them back
+    const have=(await db.collection("records").get()).docs.map(x=>({id:x.id,...x.data()}));
+    const ids=new Set(have.map(r=>r.id)),rids=new Set(),keys=new Set();
+    const remember=d=>{libRids(d).forEach(n=>rids.add(n));keys.add(libNorm(d.artist)+"|"+libNorm(d.title))};
+    have.forEach(remember);
+    const recs=[];let skipped=0;
+    for(const [id,d] of Object.entries(snap.records)){
+      if(!d||typeof d!=="object"||d.deleted||!d.title) continue;
+      if(ids.has(id)||libRids(d).some(n=>rids.has(n))||keys.has(libNorm(d.artist)+"|"+libNorm(d.title))){skipped++;continue}
+      recs.push([id,d]);ids.add(id);remember(d);
+    }
+    const fresh=(list,have)=>Object.entries(list||{}).filter(([id,d])=>d&&typeof d==="object"&&!have.some(x=>x.id===id));
+    const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
+    if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return openSettings(true)}
+    libPlan=p;libMsg="";
+  }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
+  openSettings(true);
+}
+async function applyLibrary(){
+  const p=libPlan;if(!p||libBusy)return;libPlan=null;libBusy=true;
+  // a cover id only works on the wall that stored it: anything this wall doesn't hold is looked up again
+  let stored=null;try{if(assets)stored=new Set((await assets.list()).assets.map(a=>a.id))}catch(e){}
+  const has=id=>!!(id&&stored&&stored.has(id));
+  const writes=[...p.setups.map(([id,d])=>["setups",id,d]),...p.gear.map(([id,d])=>["gear",id,d]),...p.recs.map(([id,d])=>{
+    const r={...d};if(!has(r.coverOriginal))delete r.coverOriginal;
+    if(!has(r.coverAsset)){delete r.coverAsset;r.needsEnrich=true}
+    return ["records",id,r]})];
+  let done=0;
+  try{
+    for(const [c,id,d] of writes){await db.collection(c).doc(id).set(d);done++;
+      if(done%5===0){libMsg=`Bringing in ${done} of ${writes.length}…`;if(openId==="__settings")openSettings(true)}}
+    // a wall that had no records takes the file's look too; an existing wall keeps its own
+    if(p.empty){const s=p.site,patch={};
+      if(typeof s.title==="string")patch.title=s.title.slice(0,60);
+      if(s.bg?.kind==="preset"&&BG_PRESETS.some(x=>x[0]===s.bg.preset))patch.bg={kind:"preset",preset:s.bg.preset};
+      else if(s.bg?.kind==="photo"&&has(s.bg.assetId)){patch.bg={kind:"photo",assetId:s.bg.assetId};
+        if(!(settings.uploads||[]).some(u=>u.id===s.bg.assetId))patch.uploads=[...(settings.uploads||[]),{id:s.bg.assetId,name:"Your photo"}]}
+      if(typeof s.dim==="number")patch.dim=s.dim;
+      if(Object.keys(patch).length)await saveSettings(patch)}
+    const lookups=writes.filter(([c,,d])=>c==="records"&&d.needsEnrich).length;
+    libMsg=`Brought in ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+(lookups?` Covers for ${lookups} record${lookups===1?"":"s"} will be looked up.`:"");
+    if(lookups){lastFire=0;fireTask()}
+  }catch(e){libMsg=`Stopped after ${done} of ${writes.length}: ${e.message||e.code}. Import the file again to bring in the rest.`}
+  libBusy=false;
+  if(openId==="__settings")openSettings(true);
+}
+$("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
 function flash(m){$("#status").textContent=m}
 
 async function boot(){
-  const [d,u,a,sm,m]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp")].map(p=>p.catch(()=>null)));
-  db=d;assets=a;sample=sm;mcp=m;userCap=u;
+  const [d,u,a,sm,m,dl]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp"),claude.use("downloads")].map(p=>p.catch(()=>null)));
+  db=d;assets=a;sample=sm;mcp=m;downloads=dl;userCap=u;
   if(!db){flash("Open this page signed in to claude.ai to see the wall.");$("#addBtn").hidden=true;return}
   canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
   document.getElementById("app").classList.toggle("ro",!canEdit);
