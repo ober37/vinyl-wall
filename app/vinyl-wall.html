@@ -294,6 +294,9 @@ textarea{resize:vertical;min-height:80px;line-height:1.5}
 input.mono{font-family:var(--mono);font-size:13px}
 /* phones: iOS zooms the page into any field with text under 16px */
 @media (max-width:640px){input,textarea,select,input.mono{font-size:16px}}
+/* iOS sizes date fields to their own content and ignores width:100%: drop the native look so they fit their column */
+input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:2.6em}
+input[type=date]::-webkit-date-and-time-value{text-align:left}
 .log{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:10px}
 .log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
 .log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
