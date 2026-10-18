@@ -1,0 +1,87 @@
+<!doctype html>
+<!-- Smoke test: drives dev/preview.html (the real page on the mock runtime) and checks the core flows and the
+     security fixes from 0.9.1. Run dev/test.sh, or serve dev/ and open test.html. Results go in #out and the title. -->
+<meta charset="utf-8"><title>running</title>
+<pre id="out"></pre><iframe id="f" style="width:1200px;height:800px"></iframe>
+<script>
+const out=[],f=document.getElementById("f"),sleep=ms=>new Promise(r=>setTimeout(r,ms));let failed=0;
+// wait for something async (like reading a file) that headless Chrome's fast-forwarded clock doesn't wait for
+const until=async(fn,tries=400)=>{for(let i=0;i<tries&&!fn();i++)await sleep(25);return fn()};
+const need=(el,sel)=>{if(!el)throw new Error("missing "+sel);return el};
+const check=(name,ok,detail="")=>{if(!ok)failed++;out.push(`${ok?"PASS":"FAIL"} ${name}${ok||!detail?"":" — "+detail}`)};
+f.src="preview.html";
+f.onload=async()=>{
+  const w=f.contentWindow,d=f.contentDocument,q=s=>d.querySelector(s),errs=[];
+  w.addEventListener("error",e=>errs.push(e.message));
+  w.addEventListener("unhandledrejection",e=>errs.push("unhandled: "+(e.reason?.message||e.reason)));
+  await sleep(900);
+  const titles=()=>[...d.querySelectorAll("#rack .cap .t")].map(x=>x.textContent);
+  const openRecord=async t=>{[...d.querySelectorAll(".sleeve-btn")].find(b=>b.textContent.includes(t)).click();await sleep(300)};
+  const site=()=>w.__data.settings.site,emit=()=>{w.__emit("settings");return sleep(200)};  // the mock replaces the doc on each write
+  try{
+    // filter
+    const all=titles().length;
+    q('.fchip[data-f="p1"]').click();await sleep(150);
+    check("filter: top want only",titles().join()==="Abbey Road",titles().join());
+    q('.fchip[data-f="p1"]').click();await sleep(150);
+    check("filter: cleared shows all",titles().length===all);
+    // search
+    q("#searchBtn").click();q("#q").value="miles blue";q("#q").dispatchEvent(new Event("input"));await sleep(150);
+    check("search: every word matches",titles().join()==="Kind of Blue",titles().join());
+    q("#q").dispatchEvent(new KeyboardEvent("keydown",{key:"Escape",bubbles:true}));await sleep(150);
+    check("search: Escape clears",q("#searchBar").hidden&&titles().length===all);
+    // add equipment
+    q("#stylusBtn").click();await sleep(300);const cards=d.querySelectorAll(".gcard").length;
+    q('[data-addgear="den"]').click();await sleep(200);q('input[name="agType"][value="cartridge"]').click();await sleep(200);
+    q("#ag-cancel").click();await sleep(300);
+    check("add equipment: cancel saves nothing",d.querySelectorAll(".gcard").length===cards);
+    q('[data-addgear="den"]').click();await sleep(200);q('input[name="agType"][value="stylus"]').click();await sleep(200);
+    q("#ag-name").value="Test stylus";q("#ag-start").value="12";q('#ag-form button[type=submit]').click();await sleep(500);
+    const g=Object.values(w.__data.gear).find(x=>x.name==="Test stylus");
+    check("add equipment: saved with its fields",g&&g.setup==="den"&&g.tracks&&g.startHours===12&&g.ratedHigh===500,JSON.stringify(g));
+    q("#closeBtn").click();await sleep(200);
+    // tracking link stays one escaped attribute
+    await openRecord("Aja");q("#modeBtn").click();await sleep(300);
+    q("#f-track").value='https://example.com/" data-injected="yes';q("#f-track").dispatchEvent(new Event("input",{bubbles:true}));await sleep(1200);
+    q("#closeBtn").click();await sleep(300);await openRecord("Aja");
+    const a=[...d.querySelectorAll("a")].find(x=>x.textContent.includes("Track package"));
+    check("tracking link: no injected attribute",a&&!a.hasAttribute("data-injected"),a?[...a.attributes].map(x=>x.name).join():"no link");
+    q("#closeBtn").click();await sleep(200);
+    // starting the task never passes record text along
+    await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();await sleep(400);
+    const call=w.__calls.filter(c=>c[1]==="fire_trigger").pop(),text=call?call[2].text:"";
+    check("task start: counts, no titles",call&&!/Kind of Blue|Rumours|Aja/.test(text),text);
+    q("#closeBtn").click();await sleep(200);
+    // update check takes plain versions only
+    site().update={latest:"9.9.9/../../../someone/else/main",checkedMs:Date.now()};await emit();
+    check("update: odd version ignored",!q("#settingsBtn").classList.contains("hasupdate"));
+    site().update={latest:"9.9.9",checkedMs:Date.now()};await emit();
+    check("update: plain version offered",q("#settingsBtn").classList.contains("hasupdate"));
+    // background asset ids never reach CSS unless they're plain ids
+    site().bg={kind:"photo",assetId:'x"),url("https://example.com/p.png'};await emit();
+    check("background: odd asset id ignored",!d.body.style.getPropertyValue("--bg-url"));
+    site().bg={kind:"preset",preset:"listening"};await emit();
+    // background thumbnails in Settings are real tiles (the filter's color squares share their class name)
+    q("#settingsBtn").click();await sleep(300);
+    const tile=q('.bgtile[data-bg="preset:grille"] .sw'),tw=tile?tile.getBoundingClientRect().width:0;
+    check("settings: background thumbnails show",tw>60&&getComputedStyle(tile).backgroundImage!=="none",`width ${tw}`);
+    q("#closeBtn").click();await sleep(200);
+    // settings saves write only what changed
+    site().discogs={status:"ok",verifiedUser:"tester"};  // as if the task wrote it and the page hasn't heard yet
+    q("#settingsBtn").click();await sleep(300);q("#st-title").value="Test wall";q("#st-title").dispatchEvent(new Event("input"));await sleep(900);
+    check("settings: save keeps others' changes",site().title==="Test wall"&&site().discogs?.status==="ok",JSON.stringify(site()));
+    need(q("#closeBtn"),"#closeBtn after settings").click();await sleep(200);
+    // import takes known record fields only, with fresh sync state
+    const file=new w.File([JSON.stringify({vinylWall:1,records:{imp1:{title:"Imported One",artist:"Tester",status:"own",notes:[],
+      discogsSync:{state:"synced",rid:5,instanceId:6},needsSync:false,stray:"x"}}})],"lib.json",{type:"application/json"});
+    q("#settingsBtn").click();await sleep(300);need(q("#lib-import"),"#lib-import").click();await sleep(200);
+    const dt=new w.DataTransfer();dt.items.add(file);q("#lib-file").files=dt.files;q("#lib-file").dispatchEvent(new w.Event("change"));await until(()=>q("#lib-yes"));
+    need(q("#lib-yes"),"#lib-yes ("+(q(".libflow")?.textContent||"no import sheet")+")").click();await until(()=>q("#lib-see"));
+    const r=w.__data.records.imp1;
+    check("import: known fields, fresh sync",r&&!r.discogsSync&&!r.stray&&r.needsSync===true&&r.title==="Imported One",JSON.stringify(r));
+  }catch(e){check("ran without throwing",false,e.message)}
+  check("no script errors",!errs.length,errs.join("; "));
+  document.getElementById("out").textContent=out.join("\n");
+  document.title=failed?`DONE ${failed} failed`:"DONE all passed";
+};
+</script>

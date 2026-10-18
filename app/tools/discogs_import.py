@@ -109,7 +109,8 @@ def now():
 def load(dirpath):
     docs = []
     for f in sorted(glob.glob(os.path.join(dirpath, "**", "*.json"), recursive=True)):
-        j = json.load(open(f))
+        with open(f) as fh:
+            j = json.load(fh)
         docs.append(j["data"] if isinstance(j.get("data"), dict) else j)
     return docs  # records marked deleted still count: they're on their way off Discogs, so don't bring them back
 
@@ -188,7 +189,8 @@ def main():
         writes.append({"op": "set", "collection": "records", "doc_id": f"dg-{bi['id']}", "data": rec})
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_want += 1
 
-    json.dump(writes, open(dst, "w"), indent=1)
+    with open(dst, "w") as fh:
+        json.dump(writes, fh, indent=1)
     capped = " (stopped at 1000 items)" if len(coll) >= MAX_ITEMS or len(wants) >= MAX_ITEMS else ""
     print(f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted); {skipped} skipped as already on the wall{capped}.")
 

@@ -18,7 +18,7 @@ Never deletes collection items the wall did not create.
 import json, os, sys, time, urllib.request, urllib.parse, urllib.error, glob, datetime
 
 TOKEN = os.environ["DISCOGS_TOKEN"]
-USER = os.environ["DISCOGS_USER"]
+USER = urllib.parse.quote(os.environ["DISCOGS_USER"], safe="")
 API = "https://api.discogs.com"
 UA = "VinylWall/1.0 +https://github.com/ober37/vinyl-wall"
 GRADE = {"M": "Mint (M)", "NM": "Near Mint (NM or M-)", "VG+": "Very Good Plus (VG+)", "VG": "Very Good (VG)",
@@ -294,7 +294,8 @@ def now():
 def load(dirpath, versions):
     docs = []
     for f in sorted(glob.glob(os.path.join(dirpath, "**", "*.json"), recursive=True)):
-        j = json.load(open(f))
+        with open(f) as fh:
+            j = json.load(fh)
         if "data" in j and isinstance(j["data"], dict):
             i = j.get("id") or os.path.basename(f)[:-5]
             docs.append((i, j.get("version") or versions.get(i), j["data"]))
@@ -309,7 +310,8 @@ def main():
     versions = {}
     for a in sys.argv[3:]:
         if a.endswith(".json"):
-            versions = json.load(open(a))
+            with open(a) as fh:
+                versions = json.load(fh)
     do_all = "--all" in sys.argv
     wants = wantlist()
     writes, report = [], []
@@ -337,7 +339,8 @@ def main():
                            "data": {"discogsSync": {**sync, "state": "error", "at": now(),
                                                     "msg": str(e)[:300]}, "needsSync": {"__delete__": True}}})
             report.append(f"{d.get('title')}: ERROR {e}")
-    json.dump(writes, open(dst, "w"), indent=1)
+    with open(dst, "w") as fh:
+        json.dump(writes, fh, indent=1)
     print("\n".join(report) or "Nothing to sync.")
 
 
