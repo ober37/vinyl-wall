@@ -107,7 +107,9 @@ header.top>.headtext .tally{column-gap:6px;row-gap:4px}
   header.top h1{font-size:clamp(30px,8vw,48px)}
 }
 #shareBtn[hidden]{display:none}
-h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:.9;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:1;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance;min-width:0}
+/* a single word too long for the line is cut off with an ellipsis instead of running under the icons */
+h1.trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub{color:var(--ink-2);margin:6px 0 0;max-width:56ch}
 .tally{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;gap:18px;font-variant-numeric:tabular-nums}
 .tally b{color:var(--ink);font-weight:500}
@@ -1153,9 +1155,12 @@ const PHOTO_PRESETS={
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
 const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
+function fitTitle(){const h=$("#pageTitle");h.classList.remove("trunc");const cut=h.scrollWidth>h.clientWidth+1;
+  h.classList.toggle("trunc",cut);if(cut)h.title=h.textContent;else h.removeAttribute("title")}
+addEventListener("resize",fitTitle);
 function applySettings(){
   const t=(settings.title||"").trim()||DEFAULT_TITLE;
-  $("#pageTitle").textContent=t; document.title=t;
+  $("#pageTitle").textContent=t; document.title=t; fitTitle();
   const b=document.body; [...b.classList].filter(c=>c.startsWith("bg-")).forEach(c=>b.classList.remove(c));
   const bg=settings.bg||{kind:"preset",preset:DEFAULT_BG};
   if(bg.kind==="photo"&&bg.assetId){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
