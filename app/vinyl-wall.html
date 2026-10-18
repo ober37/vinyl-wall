@@ -1336,9 +1336,10 @@ async function applyLibrary(){
 }
 $("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
 // ---------- Share image: a picture of the wall to save or post (#4)
-/* Drawn on a canvas: title, counts, then each section's sleeves hanging from a barnwood rail, in the wall's own order.
-   Covers come from this wall's stored images; records without one get the placeholder sleeve the wall shows.
-   Nothing private goes in: no prices, orders or notes. */
+/* Drawn on a canvas: the wall's photo background (softened as on the wall), title, counts, then each section's sleeves
+   hanging from a barnwood rail with their tags, in the wall's own order. Covers come from this wall's stored images;
+   records without one get the placeholder sleeve the wall shows. Pattern backgrounds are CSS-only, so those draw as the
+   plain wall color. Nothing private goes in: no prices (the budget is left off hunt tags), orders or notes. */
 const SHARE_W=1080,SHARE_COLS=5,SHARE_MAX=40;
 function loadImg(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
 function fitText(ctx,t,w){t=String(t||"");if(ctx.measureText(t).width<=w)return t;
@@ -1349,11 +1350,36 @@ function wrapText(ctx,t,w,max){const out=[];let line="";
   if(line)out.push(line);
   if(out.length>max){out.length=max;out[max-1]+="…"}
   return out.map(l=>fitText(ctx,l,w))}
-async function drawShare(withCovers){
+// the same tag the sleeve wears on the wall, minus the budget
+function shareTag(r,C){
+  if(r.status==="ordered") return {t:OSTAT[r.orderStatus||"ordered"]+(r.eta?" · "+shortDate(r.eta):""),bg:C.accent,fg:C.accentInk};
+  if(r.status!=="wish") return null;
+  return r.priority==1?{t:"Top want",bg:C.want,fg:"#fff"}:r.priority==3?{t:"Someday",bg:C.someday,fg:C.somedayInk}:{t:"Want",bg:C.paper,fg:C.paperInk};
+}
+function drawTag(ctx,tag,right,bottom,maxW,C,font){
+  ctx.save();ctx.font=font;if("letterSpacing" in ctx)ctx.letterSpacing="1px";
+  const h=24,w=Math.min(maxW,ctx.measureText(tag.t.toUpperCase()).width+24);
+  ctx.translate(right-w/2,bottom-h/2);ctx.rotate(6*Math.PI/180);
+  ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=6;ctx.shadowOffsetY=3;
+  ctx.beginPath();ctx.moveTo(-w/2+8,-h/2);ctx.lineTo(w/2,-h/2);ctx.lineTo(w/2,h/2);ctx.lineTo(-w/2+8,h/2);ctx.lineTo(-w/2,0);ctx.closePath();
+  ctx.fillStyle=tag.bg;ctx.fill();ctx.restore();
+  ctx.fillStyle=C.wall;ctx.beginPath();ctx.arc(-w/2+8,0,2.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=tag.fg;ctx.textBaseline="middle";ctx.fillText(fitText(ctx,tag.t.toUpperCase(),w-24),-w/2+15,1);
+  ctx.restore();
+}
+// the photo behind the wall right now (preset or uploaded), read from the page's own background layer
+function wallPhoto(){
+  const b=getComputedStyle(document.body),m=getComputedStyle(document.body,"::before").backgroundImage.match(/url\("?([^")]+)"?\)/);
+  if(!m) return null;
+  const pos=(b.getPropertyValue("--photo-pos")||"").trim().split(/\s+/)[1]||"50%";
+  return {src:m[1],dim:parseFloat(b.getPropertyValue("--bg-dim"))||parseFloat(b.getPropertyValue("--dim-default"))||55,y:parseFloat(pos)/100||.5};
+}
+async function drawShare(withImages){
   const css=getComputedStyle(document.documentElement),v=k=>css.getPropertyValue(k).trim();
-  const C={wall:v("--wall"),ink:v("--ink"),ink2:v("--ink-2"),shadow:v("--shadow")};
+  const C={wall:v("--wall"),ink:v("--ink"),ink2:v("--ink-2"),shadow:v("--shadow"),accent:v("--accent"),accentInk:v("--accent-ink"),
+    want:v("--want"),someday:v("--someday"),somedayInk:v("--someday-ink"),paper:v("--paper"),paperInk:v("--paper-ink")};
   const F={title:'800 84px "Big Shoulders Display"',sec:'600 34px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
-    cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"'};
+    cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"',tag:'500 13px "IBM Plex Mono"'};
   await Promise.all(Object.values(F).map(f=>document.fonts.load(f).catch(()=>{})));
   const {own,ord,wish}=wallLists();
   const secs=[["On the wall",own.concat(ord)],["The hunt",wish]].filter(x=>x[1].length);
@@ -1362,16 +1388,22 @@ async function drawShare(withCovers){
   for(const [,list] of secs) H+=56+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+24;
   H+=pad-24;
   const shown=secs.flatMap(x=>x[1].slice(0,SHARE_MAX));
-  const covers=new Map(withCovers?await Promise.all(shown.filter(r=>r.coverAsset).map(async r=>[r.id,await loadImg("/_blob/"+r.coverAsset)])):[]);
+  const wp=withImages?wallPhoto():null,photo=wp?await loadImg(wp.src):null;
+  const covers=new Map(withImages?await Promise.all(shown.filter(r=>r.coverAsset).map(async r=>[r.id,await loadImg("/_blob/"+r.coverAsset)])):[]);
   const cv=document.createElement("canvas");cv.width=SHARE_W;cv.height=Math.ceil(H);
   const ctx=cv.getContext("2d");ctx.textBaseline="top";
   ctx.fillStyle=C.wall;ctx.fillRect(0,0,cv.width,cv.height);
-  let y=pad;
+  if(photo){const k=Math.max(cv.width/photo.width,cv.height/photo.height),w=photo.width*k,h=photo.height*k;
+    ctx.drawImage(photo,(cv.width-w)/2,(cv.height-h)*wp.y,w,h);
+    ctx.globalAlpha=wp.dim/100;ctx.fillStyle=C.wall;ctx.fillRect(0,0,cv.width,cv.height);ctx.globalAlpha=1}
+  // over a photo, text gets the same soft glow in the wall color as on the page
+  const glow=on=>{ctx.shadowColor=on&&photo?C.wall:"transparent";ctx.shadowBlur=on&&photo?10:0;ctx.shadowOffsetY=0};
+  let y=pad;glow(true);
   ctx.fillStyle=C.ink;ctx.font=F.title;ctx.fillText(fitText(ctx,((settings.title||"").trim()||DEFAULT_TITLE).toUpperCase(),SHARE_W-2*pad),pad,y);y+=100;
   ctx.fillStyle=C.ink2;ctx.font=F.mono;
   ctx.fillText([[own.length,"on the wall"],[ord.length,"on the way"],[wish.length,"in the hunt"]].filter(x=>x[0]).map(x=>x.join(" ")).join("  ·  "),pad,y);y+=76;
   for(const [name,list] of secs){
-    ctx.fillStyle=C.ink;ctx.font=F.sec;ctx.fillText(name.toUpperCase(),pad,y);y+=56;
+    glow(true);ctx.fillStyle=C.ink;ctx.font=F.sec;ctx.fillText(name.toUpperCase(),pad,y);y+=56;glow(false);
     const items=list.slice(0,SHARE_MAX);
     for(let i=0;i<items.length;i+=SHARE_COLS){
       const row=items.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
@@ -1387,17 +1419,18 @@ async function drawShare(withCovers){
         if(!im){ctx.fillStyle="#fff";ctx.font=F.gen;wrapText(ctx,(r.title||"Untitled").toUpperCase(),sw-24,4).forEach((l,n)=>ctx.fillText(l,x+12,top+12+n*22));
           ctx.globalAlpha=.85;ctx.font=F.small;ctx.fillText(fitText(ctx,r.artist||"",sw-24),x+12,top+sw-26);ctx.globalAlpha=1}
         ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke();
-        ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
-        ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);
+        const tag=shareTag(r,C);if(tag)drawTag(ctx,tag,x+sw+4,top+sw*.82,sw+4,C,F.tag);
+        glow(true);ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
+        ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);glow(false);
       });
       y+=rowH;
     }
-    if(list.length>SHARE_MAX){ctx.fillStyle=C.ink2;ctx.font=F.mono;ctx.fillText(`+ ${list.length-SHARE_MAX} more`,pad,y);y+=40}
+    if(list.length>SHARE_MAX){glow(true);ctx.fillStyle=C.ink2;ctx.font=F.mono;ctx.fillText(`+ ${list.length-SHARE_MAX} more`,pad,y);y+=40;glow(false)}
     y+=24;
   }
   return cv;
 }
-async function shareImage(withCovers){const cv=await drawShare(withCovers);
+async function shareImage(withImages){const cv=await drawShare(withImages);
   const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(new Error("empty")),"image/png")}catch(e){rej(e)}});
   return {cv,blob}}
 async function openShare(){
@@ -1408,7 +1441,7 @@ async function openShare(){
   paint(`<p class="libmsg" role="status">Drawing your wall…</p>`);
   $("#scrim").classList.add("on"); s.classList.add("on"); s.scrollTop=0; $("#closeBtn").focus();
   if(!records.length) return paint(`<p class="libmsg">Hang a record first, then come back for a picture of your wall.</p>`);
-  // a cover that can't be drawn (the browser refuses some images) shouldn't cost the whole picture: retry with placeholders
+  // an image that can't be drawn (the browser refuses some) shouldn't cost the whole picture: retry with placeholders and no photo
   let pic=null;try{pic=await shareImage(true)}catch(e){try{pic=await shareImage(false)}catch(e2){}}
   if(openId!=="__share") return;
   if(!pic) return paint(`<p class="libmsg">Couldn't draw the picture here.</p>`);
