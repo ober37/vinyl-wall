@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.9.1**. All file links below point at this tag. Replace `v0.9.1` only if the person asks for a different version.
+Release: **v0.9.2**. All file links below point at this tag. Replace `v0.9.2` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.1
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.2
 ```
 
 ---
@@ -41,6 +41,7 @@ app/tools/discogs_sync.py
 app/tools/discogs_import.py
 app/backgrounds/listening-room.jpg
 app/backgrounds/crate-digging.jpg
+app/backgrounds/record-shop.jpg
 app/backgrounds/coffee-shop.jpg
 app/backgrounds/coffee-shop-2.jpg
 tasks/background-task.md
@@ -60,6 +61,7 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
     "tools/discogs_import.py": {"from": "app/tools/discogs_import.py", "contentType": "text/plain"},
     "backgrounds/listening-room.jpg": "app/backgrounds/listening-room.jpg",
     "backgrounds/crate-digging.jpg": "app/backgrounds/crate-digging.jpg",
+    "backgrounds/record-shop.jpg": "app/backgrounds/record-shop.jpg",
     "backgrounds/coffee-shop.jpg": "app/backgrounds/coffee-shop.jpg",
     "backgrounds/coffee-shop-2.jpg": "app/backgrounds/coffee-shop-2.jpg"
   }
