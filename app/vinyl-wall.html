@@ -946,14 +946,13 @@ function openGear(keepScroll){
   const groups=setups().map(x=>({id:x.id,title:x.name,note:x.note,items:act.filter(g=>g.setup===x.id),edit:true}));
   const shared=act.filter(g=>g.setup===ALL_SETUPS), loose=act.filter(g=>g.setup!==ALL_SETUPS&&!setupById(g.setup));
   if(loose.length) groups.push({id:"",title:"Not in a setup",note:"Open each piece and choose its setup.",items:loose});
-  const typeOpts=GEAR_ORDER.map(k=>`<option value="${k}">${GEAR_TYPES[k].label}</option>`).join("");
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Equipment</h3><div class="by">Your setups, and how much play each piece has seen</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   <div class="secs">
   ${groups.map(G=>`<fieldset><legend>${esc(G.title)}</legend>
     ${G.note?`<p class="hint" style="margin-top:0">${esc(G.note)}</p>`:""}
     <div class="glist">${G.items.map(gearCard).join("")||`<p class="hint" style="margin:0">No equipment in this setup yet.</p>`}</div>
-    ${G.edit?`<div class="actions editonly" style="margin-top:12px"><select class="g-newtype" data-setup="${esc(G.id)}" aria-label="Equipment type">${typeOpts}</select><button class="btn small primary" type="button" data-addgear="${esc(G.id)}">Add equipment</button><button class="btn small" type="button" data-editsetup="${esc(G.id)}">Rename or edit setup</button></div>`:""}
+    ${G.edit?`<div class="actions editonly" style="margin-top:12px"><button class="btn small primary" type="button" data-addgear="${esc(G.id)}">Add equipment</button><button class="btn small" type="button" data-editsetup="${esc(G.id)}">Rename or edit setup</button></div>`:""}
   </fieldset>`).join("")||`<fieldset><legend>Setups</legend><p class="hint">Start by adding a setup: a turntable and the gear that plays with it.</p></fieldset>`}
   <fieldset class="gsec"><legend>Additional setups</legend>
     <p class="hint" style="margin-top:0">Have another turntable somewhere else? Give it its own setup so its plays and wear are tracked separately.</p>
@@ -962,7 +961,7 @@ function openGear(keepScroll){
   <fieldset class="gsec"><legend>Shared equipment</legend>
     <p class="hint" style="margin-top:0">Gear used with every setup, like speakers, headphones or a cleaning kit. Plays on any setup count toward it.</p>
     ${shared.length?`<div class="glist">${shared.map(gearCard).join("")}</div>`:""}
-    <div class="actions editonly" style="margin-top:${shared.length?12:0}px"><select id="g-sharedtype" aria-label="Shared equipment type">${typeOpts}</select><button class="btn small" type="button" id="g-addshared">Add shared equipment</button></div>
+    <div class="actions editonly" style="margin-top:${shared.length?12:0}px"><button class="btn small" type="button" data-addgear="${ALL_SETUPS}">Add shared equipment</button></div>
   </fieldset>
 
   ${ret.length?`<fieldset><legend>Retired</legend><div class="glist">${ret.map(gearCard).join("")}</div></fieldset>`:""}
@@ -971,15 +970,45 @@ function openGear(keepScroll){
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
   $("#closeBtn").addEventListener("click",closeSheet);
   s.querySelectorAll("[data-gear]").forEach(b=>b.addEventListener("click",()=>openGearItem(b.dataset.gear)));
-  const newGear=(type,setup)=>{const T=GEAR_TYPES[type],id=db.collection("gear").doc().id;
-    saveGear(id,{type,name:"",setup,status:"active",tracks:!!T.tracks,ratedLow:T.ratedLow||"",ratedHigh:T.ratedHigh||"",installed:today(),startHours:0,minutes:0,plays:[],notes:[],added:Date.now()}).then(()=>openGearItem(id))};
-  s.querySelectorAll("[data-addgear]").forEach(b=>b.addEventListener("click",()=>newGear(s.querySelector(`.g-newtype[data-setup="${b.dataset.addgear}"]`).value,b.dataset.addgear)));
-  const as=$("#g-addshared"); if(as) as.addEventListener("click",()=>newGear(val("g-sharedtype"),ALL_SETUPS));
+  s.querySelectorAll("[data-addgear]").forEach(b=>b.addEventListener("click",()=>openAddGear(b.dataset.addgear)));
   s.querySelectorAll("[data-editsetup]").forEach(b=>b.addEventListener("click",()=>openSetup(b.dataset.editsetup)));
   $("#g-addsetup").addEventListener("click",async()=>{const id=db.collection("setups").doc().id;const n=setups().length;
     const doc={name:n?"Setup "+(n+1):"My setup",note:"",added:Date.now()};setupDocs.push({id,...doc});
     try{await db.collection("setups").doc(id).set(doc)}catch(e){flash("Couldn't add the setup: "+(e.message||e.code))}openSetup(id)});
 }
+// adding a piece of gear: pick the type, then only what that type needs (rated life only where there's a typical rating,
+// i.e. the stylus). Nothing is saved until Add; shop, price, notes and the rest are in the item's own sheet.
+function openAddGear(setup,type){
+  openId="__addgear";
+  const T=type&&GEAR_TYPES[type],s=$("#sheet"),keep={name:val("ag-name"),installed:val("ag-installed")};
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Add equipment</h3><div class="by">${setup===ALL_SETUPS?"Shared by all setups":"To "+esc(setupName(setup))}</div></div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  <fieldset><legend>What is it?</legend>
+    <div class="setups" role="radiogroup" aria-label="Equipment type" style="margin-top:0">${GEAR_ORDER.map(k=>`<label class="chip"><input type="radio" name="agType" value="${k}" ${k===type?"checked":""}><span>${GEAR_TYPES[k].label}</span></label>`).join("")}</div>
+  </fieldset>
+  ${T?`<form id="ag-form"><fieldset><legend>${esc(T.label)}</legend><div class="grid2">
+      <label class="f" style="grid-column:1/-1">Make &amp; model<input id="ag-name" value="${esc(keep.name)}" placeholder="e.g. ${esc(GEAR_EXAMPLE[type]||"Make and model")}" autocomplete="off"></label>
+      <label class="f">In use since<input id="ag-installed" type="date" value="${esc(keep.installed||today())}"></label>
+      ${T.tracks?`<label class="f">Hours played so far<input id="ag-start" class="mono" inputmode="decimal" placeholder="0 if it's new"></label>`:""}
+      ${T.ratedHigh?`<label class="f">Rated life from (h)<input id="ag-lo" class="mono" inputmode="numeric" value="${esc(T.ratedLow||"")}" placeholder="optional"></label>
+      <label class="f">Rated life to (h)<input id="ag-hi" class="mono" inputmode="numeric" value="${esc(T.ratedHigh||"")}" placeholder="optional"></label>`:""}
+    </div>
+    ${T.tracks?`<p class="hint">${setup===ALL_SETUPS?"Plays on any setup add hours to it.":"Plays on this setup add hours to it."}${T.hint?" "+esc(T.hint):""}</p>`:""}
+    </fieldset>
+    <div class="actions" style="margin-top:20px"><button class="btn primary" type="submit">Add</button><button class="btn" type="button" id="ag-cancel">Cancel</button></div></form>`
+  :`<div class="actions" style="margin-top:20px"><button class="btn" type="button" id="ag-cancel">Cancel</button></div>`}`;
+  $("#scrim").classList.add("on"); s.classList.add("on");
+  $("#closeBtn").addEventListener("click",closeSheet); $("#ag-cancel").addEventListener("click",()=>openGear());
+  s.querySelectorAll('input[name="agType"]').forEach(r=>r.addEventListener("change",()=>{openAddGear(setup,r.value);const n=$("#ag-name");if(n)n.focus()}));
+  if(!T){s.scrollTop=0;(s.querySelector('input[name="agType"]')).focus();return}
+  $("#ag-form").addEventListener("submit",async e=>{e.preventDefault();const num=k=>{const v=parseFloat(val(k));return isNaN(v)?"":v};
+    const id=db.collection("gear").doc().id;
+    await saveGear(id,{type,name:val("ag-name"),setup,status:"active",tracks:!!T.tracks,ratedLow:T.ratedHigh?num("ag-lo"):"",ratedHigh:T.ratedHigh?num("ag-hi"):"",
+      installed:val("ag-installed")||today(),startHours:T.tracks?num("ag-start")||0:0,minutes:0,plays:[],notes:[],added:Date.now()});
+    openGear()});
+}
+const GEAR_EXAMPLE={turntable:"Technics SL-1500C",cartridge:"Ortofon 2M Red",stylus:"Audio-Technica ATN-VM95E",preamp:"Schiit Mani 2",amp:"Yamaha A-S501",
+  speakers:"KEF Q150",headphones:"Sennheiser HD 600",mat:"Cork slipmat",belt:"Replacement belt for AT-LP60X",cleaning:"Record brush and fluid",other:"Make and model"};
 function openSetup(id){
   const x=setupById(id); if(!x) return openGear();
   openId="__setup:"+id;
@@ -1082,7 +1111,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.6.0"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.6.1"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
