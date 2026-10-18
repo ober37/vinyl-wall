@@ -24,6 +24,9 @@ Required for the 1.0 release ([milestone](https://github.com/ober37/vinyl-wall/m
 ### Simpler "add equipment" flow (#8)
 Pick the type after tapping Add.
 
+### Search the wall (#15)
+Type a few letters to find a record. To be scoped after #8.
+
 ## Future, roughly in order of fit
 
 On the roadmap, not scheduled for a release ([milestone](https://github.com/ober37/vinyl-wall/milestone/2)).
