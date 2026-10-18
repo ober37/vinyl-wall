@@ -267,12 +267,11 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 /* sheet */
 .scrim{position:fixed;inset:0;background:rgba(8,12,11,.45);z-index:20;opacity:0;pointer-events:none;transition:opacity .25s}
 .scrim.on{opacity:1;pointer-events:auto}
-/* the sheet slides by its position, not a transform: iOS can draw a transformed panel's scroll bar mid-screen */
-.sheet{position:fixed;top:0;right:calc(-1 * min(560px,100%) - 40px);bottom:0;width:min(560px,100%);background:var(--sheet);z-index:21;overflow-y:auto;
-  transition:right .32s cubic-bezier(.2,.8,.2,1);box-shadow:-10px 0 30px var(--shadow);
+.sheet{position:fixed;top:0;right:0;bottom:0;width:min(560px,100%);background:var(--sheet);z-index:21;overflow-y:auto;
+  transform:translateX(102%);transition:transform .32s cubic-bezier(.2,.8,.2,1);box-shadow:-10px 0 30px var(--shadow);
   padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) 20px}
 .sheet{visibility:hidden}
-.sheet.on{right:0;visibility:visible}
+.sheet.on{transform:none;visibility:visible}
 .sheet-head{display:flex;gap:16px;align-items:flex-start}
 .sheet-head .art{width:132px;flex:none;position:relative;transition:width .25s ease}
 .sheet.viewing .sheet-head .art{width:176px}
