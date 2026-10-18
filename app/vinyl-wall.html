@@ -78,7 +78,7 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .importbox .hint{margin-top:4px}
 .updatebox{margin:22px 0 4px;padding:14px 16px;border:1px solid var(--brass);border-radius:10px}
 .updatebox .hint{margin-top:4px}
-.feedback{margin:6px 0 4px}
+.feedback{margin:36px 0 4px}
 .askline{font-size:12px;word-break:break-all;background:var(--line);padding:8px 10px;border-radius:8px;margin:8px 0 0;user-select:all}
 #settingsBtn{position:relative}
 #settingsBtn.hasupdate::after{content:"";position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px rgba(0,0,0,.45)}
@@ -343,7 +343,7 @@ input.mono{font-family:var(--mono);font-size:13px}
 .gcard .hrs{font:500 12px/1 var(--mono);font-variant-numeric:tabular-nums}
 .gcard .state{margin-left:0}
 fieldset.gsec>p.hint{margin-bottom:12px}
-.gearsecs>fieldset{margin-top:36px;padding-top:18px}
+.secs>fieldset{margin-top:36px;padding-top:18px}
 .actions>select{width:auto;max-width:100%;flex:0 1 auto}
 .ghead{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 8px}
 .ghead:first-child{margin-top:0}
@@ -921,7 +921,7 @@ function openGear(keepScroll){
   const typeOpts=GEAR_ORDER.map(k=>`<option value="${k}">${GEAR_TYPES[k].label}</option>`).join("");
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Equipment</h3><div class="by">Your setups, and how much play each piece has seen</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
-  <div class="gearsecs">
+  <div class="secs">
   ${groups.map(G=>`<fieldset><legend>${esc(G.title)}</legend>
     ${G.note?`<p class="hint" style="margin-top:0">${esc(G.note)}</p>`:""}
     <div class="glist">${G.items.map(gearCard).join("")||`<p class="hint" style="margin:0">No equipment in this setup yet.</p>`}</div>
@@ -1114,6 +1114,7 @@ function openSettings(keepScroll){
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Settings</h3><div class="by">How your wall looks, your Discogs connection and your library</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   ${updateHTML()}
+  <div class="secs">
   <fieldset><legend>Page</legend>
     <label class="f">Title<input id="st-title" value="${esc(settings.title||"")}" placeholder="${DEFAULT_TITLE}" maxlength="60"></label>
     <span class="saved" id="saved"></span>
@@ -1159,6 +1160,7 @@ function openSettings(keepScroll){
     </div>
     ${libExportMsg?`<p class="hint" id="libStatus">${esc(libExportMsg)}</p>`:""}
   </fieldset>
+  </div>
   <p class="hint feedback">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>`;
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
