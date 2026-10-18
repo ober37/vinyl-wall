@@ -10,11 +10,11 @@ Your records hang on a rack with their real album covers. Keep a wishlist of the
 
 Paste this into a new Claude conversation:
 
-> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.5.2/SETUP.md
+> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.6.0/SETUP.md
 
 Claude publishes the wall as your own private page, creates the background task that finds covers and syncs Discogs, and walks you through the rest. It takes a few minutes. Your records, notes and settings belong to your account only; nothing is shared with this project.
 
-**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.5.2/SETUP.md"*, with the newest version number.)
+**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.6.0/SETUP.md"*, with the newest version number.)
 
 ### What your Claude setup needs
 
@@ -26,7 +26,7 @@ If something's missing, Claude tells you before building anything.
 
 ## Features
 
-- **The wall.** Owned records hang from iron rings on a weathered barnwood plank; orders on the way hang behind them, sorted by expected arrival. Hover (or tap) a sleeve to open it.
+- **The wall.** Every record hangs from iron rings on a weathered barnwood plank: what you own, then orders on the way by expected arrival, then the hunt by priority. Tags show each record's status, and tapping the counts under the title filters the wall to one or more of them. Hover (or tap) a sleeve to open it.
 - **The hunt.** A wishlist with priorities (Top want, Want, Someday), a budget, and a target pressing. One-click search links (Discogs, eBay, MusicStack, Popsike) and optional research from Claude on which pressings to look for.
 - **Automatic details.** Add just an artist and album: the cover, year, label and runtime are looked up for you.
 - **Your copy.** Media and sleeve grades, catalog number, pressing, matrix/runout, where you bought it and what you paid.

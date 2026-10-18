@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.5.2**. All file links below point at this tag. Replace `v0.5.2` only if the person asks for a different version.
+Release: **v0.6.0**. All file links below point at this tag. Replace `v0.6.0` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.5.2
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.6.0
 ```
 
 ---
