@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.6.1: a simpler "Add equipment" flow: pick the type, then only its fields (#8).
 Done in v0.6.0: one wall with status badges and filters (#13), and the version in Settings → Help.
 Done in v0.5.2: a share image of the wall to save or post, and a Help section in Settings.
 Done in v0.5.1: export your library to a file and import it, including on a brand-new wall (#10).
@@ -20,9 +21,6 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 ## 1.0
 
 Required for the 1.0 release ([milestone](https://github.com/ober37/vinyl-wall/milestone/1)).
-
-### Simpler "add equipment" flow (#8)
-Pick the type after tapping Add.
 
 ### Search the wall (#15)
 Type a few letters to find a record. To be scoped after #8.
