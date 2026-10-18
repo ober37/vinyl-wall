@@ -61,6 +61,11 @@ f.onload=async()=>{
     site().bg={kind:"photo",assetId:'x"),url("https://example.com/p.png'};await emit();
     check("background: odd asset id ignored",!d.body.style.getPropertyValue("--bg-url"));
     site().bg={kind:"preset",preset:"listening"};await emit();
+    // background thumbnails in Settings are real tiles (the filter's color squares share their class name)
+    q("#settingsBtn").click();await sleep(300);
+    const tile=q('.bgtile[data-bg="preset:grille"] .sw'),tw=tile?tile.getBoundingClientRect().width:0;
+    check("settings: background thumbnails show",tw>60&&getComputedStyle(tile).backgroundImage!=="none",`width ${tw}`);
+    q("#closeBtn").click();await sleep(200);
     // settings saves write only what changed
     site().discogs={status:"ok",verifiedUser:"tester"};  // as if the task wrote it and the page hasn't heard yet
     q("#settingsBtn").click();await sleep(300);q("#st-title").value="Test wall";q("#st-title").dispatchEvent(new Event("input"));await sleep(900);

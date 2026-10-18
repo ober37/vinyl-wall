@@ -120,7 +120,7 @@ h1.trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .fchip:hover{border-color:var(--line)}
 .fchip[aria-pressed="true"]{border-color:var(--ink-2);background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
 .fchip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
-.sw{width:9px;height:9px;border-radius:2px;background:var(--paper);box-shadow:0 0 0 1px var(--line)}
+.fchip .sw{width:9px;height:9px;border-radius:2px;background:var(--paper);box-shadow:0 0 0 1px var(--line)}
 /* phones: just each badge's color and count, on one line (owned has no badge, so it keeps its word); the words stay for screen readers */
 @media (max-width:640px){.fchip:not([data-f="own"]) .fl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
 .searchbar{display:flex;gap:8px;align-items:center;margin-top:12px;max-width:420px}
@@ -129,7 +129,7 @@ h1.trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .searchbar .iconbtn{flex:none}
 #searchBtn[hidden]{display:none}
 #searchBtn[aria-expanded="true"]{background:color-mix(in srgb,var(--ink) 9%,transparent);border-color:var(--ink-2)}
-.sw.ship{background:var(--accent)}.sw.p1{background:var(--want)}.sw.p3{background:var(--someday)}
+.fchip .sw.ship{background:var(--accent)}.fchip .sw.p1{background:var(--want)}.fchip .sw.p3{background:var(--someday)}
 .btn{font:600 14px/1 var(--body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:10px 16px;cursor:pointer}
 .btn:hover{border-color:var(--ink-2)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
