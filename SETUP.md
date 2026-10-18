@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.5.0**. All file links below point at this tag. Replace `v0.5.0` only if the person asks for a different version.
+Release: **v0.5.1**. All file links below point at this tag. Replace `v0.5.1` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.5.0
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.5.1
 ```
 
 ---
@@ -71,6 +71,7 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
     "user": {},
     "assets": {},
     "sample": {},
+    "downloads": true,
     "mcp": {"servers": [{"server": "Claude Code Remote", "tools": ["fire_trigger"]}]}
   }
   ```
@@ -125,6 +126,7 @@ Tell the person, briefly:
 3. **Connect Discogs (optional):** open **Settings** (gear icon) → enter their Discogs username and a personal access token from discogs.com/settings/developers → **Save token**. The token never needs to go through the chat. If they already keep their records on Discogs, once the connection shows as verified they can tap **Import from Discogs** in Settings to bring their collection and wantlist onto the wall.
 4. **Equipment:** tap the Gear pill to add their turntable, cartridge and stylus, and rename "My setup".
 5. Backgrounds and the title are under **Settings**.
+6. **Moving from another wall?** Tap **Import your library** on the welcome card (or **Settings** → **Your library** → **Import from a file**) and pick the file they saved with **Export your library**. Their records, equipment, setups and the wall's look come across, and covers are looked up again.
 
 Mention which approval setting the background task got (from the `create_trigger` result) and, if its runs ask for approval, that they can switch it to automatic approval in the task's settings.
 

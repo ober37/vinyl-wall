@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.5.1: export your library to a file and import it, including on a brand-new wall (#10).
 Done in v0.5: Settings says when an update is available and gives the sentence to send Claude (background runs can't replace the page or stage code for it, so installing goes through chat).
 Done in v0.3: feedback through GitHub Issues, a contributor guide and a browser preview harness.
 Done in v0.2: Discogs import, tested on a real collection and wantlist.
@@ -39,9 +40,6 @@ Most played, last spun, and stylus hours by record, from the existing play log.
 
 ### Research notes (#7)
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
-
-### Export and import (#10)
-Save your whole library to a file, and bring it back in on this wall or a new one.
 
 ### Show when background work hit a usage limit (#3)
 Say so plainly instead of waiting out the 15-minute timeout.

@@ -3,7 +3,7 @@
    ?empty  empty wall      ?dz  Discogs connected      ?dz&stale  import stuck for 15 min
    ?data=<file>  load a wall snapshot (a JSON file in dev/, never committed) instead of the sample data
    ?nomcp  no background task (e.g. a shared view)     ?up=available|none
-   Calls the page makes to connectors are recorded in window.__calls. */
+   Calls the page makes to connectors are recorded in window.__calls; Export saves a real file through the browser. */
 (function(){
 const q=new URLSearchParams(location.search), now=Date.now();
 const data={
@@ -47,6 +47,8 @@ window.claude={use:async n=>
   n==="db"?{collection:coll,doc:p=>{const i=p.lastIndexOf("/");return docRef(p.slice(0,i),p.slice(i+1))}}:
   n==="user"?{canEdit:async()=>true,isOwner:async()=>true,id:async()=>"u1"}:
   n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);const l=JSON.parse(sessionStorage.getItem("__callLog")||"[]");l.push([a[1],Object.keys(a[2]||{})]);sessionStorage.setItem("__callLog",JSON.stringify(l));return {}}}:
+  n==="downloads"?{save:async({filename,data})=>{window.__calls.push(["downloads.save",filename]);
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=filename;a.click();return {status:"saved"}}}:
   n==="sample"?{json:async()=>window.fakeSample||{headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 half-speed is the best value; UK firsts are for collectors.",pressings:["2019 50th Anniversary half-speed: best value","1969 UK first pressing: collector money"],check:["Runout matches the Discogs entry","Watch for warps"],where:["Discogs","Local shops"],price:"About $30-40 for 2019; firsts $150+."}}:
   null};
 })();
