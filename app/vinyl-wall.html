@@ -69,6 +69,7 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .iconbtn:hover{border-color:var(--ink-2)} .iconbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .iconbtn svg{width:18px;height:18px}
 .headtools{display:flex;gap:8px;align-items:center}
+.headicons{display:flex;gap:8px;align-items:center}
 .secret{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .secret input{flex:1;min-width:0}
 .tokstate{display:flex;flex-wrap:wrap;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--wall)}
@@ -78,7 +79,6 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .importbox .hint{margin-top:4px}
 .updatebox{margin:22px 0 4px;padding:14px 16px;border:1px solid var(--brass);border-radius:10px}
 .updatebox .hint{margin-top:4px}
-.feedback{margin:36px 0 4px}
 .askline{font-size:12px;word-break:break-all;background:var(--line);padding:8px 10px;border-radius:8px;margin:8px 0 0;user-select:all}
 #settingsBtn{position:relative}
 #settingsBtn.hasupdate::after{content:"";position:absolute;top:3px;right:3px;width:8px;height:8px;border-radius:50%;background:var(--brass);box-shadow:0 0 0 2px rgba(0,0,0,.45)}
@@ -93,11 +93,18 @@ header.top>.actions{grid-column:2;grid-row:2;justify-self:end;align-self:end;jus
 header.top>.headtext .tally{column-gap:16px;row-gap:4px}
 @media (max-width:640px){
   h2 small{display:block;margin:6px 0 0;line-height:1.4}
-  header.top{grid-template-columns:minmax(0,1fr) auto;gap:14px 12px}
-  header.top>.headtext{grid-column:1/-1;grid-row:1}
-  header.top>.headtools{grid-column:1;grid-row:2;justify-self:start;align-self:center}
-  header.top>.actions{grid-column:2;grid-row:2;justify-self:end;align-self:center}
+  /* phones: share and Settings sit together top right beside the title; the gear pill and Add a record share the next row */
+  /* three columns so the icons get a narrow one of their own at the right edge: the title spans everything left of them,
+     and Add a record spans the last two columns on the row below */
+  header.top{grid-template-columns:minmax(0,1fr) auto auto;gap:14px 12px}
+  header.top>.headtext{grid-column:1/3;grid-row:1}
+  header.top>.headtools{display:contents}
+  .headicons{grid-column:3;grid-row:1;align-self:start;justify-self:end}
+  #stylusBtn{grid-column:1;grid-row:2;justify-self:start;align-self:center}
+  header.top>.actions{grid-column:2/4;grid-row:2;justify-self:end;align-self:center}
+  header.top h1{font-size:clamp(30px,8vw,48px)}
 }
+#shareBtn[hidden]{display:none}
 h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:.9;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
 .sub{color:var(--ink-2);margin:6px 0 0;max-width:56ch}
 .tally{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;gap:18px;font-variant-numeric:tabular-nums}
@@ -227,6 +234,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .welcome .linkbtn{margin:0;font-size:inherit;color:var(--accent)}
 .libflow{margin-top:24px}
 .libflow .libmsg{font-size:16px;line-height:1.5;margin:0 0 18px;max-width:46ch}
+.shareprev{display:block;width:100%;height:auto;border:1px solid var(--line);border-radius:8px;margin:0 0 18px}
 .libflow .libfile{font:12px/1.4 var(--mono);color:var(--ink-2);margin:0 0 8px;overflow-wrap:anywhere}
 @media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
 /* Small text stays readable over photo backgrounds */
@@ -365,7 +373,8 @@ fieldset.gsec>p.hint{margin-bottom:12px}
       <div class="tally"><span><b id="nOwn">0</b> on the wall</span><span><b id="nOrd">0</b> on the way</span><span><b id="nWish">0</b> in the hunt</span></div>
     </div>
     <div class="headtools"><button class="stylus" id="stylusBtn" type="button" aria-label="Equipment and stylus wear"><span class="lbl" id="gearLbl">Gear</span><span class="meter" id="stylusMeter"><i style="width:0%"></i></span><span class="hrs" id="stylusHrs">—</span></button>
-      <button class="iconbtn editonly" id="settingsBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></div>
+      <span class="headicons"><button class="iconbtn editonly" id="shareBtn" type="button" aria-label="Share your wall" title="Share your wall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
+      <button class="iconbtn editonly" id="settingsBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></span></div>
     <div class="actions">
       <button class="btn primary editonly" id="addBtn" type="button">Add a record</button>
     </div>
@@ -474,16 +483,22 @@ function renderWelcome(){
 document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
   const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings();
   else if(k==="import")openImport(); else if(k==="blank")saveSettings({welcomeDismissed:true}).then(renderWelcome); else openGear()});
-function render(){
-  {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
+// the wall's order: owned by when added, then on order by expected arrival; the hunt by priority
+function wallLists(){
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
-  $("#nOrd").textContent=ord.length;
   const own=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").sort((a,b)=>(a.added||0)-(b.added||0));
   const wish=records.filter(r=>r.status==="wish").sort((a,b)=>(a.priority||2)-(b.priority||2)||(a.added||0)-(b.added||0));
+  return {own,ord,wish};
+}
+function render(){
+  {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
+  const {own,ord,wish}=wallLists();
+  $("#nOrd").textContent=ord.length;
   syncRack($("#rackOwn"),own.concat(ord)); syncRack($("#rackWish"),wish);
   for(const id of sleeveCache.keys()) if(!records.some(r=>r.id===id)) sleeveCache.delete(id);
   $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
   $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
+  for(const [id,n] of [["#nOwn",own.length],["#nOrd",ord.length],["#nWish",wish.length]]) $(id).parentElement.hidden=!n;
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
   renderWelcome();
 }
@@ -1054,7 +1069,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.5.1"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.5.2"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1160,8 +1175,10 @@ function openSettings(keepScroll){
     </div>
     ${libExportMsg?`<p class="hint" id="libStatus">${esc(libExportMsg)}</p>`:""}
   </fieldset>
-  </div>
-  <p class="hint feedback">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>`;
+  <fieldset><legend>Help</legend>
+    <p class="hint" style="margin-top:0">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>
+  </fieldset>
+  </div>`;
   s.classList.toggle("ro",!canEdit);
   s.querySelectorAll("input,textarea,select").forEach(el=>{if(!canEdit)el.disabled=true});
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
@@ -1282,7 +1299,7 @@ async function readLibrary(file){
       recs.push([id,d]);ids.add(id);remember(d);
     }
     const fresh=(list,have)=>Object.entries(list||{}).filter(([id,d])=>d&&typeof d==="object"&&!have.some(x=>x.id===id));
-    const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),fileSetups:Object.keys(snap.setups||{}),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
+    const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
     if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return renderImport()}
     libPlan=p;libMsg="";libStage="plan";
   }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
@@ -1309,10 +1326,12 @@ async function applyLibrary(){
         if(!(settings.uploads||[]).some(u=>u.id===s.bg.assetId))patch.uploads=[...(settings.uploads||[]),{id:s.bg.assetId,name:"Your photo"}]}
       if(typeof s.dim==="number")patch.dim=s.dim;
       if(Object.keys(patch).length)await saveSettings(patch);
-      // setup gives every new wall an empty "My setup"; once the file brings its own setups, drop it if it's still untouched
+      // setup gives every new wall an empty "My setup", and a file exported from such a wall can carry it too: once the
+      // file brings its own setups, drop any "My setup" that's still untouched (no notes, no gear), as long as one remains
+      const left=new Set([...setupDocs.map(x=>x.id),...p.setups.map(([id])=>id)]);  // the page may not have seen the new ones yet
       if(p.setups.length) for(const x of setupDocs.slice())
-        if(x.name==="My setup"&&!x.note&&!p.fileSetups.includes(x.id)&&!gear.some(g=>g.setup===x.id)&&!p.gear.some(([,d])=>d.setup===x.id))
-          await db.collection("setups").doc(x.id).delete()}
+        if(x.name==="My setup"&&!x.note&&!gear.some(g=>g.setup===x.id)&&!p.gear.some(([,d])=>d.setup===x.id)&&left.size>1)
+          {await db.collection("setups").doc(x.id).delete();left.delete(x.id)}}
     const lookups=writes.filter(([c,,d])=>c==="records"&&d.needsEnrich).length;
     libMsg=`Brought in ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+(lookups?` Covers for ${lookups} record${lookups===1?"":"s"} will be looked up.`:"");
     libStage="done";
@@ -1322,11 +1341,136 @@ async function applyLibrary(){
   renderImport();
 }
 $("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
+// ---------- Share image: a picture of the wall to save or post (#4)
+/* Drawn on a canvas: the wall's photo background (softened as on the wall), title, counts, then each section's sleeves
+   hanging from a barnwood rail with their tags, in the wall's own order. Covers come from this wall's stored images;
+   records without one get the placeholder sleeve the wall shows. Pattern backgrounds are CSS-only, so those draw as the
+   plain wall color. Nothing private goes in: no prices (the budget is left off hunt tags), orders or notes. */
+const SHARE_W=1080,SHARE_COLS=5,SHARE_MAX=40;
+function loadImg(src){return new Promise(res=>{const i=new Image();i.onload=()=>res(i);i.onerror=()=>res(null);i.src=src})}
+function fitText(ctx,t,w){t=String(t||"");if(ctx.measureText(t).width<=w)return t;
+  while(t&&ctx.measureText(t+"…").width>w)t=t.slice(0,-1);return t.trimEnd()+"…"}
+function wrapText(ctx,t,w,max){const out=[];let line="";
+  for(const wd of String(t||"").split(/\s+/)){const next=line?line+" "+wd:wd;
+    if(!line||ctx.measureText(next).width<=w)line=next;else{out.push(line);line=wd}}
+  if(line)out.push(line);
+  if(out.length>max){out.length=max;out[max-1]+="…"}
+  return out.map(l=>fitText(ctx,l,w))}
+// the same tag the sleeve wears on the wall, minus the budget
+function shareTag(r,C){
+  if(r.status==="ordered") return {t:OSTAT[r.orderStatus||"ordered"]+(r.eta?" · "+shortDate(r.eta):""),bg:C.accent,fg:C.accentInk};
+  if(r.status!=="wish") return null;
+  return r.priority==1?{t:"Top want",bg:C.want,fg:"#fff"}:r.priority==3?{t:"Someday",bg:C.someday,fg:C.somedayInk}:{t:"Want",bg:C.paper,fg:C.paperInk};
+}
+function drawTag(ctx,tag,right,bottom,maxW,C,font){
+  ctx.save();ctx.font=font;if("letterSpacing" in ctx)ctx.letterSpacing="1px";
+  const h=24,w=Math.min(maxW,ctx.measureText(tag.t.toUpperCase()).width+24);
+  ctx.translate(right-w/2,bottom-h/2);ctx.rotate(6*Math.PI/180);
+  ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=6;ctx.shadowOffsetY=3;
+  ctx.beginPath();ctx.moveTo(-w/2+8,-h/2);ctx.lineTo(w/2,-h/2);ctx.lineTo(w/2,h/2);ctx.lineTo(-w/2+8,h/2);ctx.lineTo(-w/2,0);ctx.closePath();
+  ctx.fillStyle=tag.bg;ctx.fill();ctx.restore();
+  ctx.fillStyle=C.wall;ctx.beginPath();ctx.arc(-w/2+8,0,2.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=tag.fg;ctx.textBaseline="middle";ctx.fillText(fitText(ctx,tag.t.toUpperCase(),w-24),-w/2+15,1);
+  ctx.restore();
+}
+// the photo behind the wall right now (preset or uploaded), read from the page's own background layer
+function wallPhoto(){
+  const b=getComputedStyle(document.body),m=getComputedStyle(document.body,"::before").backgroundImage.match(/url\("?([^")]+)"?\)/);
+  if(!m) return null;
+  const pos=(b.getPropertyValue("--photo-pos")||"").trim().split(/\s+/)[1]||"50%";
+  return {src:m[1],dim:parseFloat(b.getPropertyValue("--bg-dim"))||parseFloat(b.getPropertyValue("--dim-default"))||55,y:parseFloat(pos)/100||.5};
+}
+async function drawShare(withImages){
+  const css=getComputedStyle(document.documentElement),v=k=>css.getPropertyValue(k).trim();
+  const C={wall:v("--wall"),ink:v("--ink"),ink2:v("--ink-2"),shadow:v("--shadow"),accent:v("--accent"),accentInk:v("--accent-ink"),
+    want:v("--want"),someday:v("--someday"),somedayInk:v("--someday-ink"),paper:v("--paper"),paperInk:v("--paper-ink")};
+  const F={title:'800 84px "Big Shoulders Display"',sec:'600 34px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
+    cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"',tag:'500 13px "IBM Plex Mono"'};
+  await Promise.all(Object.values(F).map(f=>document.fonts.load(f).catch(()=>{})));
+  const {own,ord,wish}=wallLists();
+  const secs=[["On the wall",own.concat(ord)],["The hunt",wish]].filter(x=>x[1].length);
+  const pad=60,gap=24,sw=(SHARE_W-2*pad-(SHARE_COLS-1)*gap)/SHARE_COLS,railH=20,rowH=36+sw+64+28;
+  let H=pad+100+76;
+  for(const [,list] of secs) H+=56+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+24;
+  H+=pad-24;
+  const shown=secs.flatMap(x=>x[1].slice(0,SHARE_MAX));
+  const wp=withImages?wallPhoto():null,photo=wp?await loadImg(wp.src):null;
+  const covers=new Map(withImages?await Promise.all(shown.filter(r=>r.coverAsset).map(async r=>[r.id,await loadImg("/_blob/"+r.coverAsset)])):[]);
+  const cv=document.createElement("canvas");cv.width=SHARE_W;cv.height=Math.ceil(H);
+  const ctx=cv.getContext("2d");ctx.textBaseline="top";
+  ctx.fillStyle=C.wall;ctx.fillRect(0,0,cv.width,cv.height);
+  if(photo){const k=Math.max(cv.width/photo.width,cv.height/photo.height),w=photo.width*k,h=photo.height*k;
+    ctx.drawImage(photo,(cv.width-w)/2,(cv.height-h)*wp.y,w,h);
+    ctx.globalAlpha=wp.dim/100;ctx.fillStyle=C.wall;ctx.fillRect(0,0,cv.width,cv.height);ctx.globalAlpha=1}
+  // over a photo, text gets the same soft glow in the wall color as on the page
+  const glow=on=>{ctx.shadowColor=on&&photo?C.wall:"transparent";ctx.shadowBlur=on&&photo?10:0;ctx.shadowOffsetY=0};
+  let y=pad;glow(true);
+  ctx.fillStyle=C.ink;ctx.font=F.title;ctx.fillText(fitText(ctx,((settings.title||"").trim()||DEFAULT_TITLE).toUpperCase(),SHARE_W-2*pad),pad,y);y+=100;
+  ctx.fillStyle=C.ink2;ctx.font=F.mono;
+  ctx.fillText([[own.length,"on the wall"],[ord.length,"on the way"],[wish.length,"in the hunt"]].filter(x=>x[0]).map(x=>x.join(" ")).join("  ·  "),pad,y);y+=76;
+  for(const [name,list] of secs){
+    glow(true);ctx.fillStyle=C.ink;ctx.font=F.sec;ctx.fillText(name.toUpperCase(),pad,y);y+=56;glow(false);
+    const items=list.slice(0,SHARE_MAX);
+    for(let i=0;i<items.length;i+=SHARE_COLS){
+      const row=items.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
+      const g=ctx.createLinearGradient(0,y,0,y+railH);g.addColorStop(0,"#5e5244");g.addColorStop(.5,"#4a3f33");g.addColorStop(1,"#2f2820");
+      ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=10;ctx.shadowOffsetY=4;ctx.fillStyle=g;ctx.fillRect(pad-12,y,rw+24,railH);ctx.restore();
+      row.forEach((r,j)=>{
+        const x=pad+j*(sw+gap),top=y+36,im=covers.get(r.id);
+        ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+        if(im){const k=Math.min(im.width,im.height);ctx.drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,x,top,sw,sw)}
+        else{const h=hash((r.title||"")+(r.artist||""))%360,gr=ctx.createLinearGradient(x,top,x+sw,top+sw);
+          gr.addColorStop(0,`hsl(${h} 45% 32%)`);gr.addColorStop(1,`hsl(${(h+40)%360} 50% 18%)`);ctx.fillStyle=gr;ctx.fillRect(x,top,sw,sw)}
+        ctx.restore();
+        if(!im){ctx.fillStyle="#fff";ctx.font=F.gen;wrapText(ctx,(r.title||"Untitled").toUpperCase(),sw-24,4).forEach((l,n)=>ctx.fillText(l,x+12,top+12+n*22));
+          ctx.globalAlpha=.85;ctx.font=F.small;ctx.fillText(fitText(ctx,r.artist||"",sw-24),x+12,top+sw-26);ctx.globalAlpha=1}
+        ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke();
+        const tag=shareTag(r,C);if(tag)drawTag(ctx,tag,x+sw+4,top+sw*.82,sw+4,C,F.tag);
+        glow(true);ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
+        ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);glow(false);
+      });
+      y+=rowH;
+    }
+    if(list.length>SHARE_MAX){glow(true);ctx.fillStyle=C.ink2;ctx.font=F.mono;ctx.fillText(`+ ${list.length-SHARE_MAX} more`,pad,y);y+=40;glow(false)}
+    y+=24;
+  }
+  return cv;
+}
+async function shareImage(withImages){const cv=await drawShare(withImages);
+  const blob=await new Promise((res,rej)=>{try{cv.toBlob(b=>b?res(b):rej(new Error("empty")),"image/png")}catch(e){rej(e)}});
+  return {cv,blob}}
+async function openShare(){
+  openId="__share";
+  const s=$("#sheet"),paint=body=>{s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Share your wall</h3><div class="by">A picture of your wall to save or post.</div></div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button></div><div class="libflow">${body}</div>`;
+    $("#closeBtn").addEventListener("click",closeSheet)};
+  paint(`<p class="libmsg" role="status">Drawing your wall…</p>`);
+  $("#scrim").classList.add("on"); s.classList.add("on"); s.scrollTop=0; $("#closeBtn").focus();
+  if(!records.length) return paint(`<p class="libmsg">Hang a record first, then come back for a picture of your wall.</p>`);
+  // an image that can't be drawn (the browser refuses some) shouldn't cost the whole picture: retry with placeholders and no photo
+  let pic=null;try{pic=await shareImage(true)}catch(e){try{pic=await shareImage(false)}catch(e2){}}
+  if(openId!=="__share") return;
+  if(!pic) return paint(`<p class="libmsg">Couldn't draw the picture here.</p>`);
+  // the phone's own share sheet, where the browser lets this page use it (the Claude iPhone app's save already opens it)
+  const file=new File([pic.blob],`vinyl-wall-${today()}.png`,{type:"image/png"});
+  let canShare=false;try{canShare=!!(navigator.canShare&&navigator.canShare({files:[file]}))}catch(e){}
+  paint(`<div class="actions">${canShare?`<button class="btn primary" type="button" id="shareNative">Share</button>`:""}<button class="btn${canShare?"":" primary"}" type="button" id="shareSave">Save image</button></div><p class="hint" id="shareStatus" role="status"></p>`);
+  pic.cv.className="shareprev";pic.cv.setAttribute("role","img");pic.cv.setAttribute("aria-label","Picture of your wall");
+  $(".libflow").prepend(pic.cv);($("#shareNative")||$("#shareSave")).focus();
+  const sn=$("#shareNative"); if(sn) sn.addEventListener("click",async()=>{const st=$("#shareStatus");
+    try{await navigator.share({files:[file],title:(settings.title||"").trim()||DEFAULT_TITLE});st.textContent=""}
+    catch(e){st.textContent=e.name==="AbortError"?"":"Sharing isn't available here. Save the image instead."}});
+  $("#shareSave").addEventListener("click",async()=>{const st=$("#shareStatus");
+    try{await downloads.save({filename:`vinyl-wall-${today()}.png`,data:pic.blob});st.textContent="Saved."}
+    catch(e){st.textContent=e.code==="declined"?"":"Couldn't save the picture: "+(e.message||e.code)}});
+}
+$("#shareBtn").addEventListener("click",()=>openShare());
 function flash(m){$("#status").textContent=m}
 
 async function boot(){
   const [d,u,a,sm,m,dl]=await Promise.all([claude.use("db"),claude.use("user"),claude.use("assets"),claude.use("sample"),claude.use("mcp"),claude.use("downloads")].map(p=>p.catch(()=>null)));
   db=d;assets=a;sample=sm;mcp=m;downloads=dl;userCap=u;
+  $("#shareBtn").hidden=!downloads;
   if(!db){flash("Open this page signed in to claude.ai to see the wall.");$("#addBtn").hidden=true;return}
   canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
   document.getElementById("app").classList.toggle("ro",!canEdit);
