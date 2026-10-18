@@ -292,6 +292,8 @@ label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--in
 input,textarea,select{font:inherit;font-size:14px;color:var(--ink);background:var(--wall);border:1px solid var(--line);border-radius:6px;padding:8px 10px;width:100%;min-width:0}
 textarea{resize:vertical;min-height:80px;line-height:1.5}
 input.mono{font-family:var(--mono);font-size:13px}
+/* phones: iOS zooms the page into any field with text under 16px */
+@media (max-width:640px){input,textarea,select,input.mono{font-size:16px}}
 .log{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:10px}
 .log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
 .log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
@@ -999,7 +1001,7 @@ function openAddGear(setup,type){
   :`<div class="actions" style="margin-top:20px"><button class="btn" type="button" id="ag-cancel">Cancel</button></div>`}`;
   $("#scrim").classList.add("on"); s.classList.add("on");
   $("#closeBtn").addEventListener("click",closeSheet); $("#ag-cancel").addEventListener("click",()=>openGear());
-  s.querySelectorAll('input[name="agType"]').forEach(r=>r.addEventListener("change",()=>{openAddGear(setup,r.value);const n=$("#ag-name");if(n)n.focus()}));
+  s.querySelectorAll('input[name="agType"]').forEach(r=>r.addEventListener("change",()=>{openAddGear(setup,r.value);const n=$("#ag-name");if(n&&!matchMedia("(hover:none)").matches)n.focus()}));
   if(!T){s.scrollTop=0;(s.querySelector('input[name="agType"]')).focus();return}
   $("#ag-form").addEventListener("submit",async e=>{e.preventDefault();const num=k=>{const v=parseFloat(val(k));return isNaN(v)?"":v};
     const id=db.collection("gear").doc().id;
