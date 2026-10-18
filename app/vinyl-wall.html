@@ -272,6 +272,8 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
   padding:calc(20px + env(safe-area-inset-top,0px)) max(20px,env(safe-area-inset-right,0px)) calc(40px + env(safe-area-inset-bottom,0px)) 20px}
 .sheet{visibility:hidden}
 .sheet.on{transform:none;visibility:visible}
+/* touch screens: no scroll indicator on the sheet (iOS in the Claude app can draw it partway across the panel); it still scrolls */
+@media (hover:none){.sheet{scrollbar-width:none}.sheet::-webkit-scrollbar{display:none}}
 .sheet-head{display:flex;gap:16px;align-items:flex-start}
 .sheet-head .art{width:132px;flex:none;position:relative;transition:width .25s ease}
 .sheet.viewing .sheet-head .art{width:176px}
