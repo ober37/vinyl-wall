@@ -30,10 +30,10 @@ On the roadmap, not scheduled for a release ([milestone](https://github.com/ober
 ### Local record shops: "it's in stock near you" (#1)
 Many independent shops publish their inventory online, and several run the same storefront software, with product pages addressed by barcode (for example `…/UPC/093624843276`). That makes one integration cover many shops.
 
-- **Your shops:** a short list in Settings (name and website), e.g. Siren Records in McHenry.
+- **Your shops:** a short list in Settings (name and website) of the record shops you visit.
 - **Matching:** each hunt record gets its target pressing's barcode from its Discogs release (Discogs lists barcodes), so the check looks for the exact pressing, not just the album.
 - **Checking:** the background task looks up each wanted barcode at each shop, either when you ask or on a gentle weekly schedule, and records price and availability.
-- **On the wall:** a tag on the sleeve ("In stock at Siren · $39.98") and a line in the record's Find it section with a link to the shop's page.
+- **On the wall:** a tag on the sleeve ("In stock at your shop · $39.98") and a line in the record's Find it section with a link to the shop's page.
 - **Care points:** respect each site's terms and keep requests light; treat listings as "call to confirm"; fall back to a title search for shops without barcode pages.
 
 ### Price watch for the hunt (#2)
