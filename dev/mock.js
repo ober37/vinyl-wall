@@ -1,6 +1,7 @@
 /* A stand-in for the claude.ai runtime (window.claude) so the page can run in a plain browser.
    Data lives in memory; writes re-emit snapshots like the real database. URL flags pick a scenario:
    ?empty  empty wall      ?dz  Discogs connected      ?dz&stale  import stuck for 15 min
+   ?data=<file>  load a wall snapshot (a JSON file in dev/, never committed) instead of the sample data
    ?nomcp  no background task (e.g. a shared view)     ?up=available|none
    Calls the page makes to connectors are recorded in window.__calls. */
 (function(){
@@ -23,6 +24,8 @@ const data={
   r5:{title:"Aja",artist:"Steely Dan",year:"1977",status:"ordered",orderStatus:"shipped",eta:"2026-10-24",notes:[],added:5},
   r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,notes:[],added:4},
   r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6}}};
+if(q.get("data")){try{const x=new XMLHttpRequest();x.open("GET",q.get("data"),false);x.send();const snap=JSON.parse(x.responseText);
+  for(const c of ["settings","setups","gear","records"]) if(snap[c]) data[c]=snap[c]; data.settings.site=data.settings.site||{};}catch(e){console.warn("Couldn't load snapshot",e)}}
 const site=data.settings.site;
 if(q.has("empty")){data.records={};data.gear={}}
 if(!q.has("nomcp")) site.taskId="trig_preview";

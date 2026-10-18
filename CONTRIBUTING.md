@@ -28,9 +28,10 @@ The page can't reach outside websites. Anything that needs the network (covers, 
 ## Testing a change
 
 1. `python3 dev/build.py`, then `python3 -m http.server 8765 -d dev`, and open `http://localhost:8765/preview.html`. URL flags pick scenarios; see the top of `dev/mock.js`.
+   To try a change with a real collection, put a wall snapshot (records, gear, setups and settings as one JSON file, `{"settings": {"site": {...}}, "setups": {...}, "gear": {...}, "records": {...}}`) in `dev/` and add `?data=<file name>`. Snapshots hold personal data: they're git-ignored, so never commit one.
 2. Go through [docs/design-checklist.md](docs/design-checklist.md) for every screen you touched: view and edit, each record status, empty and full, phone (390px) and desktop, light and dark.
 3. For Python scripts, run them against a folder of sample record JSON files with the network calls stubbed. Never test against a real Discogs account without its owner.
-4. Changes to the background task can only be tested on a real wall. Describe in the PR what to check.
+4. Changes to the background task can only be tested on a real wall. Use a separate test wall (set one up with SETUP.md), never the owner's own; to fill it from a snapshot, write each document with `ArtifactData` (`batch`, `set`, collection and doc id as in the file). Don't connect the owner's real Discogs account to a test wall. Describe in the PR what to check.
 
 ## Releasing
 
