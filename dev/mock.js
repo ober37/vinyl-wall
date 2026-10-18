@@ -1,8 +1,9 @@
 /* A stand-in for the claude.ai runtime (window.claude) so the page can run in a plain browser.
    Data lives in memory; writes re-emit snapshots like the real database. URL flags pick a scenario:
    ?empty  empty wall      ?dz  Discogs connected      ?dz&stale  import stuck for 15 min
-   ?nomcp  no background task (e.g. a shared view)     ?up=available|failed|updating|stalled|reload|none
-   Calls the page makes to start the background task are recorded in window.__calls. */
+   ?nomcp  no background task (e.g. a shared view)     ?up=available|failed|updating|stalled|ready|chat|reload|none
+   Calls the page makes to connectors are recorded in window.__calls; self-publishes in sessionStorage "__published".
+   ?up=ready loads dev/_blob/preview-update, which dev/build.py writes from the current page. */
 (function(){
 const q=new URLSearchParams(location.search), now=Date.now();
 const data={
@@ -31,6 +32,7 @@ if(q.has("dz")){site.discogs={username:"tester",hasToken:true,last4:"ABCD",statu
 const up=q.get("up");
 if(up) site.update={available:{latest:"9.0.0",checkedMs:now},failed:{latest:"9.0.0",checkedMs:now,msg:"Couldn't download the new version from GitHub."},
   updating:{latest:"9.0.0",checkedMs:now,requested:true,requestedAt:now},stalled:{latest:"9.0.0",checkedMs:now,requested:true,requestedAt:now-20*60000},
+  ready:{latest:"9.0.0",checkedMs:now,staged:{version:"9.0.0",asset:"preview-update"}},chat:{latest:"9.0.0",checkedMs:now,needsChat:"9.0.0"},
   reload:{latest:"9.0.0",checkedMs:now,installed:"9.0.0"},none:{latest:"0.0.1",checkedMs:now}}[up];
 const L={};const snap=c=>({docs:Object.entries(data[c]||{}).map(([id,d])=>({id,exists:true,data:()=>d})),size:0,empty:false,docChanges:()=>[],metadata:{}});
 const emit=c=>(L[c]||[]).forEach(n=>n(snap(c)));
@@ -45,7 +47,8 @@ window.__data=data;window.__emit=emit;window.__calls=[];
 window.claude={use:async n=>
   n==="db"?{collection:coll,doc:p=>{const i=p.lastIndexOf("/");return docRef(p.slice(0,i),p.slice(i+1))}}:
   n==="user"?{canEdit:async()=>true,isOwner:async()=>true,id:async()=>"u1"}:
-  n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);return {}}}:
+  n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);const l=JSON.parse(sessionStorage.getItem("__callLog")||"[]");l.push([a[1],Object.keys(a[2]||{})]);sessionStorage.setItem("__callLog",JSON.stringify(l));return {}}}:
+  n==="artifact"&&!q.has("noself")?{publish:async f=>{const log=JSON.parse(sessionStorage.getItem("__published")||"[]");log.push(typeof f==="string"?["html",f.length]:["files",Object.keys(f)]);sessionStorage.setItem("__published",JSON.stringify(log));if(window.failPublish)throw {code:window.failPublish};return {version:"v-preview"}}}:
   n==="sample"?{json:async()=>window.fakeSample||{headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 half-speed is the best value; UK firsts are for collectors.",pressings:["2019 50th Anniversary half-speed: best value","1969 UK first pressing: collector money"],check:["Runout matches the Discogs entry","Watch for warps"],where:["Discogs","Local shops"],price:"About $30-40 for 2019; firsts $150+."}}:
   null};
 })();

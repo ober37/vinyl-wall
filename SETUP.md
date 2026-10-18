@@ -2,10 +2,10 @@
 
 These instructions are written for **Claude** to follow on behalf of the person who asked to set up (or update) a Vinyl Wall. If you are a person, you don't need to read this: paste the prompt from the [README](README.md) into Claude.
 
-Release: **v0.3.1**. All file links below point at this tag. Replace `v0.3.1` only if the person asks for a different version.
+Release: **v0.4.0**. All file links below point at this tag. Replace `v0.4.0` only if the person asks for a different version.
 
 ```
-BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.3.1
+BASE = https://raw.githubusercontent.com/ober37/vinyl-wall/v0.4.0
 ```
 
 ---
@@ -71,7 +71,8 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
     "user": {},
     "assets": {},
     "sample": {},
-    "mcp": {"servers": [{"server": "Claude Code Remote", "tools": ["fire_trigger"]}]}
+    "artifact": {},
+    "mcp": {"servers": [{"server": "Claude Code Remote", "tools": ["fire_trigger", "update_trigger", "list_triggers"]}]}
   }
   ```
 - `description`: "Album covers hanging on a rack: your vinyl collection, wishlist, listening log and gear."
@@ -134,12 +135,13 @@ Mention which approval setting the background task got (from the `create_trigger
 
 When the person asks to update their Vinyl Wall:
 
-The wall's background task also runs these steps when the owner taps **Update** in Settings (background-task part E). In that case there's no one to ask: it does steps 2 to 5, skips step 6, and records the result in `settings/site` `update` instead of step 7.
+Walls can also update themselves from Settings (background-task part E): **Update** has the background task download the release and store it with the wall, then **Install** has the page save the new version over itself and refresh the task's instructions; the next background run does the data upgrades (step 5). That only works when the release's capabilities (step 3) match what the wall already declares. When they differ, Settings asks the owner to update through Claude, with these steps.
 
 1. Find the existing artifact URL (`Artifact` `action: "list"`, or ask). Read it with `Artifact` `action: "read"` before publishing.
 2. Download the files for the requested release (step 2).
 3. Publish `app/vinyl-wall.html` **to the existing URL** with the same `files`. Omit `capabilities` if the existing artifact already declares exactly the list in step 3 (the read shows what it declares); otherwise pass step 3's list. Never delete or rewrite the person's records, gear, setups, settings or private data.
 4. `get` `settings` / `site` to find `taskId`, then `update_trigger` that task with the new `tasks/background-task.md` text (with `{{WALL_URL}}` filled in). If `taskId` is missing or the task no longer exists, create a new one (step 4) and `update` `settings/site` with the new `taskId`.
+   Then clear any in-app update that was waiting: `update` `settings/site` with `{"update": {"requested": {"__delete__": true}, "requestedAt": {"__delete__": true}, "staged": {"__delete__": true}, "needsChat": {"__delete__": true}, "installing": {"__delete__": true}, "msg": {"__delete__": true}}}` (pin to its version).
 5. **Run data upgrades.** Read `dataVersion` from `settings/site` (missing means `1`). Run every upgrade below whose number is higher than that, in order, then `update` `settings/site` with `{"dataVersion": <highest number run>}`. Each upgrade is safe to re-run, but run each only once.
 
    **Upgrade 2** (from v0.1.x):

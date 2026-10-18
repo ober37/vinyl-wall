@@ -10,4 +10,10 @@ head = ('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" 
 open(os.path.join(here, "preview.html"), "w").write(head + page + "</body></html>")
 dst = os.path.join(here, "backgrounds")
 if not os.path.isdir(dst): shutil.copytree(os.path.join(here, "..", "app", "backgrounds"), dst)
+import json, re
+v = re.search(r'const APP_VERSION="([0-9.]+)"', page).group(1)
+os.makedirs(os.path.join(here, "_blob"), exist_ok=True)
+fake = page.replace('const APP_VERSION="%s"' % v, 'const APP_VERSION="9.0.0"')
+json.dump({"vinylWall": 1, "version": "9.0.0", "page": fake, "files": {"tools/discogs_sync.py": "# preview", "tools/discogs_import.py": "# preview"}, "task": "x" * 300},
+          open(os.path.join(here, "_blob", "preview-update"), "w"))
 print("wrote dev/preview.html")
