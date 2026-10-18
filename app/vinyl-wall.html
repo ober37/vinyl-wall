@@ -343,6 +343,7 @@ input.mono{font-family:var(--mono);font-size:13px}
 .gcard .hrs{font:500 12px/1 var(--mono);font-variant-numeric:tabular-nums}
 .gcard .state{margin-left:0}
 fieldset.gsec>p.hint{margin-bottom:12px}
+.gearsecs>fieldset{margin-top:36px;padding-top:18px}
 .actions>select{width:auto;max-width:100%;flex:0 1 auto}
 .ghead{font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin:14px 0 8px}
 .ghead:first-child{margin-top:0}
@@ -920,6 +921,7 @@ function openGear(keepScroll){
   const typeOpts=GEAR_ORDER.map(k=>`<option value="${k}">${GEAR_TYPES[k].label}</option>`).join("");
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Equipment</h3><div class="by">Your setups, and how much play each piece has seen</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  <div class="gearsecs">
   ${groups.map(G=>`<fieldset><legend>${esc(G.title)}</legend>
     ${G.note?`<p class="hint" style="margin-top:0">${esc(G.note)}</p>`:""}
     <div class="glist">${G.items.map(gearCard).join("")||`<p class="hint" style="margin:0">No equipment in this setup yet.</p>`}</div>
@@ -935,7 +937,8 @@ function openGear(keepScroll){
     <div class="actions editonly" style="margin-top:${shared.length?12:0}px"><select id="g-sharedtype" aria-label="Shared equipment type">${typeOpts}</select><button class="btn small" type="button" id="g-addshared">Add shared equipment</button></div>
   </fieldset>
 
-  ${ret.length?`<fieldset><legend>Retired</legend><div class="glist">${ret.map(gearCard).join("")}</div></fieldset>`:""}`;
+  ${ret.length?`<fieldset><legend>Retired</legend><div class="glist">${ret.map(gearCard).join("")}</div></fieldset>`:""}
+  </div>`;
   s.classList.toggle("ro",!canEdit);
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
   $("#closeBtn").addEventListener("click",closeSheet);
