@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.6.0: one wall with status badges and filters (#13), and the version in Settings → Help.
 Done in v0.5.2: a share image of the wall to save or post, and a Help section in Settings.
 Done in v0.5.1: export your library to a file and import it, including on a brand-new wall (#10).
 Done in v0.5: Settings says when an update is available and gives the sentence to send Claude (background runs can't replace the page or stage code for it, so installing goes through chat).
@@ -19,9 +20,6 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 ## 1.0
 
 Required for the 1.0 release ([milestone](https://github.com/ober37/vinyl-wall/milestone/1)).
-
-### One wall with status badges and filters (#13)
-Replace "On the wall" and "The hunt" with one wall: owned, on order and wanted records hang together, status shows as a badge, and you filter by one or more badges.
 
 ### Simpler "add equipment" flow (#8)
 Pick the type after tapping Add.

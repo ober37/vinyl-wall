@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a listening-room wall. A weathered barnwood plank with iron rings runs across each row; sleeves hang from them.
-   Two walls: what's owned ("On the wall") and what's being hunted ("The hunt"). Detail opens in a side sheet. */
+   One wall of every record, owned, on order and hunted, narrowed by the filter in the counts line. Detail opens in a side sheet. */
 :root{
   --wall:#dde2dc; --wall-2:#cfd6cf; --ink:#1b2220; --ink-2:#4b5753; --line:#b9c3bc;
   --rail:#6a462b; --rail-hi:#8b6140; --brass:#a77a2c; --accent:#2c5c4f; --accent-ink:#f2f5f1;
@@ -90,9 +90,8 @@ header.top>.headtext{grid-column:1;grid-row:1/span 2;min-width:0}
 header.top>.headtext .tally{margin-top:12px;flex-wrap:wrap}
 header.top>.headtools{grid-column:2;grid-row:1;justify-self:end}
 header.top>.actions{grid-column:2;grid-row:2;justify-self:end;align-self:end;justify-content:flex-end}
-header.top>.headtext .tally{column-gap:16px;row-gap:4px}
+header.top>.headtext .tally{column-gap:6px;row-gap:4px}
 @media (max-width:640px){
-  h2 small{display:block;margin:6px 0 0;line-height:1.4}
   /* phones: share and Settings sit together top right beside the title; the gear pill and Add a record share the next row */
   /* three columns so the icons get a narrow one of their own at the right edge: the title spans everything left of them,
      and Add a record spans the last two columns on the row below */
@@ -109,6 +108,17 @@ h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);lin
 .sub{color:var(--ink-2);margin:6px 0 0;max-width:56ch}
 .tally{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;gap:18px;font-variant-numeric:tabular-nums}
 .tally b{color:var(--ink);font-weight:500}
+/* the counts double as the filter: none pressed shows every record */
+.fchip{font:inherit;color:inherit;background:transparent;border:1px solid transparent;border-radius:999px;padding:5px 10px;min-height:32px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+#filters{margin-left:-10px}
+.fchip[hidden]{display:none}
+.fchip:hover{border-color:var(--line)}
+.fchip[aria-pressed="true"]{border-color:var(--ink-2);background:color-mix(in srgb,var(--ink) 9%,transparent);color:var(--ink)}
+.fchip:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.sw{width:9px;height:9px;border-radius:2px;background:var(--paper);box-shadow:0 0 0 1px var(--line)}
+/* phones: just each badge's color and count, on one line (owned has no badge, so it keeps its word); the words stay for screen readers */
+@media (max-width:640px){.fchip:not([data-f="own"]) .fl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+.sw.ship{background:var(--accent)}.sw.p1{background:var(--want)}.sw.p3{background:var(--someday)}
 .btn{font:600 14px/1 var(--body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:10px 16px;cursor:pointer}
 .btn:hover{border-color:var(--ink-2)}
 .btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
@@ -118,9 +128,7 @@ h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);lin
 .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
 
 section.wallsec{margin-top:36px}
-.sec-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
 h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-spacing:.06em;font-size:26px;margin:0}
-h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink-2);margin-left:10px;font-weight:400}
 
 /* the rack: each row draws its own rail via the item tops */
 .rack{overflow-x:clip;overflow-y:visible;display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));column-gap:0;row-gap:26px;padding-top:4px}
@@ -238,7 +246,7 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .libflow .libfile{font:12px/1.4 var(--mono);color:var(--ink-2);margin:0 0 8px;overflow-wrap:anywhere}
 @media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
 /* Small text stays readable over photo backgrounds */
-:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,h2 small,.cap .a,.cap .meta){
+:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,.cap .a,.cap .meta){
   color:color-mix(in srgb,var(--ink-2) 55%,var(--ink));text-shadow:0 0 2px var(--wall),0 0 8px var(--wall),0 0 14px var(--wall)}
 /* Touch screens get no hover peek, so show a sliver of vinyl and a press response instead */
 @media (hover:none){.disc{transform:translateX(9%)}.sleeve-btn:active .sleeve-box{transform:scale(.975);transition:transform .12s}}
@@ -370,7 +378,7 @@ fieldset.gsec>p.hint{margin-bottom:12px}
   <header class="top">
     <div class="headtext">
       <h1 id="pageTitle">My Vinyl Wall</h1>
-      <div class="tally"><span><b id="nOwn">0</b> on the wall</span><span><b id="nOrd">0</b> on the way</span><span><b id="nWish">0</b> in the hunt</span></div>
+      <div class="tally" id="filters" role="group" aria-label="Show on the wall"><button class="fchip" type="button" data-f="own"><b>0</b><span class="fl"> owned</span></button><button class="fchip" type="button" data-f="ord"><i class="sw ship"></i><b>0</b><span class="fl"> on the way</span></button><button class="fchip" type="button" data-f="p1"><i class="sw p1"></i><b>0</b><span class="fl"> top want</span></button><button class="fchip" type="button" data-f="p2"><i class="sw"></i><b>0</b><span class="fl"> want</span></button><button class="fchip" type="button" data-f="p3"><i class="sw p3"></i><b>0</b><span class="fl"> someday</span></button></div>
     </div>
     <div class="headtools"><button class="stylus" id="stylusBtn" type="button" aria-label="Equipment and stylus wear"><span class="lbl" id="gearLbl">Gear</span><span class="meter" id="stylusMeter"><i style="width:0%"></i></span><span class="hrs" id="stylusHrs">—</span></button>
       <span class="headicons"><button class="iconbtn editonly" id="shareBtn" type="button" aria-label="Share your wall" title="Share your wall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
@@ -392,16 +400,9 @@ fieldset.gsec>p.hint{margin-bottom:12px}
     <p class="editonly">Moving from another wall? <button class="linkbtn" type="button" data-welcome="import">Import your library</button></p>
   </section>
 
-  <section class="wallsec" aria-labelledby="h-own">
-    <div class="sec-head"><h2 id="h-own">On the wall<small>owned · then on order by expected arrival</small></h2></div>
-    <div class="rack" id="rackOwn"></div>
-    <div class="empty" id="emptyOwn" hidden>Nothing hanging yet. Add a record you own, or mark one from the hunt as acquired.</div>
-  </section>
-
-  <section class="wallsec" aria-labelledby="h-wish">
-    <div class="sec-head"><h2 id="h-wish">The hunt<small>wishlist · by priority</small></h2></div>
-    <div class="rack" id="rackWish"></div>
-    <div class="empty" id="emptyWish" hidden>No records on the hunt. Add one you want and set a target pressing.</div>
+  <section class="wallsec" aria-label="Records">
+    <div class="rack" id="rack"></div>
+    <div class="empty" id="emptyWall" hidden>Nothing hanging yet. Add a record you own, or one you're hunting for.</div>
   </section>
   <div class="status" id="status">Loading the wall…</div>
 </div>
@@ -483,22 +484,34 @@ function renderWelcome(){
 document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
   const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings();
   else if(k==="import")openImport(); else if(k==="blank")saveSettings({welcomeDismissed:true}).then(renderWelcome); else openGear()});
-// the wall's order: owned by when added, then on order by expected arrival; the hunt by priority
+// the wall's order: owned by when added, then on order by expected arrival, then the hunt by priority
 function wallLists(){
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
   const own=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").sort((a,b)=>(a.added||0)-(b.added||0));
   const wish=records.filter(r=>r.status==="wish").sort((a,b)=>(a.priority||2)-(b.priority||2)||(a.added||0)-(b.added||0));
   return {own,ord,wish};
 }
+// the filter: which badges to show, remembered per viewer. Nothing chosen, or only badges no record has, shows them all
+const FKEYS=["own","ord","p1","p2","p3"],FLABEL={own:"owned",ord:"on the way",p1:"top want",p2:"want",p3:"someday"};
+function fkey(r){return r.status==="ordered"?"ord":r.status==="wish"?(r.priority==1?"p1":r.priority==3?"p3":"p2"):"own"}
+let wallFilter=new Set();try{for(const k of JSON.parse(localStorage.getItem("rw.filter")||"[]")) if(FKEYS.includes(k)) wallFilter.add(k)}catch(e){}
+function shownList(){
+  const {own,ord,wish}=wallLists(),all=own.concat(ord,wish),n={};for(const r of all) n[fkey(r)]=(n[fkey(r)]||0)+1;
+  const on=FKEYS.filter(k=>wallFilter.has(k)&&n[k]);
+  return {n,on,list:on.length?all.filter(r=>on.includes(fkey(r))):all};
+}
+$("#filters").addEventListener("click",e=>{const b=e.target.closest(".fchip");if(!b)return;const k=b.dataset.f;
+  wallFilter.has(k)?wallFilter.delete(k):wallFilter.add(k);
+  try{localStorage.setItem("rw.filter",JSON.stringify([...wallFilter]))}catch(e){}
+  render()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
-  const {own,ord,wish}=wallLists();
-  $("#nOrd").textContent=ord.length;
-  syncRack($("#rackOwn"),own.concat(ord)); syncRack($("#rackWish"),wish);
+  const {n,on,list}=shownList();
+  syncRack($("#rack"),list);
   for(const id of sleeveCache.keys()) if(!records.some(r=>r.id===id)) sleeveCache.delete(id);
-  $("#emptyOwn").hidden=own.length+ord.length>0; $("#emptyWish").hidden=wish.length>0;
-  $("#nOwn").textContent=own.length; $("#nWish").textContent=wish.length;
-  for(const [id,n] of [["#nOwn",own.length],["#nOrd",ord.length],["#nWish",wish.length]]) $(id).parentElement.hidden=!n;
+  $("#emptyWall").hidden=list.length>0;
+  for(const b of document.querySelectorAll(".fchip")){const k=b.dataset.f;
+    b.querySelector("b").textContent=n[k]||0; b.hidden=!n[k]; b.setAttribute("aria-pressed",String(on.includes(k)))}
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
   renderWelcome();
 }
@@ -1069,7 +1082,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.5.2"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.6.0"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1177,6 +1190,7 @@ function openSettings(keepScroll){
   </fieldset>
   <fieldset><legend>Help</legend>
     <p class="hint" style="margin-top:0">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>
+    <p class="hint mono">Vinyl Wall ${APP_VERSION}</p>
   </fieldset>
   </div>`;
   s.classList.toggle("ro",!canEdit);
@@ -1342,7 +1356,7 @@ async function applyLibrary(){
 }
 $("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
 // ---------- Share image: a picture of the wall to save or post (#4)
-/* Drawn on a canvas: the wall's photo background (softened as on the wall), title, counts, then each section's sleeves
+/* Drawn on a canvas: the wall's photo background (softened as on the wall), title, counts, then the sleeves the filter shows
    hanging from a barnwood rail with their tags, in the wall's own order. Covers come from this wall's stored images;
    records without one get the placeholder sleeve the wall shows. Pattern backgrounds are CSS-only, so those draw as the
    plain wall color. Nothing private goes in: no prices (the budget is left off hunt tags), orders or notes. */
@@ -1384,16 +1398,13 @@ async function drawShare(withImages){
   const css=getComputedStyle(document.documentElement),v=k=>css.getPropertyValue(k).trim();
   const C={wall:v("--wall"),ink:v("--ink"),ink2:v("--ink-2"),shadow:v("--shadow"),accent:v("--accent"),accentInk:v("--accent-ink"),
     want:v("--want"),someday:v("--someday"),somedayInk:v("--someday-ink"),paper:v("--paper"),paperInk:v("--paper-ink")};
-  const F={title:'800 84px "Big Shoulders Display"',sec:'600 34px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
+  const F={title:'800 84px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
     cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"',tag:'500 13px "IBM Plex Mono"'};
   await Promise.all(Object.values(F).map(f=>document.fonts.load(f).catch(()=>{})));
-  const {own,ord,wish}=wallLists();
-  const secs=[["On the wall",own.concat(ord)],["The hunt",wish]].filter(x=>x[1].length);
+  const {n,on,list}=shownList();
   const pad=60,gap=24,sw=(SHARE_W-2*pad-(SHARE_COLS-1)*gap)/SHARE_COLS,railH=20,rowH=36+sw+64+28;
-  let H=pad+100+76;
-  for(const [,list] of secs) H+=56+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+24;
-  H+=pad-24;
-  const shown=secs.flatMap(x=>x[1].slice(0,SHARE_MAX));
+  const H=pad+100+76+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+pad;
+  const shown=list.slice(0,SHARE_MAX);
   const wp=withImages?wallPhoto():null,photo=wp?await loadImg(wp.src):null;
   const covers=new Map(withImages?await Promise.all(shown.filter(r=>r.coverAsset).map(async r=>[r.id,await loadImg("/_blob/"+r.coverAsset)])):[]);
   const cv=document.createElement("canvas");cv.width=SHARE_W;cv.height=Math.ceil(H);
@@ -1407,33 +1418,28 @@ async function drawShare(withImages){
   let y=pad;glow(true);
   ctx.fillStyle=C.ink;ctx.font=F.title;ctx.fillText(fitText(ctx,((settings.title||"").trim()||DEFAULT_TITLE).toUpperCase(),SHARE_W-2*pad),pad,y);y+=100;
   ctx.fillStyle=C.ink2;ctx.font=F.mono;
-  ctx.fillText([[own.length,"on the wall"],[ord.length,"on the way"],[wish.length,"in the hunt"]].filter(x=>x[0]).map(x=>x.join(" ")).join("  ·  "),pad,y);y+=76;
-  for(const [name,list] of secs){
-    glow(true);ctx.fillStyle=C.ink;ctx.font=F.sec;ctx.fillText(name.toUpperCase(),pad,y);y+=56;glow(false);
-    const items=list.slice(0,SHARE_MAX);
-    for(let i=0;i<items.length;i+=SHARE_COLS){
-      const row=items.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
-      const g=ctx.createLinearGradient(0,y,0,y+railH);g.addColorStop(0,"#5e5244");g.addColorStop(.5,"#4a3f33");g.addColorStop(1,"#2f2820");
-      ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=10;ctx.shadowOffsetY=4;ctx.fillStyle=g;ctx.fillRect(pad-12,y,rw+24,railH);ctx.restore();
-      row.forEach((r,j)=>{
-        const x=pad+j*(sw+gap),top=y+36,im=covers.get(r.id);
-        ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=18;ctx.shadowOffsetY=8;
-        if(im){const k=Math.min(im.width,im.height);ctx.drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,x,top,sw,sw)}
-        else{const h=hash((r.title||"")+(r.artist||""))%360,gr=ctx.createLinearGradient(x,top,x+sw,top+sw);
-          gr.addColorStop(0,`hsl(${h} 45% 32%)`);gr.addColorStop(1,`hsl(${(h+40)%360} 50% 18%)`);ctx.fillStyle=gr;ctx.fillRect(x,top,sw,sw)}
-        ctx.restore();
-        if(!im){ctx.fillStyle="#fff";ctx.font=F.gen;wrapText(ctx,(r.title||"Untitled").toUpperCase(),sw-24,4).forEach((l,n)=>ctx.fillText(l,x+12,top+12+n*22));
-          ctx.globalAlpha=.85;ctx.font=F.small;ctx.fillText(fitText(ctx,r.artist||"",sw-24),x+12,top+sw-26);ctx.globalAlpha=1}
-        ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke();
-        const tag=shareTag(r,C);if(tag)drawTag(ctx,tag,x+sw+4,top+sw*.82,sw+4,C,F.tag);
-        glow(true);ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
-        ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);glow(false);
-      });
-      y+=rowH;
-    }
-    if(list.length>SHARE_MAX){glow(true);ctx.fillStyle=C.ink2;ctx.font=F.mono;ctx.fillText(`+ ${list.length-SHARE_MAX} more`,pad,y);y+=40;glow(false)}
-    y+=24;
+  ctx.fillText(FKEYS.filter(k=>n[k]&&(!on.length||on.includes(k))).map(k=>n[k]+" "+FLABEL[k]).join("  ·  "),pad,y);y+=76;glow(false);
+  for(let i=0;i<shown.length;i+=SHARE_COLS){
+    const row=shown.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
+    const g=ctx.createLinearGradient(0,y,0,y+railH);g.addColorStop(0,"#5e5244");g.addColorStop(.5,"#4a3f33");g.addColorStop(1,"#2f2820");
+    ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=10;ctx.shadowOffsetY=4;ctx.fillStyle=g;ctx.fillRect(pad-12,y,rw+24,railH);ctx.restore();
+    row.forEach((r,j)=>{
+      const x=pad+j*(sw+gap),top=y+36,im=covers.get(r.id);
+      ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+      if(im){const k=Math.min(im.width,im.height);ctx.drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,x,top,sw,sw)}
+      else{const h=hash((r.title||"")+(r.artist||""))%360,gr=ctx.createLinearGradient(x,top,x+sw,top+sw);
+        gr.addColorStop(0,`hsl(${h} 45% 32%)`);gr.addColorStop(1,`hsl(${(h+40)%360} 50% 18%)`);ctx.fillStyle=gr;ctx.fillRect(x,top,sw,sw)}
+      ctx.restore();
+      if(!im){ctx.fillStyle="#fff";ctx.font=F.gen;wrapText(ctx,(r.title||"Untitled").toUpperCase(),sw-24,4).forEach((l,n)=>ctx.fillText(l,x+12,top+12+n*22));
+        ctx.globalAlpha=.85;ctx.font=F.small;ctx.fillText(fitText(ctx,r.artist||"",sw-24),x+12,top+sw-26);ctx.globalAlpha=1}
+      ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke();
+      const tag=shareTag(r,C);if(tag)drawTag(ctx,tag,x+sw+4,top+sw*.82,sw+4,C,F.tag);
+      glow(true);ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
+      ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);glow(false);
+    });
+    y+=rowH;
   }
+  if(list.length>SHARE_MAX){glow(true);ctx.fillStyle=C.ink2;ctx.font=F.mono;ctx.fillText(`+ ${list.length-SHARE_MAX} more`,pad,y);y+=40;glow(false)}
   return cv;
 }
 async function shareImage(withImages){const cv=await drawShare(withImages);
