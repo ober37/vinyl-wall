@@ -1299,7 +1299,7 @@ async function readLibrary(file){
       recs.push([id,d]);ids.add(id);remember(d);
     }
     const fresh=(list,have)=>Object.entries(list||{}).filter(([id,d])=>d&&typeof d==="object"&&!have.some(x=>x.id===id));
-    const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),fileSetups:Object.keys(snap.setups||{}),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
+    const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
     if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return renderImport()}
     libPlan=p;libMsg="";libStage="plan";
   }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
@@ -1326,10 +1326,12 @@ async function applyLibrary(){
         if(!(settings.uploads||[]).some(u=>u.id===s.bg.assetId))patch.uploads=[...(settings.uploads||[]),{id:s.bg.assetId,name:"Your photo"}]}
       if(typeof s.dim==="number")patch.dim=s.dim;
       if(Object.keys(patch).length)await saveSettings(patch);
-      // setup gives every new wall an empty "My setup"; once the file brings its own setups, drop it if it's still untouched
+      // setup gives every new wall an empty "My setup", and a file exported from such a wall can carry it too: once the
+      // file brings its own setups, drop any "My setup" that's still untouched (no notes, no gear), as long as one remains
+      const left=new Set([...setupDocs.map(x=>x.id),...p.setups.map(([id])=>id)]);  // the page may not have seen the new ones yet
       if(p.setups.length) for(const x of setupDocs.slice())
-        if(x.name==="My setup"&&!x.note&&!p.fileSetups.includes(x.id)&&!gear.some(g=>g.setup===x.id)&&!p.gear.some(([,d])=>d.setup===x.id))
-          await db.collection("setups").doc(x.id).delete()}
+        if(x.name==="My setup"&&!x.note&&!gear.some(g=>g.setup===x.id)&&!p.gear.some(([,d])=>d.setup===x.id)&&left.size>1)
+          {await db.collection("setups").doc(x.id).delete();left.delete(x.id)}}
     const lookups=writes.filter(([c,,d])=>c==="records"&&d.needsEnrich).length;
     libMsg=`Brought in ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+(lookups?` Covers for ${lookups} record${lookups===1?"":"s"} will be looked up.`:"");
     libStage="done";
