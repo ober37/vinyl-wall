@@ -9,5 +9,6 @@ head = ('<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" 
         '<style>body{margin:0;font:14px system-ui}[hidden]{display:none!important}</style><script>' + mock + '</script></head><body>')
 open(os.path.join(here, "preview.html"), "w").write(head + page + "</body></html>")
 dst = os.path.join(here, "backgrounds")
-if not os.path.isdir(dst): shutil.copytree(os.path.join(here, "..", "app", "backgrounds"), dst)
+shutil.rmtree(dst, ignore_errors=True)  # always fresh, so replaced photos show up
+shutil.copytree(os.path.join(here, "..", "app", "backgrounds"), dst)
 print("wrote dev/preview.html")

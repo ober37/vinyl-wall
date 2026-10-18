@@ -30,7 +30,6 @@
 html,body{overflow-x:hidden;max-width:100%}
 body{background:var(--wall);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;min-height:100vh}
 /* Backgrounds: each preset is built from the theme tokens so it reads in light and dark. Tiles in Settings reuse the same classes. */
-.bg-pegboard{background-image:radial-gradient(var(--wall-2) 1px,transparent 1.4px);background-size:22px 22px}
 .bg-plain{background-image:none}
 .bg-grooves{background-image:repeating-radial-gradient(circle at 112% -12%,var(--wall) 0 3px,color-mix(in srgb,var(--wall-2) 80%,var(--line)) 3px 4px)}
 .bg-walnut{background-image:repeating-linear-gradient(90deg,transparent 0 178px,color-mix(in srgb,var(--rail) 45%,var(--wall)) 178px 180px),
@@ -45,13 +44,16 @@ body{background:var(--wall);color:var(--ink);font-family:var(--body);font-size:1
 .bg-listening{--photo:url("backgrounds/listening-room.jpg")}
 .bg-cafe{--photo:url("backgrounds/coffee-shop.jpg")}
 .bg-tavern{--photo:url("backgrounds/coffee-shop-2.jpg")}
+.bg-shop{--photo:url("backgrounds/record-shop.jpg")}
+/* stock photos are the originals, softened only by the wall-colored wash; a tile shows them at the default (83%) */
+.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop{--dim-default:83%}
 .bg-photo{--photo:var(--bg-url);--dim-default:70%}
-.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo,
-body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-tavern::before,body.bg-photo::before{
+.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop,.bg-photo,
+body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-tavern::before,body.bg-shop::before,body.bg-photo::before{
   background-image:linear-gradient(color-mix(in srgb,var(--wall) var(--bg-dim,var(--dim-default,55%)),transparent),color-mix(in srgb,var(--wall) var(--bg-dim,var(--dim-default,55%)),transparent)),var(--photo);
   background-size:cover;background-position:var(--photo-pos,center);background-repeat:no-repeat}
-body.bg-listening,body.bg-crates,body.bg-cafe,body.bg-tavern,body.bg-photo{background-image:none}
-body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-tavern::before,body.bg-photo::before{
+body.bg-listening,body.bg-crates,body.bg-cafe,body.bg-tavern,body.bg-shop,body.bg-photo{background-image:none}
+body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-tavern::before,body.bg-shop::before,body.bg-photo::before{
   content:"";position:fixed;inset:0;z-index:-1;pointer-events:none}
 .bg-grille{background-image:radial-gradient(circle,color-mix(in srgb,var(--ink) 16%,transparent) 1.5px,transparent 2px),radial-gradient(circle,color-mix(in srgb,var(--ink) 16%,transparent) 1.5px,transparent 2px),
   linear-gradient(color-mix(in srgb,var(--wall-2) 60%,var(--wall)),color-mix(in srgb,var(--wall-2) 60%,var(--wall)));background-size:9px 9px,9px 9px,auto;background-position:0 0,4.5px 4.5px,0 0}
@@ -60,7 +62,7 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .bggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
 .bgtile{position:relative;display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer;font:inherit;text-align:left;min-width:0}
 .bgtile .sw{display:block;aspect-ratio:4/3;max-width:100%;border-radius:8px;border:1px solid var(--line);background-color:var(--wall);background-position:center;background-size:cover}
-.bgtile .sw.bg-pegboard{background-size:22px 22px}.bgtile .sw.bg-foam{background-size:34px 34px}
+.bgtile .sw.bg-foam{background-size:34px 34px}
 .bgtile[aria-pressed="true"] .sw{outline:2px solid var(--accent);outline-offset:2px}
 .bgtile:focus-visible .sw{outline:2px solid var(--brass);outline-offset:2px}
 .bgtile .nm{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
@@ -257,7 +259,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .libflow .libfile{font:12px/1.4 var(--mono);color:var(--ink-2);margin:0 0 8px;overflow-wrap:anywhere}
 @media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
 /* Small text stays readable over photo backgrounds */
-:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,.cap .a,.cap .meta){
+:is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-shop,.bg-photo) :is(.tally,.cap .a,.cap .meta){
   color:color-mix(in srgb,var(--ink-2) 55%,var(--ink));text-shadow:0 0 2px var(--wall),0 0 8px var(--wall),0 0 14px var(--wall)}
 /* Touch screens get no hover peek, so show a sliver of vinyl and a press response instead */
 @media (hover:none){.disc{transform:translateX(9%)}.sleeve-btn:active .sleeve-box{transform:scale(.975);transition:transform .12s}}
@@ -1145,17 +1147,21 @@ function openGearItem(id,keepScroll){
 }
 $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
-const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
+const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["shop","Record shop"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.9.1"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.9.2"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
 const PHOTO_PRESETS={
-  listening:`Listening room photo, softened.`,
-  crates:`Record shop photo, softened.`,
-  cafe:`Coffee shop photo, softened.`,
+  listening:`Listening room photo.`,
+  crates:`Record shop crates photo.`,
+  shop:`Record shop photo.`,
+  cafe:`Coffee shop photo.`,
   tavern:`Tavern photo, softened.`};
+/* A stock photo's slider runs 0-100 and lays the wall-colored wash at 70-95% (0, 50 and 100 give 70%, 83% and 95%);
+   anything lighter than 70% makes the photo too busy to read the wall over. An uploaded photo's slider is the wash itself (20-90%). */
+const stockDim=v=>{const t=40+v*.6;return Math.round((t<=50?50+t/2:75+(t-50)*.4)*10)/10};
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
 const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
@@ -1170,7 +1176,7 @@ function applySettings(){
   const bg=settings.bg||{kind:"preset",preset:DEFAULT_BG};
   if(bg.kind==="photo"&&okAsset(bg.assetId)){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
   else{b.classList.add("bg-"+(BG_PRESETS.some(x=>x[0]===bg.preset)?bg.preset:DEFAULT_BG));b.style.removeProperty("--bg-url");
-    if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",(settings.dim??55)+"%");else b.style.removeProperty("--bg-dim")}
+    if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",stockDim(settings.dim??50)+"%");else b.style.removeProperty("--bg-dim")}
 }
 const PLAIN_VERSION=/^\d+\.\d+\.\d+$/;
 function newer(a,b){if(!PLAIN_VERSION.test(String(a||"").replace(/^v/,"")))return false;const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
@@ -1225,7 +1231,7 @@ function openSettings(keepScroll){
       ${uploads.map(u=>`<div class="bgtile" role="button" tabindex="0" data-bg="photo:${esc(u.id)}" aria-pressed="${bg.kind==="photo"&&bg.assetId===u.id}"><span class="sw" style="background-image:url('/_blob/${esc(u.id)}')"></span><span class="nm">${esc(u.name||"Your photo")}</span>${assets?`<button class="rm" type="button" data-rmbg="${esc(u.id)}" aria-label="Remove this background">×</button>`:""}</div>`).join("")}
     </div>
     ${assets?`<div class="actions" style="margin-top:14px"><label class="btn small" for="st-upload">Upload your own</label><input type="file" id="st-upload" accept="image/jpeg,image/png,image/webp" hidden><span class="saved" id="bgStatus"></span></div>`:`<p class="hint">Uploading your own background isn't available in this view.</p>`}
-    ${bg.kind==="photo"||PHOTO_PRESETS[bg.preset]?`<label class="f" style="margin-top:14px">Soften photo so records stay readable <input id="st-dim" type="range" min="20" max="90" step="5" value="${esc(settings.dim??(bg.kind==="photo"?70:55))}"></label>`:""}
+    ${bg.kind==="photo"||PHOTO_PRESETS[bg.preset]?`<label class="f" style="margin-top:14px">Soften photo so records stay readable <input id="st-dim" type="range" ${bg.kind==="photo"?`min="20" max="90"`:`min="0" max="100"`} step="5" value="${esc(settings.dim??(bg.kind==="photo"?70:50))}"></label>`:""}
     ${bg.kind!=="photo"&&PHOTO_PRESETS[bg.preset]?`<p class="hint">${PHOTO_PRESETS[bg.preset]}</p>`:""}
     <div class="confirm" id="bg-confirm"><span>Remove this background for good?</span><button class="btn danger small" type="button" id="bg-yes">Remove</button><button class="btn small" type="button" id="bg-no">Cancel</button></div>
   </fieldset>
@@ -1272,9 +1278,12 @@ function openSettings(keepScroll){
   $("#closeBtn").addEventListener("click",closeSheet);
   let t=null;
   $("#st-title").addEventListener("input",()=>{clearTimeout(t);t=setTimeout(()=>saveSettings({title:val("st-title")}).then(()=>{const sv=$("#saved");if(sv)sv.textContent="Saved"}),500)});
-  const pick=el=>{const [kind,v]=el.dataset.bg.split(":");saveSettings({bg:kind==="photo"?{kind:"photo",assetId:v}:{kind:"preset",preset:v}}).then(()=>openSettings(true))};
+  const pick=el=>{const [kind,v]=el.dataset.bg.split(":"),patch={bg:kind==="photo"?{kind:"photo",assetId:v}:{kind:"preset",preset:v}};
+    // stock and uploaded photos use different slider scales: switching between them starts at that kind's default
+    if(kind==="photo"?bg.kind!=="photo":(PHOTO_PRESETS[v]&&bg.kind==="photo")) patch.dim=kind==="photo"?70:50;
+    saveSettings(patch).then(()=>openSettings(true))};
   s.querySelectorAll(".bgtile").forEach(el=>{el.addEventListener("click",e=>{if(e.target.closest(".rm"))return;pick(el)});el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(el)}})});
-  const dim=$("#st-dim"); if(dim){dim.addEventListener("input",()=>{document.body.style.setProperty("--bg-dim",dim.value+"%")});dim.addEventListener("change",()=>saveSettings({dim:+dim.value}))}
+  const dim=$("#st-dim"); if(dim){dim.addEventListener("input",()=>{document.body.style.setProperty("--bg-dim",(bg.kind==="photo"?+dim.value:stockDim(+dim.value))+"%")});dim.addEventListener("change",()=>saveSettings({dim:+dim.value}))}
   const up=$("#st-upload"); if(up) up.addEventListener("change",async()=>{const f=up.files[0];if(!f)return;const st=$("#bgStatus");
     if(f.size>15*1024*1024){st.textContent="That image is over 15 MB. Try a smaller one.";return}
     st.textContent="Uploading…";

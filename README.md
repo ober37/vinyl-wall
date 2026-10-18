@@ -12,11 +12,11 @@ Your records hang on a rack with their real album covers. Keep a wishlist of the
 
 Paste this into a new Claude conversation:
 
-> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.1/SETUP.md
+> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.2/SETUP.md
 
 Claude publishes the wall as your own private page, creates the background task that finds covers and syncs Discogs, and walks you through the rest. It takes a few minutes. Your records, notes and settings belong to your account only; nothing is shared with this project. If you share your wall, people can see everything on it, prices, orders and notes included, but only you and people you make Editors can change it.
 
-**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.1/SETUP.md"*, with the newest version number.)
+**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.2/SETUP.md"*, with the newest version number.)
 
 ### What your Claude setup needs
 
@@ -36,7 +36,7 @@ If something's missing, Claude tells you before building anything.
 - **Listening log.** Dated notes per record, plus "Played the whole album" / "Played one side".
 - **Equipment.** Turntables, cartridges, styluses, speakers and more, grouped into setups (e.g. Office, Living room) with shared gear. Plays add hours to the right gear; styluses warn you as they approach their rated life.
 - **Discogs sync (optional).** Owned records go to your Discogs collection with grades and notes; the hunt and orders go to your wantlist. Already on Discogs? Import your collection and wantlist in one tap.
-- **Make it yours.** Rename the wall and pick a background: softened photos of a listening room, a record shop, a coffee shop or a tavern, or patterns like speaker grille and walnut paneling. Or upload your own.
+- **Make it yours.** Rename the wall and pick a background: photos of a listening room, record shops, a coffee shop or a tavern, softened as much as you like, or patterns like speaker grille and walnut paneling. Or upload your own.
 - **Easy updates.** Settings tells you when a new version is out and what to send Claude.
 - Works on phones, and in light and dark mode.
 
@@ -67,7 +67,7 @@ The sync only writes to *your* collection and wantlist, and the import only adds
 | `app/vinyl-wall.html` | The wall itself: one self-contained page |
 | `app/tools/discogs_sync.py` | One-way sync from the wall to your Discogs collection and wantlist |
 | `app/tools/discogs_import.py` | One-time import of an existing Discogs collection and wantlist onto the wall |
-| `app/backgrounds/` | The softened photo backgrounds |
+| `app/backgrounds/` | The photo backgrounds |
 | `tasks/background-task.md` | Instructions for the background task (covers, runtimes, Discogs) |
 | `SETUP.md` | Step-by-step instructions Claude follows to install or update a wall |
 

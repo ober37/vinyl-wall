@@ -61,9 +61,15 @@ f.onload=async()=>{
     site().bg={kind:"photo",assetId:'x"),url("https://example.com/p.png'};await emit();
     check("background: odd asset id ignored",!d.body.style.getPropertyValue("--bg-url"));
     site().bg={kind:"preset",preset:"listening"};await emit();
+    // stock photos: slider 0 / 50 / 100 lays the wash at 70% / 83% / 95%
+    const wash=async v=>{site().dim=v;await emit();return d.body.style.getPropertyValue("--bg-dim")};
+    const w0=await wash(0),w50=await wash(50),w100=await wash(100);
+    check("stock photo slider: 70% / 83% / 95%",w0==="70%"&&w50==="83%"&&w100==="95%",[w0,w50,w100].join(" "));
+    delete site().dim;await emit();
     // background thumbnails in Settings are real tiles (the filter's color squares share their class name)
     q("#settingsBtn").click();await sleep(300);
     const tile=q('.bgtile[data-bg="preset:grille"] .sw'),tw=tile?tile.getBoundingClientRect().width:0;
+    check("settings: Record shop offered, Pegboard gone",!!q('.bgtile[data-bg="preset:shop"]')&&!q('.bgtile[data-bg="preset:pegboard"]'));
     check("settings: background thumbnails show",tw>60&&getComputedStyle(tile).backgroundImage!=="none",`width ${tw}`);
     q("#closeBtn").click();await sleep(200);
     // settings saves write only what changed
