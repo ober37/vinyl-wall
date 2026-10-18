@@ -5,7 +5,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: a listening-room wall. A weathered barnwood plank with iron rings runs across each row; sleeves hang from them.
-   One wall of every record, owned, on order and hunted, narrowed by the filter in the counts line. Detail opens in a side sheet. */
+   One wall of every record, owned, on order and hunted, narrowed by the filter in the counts line and by search. Detail opens in a side sheet. */
 :root{
   --wall:#dde2dc; --wall-2:#cfd6cf; --ink:#1b2220; --ink-2:#4b5753; --line:#b9c3bc;
   --rail:#6a462b; --rail-hi:#8b6140; --brass:#a77a2c; --accent:#2c5c4f; --accent-ink:#f2f5f1;
@@ -94,17 +94,22 @@ header.top>.headtext .tally{column-gap:6px;row-gap:4px}
 @media (max-width:640px){
   /* phones: share and Settings sit together top right beside the title; the gear pill and Add a record share the next row */
   /* three columns so the icons get a narrow one of their own at the right edge: the title spans everything left of them,
-     and Add a record spans the last two columns on the row below */
-  header.top{grid-template-columns:minmax(0,1fr) auto auto;gap:14px 12px}
-  header.top>.headtext{grid-column:1/3;grid-row:1}
-  header.top>.headtools{display:contents}
+     and Add a record spans the last two columns on the bottom row. The counts and search get full-width rows of their own
+     under the title, so the icons don't squeeze them; rows are spaced by margins since the hidden ones leave empty tracks */
+  header.top{grid-template-columns:minmax(0,1fr) auto auto;gap:0 12px}
+  header.top>.headtext,header.top>.headtools{display:contents}
+  header.top h1{grid-column:1/3;grid-row:1}
   .headicons{grid-column:3;grid-row:1;align-self:start;justify-self:end}
-  #stylusBtn{grid-column:1;grid-row:2;justify-self:start;align-self:center}
-  header.top>.actions{grid-column:2/4;grid-row:2;justify-self:end;align-self:center}
+  header.top .tally{grid-column:1/-1;grid-row:2}
+  header.top .searchbar{grid-column:1/-1;grid-row:3;max-width:none}
+  #stylusBtn{grid-column:1;grid-row:4;justify-self:start;align-self:center;margin-top:14px}
+  header.top>.actions{grid-column:2/4;grid-row:4;justify-self:end;align-self:center;margin-top:14px}
   header.top h1{font-size:clamp(30px,8vw,48px)}
 }
 #shareBtn[hidden]{display:none}
-h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:.9;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance}
+h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);line-height:1;margin:0;letter-spacing:.01em;text-transform:uppercase;text-wrap:balance;min-width:0}
+/* a single word too long for the line is cut off with an ellipsis instead of running under the icons */
+h1.trunc{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sub{color:var(--ink-2);margin:6px 0 0;max-width:56ch}
 .tally{font-family:var(--mono);font-size:13px;color:var(--ink-2);display:flex;gap:18px;font-variant-numeric:tabular-nums}
 .tally b{color:var(--ink);font-weight:500}
@@ -118,6 +123,12 @@ h1{font-family:var(--display);font-weight:800;font-size:clamp(40px,7vw,68px);lin
 .sw{width:9px;height:9px;border-radius:2px;background:var(--paper);box-shadow:0 0 0 1px var(--line)}
 /* phones: just each badge's color and count, on one line (owned has no badge, so it keeps its word); the words stay for screen readers */
 @media (max-width:640px){.fchip:not([data-f="own"]) .fl{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}}
+.searchbar{display:flex;gap:8px;align-items:center;margin-top:12px;max-width:420px}
+.searchbar[hidden]{display:none}
+.searchbar input{flex:1;min-width:0;border-radius:999px;padding:8px 14px}
+.searchbar .iconbtn{flex:none}
+#searchBtn[hidden]{display:none}
+#searchBtn[aria-expanded="true"]{background:color-mix(in srgb,var(--ink) 9%,transparent);border-color:var(--ink-2)}
 .sw.ship{background:var(--accent)}.sw.p1{background:var(--want)}.sw.p3{background:var(--someday)}
 .btn{font:600 14px/1 var(--body);border:1px solid var(--line);background:transparent;color:var(--ink);border-radius:999px;padding:10px 16px;cursor:pointer}
 .btn:hover{border-color:var(--ink-2)}
@@ -384,9 +395,11 @@ fieldset.gsec>p.hint{margin-bottom:12px}
     <div class="headtext">
       <h1 id="pageTitle">My Vinyl Wall</h1>
       <div class="tally" id="filters" role="group" aria-label="Show on the wall"><button class="fchip" type="button" data-f="own"><b>0</b><span class="fl"> owned</span></button><button class="fchip" type="button" data-f="ord"><i class="sw ship"></i><b>0</b><span class="fl"> on the way</span></button><button class="fchip" type="button" data-f="p1"><i class="sw p1"></i><b>0</b><span class="fl"> top want</span></button><button class="fchip" type="button" data-f="p2"><i class="sw"></i><b>0</b><span class="fl"> want</span></button><button class="fchip" type="button" data-f="p3"><i class="sw p3"></i><b>0</b><span class="fl"> someday</span></button></div>
+      <div class="searchbar" id="searchBar" role="search" hidden><input type="search" id="q" placeholder="Title, artist, label or year" aria-label="Search the wall" autocomplete="off" enterkeyhint="search"><button class="iconbtn" id="qClear" type="button" aria-label="Clear search" title="Clear search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>
     </div>
     <div class="headtools"><button class="stylus" id="stylusBtn" type="button" aria-label="Equipment and stylus wear"><span class="lbl" id="gearLbl">Gear</span><span class="meter" id="stylusMeter"><i style="width:0%"></i></span><span class="hrs" id="stylusHrs">—</span></button>
-      <span class="headicons"><button class="iconbtn editonly" id="shareBtn" type="button" aria-label="Share your wall" title="Share your wall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
+      <span class="headicons"><button class="iconbtn" id="searchBtn" type="button" aria-label="Search the wall" title="Search the wall" aria-expanded="false" aria-controls="searchBar" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></button>
+      <button class="iconbtn editonly" id="shareBtn" type="button" aria-label="Share your wall" title="Share your wall" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M7 8l5-5 5 5"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg></button>
       <button class="iconbtn editonly" id="settingsBtn" type="button" aria-label="Settings" title="Settings"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button></span></div>
     <div class="actions">
       <button class="btn primary editonly" id="addBtn" type="button">Add a record</button>
@@ -408,6 +421,7 @@ fieldset.gsec>p.hint{margin-bottom:12px}
   <section class="wallsec" aria-label="Records">
     <div class="rack" id="rack"></div>
     <div class="empty" id="emptyWall" hidden>Nothing hanging yet. Add a record you own, or one you're hunting for.</div>
+    <div class="empty" id="noMatch" hidden><span id="noMatchMsg"></span> <button class="linkbtn" type="button" id="noMatchClear" style="margin:0;font-size:inherit;color:var(--accent)">Clear the search</button></div>
   </section>
   <div class="status" id="status">Loading the wall…</div>
 </div>
@@ -500,21 +514,34 @@ function wallLists(){
 const FKEYS=["own","ord","p1","p2","p3"],FLABEL={own:"owned",ord:"on the way",p1:"top want",p2:"want",p3:"someday"};
 function fkey(r){return r.status==="ordered"?"ord":r.status==="wish"?(r.priority==1?"p1":r.priority==3?"p3":"p2"):"own"}
 let wallFilter=new Set();try{for(const k of JSON.parse(localStorage.getItem("rw.filter")||"[]")) if(FKEYS.includes(k)) wallFilter.add(k)}catch(e){}
+// search: every typed word must appear in the title, artist, label or year; capitals and accents don't matter. Not remembered.
+const fold=t=>String(t??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();
+function searchWords(){return $("#searchBar").hidden?[]:fold($("#q").value).split(/\s+/).filter(Boolean)}
+function matches(r,words){const hay=fold([r.title,r.artist,r.label,r.year].join(" "));return words.every(w=>hay.includes(w))}
 function shownList(){
   const {own,ord,wish}=wallLists(),all=own.concat(ord,wish),n={};for(const r of all) n[fkey(r)]=(n[fkey(r)]||0)+1;
-  const on=FKEYS.filter(k=>wallFilter.has(k)&&n[k]);
-  return {n,on,list:on.length?all.filter(r=>on.includes(fkey(r))):all};
+  const on=FKEYS.filter(k=>wallFilter.has(k)&&n[k]),words=searchWords();
+  return {n,on,words,list:all.filter(r=>(!on.length||on.includes(fkey(r)))&&(!words.length||matches(r,words)))};
 }
+function closeSearch(){$("#q").value="";$("#searchBar").hidden=true;$("#searchBtn").setAttribute("aria-expanded","false");render()}
+$("#searchBtn").addEventListener("click",()=>{if(!$("#searchBar").hidden)return closeSearch();
+  $("#searchBar").hidden=false;$("#searchBtn").setAttribute("aria-expanded","true");$("#q").focus()});
+$("#q").addEventListener("input",()=>render());
+$("#q").addEventListener("keydown",e=>{if(e.key==="Escape"){e.stopPropagation();closeSearch();$("#searchBtn").focus()}});
+$("#qClear").addEventListener("click",()=>{closeSearch();$("#searchBtn").focus()});
+$("#noMatchClear").addEventListener("click",()=>{closeSearch();$("#searchBtn").focus()});
 $("#filters").addEventListener("click",e=>{const b=e.target.closest(".fchip");if(!b)return;const k=b.dataset.f;
   wallFilter.has(k)?wallFilter.delete(k):wallFilter.add(k);
   try{localStorage.setItem("rw.filter",JSON.stringify([...wallFilter]))}catch(e){}
   render()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
-  const {n,on,list}=shownList();
+  const {n,on,words,list}=shownList();
   syncRack($("#rack"),list);
   for(const id of sleeveCache.keys()) if(!records.some(r=>r.id===id)) sleeveCache.delete(id);
-  $("#emptyWall").hidden=list.length>0;
+  $("#emptyWall").hidden=list.length>0||records.length>0; $("#noMatch").hidden=list.length>0||!records.length;
+  if(!list.length&&records.length) $("#noMatchMsg").textContent=`Nothing on the wall matches “${$("#q").value.trim()}”${on.length?" with this filter":""}.`;
+  $("#searchBtn").hidden=!records.length;
   for(const b of document.querySelectorAll(".fchip")){const k=b.dataset.f;
     b.querySelector("b").textContent=n[k]||0; b.hidden=!n[k]; b.setAttribute("aria-pressed",String(on.includes(k)))}
   if(openId&&!String(openId).startsWith("__")){const r=records.find(x=>x.id===openId); if(!r) closeSheet();}
@@ -1116,7 +1143,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["pegboard","Pegboard"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.6.1"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.9.0"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1128,9 +1155,12 @@ const PHOTO_PRESETS={
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
 const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
+function fitTitle(){const h=$("#pageTitle");h.classList.remove("trunc");const cut=h.scrollWidth>h.clientWidth+1;
+  h.classList.toggle("trunc",cut);if(cut)h.title=h.textContent;else h.removeAttribute("title")}
+addEventListener("resize",fitTitle);
 function applySettings(){
   const t=(settings.title||"").trim()||DEFAULT_TITLE;
-  $("#pageTitle").textContent=t; document.title=t;
+  $("#pageTitle").textContent=t; document.title=t; fitTitle();
   const b=document.body; [...b.classList].filter(c=>c.startsWith("bg-")).forEach(c=>b.classList.remove(c));
   const bg=settings.bg||{kind:"preset",preset:DEFAULT_BG};
   if(bg.kind==="photo"&&bg.assetId){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
@@ -1435,7 +1465,7 @@ async function drawShare(withImages){
   const F={title:'800 84px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
     cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"',tag:'500 13px "IBM Plex Mono"'};
   await Promise.all(Object.values(F).map(f=>document.fonts.load(f).catch(()=>{})));
-  const {n,on,list}=shownList();
+  const {list}=shownList();
   const pad=60,gap=24,sw=(SHARE_W-2*pad-(SHARE_COLS-1)*gap)/SHARE_COLS,railH=20,rowH=36+sw+64+28;
   const H=pad+100+76+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+pad;
   const shown=list.slice(0,SHARE_MAX);
@@ -1452,7 +1482,8 @@ async function drawShare(withImages){
   let y=pad;glow(true);
   ctx.fillStyle=C.ink;ctx.font=F.title;ctx.fillText(fitText(ctx,((settings.title||"").trim()||DEFAULT_TITLE).toUpperCase(),SHARE_W-2*pad),pad,y);y+=100;
   ctx.fillStyle=C.ink2;ctx.font=F.mono;
-  ctx.fillText(FKEYS.filter(k=>n[k]&&(!on.length||on.includes(k))).map(k=>n[k]+" "+FLABEL[k]).join("  ·  "),pad,y);y+=76;glow(false);
+  const shownN={};for(const r of list) shownN[fkey(r)]=(shownN[fkey(r)]||0)+1;
+  ctx.fillText(FKEYS.filter(k=>shownN[k]).map(k=>shownN[k]+" "+FLABEL[k]).join("  ·  "),pad,y);y+=76;glow(false);
   for(let i=0;i<shown.length;i+=SHARE_COLS){
     const row=shown.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
     const g=ctx.createLinearGradient(0,y,0,y+railH);g.addColorStop(0,"#5e5244");g.addColorStop(.5,"#4a3f33");g.addColorStop(1,"#2f2820");
