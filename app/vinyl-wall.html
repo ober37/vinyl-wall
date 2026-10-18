@@ -225,6 +225,9 @@ h2 small{font-family:var(--mono);font-size:12px;letter-spacing:0;color:var(--ink
 .steps li.done::before{content:"✓";background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .steps li.done .btn{opacity:.6}
 .welcome .linkbtn{margin:0;font-size:inherit;color:var(--accent)}
+.libflow{margin-top:24px}
+.libflow .libmsg{font-size:16px;line-height:1.5;margin:0 0 18px;max-width:46ch}
+.libflow .libfile{font:12px/1.4 var(--mono);color:var(--ink-2);margin:0 0 8px;overflow-wrap:anywhere}
 @media (max-width:520px){.welcome{padding:22px 18px}.steps li{grid-template-columns:34px 1fr}.steps li .btn{grid-column:2;grid-row:auto;justify-self:start;margin-top:10px}}
 /* Small text stays readable over photo backgrounds */
 :is(.bg-listening,.bg-crates,.bg-cafe,.bg-tavern,.bg-photo) :is(.tally,h2 small,.cap .a,.cap .meta){
@@ -375,6 +378,7 @@ fieldset.gsec>p.hint{margin-bottom:16px}
       <li><b>Add your first record</b><span>Something you own, or one you're hunting for.</span><button class="btn primary small editonly" type="button" data-welcome="add">Add a record</button></li>
       <li id="wStepDiscogs"><b>Connect Discogs</b><span>Optional. Keeps your collection and wantlist in sync, and can bring in records you've already listed there.</span><button class="btn small editonly" type="button" data-welcome="settings">Open Settings</button></li>
       <li id="wStepGear"><b>Add your turntable and stylus</b><span>Optional. Plays add up so you know when a stylus is wearing out.</span><button class="btn small editonly" type="button" data-welcome="gear">Set up equipment</button></li>
+      <li><b>Start with a blank wall</b><span>Skip this and hang records as you go.</span><button class="btn small editonly" type="button" data-welcome="blank">Start blank</button></li>
     </ol>
     <p class="editonly">Moving from another wall? <button class="linkbtn" type="button" data-welcome="import">Import your library</button></p>
   </section>
@@ -461,15 +465,15 @@ function syncRack(rack,list){
   want.forEach((el,i)=>{if(rack.children[i]!==el) rack.insertBefore(el,rack.children[i]||null)});
 }
 function renderWelcome(){
-  const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0;
-  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show); $(".tally").hidden=show;
+  const w=$("#welcome"); if(!w) return; const show=recordsLoaded&&records.length===0&&!settings.welcomeDismissed;
+  w.hidden=!show; document.querySelectorAll(".wallsec").forEach(x=>x.hidden=show); $(".tally").hidden=recordsLoaded&&records.length===0;
   if(!show) return;
   $("#wStepDiscogs").classList.toggle("done",settings?.discogs?.status==="ok");
   $("#wStepGear").classList.toggle("done",gear.some(g=>!g.example));
 }
 document.addEventListener("click",e=>{const b=e.target.closest("[data-welcome]");if(!b)return;
   const k=b.dataset.welcome; if(k==="add")openSheet(null); else if(k==="settings")openSettings();
-  else if(k==="import"){openSettings();$("#lib-file").click()} else openGear()});
+  else if(k==="import")openImport(); else if(k==="blank")saveSettings({welcomeDismissed:true}).then(renderWelcome); else openGear()});
 function render(){
   {const seen=new Set();records=records.filter(r=>!seen.has(r.id)&&seen.add(r.id));}
   const ord=records.filter(r=>r.status==="ordered").sort((a,b)=>(a.eta||"9999").localeCompare(b.eta||"9999"));
@@ -1148,11 +1152,10 @@ function openSettings(keepScroll){
   <fieldset class="editonly"><legend>Your library</legend>
     <p class="hint" style="margin-top:0">Save your records, equipment and settings to a file you keep, or bring in a file you exported from a wall. Your Discogs token is never included.</p>
     <div class="actions" style="margin-top:10px">
-      ${downloads?`<button class="btn small" type="button" id="lib-export" ${libBusy?"disabled":""}>Export your library</button>`:""}
-      <label class="btn small" for="lib-file">Import from a file</label>
+      ${downloads?`<button class="btn small" type="button" id="lib-export">Export your library</button>`:""}
+      <button class="btn small" type="button" id="lib-import">Import from a file</button>
     </div>
-    <div class="confirm ${libPlan?"on":""}" id="lib-confirm"><span>${libPlan?esc(libSummary(libPlan)):""}</span><button class="btn primary small" type="button" id="lib-yes">Bring them in</button><button class="btn small" type="button" id="lib-no">Cancel</button></div>
-    <p class="hint" id="libStatus">${esc(libMsg)}</p>
+    ${libExportMsg?`<p class="hint" id="libStatus">${esc(libExportMsg)}</p>`:""}
   </fieldset>
   <p class="hint feedback">Found a problem or have an idea? <a href="${REPO_URL}/issues/new/choose" target="_blank" rel="noopener">Tell us on GitHub</a>.</p>`;
   s.classList.toggle("ro",!canEdit);
@@ -1204,8 +1207,7 @@ function openSettings(keepScroll){
   // check for a newer release at most once a day, when Settings is opened on the owner's own wall
   if(canEdit&&mcp&&settings.taskId&&Date.now()-((settings.update||{}).checkedMs||0)>24*3600000&&!keepScroll) fireTask();
   const ex=$("#lib-export"); if(ex) ex.addEventListener("click",exportLibrary);
-  $("#lib-yes").addEventListener("click",applyLibrary);
-  $("#lib-no").addEventListener("click",()=>{libPlan=null;libMsg="";openSettings(true)});
+  $("#lib-import").addEventListener("click",()=>openImport());
   const rc=$("#st-recheck"); if(rc) rc.addEventListener("click",()=>{saveSettings({discogs:{...settings.discogs,status:"pending"}}).then(()=>{fireTask();openSettings(true)})});
   const rm=$("#st-remove"); if(rm) rm.addEventListener("click",()=>$("#tok-confirm").classList.add("on"));
   $("#tok-no").addEventListener("click",()=>$("#tok-confirm").classList.remove("on"));
@@ -1217,7 +1219,8 @@ $("#settingsBtn").addEventListener("click",()=>openSettings());
 // ---------- Your library: export everything to a file, and import a file made that way (#10)
 /* The file holds records, gear, setups and the page's look. Never the Discogs token (it isn't loaded here) or anything
    tied to one wall: the task id, the Discogs connection, update state, data version. */
-let libPlan=null,libMsg="",libBusy=false;
+/* Import runs in its own sheet, one step at a time: choose a file, see what it adds, bring it in, done. */
+let libPlan=null,libMsg="",libBusy=false,libStage="idle",libFileName="",libExportMsg="";
 function nowUTC(){return new Date().toISOString().slice(0,16).replace("T"," ")+" UTC"}
 // same matching as app/tools/discogs_import.py: ignore case, punctuation, "the", "&"/"and", Discogs' "(2)" and "*"
 function libNorm(s){return String(s||"").toLowerCase().replace(/\s*\(\d+\)|\*/g,"").replace(/&/g," and ").split(/[^a-z0-9]+/).filter(w=>w&&w!=="the").join("")}
@@ -1232,15 +1235,36 @@ async function exportLibrary(){
   const site={};for(const k of ["title","bg","dim"]) if(settings[k]!==undefined) site[k]=settings[k];
   const file={vinylWall:1,exportedAt:nowUTC(),app:APP_VERSION,settings:{site},setups:byId(setupDocs),gear:byId(gear),records:byId(records)};
   try{await downloads.save({filename:`vinyl-wall-${today()}.json`,data:JSON.stringify(file,null,1)});
-    libMsg=`Saved ${libCount(Object.keys(file.records).length,Object.keys(file.gear).length,Object.keys(file.setups).length)}.`}
-  catch(e){libMsg=e.code==="declined"?"":"Couldn't save the file: "+(e.message||e.code)}
+    libExportMsg=`Saved ${libCount(Object.keys(file.records).length,Object.keys(file.gear).length,Object.keys(file.setups).length)}.`}
+  catch(e){libExportMsg=e.code==="declined"?"":"Couldn't save the file: "+(e.message||e.code)}
   if(openId==="__settings")openSettings(true);
 }
+function renderImport(){if(openId==="__import")openImport(true)}
+function openImport(keepScroll){
+  if(!keepScroll&&!libBusy){libStage="idle";libPlan=null;libMsg="";libFileName=""}
+  openId="__import";
+  const s=$("#sheet"),choose=(primary,label)=>`<button class="btn${primary?" primary":""}" type="button" data-choose>${label}</button>`;
+  const file=libFileName?`<p class="libfile">${esc(libFileName)}</p>`:"";
+  const body=libStage==="plan"?`${file}<p class="libmsg">${esc(libSummary(libPlan))}</p><div class="actions"><button class="btn primary" type="button" id="lib-yes">Bring them in</button>${choose(false,"Choose another file")}</div>`
+    :libStage==="busy"?`${file}<p class="libmsg" role="status">${esc(libMsg)}</p>`
+    :libStage==="done"?`<p class="libmsg" role="status">${esc(libMsg)}</p><div class="actions"><button class="btn primary" type="button" id="lib-see">See your wall</button></div>`
+    :libStage==="msg"?`${file}<p class="libmsg" role="status">${esc(libMsg)}</p><div class="actions">${choose(true,"Choose a file")}</div>`
+    :`<div class="actions">${choose(true,"Choose a file")}</div>`;
+  s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Import your library</h3><div class="by">Bring in a file you saved with Export your library.</div></div>
+    <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
+  <div class="libflow">${body}</div>`;
+  s.classList.toggle("ro",!canEdit);
+  $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
+  $("#closeBtn").addEventListener("click",closeSheet);
+  s.querySelectorAll("[data-choose]").forEach(b=>b.addEventListener("click",()=>$("#lib-file").click()));
+  const y=$("#lib-yes"); if(y){y.addEventListener("click",applyLibrary);y.focus()}
+  const see=$("#lib-see"); if(see){see.addEventListener("click",closeSheet);see.focus()}
+}
 async function readLibrary(file){
-  libPlan=null;
+  libPlan=null;libFileName=file.name||"";libStage="msg";
   let snap=null;try{snap=JSON.parse(await file.text())}catch(e){}
-  if(!snap||!Number.isInteger(snap.vinylWall)||typeof snap.records!=="object"){libMsg="This file wasn't made by Export on a Vinyl Wall.";return openSettings(true)}
-  if(snap.vinylWall>1){libMsg="This file was made by a newer Vinyl Wall. Update this wall first, then import it.";return openSettings(true)}
+  if(!snap||!Number.isInteger(snap.vinylWall)||typeof snap.records!=="object"){libMsg="This file wasn't made by Export on a Vinyl Wall.";return renderImport()}
+  if(snap.vinylWall>1){libMsg="This file was made by a newer Vinyl Wall. Update this wall first, then import it.";return renderImport()}
   try{
     // every record, including ones marked deleted: they're on their way off Discogs, so don't bring them back
     const have=(await db.collection("records").get()).docs.map(x=>({id:x.id,...x.data()}));
@@ -1255,13 +1279,13 @@ async function readLibrary(file){
     }
     const fresh=(list,have)=>Object.entries(list||{}).filter(([id,d])=>d&&typeof d==="object"&&!have.some(x=>x.id===id));
     const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted)};
-    if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return openSettings(true)}
-    libPlan=p;libMsg="";
+    if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return renderImport()}
+    libPlan=p;libMsg="";libStage="plan";
   }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
-  openSettings(true);
+  renderImport();
 }
 async function applyLibrary(){
-  const p=libPlan;if(!p||libBusy)return;libPlan=null;libBusy=true;
+  const p=libPlan;if(!p||libBusy)return;libPlan=null;libBusy=true;libStage="busy";libMsg="Bringing in your library…";renderImport();
   // a cover id only works on the wall that stored it: anything this wall doesn't hold is looked up again
   let stored=null;try{if(assets)stored=new Set((await assets.list()).assets.map(a=>a.id))}catch(e){}
   const has=id=>!!(id&&stored&&stored.has(id));
@@ -1272,7 +1296,7 @@ async function applyLibrary(){
   let done=0;
   try{
     for(const [c,id,d] of writes){await db.collection(c).doc(id).set(d);done++;
-      if(done%5===0){libMsg=`Bringing in ${done} of ${writes.length}…`;if(openId==="__settings")openSettings(true)}}
+      if(done%5===0){libMsg=`Bringing in ${done} of ${writes.length}…`;renderImport()}}
     // a wall that had no records takes the file's look too; an existing wall keeps its own
     if(p.empty){const s=p.site,patch={};
       if(typeof s.title==="string")patch.title=s.title.slice(0,60);
@@ -1283,10 +1307,11 @@ async function applyLibrary(){
       if(Object.keys(patch).length)await saveSettings(patch)}
     const lookups=writes.filter(([c,,d])=>c==="records"&&d.needsEnrich).length;
     libMsg=`Brought in ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+(lookups?` Covers for ${lookups} record${lookups===1?"":"s"} will be looked up.`:"");
+    libStage="done";
     if(lookups){lastFire=0;fireTask()}
-  }catch(e){libMsg=`Stopped after ${done} of ${writes.length}: ${e.message||e.code}. Import the file again to bring in the rest.`}
+  }catch(e){libStage="msg";libMsg=`Stopped after ${done} of ${writes.length}: ${e.message||e.code}. Import the file again to bring in the rest.`}
   libBusy=false;
-  if(openId==="__settings")openSettings(true);
+  renderImport();
 }
 $("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
 function flash(m){$("#status").textContent=m}
