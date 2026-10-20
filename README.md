@@ -28,7 +28,7 @@ If something's missing, Claude tells you before building anything.
 
 ## Features
 
-- **The wall.** Every record hangs from iron rings on a weathered barnwood plank: what you own, then orders on the way by expected arrival, then the hunt by priority. Tags show each record's status, and tapping the counts under the title filters the wall to one or more of them. Search by title, artist, label or year to find a record fast. Hover (or tap) a sleeve to open it.
+- **The wall.** Every record hangs on the wall, from iron rings on a weathered barnwood plank, wooden pegs, push pins on cork, or floating (Settings → Hanging): what you own, then orders on the way by expected arrival, then the hunt by priority. Tags show each record's status, and tapping the counts under the title filters the wall to one or more of them. Search by title, artist, label or year to find a record fast. Hover (or tap) a sleeve to open it.
 - **The hunt.** A wishlist with priorities (Top want, Want, Someday), a budget, and a target pressing. One-click search links (Discogs, eBay, MusicStack, Popsike) and optional research from Claude on which pressings to look for.
 - **Automatic details.** Add just an artist and album: the cover, year, label and runtime are looked up for you.
 - **Your copy.** Media and sleeve grades, catalog number, pressing, matrix/runout, where you bought it and what you paid.

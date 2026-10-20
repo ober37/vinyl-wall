@@ -176,6 +176,14 @@ f.onload=async()=>{
     site().hang="twine";await emit();
     check("hanging: an unknown style falls back to Barnwood",rack()==="rail-barn",rack());
     delete site().hang;await emit();
+    need(q("#closeBtn"),"#closeBtn after hanging").click();await sleep(200);
+    // the share image hangs the records the way the wall does: a cork strip on Cork, the dark plank on Barnwood
+    const shareAt=async(hang,x,y)=>{if(hang)site().hang=hang;else delete site().hang;await emit();q("#shareBtn").click();
+      await until(()=>q(".shareprev"));const px=q(".shareprev").getContext("2d").getImageData(x,y,1,1).data;q("#closeBtn").click();await sleep(200);return px};
+    const ck=await shareAt("cork",70,262),bw=await shareAt("",70,244);
+    check("share image: Cork draws cork",ck[0]>150&&ck[1]>105&&ck[2]<120,[...ck].join());
+    check("share image: Barnwood draws the plank",bw[0]<110&&bw[1]<100,[...bw].join());
+    q("#settingsBtn").click();await sleep(300);
     q("#closeBtn").click();await sleep(200);
     // settings saves write only what changed
     site().discogs={status:"ok",verifiedUser:"tester"};  // as if the task wrote it and the page hasn't heard yet
