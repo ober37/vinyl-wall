@@ -390,6 +390,19 @@ fieldset.gsec>p.hint{margin-bottom:12px}
 .chip span{display:inline-block;font:500 13px/1 var(--body);padding:8px 12px;border-radius:999px;border:1px solid var(--line);color:var(--ink-2)}
 .chip input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .chip input:focus-visible+span{outline:2px solid var(--brass);outline-offset:2px}
+.mostplayed{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:6px}
+.mostplayed button{display:flex;justify-content:space-between;align-items:baseline;gap:12px;width:100%;text-align:left;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--wall);color:var(--ink);cursor:pointer;font:inherit}
+.mostplayed button:hover{border-color:var(--ink-2)} .mostplayed button:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+.mostplayed .tn{min-width:0;overflow-wrap:anywhere} .mostplayed .tn b{font-weight:600}
+.mostplayed .hrs{font:500 12px/1.4 var(--mono);font-variant-numeric:tabular-nums;color:var(--ink-2);white-space:nowrap}
+/* earned badges on the record sheet: a metal emblem with an icon, then the name */
+.pills{display:flex;flex-wrap:wrap;align-items:center;gap:0 6px}
+.badge{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:2px 10px 2px 2px;border-radius:999px;border:1px solid var(--m2);
+  background:color-mix(in srgb,var(--m1) 16%,transparent);color:var(--ink);font:500 11px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;white-space:nowrap}
+.badge .em{display:grid;place-items:center;width:26px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 30%,var(--m1),var(--m2) 75%);
+  box-shadow:inset 0 0 0 1.5px rgba(255,255,255,.4),0 1px 2px var(--shadow)}
+.badge svg{width:16px;height:16px;color:#2a2622}
+.b-gold{--m1:#f6dc96;--m2:#b8862f} .b-silver{--m1:#f2f4f5;--m2:#8e979e} .b-bronze{--m1:#ebb680;--m2:#9a5b2a} .b-hot{--m1:#f5ad88;--m2:#b6452c}
 .plays{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px}
 .plays .hint{margin:0}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
@@ -635,7 +648,7 @@ function openSheet(id,keepScroll){
     ${isNew?"":`<div class="art"><div class="sleeve-box"><div class="disc" style="--disc-label:${labelColor(r)}"></div>${coverHTML(r)}</div></div>`}
     <div style="min-width:0;flex:1">
       <h3 id="sTitle">${isNew?"Add a record":esc(r.title)}</h3>
-      ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"Ordered":wish?"Wanted":"Owned"}</span>`}
+      ${isNew?"":`<div class="by">${esc(r.artist)}${r.year?" · "+esc(r.year):""}</div><div class="pills"><span class="pill ${ord?"ord":wish?"wish":"own"}">${ord?"Ordered":wish?"Wanted":"Owned"}</span>${!wish&&!ord?badgesHTML(r):""}</div>`}
     </div>
     <div class="headbtns">${isNew?"":`<button class="btn small editonly" type="button" id="modeBtn">${editing?"Done":"Edit"}</button>`}<button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   </div>
@@ -697,6 +710,7 @@ function openSheet(id,keepScroll){
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
   <fieldset class="viewonly" id="logFs"><legend>${wish||ord?"Notes":"Listening log"}</legend>
+    ${!wish&&!ord?(S=>S?`<p class="hint" style="margin-top:0">Played ${S.count===1?"once":S.count+" times"} · ${fmtH(S.min/60)} h${S.last?" · last "+esc(playDate(S.last)):""}</p>`:"")(recordPlays(r)):""}
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
@@ -811,7 +825,7 @@ function write(id,data,reopen){
     clearTimeout(syncTimer);syncTimer=setTimeout(()=>{if(syncDirty){syncDirty=false;fireTask()}},20000);}
   writing=writing.then(async()=>{
     try{await db.collection("records").doc(id).update(data);
-      const local=records.find(x=>x.id===id); if(local) Object.assign(local,data);
+      const local=records.find(x=>x.id===id); if(local){Object.assign(local,data);rankCache=null}
       const sv=document.getElementById("saved"); if(sv) sv.textContent="Saved";
       if(reopen&&openId===id) openSheet(id);
     }catch(e){flash("Couldn't save: "+(e.message||e.code))}
@@ -962,6 +976,43 @@ function saveGear(id,data){
     .catch(e=>flash("Couldn't save equipment: "+(e.message||e.code)));
   return gearWriting;
 }
+// plays come from the record's log: logPlay writes each one as a dated note "Played … (~N min)". A note typed by hand counts
+// only if it has that "(~N min)" part, which people rarely type. Dates are read as text, since an imported file may hold anything.
+const PLAY_NOTE=/^Played (?:one side|the whole album)\b.*?\(~(\d+) min\)/;
+function playStats(r){const mo=today().slice(0,7);let count=0,min=0,month=0,mmin=0,last="";
+  for(const n of r.notes||[]){const m=PLAY_NOTE.exec(String(n?.t??""));if(!m)continue;
+    const d=String(n.d??""),t=+m[1];count++;min+=t;if(d.startsWith(mo)){month++;mmin+=t}if(d>last)last=d}
+  return {count,min,month,mmin,last}}
+// most played first: more plays, then more hours, then the latest play
+const byPlays=(n,t)=>(a,b)=>b[n]-a[n]||b[t]-a[t]||b.last.localeCompare(a.last);
+/* owned records with plays, ranked. Kept until the records change (a new snapshot replaces the array; write() clears it)
+   or the day turns, so redrawing a sheet doesn't re-read every note on the wall. */
+let rankCache=null;
+function rankedPlays(){const day=today();
+  if(rankCache&&rankCache.recs===records&&rankCache.day===day) return rankCache.list;
+  const list=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").map(r=>({r,...playStats(r)})).filter(x=>x.count).sort(byPlays("count","min"));
+  rankCache={recs:records,day,list};return list}
+function recordPlays(r){return rankedPlays().find(x=>x.r.id===r.id)}
+// the leader of a ranking earns its badge with at least 2 plays and more than anyone else; a tie earns nothing
+function leader(L,n){return L[0]&&L[0][n]>=2&&!(L[1]&&L[1][n]===L[0][n])?L[0].r.id:null}
+const BADGE_ICON={trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 12v4M8 20h8M10 16h4v4h-4z"/>',
+  flame:'<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3-1-3 0-5.5 0-8z"/>',
+  disc:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>'};
+// earned on the record sheet: most played ever, top this month, and the highest hours mark reached
+function badgesHTML(r){
+  const P=rankedPlays(),S=recordPlays(r),out=[];if(!S)return "";
+  if(leader(P,"count")===r.id) out.push(["b-gold","trophy","Most played ever"]);
+  if(leader(P.filter(x=>x.month).sort(byPlays("month","mmin")),"month")===r.id) out.push(["b-hot","flame","Top this month"]);
+  const h=S.min/60,tier=h>=100?["b-gold","100+"]:h>=50?["b-silver","50+"]:h>=10?["b-bronze","10+"]:null;
+  if(tier) out.push([tier[0],"disc",tier[1]+" hours"]);
+  return out.map(([c,i,t])=>`<span class="badge ${c}"><span class="em"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BADGE_ICON[i]}</svg></span>${t}</span>`).join("")}
+function playDate(d){const y=d.slice(0,4);return shortDate(d)+(y!==today().slice(0,4)?", "+y:"")}
+function listeningHTML(){
+  const P=rankedPlays();
+  if(!P.length) return `<p class="hint" style="margin-top:0">No plays logged yet.${canEdit?" Open a record and tap Played the whole album.":""}</p>`;
+  const mo=P.reduce((n,x)=>n+x.month,0),all=P.reduce((n,x)=>n+x.count,0),L=P.reduce((a,x)=>x.last>a.last?x:a);
+  return `<p class="hint" style="margin-top:0">${mo?`${mo} play${mo>1?"s":""} this month`:"None yet this month"} · ${all} in all · last spun ${esc(L.r.title)}${L.last?", "+esc(playDate(L.last)):""}</p>
+    <ul class="mostplayed">${P.slice(0,5).map(x=>`<li><button type="button" data-rec="${esc(x.r.id)}"><span class="tn"><b>${esc(x.r.title)}</b>${x.r.artist?" — "+esc(x.r.artist):""}</span><span class="hrs">${x.count} play${x.count>1?"s":""} · ${fmtH(x.min/60)} h</span></button></li>`).join("")}</ul>`}
 async function logPlay(r,kind){
   const rt=+r.runtime||40, min=kind==="side"?Math.round(rt/2):rt;
   const has=setups().length>0;
@@ -987,6 +1038,7 @@ function openGear(keepScroll){
   s.innerHTML=`<div class="sheet-head"><div style="min-width:0;flex:1"><h3 id="sTitle">Equipment</h3><div class="by">Your setups, and how much play each piece has seen</div></div>
     <button class="btn small closex" type="button" id="closeBtn">Close</button></div>
   <div class="secs">
+  <fieldset><legend>Listening</legend>${listeningHTML()}</fieldset>
   ${groups.map(G=>`<fieldset><legend>${esc(G.title)}</legend>
     ${G.note?`<p class="hint" style="margin-top:0">${esc(G.note)}</p>`:""}
     <div class="glist">${G.items.map(gearCard).join("")||`<p class="hint" style="margin:0">No equipment in this setup yet.</p>`}</div>
@@ -1008,6 +1060,7 @@ function openGear(keepScroll){
   $("#scrim").classList.add("on"); s.classList.add("on"); if(!keepScroll){s.scrollTop=0;$("#closeBtn").focus()}
   $("#closeBtn").addEventListener("click",closeSheet);
   s.querySelectorAll("[data-gear]").forEach(b=>b.addEventListener("click",()=>openGearItem(b.dataset.gear)));
+  s.querySelectorAll("[data-rec]").forEach(b=>b.addEventListener("click",()=>openSheet(b.dataset.rec)));
   s.querySelectorAll("[data-addgear]").forEach(b=>b.addEventListener("click",()=>openAddGear(b.dataset.addgear)));
   s.querySelectorAll("[data-editsetup]").forEach(b=>b.addEventListener("click",()=>openSetup(b.dataset.editsetup)));
   $("#g-addsetup").addEventListener("click",async()=>{const id=db.collection("setups").doc().id;const n=setups().length;
@@ -1585,6 +1638,7 @@ async function boot(){
     const before=openId&&openId!=="__new"?JSON.stringify(records.find(x=>x.id===openId)):null;
     records=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>!x.deleted);
     recordsLoaded=true; render();
+    if(openId==="__gear") openGear(true);  // its Listening section reads the records
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
       if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");
