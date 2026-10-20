@@ -314,11 +314,12 @@ input.mono{font-family:var(--mono);font-size:13px}
 input[type=date]{-webkit-appearance:none;appearance:none;display:block;min-width:0;max-width:100%;min-height:2.6em}
 input[type=date]::-webkit-date-and-time-value{text-align:left}
 .log{list-style:none;padding:0;margin:12px 0 0;display:flex;flex-direction:column;gap:10px}
-.log li{display:grid;grid-template-columns:86px 1fr auto;gap:10px;align-items:start;font-size:14px}
+.log li{display:grid;grid-template-columns:96px 1fr auto;gap:10px;align-items:start;font-size:14px}
 .log time{font:12px/1.6 var(--mono);color:var(--ink-2);font-variant-numeric:tabular-nums}
 .log .x{border:0;background:none;color:var(--ink-2);cursor:pointer;font-size:16px;line-height:1;padding:2px 4px}
 .log li.nolog{display:block}
 .log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
+.log .pl{display:block;color:var(--ink-2);font-size:13px}
 .addlog{display:flex;gap:8px;margin-top:10px}
 .addlog input{flex:1}
 .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
@@ -646,11 +647,22 @@ function factsHTML(r){
   const wide=v=>v.replace(/<[^>]+>/g,"").length>22;
   return f.length?`<dl class="facts">${f.map(([k,v])=>`<div${wide(v)?' class="wide"':""}><dt>${k}</dt><dd>${v}</dd></div>`).join("")}</dl>`:"";
 }
+/* The log, newest first. View mode shows the latest few (Show all for the rest) with no delete; edit mode lists every
+   entry with its ×. A play note reads as a compact row ("Whole album · Den · 46 min"), with any comment under it. */
+const LOG_SHORT=5;let logAll=false;
+function logRow(n){const t=String(n?.t??""),m=PLAY_NOTE.exec(t);if(!m) return {text:t};
+  const on=/^Played (?:one side|the whole album) on (.+?) \(~\d+ min\)/.exec(t);
+  return {play:[t.startsWith("Played one side")?"One side":"Whole album",on&&on[1],m[1]+" min"].filter(Boolean).join(" · "),
+    text:t.slice(m.index+m[0].length).replace(/^\.\s*/,"").trim()}}
+function logHTML(r,all,edit){
+  const rows=(r.notes||[]).map((n,i)=>({n,i})).reverse();
+  return (all?rows:rows.slice(0,LOG_SHORT)).map(({n,i})=>{const L=logRow(n);
+    return `<li><time>${esc(n.d?playDate(String(n.d)):"")}</time><p>${L.play?`<span class="pl">${esc(L.play)}</span>`:""}${esc(L.text)}</p>${edit?`<button class="x" type="button" data-del="${i}" aria-label="Delete">×</button>`:"<span></span>"}</li>`}).join("")}
 function openSheet(id,keepScroll){
   const isNew=id===null;
   const r=isNew?(newDraft||{status:"wish",priority:2,notes:[]}):records.find(x=>x.id===id); if(!r) return;
   openId=isNew?"__new":id; if(isNew){newId=null;creating=false}
-  if(sheetMode.id!==id) sheetMode={id,edit:false};
+  if(sheetMode.id!==id){sheetMode={id,edit:false};logAll=false}
   const editing=isNew||sheetMode.edit;
   const s=$("#sheet"); const wish=r.status==="wish"; const ord=r.status==="ordered";
   const ostatOpts=Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("");
@@ -727,7 +739,8 @@ function openSheet(id,keepScroll){
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
     <form class="addlog editonly" id="logForm"><input id="f-note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Side B hit different tonight…"}" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
-    <ul class="log" id="log">${(r.notes||[]).slice().reverse().map((n,i)=>{const idx=(r.notes.length-1-i);return `<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-del="${idx}" aria-label="Delete note">×</button></li>`}).join("")||`<li class="nolog"><p class="hint" style="margin:0">${ord?"No notes yet. Track shipping updates or anything about the order.":wish?"No notes yet. Keep track of stores you checked and prices you saw.":"No plays logged yet. Log a listen or a thought."}</p><span></span></li>`}</ul>
+    <ul class="log" id="log">${logHTML(r,logAll,false)||`<li class="nolog"><p class="hint" style="margin:0">${ord?"No notes yet. Track shipping updates or anything about the order.":wish?"No notes yet. Keep track of stores you checked and prices you saw.":"No plays logged yet. Log a listen or a thought."}</p><span></span></li>`}</ul>
+    ${(r.notes||[]).length>LOG_SHORT?`<button class="linkbtn" type="button" id="logMore">${logAll?"Show fewer":"Show all "+r.notes.length}</button>`:""}
   </fieldset>
 
   ${wish?`<fieldset class="viewonly" id="findFs"><legend>Find it</legend>
@@ -738,6 +751,10 @@ function openSheet(id,keepScroll){
     ${researchEntries(r).length?`<div class="research" id="research">${researchHTML(r)}</div>`:""}
   </fieldset>`:`<fieldset class="viewonly"><legend>On Discogs</legend><div class="links">${ownLinks(r)}</div></fieldset>
   ${researchEntries(r).length?`<fieldset class="viewonly"><legend>Research it</legend><div class="research">${researchHTML(r)}</div></fieldset>`:""}`}
+
+  ${isNew?"":`<fieldset class="editpart"><legend>${wish||ord?"Notes":"Log"}</legend>
+    ${(r.notes||[]).length?`<ul class="log">${logHTML(r,true,true)}</ul>`:`<p class="hint" style="margin-top:0">Nothing logged yet.</p>`}
+  </fieldset>`}
 
   <fieldset class="editpart"><legend>Discogs</legend>${discogsHTML(r)}</fieldset>
 
@@ -772,6 +789,7 @@ function openSheet(id,keepScroll){
     $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
     s.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>logPlay(r,b.dataset.play)));
+    if($("#logMore")) $("#logMore").addEventListener("click",()=>{logAll=!logAll;openSheet(id,true)});
     s.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const notes=[...(r.notes||[])];notes.splice(+b.dataset.del,1);write(r.id,{notes},true)}));
     $("#delBtn").addEventListener("click",()=>$("#delConfirm").classList.add("on"));
     $("#delNo").addEventListener("click",()=>$("#delConfirm").classList.remove("on"));
@@ -810,7 +828,7 @@ function openSheet(id,keepScroll){
   const fc=$("#f-cover"); if(fc) fc.addEventListener("change",()=>uploadCover(isNew?null:r,fc.files[0]));
 }
 
-function closeSheet(){newDraft=null;clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;logAll=false;clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 function collect(r){

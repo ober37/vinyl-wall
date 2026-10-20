@@ -63,6 +63,27 @@ f.onload=async()=>{
     check("badges: only owned records compete",badges().startsWith("Most played ever"),badges());
     R.r2.status="own";w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
+    // listening log: compact play rows, the latest 5 with Show all, delete only in edit mode
+    await openRecord("Kind of Blue");
+    const first=q("#logFs .log li p");
+    check("log: play reads compactly, comment below",first?.querySelector(".pl")?.textContent==="Whole album · Living room · 46 min"&&first.textContent.endsWith("Side B hit different tonight."),first?.textContent);
+    check("log: no delete in view mode",!d.querySelector("#logFs .x"));
+    q("#modeBtn").click();await sleep(300);
+    const dels=[...d.querySelectorAll(".editpart .log .x")];
+    check("log: edit mode lists every entry",dels.length===w.__data.records.r1.notes.length,`${dels.length}`);
+    dels.find(x=>x.closest("li").textContent.includes("Cleaned it")).click();await sleep(400);
+    check("log: delete removes that entry",!w.__data.records.r1.notes.some(n=>n.t.startsWith("Cleaned it"))&&w.__data.records.r1.notes.length===4);
+    q("#modeBtn").click();await sleep(300);
+    check("log: play count unchanged",(q("#logFs .hint")?.textContent||"").startsWith("Played 3 times"),q("#logFs .hint")?.textContent);
+    q("#closeBtn").click();await sleep(200);
+    await openRecord("Rumours");
+    const rows=()=>d.querySelectorAll("#logFs .log li").length;
+    check("log: latest 5 with Show all",rows()===5&&q("#logMore")?.textContent==="Show all 17",`${rows()} ${q("#logMore")?.textContent}`);
+    q("#logMore").click();await sleep(300);
+    check("log: Show all shows the rest",rows()===17&&q("#logMore").textContent==="Show fewer");
+    q("#closeBtn").click();await sleep(200);await openRecord("Rumours");
+    check("log: short again after closing",rows()===5);
+    q("#closeBtn").click();await sleep(200);
     // research: pin one entry, save one as a note, keep the pin through new research
     await openRecord("Abbey Road");
     const resOrder=()=>[...d.querySelectorAll(".resentry")].map(x=>x.dataset.res).join();
