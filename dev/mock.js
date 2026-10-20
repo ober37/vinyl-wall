@@ -27,7 +27,9 @@ const data={
    ...Array.from({length:17},(_,i)=>({d:day(40+(16-i)*12),t:"Played the whole album on Living room (~39 min)"}))],added:2},
   r3:{title:"Blue Train",artist:"John Coltrane",year:"1957",label:"Blue Note",status:"own",runtime:42,notes:[{d:day(370),t:"Played the whole album on Den (~42 min)"}],added:3},
   r5:{title:"Aja",artist:"Steely Dan",year:"1977",status:"ordered",orderStatus:"shipped",eta:"2026-10-24",notes:[],added:5},
-  r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,notes:[],added:4},
+  r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,notes:[],added:4,researchLog:[
+   {id:"ab2",at:day(3),headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
+   {id:"ab1",at:day(60),headline:"UK first pressings are collector money.",summary:"Check the Her Majesty listing on the sleeve to spot a true first.",check:["Her Majesty not listed on the back"],price:"UK firsts $150-400."}]},
   r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6}}};
 if(q.get("data")){try{const x=new XMLHttpRequest();x.open("GET",q.get("data"),false);x.send();const snap=JSON.parse(x.responseText);
   for(const c of ["settings","setups","gear","records"]) if(snap[c]) data[c]=snap[c]; data.settings.site=data.settings.site||{};}catch(e){console.warn("Couldn't load snapshot",e)}}
