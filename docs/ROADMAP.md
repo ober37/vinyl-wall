@@ -21,7 +21,19 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped in v0.9.0, the 1.0 beta. 1.0.0 follows once beta feedback is in.
+The [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped its first round in v0.9.0, the 1.0 beta. Four small, page-only additions join it and ship as v0.9.3, a second beta. 1.0.0 follows once beta feedback is in.
+
+### Listening insights (#6)
+Most played, last spun, and stylus hours by record, from the existing play log.
+
+### Research notes (#7)
+Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
+
+### Rail style picker (#9)
+Choose the rail in Settings (walnut, twine, barnwood, pipe, peg are already in the code).
+
+### Listening log you can scan (#24)
+Compact play rows, a short log by default with the rest a tap away, written notes that stand out, and delete moved to edit mode.
 
 ## Future, roughly in order of fit
 
@@ -41,12 +53,3 @@ Alert when a wanted pressing is listed on Discogs under your budget. Same backgr
 
 ### Wishlist as a gift list (#5)
 A shareable page of the hunt (priorities, target pressings, where to buy) for birthdays and holidays.
-
-### Listening insights (#6)
-Most played, last spun, and stylus hours by record, from the existing play log.
-
-### Research notes (#7)
-Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
-
-### Smaller polish
-- Rail style picker in Settings (walnut, twine, barnwood, pipe, peg are already in the code) (#9).
