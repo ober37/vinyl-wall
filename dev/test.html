@@ -63,6 +63,36 @@ f.onload=async()=>{
     check("badges: only owned records compete",badges().startsWith("Most played ever"),badges());
     R.r2.status="own";w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
+    // research: pin one entry, save one as a note, keep the pin through new research
+    await openRecord("Abbey Road");
+    const resOrder=()=>[...d.querySelectorAll(".resentry")].map(x=>x.dataset.res).join();
+    q('[data-respin="ab1"]').click();await sleep(300);
+    const ab=()=>w.__data.records.r4;
+    check("research: pinned entry goes first, open",resOrder()==="ab1,ab2"&&q('.resentry[data-res="ab1"]').open&&ab().researchLog.find(e=>e.id==="ab1").pinned,resOrder());
+    q('[data-respin="ab2"]').click();await sleep(300);
+    check("research: one pin at a time",ab().researchLog.filter(e=>e.pinned).map(e=>e.id).join()==="ab2");
+    q('[data-respin="ab2"]').click();await sleep(300);q('[data-respin="ab1"]').click();await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Abbey Road");
+    check("research: pin survives reopening",resOrder()==="ab1,ab2",resOrder());
+    q('[data-resnote="ab2"]').click();await sleep(300);q('[data-resnote="ab2"]').click();await sleep(300);
+    const saved=ab().notes.filter(n=>n.t==="Research: Hunt the 2019 half-speed reissue under $40. About $30-40 for 2019; firsts $150+.").length;
+    check("research: save as note adds one note",saved===1&&q('[data-resnote="ab2"]').disabled,`${saved} notes`);
+    ab().researchLog=[...Array.from({length:9},(_,i)=>({id:"x"+i,at:"2026-01-0"+(i+1),headline:"Entry "+i})),ab().researchLog.find(e=>e.id==="ab1")];
+    w.__emit("records");await sleep(300);q("#resBtn").click();await sleep(600);
+    const ids=ab().researchLog.map(e=>e.id);
+    check("research: a new run keeps the pinned entry",ids.length===10&&ids.includes("ab1")&&!ids.includes("x8"),ids.join());
+    q('[data-respin="ab1"]').click();await sleep(300);
+    check("research: unpinned entry closes again",!q('.resentry[data-res="ab1"]').open);
+    const P=(id,pinned)=>({id,at:"2026-01-01",headline:"Entry "+id,...(pinned?{pinned:true}:{})});
+    ab().researchLog=[P("p1",1),P("p2",1),...Array.from({length:9},(_,i)=>P("y"+i))];w.__emit("records");await sleep(300);
+    q("#resBtn").click();await sleep(600);
+    const ids2=ab().researchLog.map(e=>e.id);
+    check("research: two pins still cap the list at 10",ids2.length===10&&ids2.includes("p1")&&ids2.includes("p2"),ids2.join());
+    ab().researchLog=[{id:"np",at:"2026-01-01",headline:"Hunt the reissue",price:"About $30."},{id:"em",at:"2026-01-01"}];w.__emit("records");await sleep(300);
+    check("research: nothing to save, no Save as note",!q('[data-resnote="em"]'));
+    q('[data-resnote="np"]').click();await sleep(300);
+    check("research: note gets its period",ab().notes.some(n=>n.t==="Research: Hunt the reissue. About $30."),ab().notes.map(n=>n.t).join(" | "));
+    q("#closeBtn").click();await sleep(200);
     // add equipment
     q("#stylusBtn").click();await sleep(300);const cards=d.querySelectorAll(".gcard").length;
     q('[data-addgear="den"]').click();await sleep(200);q('input[name="agType"][value="cartridge"]').click();await sleep(200);
