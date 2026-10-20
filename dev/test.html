@@ -81,6 +81,17 @@ f.onload=async()=>{
     w.__emit("records");await sleep(300);q("#resBtn").click();await sleep(600);
     const ids=ab().researchLog.map(e=>e.id);
     check("research: a new run keeps the pinned entry",ids.length===10&&ids.includes("ab1")&&!ids.includes("x8"),ids.join());
+    q('[data-respin="ab1"]').click();await sleep(300);
+    check("research: unpinned entry closes again",!q('.resentry[data-res="ab1"]').open);
+    const P=(id,pinned)=>({id,at:"2026-01-01",headline:"Entry "+id,...(pinned?{pinned:true}:{})});
+    ab().researchLog=[P("p1",1),P("p2",1),...Array.from({length:9},(_,i)=>P("y"+i))];w.__emit("records");await sleep(300);
+    q("#resBtn").click();await sleep(600);
+    const ids2=ab().researchLog.map(e=>e.id);
+    check("research: two pins still cap the list at 10",ids2.length===10&&ids2.includes("p1")&&ids2.includes("p2"),ids2.join());
+    ab().researchLog=[{id:"np",at:"2026-01-01",headline:"Hunt the reissue",price:"About $30."},{id:"em",at:"2026-01-01"}];w.__emit("records");await sleep(300);
+    check("research: nothing to save, no Save as note",!q('[data-resnote="em"]'));
+    q('[data-resnote="np"]').click();await sleep(300);
+    check("research: note gets its period",ab().notes.some(n=>n.t==="Research: Hunt the reissue. About $30."),ab().notes.map(n=>n.t).join(" | "));
     q("#closeBtn").click();await sleep(200);
     // add equipment
     q("#stylusBtn").click();await sleep(300);const cards=d.querySelectorAll(".gcard").length;

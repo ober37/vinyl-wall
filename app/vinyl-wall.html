@@ -607,14 +607,15 @@ function firstSentence(t){t=String(t||"").trim();const m=t.match(/^.+?[.!?](\s|$
 // a pinned entry opens expanded unless it was collapsed since the page loaded
 const openResearch=new Set(),shutResearch=new Set();
 // what Save as note writes: the headline (or the summary's first sentence) and the price line
-function researchNote(e){return ("Research: "+(e.headline||firstSentence(e.summary))+(e.price?" "+e.price:"")).trim()}
-// at most 10 entries, newest first; a pinned entry always stays
-function trimResearch(L){let n=0;const room=L.some(e=>e.pinned)?9:10;return L.filter(e=>e.pinned||n++<room)}
+// (empty when the entry has neither, so there's nothing to save)
+function researchNote(e){const h=String(e.headline||firstSentence(e.summary)||"").trim();
+  return h?"Research: "+h.replace(/[^.!?]$/,"$&.")+(e.price?" "+String(e.price).trim():""):""}
 function researchHTML(r){
   const items=researchEntries(r); if(!items.length) return "";
   const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
-  return `<div class="reslog">${items.map((e,i)=>({e,key:e.id||String(i)})).sort((a,b)=>!!b.e.pinned-!!a.e.pinned).map(({e,key})=>{const k=r.id+":"+key,saved=(r.notes||[]).some(n=>n.t===researchNote(e));
-    return `<details class="resentry" data-res="${esc(key)}" ${openResearch.has(k)||e.pinned&&!shutResearch.has(k)?"open":""}>
+  const noted=new Set((r.notes||[]).map(n=>n.t));
+  return `<div class="reslog">${items.map((e,i)=>({e,key:e.id||String(i)})).sort((a,b)=>!!b.e.pinned-!!a.e.pinned).map(({e,key})=>{const k=r.id+":"+key,note=researchNote(e),saved=noted.has(note);
+    return `<details class="resentry" data-res="${esc(key)}"${e.pinned?" data-pinned":""} ${openResearch.has(k)||e.pinned&&!shutResearch.has(k)?"open":""}>
     <summary><time>${esc(shortDate(e.at)||e.at||"")}</time><span>${e.pinned?`<span class="pinlbl">Pinned</span>`:""}${esc(e.headline||firstSentence(e.summary)||"Research notes")}</span></summary>
     <div class="resbody">
       ${(()=>{const sm=String(e.summary||"").trim();const body=e.headline?sm:sm.slice(firstSentence(sm).length).trim();return body?`<p>${esc(body)}</p>`:""})()}
@@ -623,7 +624,7 @@ function researchHTML(r){
       ${e.where?.length?`<h4>Where to look</h4>${list(e.where)}`:""}
       ${e.price?`<h4>Price</h4><p>${esc(e.price)}</p>`:""}
       <div class="resacts editonly"><button class="linkbtn" type="button" data-respin="${esc(key)}">${e.pinned?"Unpin":"Pin"}</button>
-        <button class="linkbtn" type="button" data-resnote="${esc(key)}" ${saved?"disabled":""}>${saved?"Saved as a note":"Save as note"}</button>
+        ${note?`<button class="linkbtn" type="button" data-resnote="${esc(key)}" ${saved?"disabled":""}>${saved?"Saved as a note":"Save as note"}</button>`:""}
         <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button></div>
     </div></details>`}).join("")}</div>
     <p class="hint">From Claude's own knowledge. Check details on Discogs before buying.</p>`;
@@ -793,7 +794,8 @@ function openSheet(id,keepScroll){
     if($("#enrichBtn")) $("#enrichBtn").addEventListener("click",async()=>{await write(r.id,{needsEnrich:true},true);enrich(r)});
     if($("#resBtn")) $("#resBtn").addEventListener("click",()=>research(r));
     s.querySelectorAll(".resentry").forEach(d=>d.addEventListener("toggle",()=>{const k=r.id+":"+d.dataset.res;
-      if(d.open){openResearch.add(k);shutResearch.delete(k)}else{openResearch.delete(k);shutResearch.add(k)}}));
+      // a pinned entry opens by itself (which also fires toggle): only an entry someone opened stays open after Unpin
+      if(d.open){shutResearch.delete(k);if(!d.hasAttribute("data-pinned"))openResearch.add(k)}else{openResearch.delete(k);shutResearch.add(k)}}));
     // pinning writes the whole list, so an older single research entry moves into researchLog
     s.querySelectorAll("[data-respin]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.respin;
       const log=researchEntries(r).map((e,i)=>{const {pinned,...rest}=e;return (e.id||String(i))===k&&!pinned?{...rest,pinned:true}:rest});
@@ -904,7 +906,10 @@ Be specific, be brief, and say plainly when unsure. No markdown.`;
   try{
     const res=await sample.json(prompt,{modelTier:"complex"});
     const data={id:Date.now().toString(36),at:today(),headline:String(res.headline||""),summary:String(res.summary||""),pressings:(res.pressings||[]).map(String),check:(res.check||[]).map(String),where:(res.where||[]).map(String),price:String(res.price||"")};
-    await write(r.id,{researchLog:trimResearch([data,...researchEntries(r)]),research:null},true);
+    // at most 10 entries, newest first, and pinned ones always stay. Built from the record as it is now, so a pin or
+    // removal made while the research ran isn't undone.
+    const L=[data,...researchEntries(records.find(x=>x.id===r.id)||r)],room=10-L.filter(e=>e.pinned).length;let n=0;
+    await write(r.id,{researchLog:L.filter(e=>e.pinned||n++<room),research:null},true);
   }catch(e){
     st.textContent=e.code==="not_granted"?"Research needs permission. Allow Claude for this page and try again.":e.code==="rate_limited"?"Too many requests right now. Try again in a minute.":"Research didn't come back: "+(e.message||e.code);
     btn.disabled=false;
