@@ -4,7 +4,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <style>
-/* Layout: a listening-room wall. A weathered barnwood plank with iron rings runs across each row; sleeves hang from them.
+/* Layout: a listening-room wall. Sleeves hang in rows from the style chosen in Settings → Hanging (a barnwood plank with iron rings by default).
    One wall of every record, owned, on order and hunted, narrowed by the filter in the counts line and by search. Detail opens in a side sheet. */
 :root{
   --wall:#dde2dc; --wall-2:#cfd6cf; --ink:#1b2220; --ink-2:#4b5753; --line:#b9c3bc;
@@ -60,13 +60,16 @@ body.bg-listening::before,body.bg-crates::before,body.bg-cafe::before,body.bg-ta
 .bgtile .sw.bg-grille{background-size:9px 9px,9px 9px,auto}
 
 .bggrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:10px}
-.bgtile{position:relative;display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer;font:inherit;text-align:left;min-width:0}
+.bgtile,.hangtile{position:relative;display:flex;flex-direction:column;gap:6px;padding:0;border:0;background:none;color:var(--ink);cursor:pointer;font:inherit;text-align:left;min-width:0}
 .bgtile .sw{display:block;aspect-ratio:4/3;max-width:100%;border-radius:8px;border:1px solid var(--line);background-color:var(--wall);background-position:center;background-size:cover}
 .bgtile .sw.bg-foam{background-size:34px 34px}
-.bgtile[aria-pressed="true"] .sw{outline:2px solid var(--accent);outline-offset:2px}
-.bgtile:focus-visible .sw{outline:2px solid var(--brass);outline-offset:2px}
-.bgtile .nm{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
+.bgtile[aria-pressed="true"] .sw,.hangtile[aria-pressed="true"] .hw{outline:2px solid var(--accent);outline-offset:2px}
+.bgtile:focus-visible .sw,.hangtile:focus-visible .hw{outline:2px solid var(--brass);outline-offset:2px}
+.bgtile .nm,.hangtile .nm{font-size:12px;color:var(--ink-2);overflow-wrap:anywhere}
 .bgtile .rm{position:absolute;top:6px;right:6px;border:0;border-radius:999px;width:24px;height:24px;background:rgba(0,0,0,.6);color:#fff;cursor:pointer;font-size:14px;line-height:24px;padding:0}
+/* Hanging tiles: a small piece of wall in each style, cropped to the rail and the top of one sleeve */
+.hangtile .hw{display:block;height:80px;overflow:hidden;border-radius:8px;border:1px solid var(--line);background:var(--wall)}
+.hangtile .slot,.hangtile .hanger,.hangtile .sleeve-box{display:block}
 .iconbtn{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;border-radius:999px;border:1px solid var(--line);background:transparent;color:var(--ink);cursor:pointer;padding:0}
 .iconbtn:hover{border-color:var(--ink-2)} .iconbtn:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
 .iconbtn svg{width:18px;height:18px}
@@ -156,20 +159,9 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
   background:linear-gradient(90deg,color-mix(in srgb,var(--brass) 70%,#000),var(--brass) 40%,color-mix(in srgb,var(--brass) 60%,#fff) 55%,var(--brass) 75%);
   border-radius:3px 3px 5px 5px;box-shadow:0 2px 3px var(--shadow)}
 .clip::after{content:"";position:absolute;left:6px;right:6px;bottom:5px;height:2px;background:rgba(0,0,0,.25);border-radius:2px}
-/* Rail styles (body.rail-*). The base rules above draw a walnut rail + brass clip; barnwood (rail-barn) is the default style. Each style restyles the same two pieces:
+/* Hanging styles (rail-* on the wall's #rack, and on each tile in Settings → Hanging). The base rules above draw a plain rail + brass clip;
+   barnwood (rail-barn) is the default. Each style restyles the same two pieces:
    .slot::before is the rail, .clip is what holds the sleeve. */
-/* Twine and clothespins */
-.rail-twine .slot::before{top:15px;height:3px;border-radius:2px;
-  background:repeating-linear-gradient(118deg,#c9a46e 0 2px,#9c7746 2px 4px,#b48c58 4px 6px);box-shadow:0 2px 2px var(--shadow)}
-.rail-twine .hanger{transform-origin:50% -14px}
-.rail-twine .slot:nth-child(odd) .hanger{transform:rotate(-2deg)}
-.rail-twine .slot:nth-child(even) .hanger{transform:rotate(1.6deg)}
-.rail-twine .slot:nth-child(3n) .hanger{transform:rotate(-.6deg)}
-.rail-twine .clip{width:14px;height:42px;margin-left:-7px;top:-27px;border-radius:2px 2px 3px 3px;
-  background:linear-gradient(90deg,#b8935e,#e2c896 35%,#d4b47d 60%,#a98451);box-shadow:1px 2px 3px var(--shadow)}
-.rail-twine .clip::before{content:"";position:absolute;left:50%;top:0;bottom:0;width:1px;margin-left:-.5px;background:rgba(70,45,20,.45)}
-.rail-twine .clip::after{left:-2px;right:-2px;top:13px;bottom:auto;height:5px;border-radius:2px;
-  background:linear-gradient(#d7dade,#8e9399 55%,#5f646a)}
 /* Barnwood plank and iron hooks */
 .rail-barn .slot::before{top:3px;height:21px;
   background:
@@ -190,25 +182,53 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
   border:4px solid #3b3936;border-top-color:#8a857e;border-left-color:#5a5651;filter:drop-shadow(0 2px 2px rgba(0,0,0,.55))}
 .rail-barn .clip::after{left:50%;right:auto;width:12px;margin-left:-6px;top:-14px;bottom:auto;height:10px;border-radius:2px;
   background:radial-gradient(circle at 50% 50%,#6a6a6a 0 1.2px,transparent 1.8px),linear-gradient(#3b3b3b,#151515);box-shadow:0 1px 2px rgba(0,0,0,.5)}
-/* Iron pipe and leather straps */
-.rail-pipe .slot::before{top:11px;height:12px;
-  background:linear-gradient(#6d7277,#3a3e42 45%,#1f2225 80%,#2c3034);box-shadow:0 4px 7px var(--shadow)}
-.rail-pipe .hanger{transform-origin:50% -16px}
-.rail-pipe .clip{width:17px;height:38px;margin-left:-8.5px;top:-26px;border-radius:4px 4px 3px 3px;
-  background:linear-gradient(90deg,#5c3519,#8d5730 45%,#7a4826 70%,#5a3318);box-shadow:0 2px 3px var(--shadow)}
-.rail-pipe .clip::before{content:"";position:absolute;inset:3px 3px 12px;border:1px dashed rgba(240,214,170,.55);border-radius:2px}
-.rail-pipe .clip::after{left:50%;right:auto;width:7px;height:7px;margin-left:-3.5px;bottom:3px;border-radius:50%;
-  background:radial-gradient(circle at 35% 35%,#f3d58e,#b8862f 60%,#6e4c17)}
-/* Shaker peg rail and picture wire */
-.rail-peg .slot::before{top:2px;height:15px;
-  background:repeating-linear-gradient(178deg,rgba(0,0,0,.05) 0 1px,transparent 1px 4px),
-    linear-gradient(#c79a62,#a87845 55%,#8a5f33);box-shadow:0 4px 7px var(--shadow),inset 0 1px 0 rgba(255,255,255,.2)}
+/* Floating: no rail or clips; each sleeve sits straight, a little off the wall, on a soft deep shadow */
+.rail-float .slot{padding-top:16px}
+.rail-float .slot::before,.rail-float .clip{display:none}
+.rail-float .slot .hanger{transform:none}
+.rail-float .sleeve-box .cover,.rail-float .sleeve-box .gen{box-shadow:inset 0 1px 0 rgba(255,255,255,.22),0 3px 0 rgba(0,0,0,.32),0 46px 58px -20px rgba(0,0,0,.78),0 22px 30px -10px rgba(0,0,0,.42),0 2px 4px var(--shadow)}
+.rail-float .cap{position:relative;z-index:2;padding-top:24px}
+@media (hover:hover){.rail-float .slot:hover .hanger{transform:translateY(-5px)}}
+/* Cork board: a cork strip behind the top of each row, a colored push pin centered on the cork above each sleeve */
+.rail-cork .slot::before{top:17px;height:19px;background-color:#bd8f5f;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .28 0 0 0 0 .15 0 0 0 0 .06 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),linear-gradient(rgba(255,240,215,.12),rgba(0,0,0,.14));background-size:160px 60px,auto;
+  box-shadow:0 5px 5px -3px var(--shadow),inset 0 1px 0 rgba(255,255,255,.18),inset 0 -1px 0 rgba(0,0,0,.3)}
+.rail-cork .hanger{transform-origin:calc(50% + var(--tx,0px)) -6px}
+/* push pins, as on a real cork board: a wide base at the board, a short neck and a smaller domed cap, each leaning its own
+   way (a fixed pattern, so it doesn't change between redraws). --la is the lean, --ll how far the cap sits from the base */
+.rail-cork .slot:nth-child(3n+1){--tx:-8px;--la:-58deg;--ll:5px} .rail-cork .slot:nth-child(3n+2){--tx:5px;--la:52deg;--ll:5px}
+.rail-cork .slot:nth-child(3n){--tx:-2px;--la:-80deg;--ll:6px} .rail-cork .slot:nth-child(4n){--tx:10px;--la:70deg}
+.rail-cork .slot:nth-child(7n+3){--la:100deg;--ll:4px}
+.rail-cork .slot:nth-child(odd) .hanger{transform:rotate(-1.6deg)}
+.rail-cork .slot:nth-child(even) .hanger{transform:rotate(1.3deg)}
+@media (hover:hover){.rail-cork .slot:hover .hanger{transform:rotate(0) translateY(2px)}}
+.rail-cork .slot:nth-child(5n+1){--pin:#d63a35} .rail-cork .slot:nth-child(5n+2){--pin:#f2c418} .rail-cork .slot:nth-child(5n+3){--pin:#1f5fc4}
+.rail-cork .slot:nth-child(5n+4){--pin:#1f9a52} .rail-cork .slot:nth-child(5n){--pin:#f1efe9}
+.rail-cork .clip{width:13px;height:13px;margin-left:-6.5px;top:-13px;border-radius:50%;transform:translateX(var(--tx,0px));
+  background:radial-gradient(circle at 40% 35%,color-mix(in srgb,var(--pin) 70%,#fff),var(--pin) 45%,color-mix(in srgb,var(--pin) 60%,#000));
+  box-shadow:1px 2px 2px rgba(0,0,0,.45)}
+.rail-cork .clip::before{content:"";position:absolute;left:50%;bottom:50%;width:6px;margin-left:-3px;height:var(--ll,7px);
+  transform-origin:50% 100%;transform:rotate(var(--la,0deg));
+  background:linear-gradient(90deg,color-mix(in srgb,var(--pin) 62%,#000),var(--pin) 45%,color-mix(in srgb,var(--pin) 55%,#000))}
+.rail-cork .clip::after{left:1px;right:auto;top:1px;bottom:auto;width:11px;height:11px;border-radius:50%;
+  transform:rotate(var(--la,0deg)) translateY(calc(-1 * var(--ll,7px))) rotate(calc(-1 * var(--la,0deg)));
+  background:radial-gradient(circle at 35% 30%,color-mix(in srgb,var(--pin) 40%,#fff) 0 14%,var(--pin) 50%,color-mix(in srgb,var(--pin) 68%,#000));
+  box-shadow:2px 4px 4px rgba(0,0,0,.35)}
+/* Shaker peg rail: dark espresso wood with turned pegs, each sleeve hung on a loop of dark twisted yarn */
+.rail-peg .slot::before{top:2px;height:16px;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.035) 0 23px,rgba(0,0,0,.14) 23px 25px,transparent 25px 61px,rgba(0,0,0,.08) 61px 63px,transparent 63px 97px),
+    repeating-linear-gradient(180deg,rgba(0,0,0,.2) 0 1px,transparent 1px 3px,rgba(255,255,255,.04) 3px 4px,transparent 4px 6px),
+    linear-gradient(#5b3b27,#45291a 45%,#2f1c11 88%,#24150c);
+  box-shadow:0 5px 9px var(--shadow),inset 0 1px 0 rgba(255,255,255,.12),inset 0 -2px 0 rgba(0,0,0,.45)}
 .rail-peg .hanger{transform-origin:50% -20px}
-.rail-peg .clip{width:15px;height:15px;margin-left:-7.5px;top:-24px;border-radius:50%;
-  background:radial-gradient(circle at 38% 35%,#e6be86,#b07c45 55%,#7c522a);box-shadow:0 3px 4px var(--shadow)}
+.rail-peg .clip{width:16px;height:16px;margin-left:-8px;top:-23px;border-radius:50%;
+  background:radial-gradient(circle at 36% 32%,#9a6a46 0 8%,#6a4129 30%,#3d2416 62%,#24150c);
+  box-shadow:0 3px 4px rgba(0,0,0,.5),inset 0 0 0 1.5px rgba(0,0,0,.35),inset 0 -1px 1px rgba(255,255,255,.12)}
 .rail-peg .clip::after{display:none}
 .rail-peg .hanger::before{content:"";position:absolute;left:10%;right:10%;top:-18px;height:20px;z-index:2;pointer-events:none;
-  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23c49a5e' stroke-width='2.2' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;background-size:100% 100%}
+  background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%232b201b' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23614a3d' stroke-width='1.4' stroke-dasharray='2.2 2.6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") no-repeat;background-size:100% 100%;
+  filter:drop-shadow(0 1px 1px rgba(0,0,0,.35))}
 .sleeve-btn{display:block;width:100%;padding:0;border:0;background:none;cursor:pointer;text-align:left;color:inherit;position:relative}
 .sleeve-box{position:relative;aspect-ratio:1;max-width:100%}
 .disc{position:absolute;inset:3% 3% 3% 3%;border-radius:50%;z-index:0;
@@ -1250,7 +1270,7 @@ $("#stylusBtn").addEventListener("click",()=>openGear());
 // ---------- Settings: title, background, Discogs
 const BG_PRESETS=[["listening","Listening room"],["crates","Crate digging"],["shop","Record shop"],["cafe","Coffee shop"],["tavern","Cozy tavern"],["grille","Speaker grille"],["grooves","Grooves"],["walnut","Walnut paneling"],["foam","Studio foam"],["sunburst","Sunburst"],["spines","Crate dig"],["felt","Felt slipmat"],["plain","Plain wall"]];
 const DEFAULT_TITLE="My Vinyl Wall";
-const APP_VERSION="0.9.2"; // stamped per release; must match VERSION (the release workflow checks)
+const APP_VERSION="0.9.3"; // stamped per release; must match VERSION (the release workflow checks)
 const REPO_URL="https://github.com/ober37/vinyl-wall";
 const DEFAULT_BG="listening";
 // softened photo presets and their credits (shown in Settings, repeated in the README)
@@ -1265,7 +1285,10 @@ const PHOTO_PRESETS={
 const stockDim=v=>{const t=40+v*.6;return Math.round((t<=50?50+t/2:75+(t-50)*.4)*10)/10};
 let settings={},myId=null,userCap=null;
 document.body.classList.add("bg-"+DEFAULT_BG);
-const DEFAULT_RAIL="barn"; document.body.classList.add("rail-"+DEFAULT_RAIL);
+// how records hang (Settings → Hanging); the class goes on the wall itself, so the tiles in Settings keep their own style
+const HANGS=[["barn","Barnwood"],["peg","Pegs"],["cork","Cork"],["float","Floating"]],DEFAULT_HANG="barn";
+function currentHang(){return HANGS.some(x=>x[0]===settings.hang)?settings.hang:DEFAULT_HANG}
+$("#rack").classList.add("rail-"+DEFAULT_HANG);
 function fitTitle(){const h=$("#pageTitle");h.classList.remove("trunc");const cut=h.scrollWidth>h.clientWidth+1;
   h.classList.toggle("trunc",cut);if(cut)h.title=h.textContent;else h.removeAttribute("title")}
 addEventListener("resize",fitTitle);
@@ -1278,6 +1301,8 @@ function applySettings(){
   if(bg.kind==="photo"&&okAsset(bg.assetId)){b.classList.add("bg-photo");b.style.setProperty("--bg-url",`url("/_blob/${bg.assetId}")`);b.style.setProperty("--bg-dim",(settings.dim??70)+"%")}
   else{b.classList.add("bg-"+(BG_PRESETS.some(x=>x[0]===bg.preset)?bg.preset:DEFAULT_BG));b.style.removeProperty("--bg-url");
     if(PHOTO_PRESETS[bg.preset])b.style.setProperty("--bg-dim",stockDim(settings.dim??50)+"%");else b.style.removeProperty("--bg-dim")}
+  const rk=$("#rack"); [...rk.classList].filter(c=>c.startsWith("rail-")).forEach(c=>rk.classList.remove(c));
+  rk.classList.add("rail-"+currentHang());
 }
 const PLAIN_VERSION=/^\d+\.\d+\.\d+$/;
 function newer(a,b){if(!PLAIN_VERSION.test(String(a||"").replace(/^v/,"")))return false;const x=String(a||"").replace(/^v/,"").split(".").map(Number),y=String(b||"").replace(/^v/,"").split(".").map(Number);
@@ -1336,6 +1361,11 @@ function openSettings(keepScroll){
     ${bg.kind!=="photo"&&PHOTO_PRESETS[bg.preset]?`<p class="hint">${PHOTO_PRESETS[bg.preset]}</p>`:""}
     <div class="confirm" id="bg-confirm"><span>Remove this background for good?</span><button class="btn danger small" type="button" id="bg-yes">Remove</button><button class="btn small" type="button" id="bg-no">Cancel</button></div>
   </fieldset>
+  <fieldset><legend>Hanging</legend>
+    <div class="bggrid">${HANGS.map(([k,l])=>`<div class="hangtile" role="button" tabindex="0" data-hang="${k}" aria-pressed="${currentHang()===k}">
+      <span class="hw rail-${k}"><span class="slot"><span class="hanger"><span class="clip"></span><span class="sleeve-box"><span class="gen" style="background:linear-gradient(150deg,hsl(160 40% 32%),hsl(200 45% 18%))"></span></span></span></span></span>
+      <span class="nm">${l}</span></div>`).join("")}</div>
+  </fieldset>
   <fieldset><legend>Discogs</legend>
     <p class="hint" style="margin-top:0">Connect your Discogs account to keep your collection and wantlist in sync with the wall.</p>
     <div class="grid2" style="margin-top:10px">
@@ -1383,6 +1413,8 @@ function openSettings(keepScroll){
     // stock and uploaded photos use different slider scales: switching between them starts at that kind's default
     if(kind==="photo"?bg.kind!=="photo":(PHOTO_PRESETS[v]&&bg.kind==="photo")) patch.dim=kind==="photo"?70:50;
     saveSettings(patch).then(()=>openSettings(true))};
+  s.querySelectorAll(".hangtile").forEach(el=>{const go=()=>{if(el.dataset.hang!==currentHang())saveSettings({hang:el.dataset.hang}).then(()=>openSettings(true))};
+    el.addEventListener("click",go);el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();go()}})});
   s.querySelectorAll(".bgtile").forEach(el=>{el.addEventListener("click",e=>{if(e.target.closest(".rm"))return;pick(el)});el.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pick(el)}})});
   const dim=$("#st-dim"); if(dim){dim.addEventListener("input",()=>{document.body.style.setProperty("--bg-dim",(bg.kind==="photo"?+dim.value:stockDim(+dim.value))+"%")});dim.addEventListener("change",()=>saveSettings({dim:+dim.value}))}
   const up=$("#st-upload"); if(up) up.addEventListener("change",async()=>{const f=up.files[0];if(!f)return;const st=$("#bgStatus");
@@ -1450,7 +1482,7 @@ function libSummary(p){return `Adds ${libCount(p.recs.length,p.gear.length,p.set
   (p.skipped?` ${p.skipped} record${p.skipped===1?" is":"s are"} already on the wall and will be skipped.`:"")}
 async function exportLibrary(){
   const byId=list=>Object.fromEntries(list.filter(x=>!x.example&&!x.deleted).map(({id,...d})=>[id,d]));
-  const site={};for(const k of ["title","bg","dim"]) if(settings[k]!==undefined) site[k]=settings[k];
+  const site={};for(const k of ["title","bg","dim","hang"]) if(settings[k]!==undefined) site[k]=settings[k];
   const file={vinylWall:1,exportedAt:nowUTC(),app:APP_VERSION,settings:{site},setups:byId(setupDocs),gear:byId(gear),records:byId(records)};
   try{await downloads.save({filename:`vinyl-wall-${today()}.json`,data:JSON.stringify(file,null,1)});
     libExportMsg=`Saved ${libCount(Object.keys(file.records).length,Object.keys(file.gear).length,Object.keys(file.setups).length)}.`}
@@ -1530,6 +1562,7 @@ async function applyLibrary(){
       else if(s.bg?.kind==="photo"&&has(s.bg.assetId)){patch.bg={kind:"photo",assetId:s.bg.assetId};
         if(!(settings.uploads||[]).some(u=>u.id===s.bg.assetId))patch.uploads=[...(settings.uploads||[]),{id:s.bg.assetId,name:"Your photo"}]}
       if(typeof s.dim==="number")patch.dim=s.dim;
+      if(HANGS.some(x=>x[0]===s.hang))patch.hang=s.hang;
       if(Object.keys(patch).length)await saveSettings(patch);
       // setup gives every new wall an empty "My setup", and a file exported from such a wall can carry it too: once the
       // file brings its own setups, drop any "My setup" that's still untouched (no notes, no gear), as long as one remains
@@ -1548,7 +1581,7 @@ async function applyLibrary(){
 $("#lib-file").addEventListener("change",e=>{const f=e.target.files[0];e.target.value="";if(f&&!libBusy)readLibrary(f)});
 // ---------- Share image: a picture of the wall to save or post (#4)
 /* Drawn on a canvas: the wall's photo background (softened as on the wall), title, counts, then the sleeves the filter shows
-   hanging from a barnwood rail with their tags, in the wall's own order. Covers come from this wall's stored images;
+   hanging in the wall's chosen style (Settings → Hanging) with their tags, in the wall's own order. Covers come from this wall's stored images;
    records without one get the placeholder sleeve the wall shows. Pattern backgrounds are CSS-only, so those draw as the
    plain wall color. Nothing private goes in: no prices (the budget is left off hunt tags), orders or notes. */
 const SHARE_W=1080,SHARE_COLS=5,SHARE_MAX=40;
@@ -1585,6 +1618,19 @@ function wallPhoto(){
   const pos=(b.getPropertyValue("--photo-pos")||"").trim().split(/\s+/)[1]||"50%";
   return {src:m[1],dim:parseFloat(b.getPropertyValue("--bg-dim"))||parseFloat(b.getPropertyValue("--dim-default"))||55,y:parseFloat(pos)/100||.5};
 }
+// a hex color mixed toward another (t=0 keeps it), for shading the drawn pins
+function mixHex(a,b,t){const p=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),x=p(a),y=p(b);
+  return "#"+x.map((v,i)=>Math.round(v+(y[i]-v)*t).toString(16).padStart(2,"0")).join("")}
+// the cork pins as on the wall: position, lean and color by the sleeve's place in the wall (same pattern as the CSS)
+const PIN_COLORS=["#d63a35","#f2c418","#1f5fc4","#1f9a52","#f1efe9"];
+function pinFor(n){let [tx,la,ll]=[[-8,-58,5],[5,52,5],[-2,-80,6]][n%3];if(n%4===3){tx=10;la=70}if(n%7===2){la=100;ll=4}
+  return {tx,la:la*Math.PI/180,ll,c:PIN_COLORS[n%5]}}
+function drawPin(ctx,cx,cy,P){const dx=Math.sin(P.la)*P.ll,dy=-Math.cos(P.la)*P.ll,disc=(x,y,r,hi)=>{
+    const g=ctx.createRadialGradient(x-r*.3,y-r*.35,0,x,y,r);g.addColorStop(0,mixHex(P.c,"#ffffff",hi));g.addColorStop(.5,P.c);g.addColorStop(1,mixHex(P.c,"#000000",.4));
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill()};
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.45)";ctx.shadowBlur=2;ctx.shadowOffsetX=1;ctx.shadowOffsetY=2;disc(cx,cy,6.5,.3);ctx.restore();
+  ctx.save();ctx.strokeStyle=mixHex(P.c,"#000000",.25);ctx.lineWidth=6;ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(cx+dx,cy+dy);ctx.stroke();ctx.restore();
+  ctx.save();ctx.shadowColor="rgba(0,0,0,.35)";ctx.shadowBlur=4;ctx.shadowOffsetX=2;ctx.shadowOffsetY=4;disc(cx+dx,cy+dy,5.5,.6);ctx.restore()}
 async function drawShare(withImages){
   const css=getComputedStyle(document.documentElement),v=k=>css.getPropertyValue(k).trim();
   const C={wall:v("--wall"),ink:v("--ink"),ink2:v("--ink-2"),shadow:v("--shadow"),accent:v("--accent"),accentInk:v("--accent-ink"),
@@ -1592,7 +1638,7 @@ async function drawShare(withImages){
   const F={title:'800 84px "Big Shoulders Display"',gen:'800 22px "Big Shoulders Display"',
     cap:'600 20px "Instrument Sans"',by:'400 17px "Instrument Sans"',mono:'500 20px "IBM Plex Mono"',small:'500 13px "IBM Plex Mono"',tag:'500 13px "IBM Plex Mono"'};
   await Promise.all(Object.values(F).map(f=>document.fonts.load(f).catch(()=>{})));
-  const {list}=shownList();
+  const {list}=shownList(),hang=currentHang();
   const pad=60,gap=24,sw=(SHARE_W-2*pad-(SHARE_COLS-1)*gap)/SHARE_COLS,railH=20,rowH=36+sw+64+28;
   const H=pad+100+76+Math.ceil(Math.min(list.length,SHARE_MAX)/SHARE_COLS)*rowH+(list.length>SHARE_MAX?40:0)+pad;
   const shown=list.slice(0,SHARE_MAX);
@@ -1613,18 +1659,30 @@ async function drawShare(withImages){
   ctx.fillText(FKEYS.filter(k=>shownN[k]).map(k=>shownN[k]+" "+FLABEL[k]).join("  ·  "),pad,y);y+=76;glow(false);
   for(let i=0;i<shown.length;i+=SHARE_COLS){
     const row=shown.slice(i,i+SHARE_COLS),rw=row.length*sw+(row.length-1)*gap;
-    const g=ctx.createLinearGradient(0,y,0,y+railH);g.addColorStop(0,"#5e5244");g.addColorStop(.5,"#4a3f33");g.addColorStop(1,"#2f2820");
-    ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=10;ctx.shadowOffsetY=4;ctx.fillStyle=g;ctx.fillRect(pad-12,y,rw+24,railH);ctx.restore();
+    // the rail for this row, in the wall's hanging style (Floating has none)
+    if(hang==="barn"||hang==="peg"){const g=ctx.createLinearGradient(0,y,0,y+railH);
+      (hang==="barn"?[[0,"#5e5244"],[.5,"#4a3f33"],[1,"#2f2820"]]:[[0,"#5b3b27"],[.45,"#45291a"],[1,"#24150c"]]).forEach(([o,c])=>g.addColorStop(o,c));
+      ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=10;ctx.shadowOffsetY=4;ctx.fillStyle=g;ctx.fillRect(pad-12,y,rw+24,railH);ctx.restore();
+      if(hang==="peg"){ctx.fillStyle="rgba(0,0,0,.2)";for(let k=3;k<railH;k+=4)ctx.fillRect(pad-12,y+k,rw+24,1)}}
+    else if(hang==="cork"){ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=6;ctx.shadowOffsetY=3;ctx.fillStyle="#bd8f5f";ctx.fillRect(pad-12,y+14,rw+24,24);ctx.restore();
+      let q=7+i;const rnd=()=>(q=(q*16807)%2147483647)/2147483647;  // cork grain: fixed specks, so the same wall draws the same picture
+      for(let k=0;k<(rw+24)*2.2;k++){ctx.fillStyle=rnd()<.7?"rgba(84,50,22,.45)":"rgba(255,236,200,.3)";ctx.fillRect(pad-12+rnd()*(rw+24),y+14+rnd()*23,1.5,1.5)}}
     row.forEach((r,j)=>{
       const x=pad+j*(sw+gap),top=y+36,im=covers.get(r.id);
-      ctx.save();ctx.shadowColor=C.shadow;ctx.shadowBlur=18;ctx.shadowOffsetY=8;
+      ctx.save();if(hang==="float"){ctx.shadowColor="rgba(0,0,0,.6)";ctx.shadowBlur=34;ctx.shadowOffsetY=22}else{ctx.shadowColor=C.shadow;ctx.shadowBlur=18;ctx.shadowOffsetY=8}
       if(im){const k=Math.min(im.width,im.height);ctx.drawImage(im,(im.width-k)/2,(im.height-k)/2,k,k,x,top,sw,sw)}
       else{const h=hash((r.title||"")+(r.artist||""))%360,gr=ctx.createLinearGradient(x,top,x+sw,top+sw);
         gr.addColorStop(0,`hsl(${h} 45% 32%)`);gr.addColorStop(1,`hsl(${(h+40)%360} 50% 18%)`);ctx.fillStyle=gr;ctx.fillRect(x,top,sw,sw)}
       ctx.restore();
       if(!im){ctx.fillStyle="#fff";ctx.font=F.gen;wrapText(ctx,(r.title||"Untitled").toUpperCase(),sw-24,4).forEach((l,n)=>ctx.fillText(l,x+12,top+12+n*22));
         ctx.globalAlpha=.85;ctx.font=F.small;ctx.fillText(fitText(ctx,r.artist||"",sw-24),x+12,top+sw-26);ctx.globalAlpha=1}
-      ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke();
+      // what holds the sleeve: an iron ring, a peg with a loop of yarn, or a push pin on the cork
+      if(hang==="barn"){ctx.strokeStyle="#4a4743";ctx.lineWidth=4;ctx.beginPath();ctx.arc(x+sw/2,y+railH+5,11,0,Math.PI*2);ctx.stroke()}
+      else if(hang==="peg"){const px=x+sw/2,py=y+railH/2;ctx.save();ctx.strokeStyle="#2b201b";ctx.lineWidth=3.4;ctx.lineCap="round";ctx.lineJoin="round";
+        ctx.beginPath();ctx.moveTo(x+sw*.1,top+2);ctx.lineTo(px,py);ctx.lineTo(x+sw*.9,top+2);ctx.stroke();ctx.restore();
+        const pg=ctx.createRadialGradient(px-3,py-3,0,px,py,9);pg.addColorStop(0,"#9a6a46");pg.addColorStop(.45,"#6a4129");pg.addColorStop(1,"#24150c");
+        ctx.save();ctx.shadowColor="rgba(0,0,0,.5)";ctx.shadowBlur=4;ctx.shadowOffsetY=3;ctx.fillStyle=pg;ctx.beginPath();ctx.arc(px,py,9,0,Math.PI*2);ctx.fill();ctx.restore()}
+      else if(hang==="cork"){const P=pinFor(i+j);drawPin(ctx,x+sw/2+P.tx,y+26,P)}
       const tag=shareTag(r,C);if(tag)drawTag(ctx,tag,x+sw+4,top+sw*.82,sw+4,C,F.tag);
       glow(true);ctx.fillStyle=C.ink;ctx.font=F.cap;ctx.fillText(fitText(ctx,r.title,sw),x,top+sw+12);
       ctx.fillStyle=C.ink2;ctx.font=F.by;ctx.fillText(fitText(ctx,r.artist,sw),x,top+sw+38);glow(false);

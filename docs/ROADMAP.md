@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.9.3, the second 1.0 beta: listening insights and earned badges (#6), pinned research (#7), a listening log you can scan (#24), and four ways to hang the records (#9).
 Done in v0.9.0, the 1.0 beta: search the wall (#15).
 Done in v0.6.1: a simpler "Add equipment" flow: pick the type, then only its fields (#8).
 Done in v0.6.0: one wall with status badges and filters (#13), and the version in Settings → Help.
@@ -21,7 +22,7 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-The [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped its first round in v0.9.0, the 1.0 beta. Four small, page-only additions join it and ship as v0.9.3, a second beta. 1.0.0 follows once beta feedback is in.
+Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. 1.0.0 follows once beta feedback is in.
 
 ### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
@@ -29,8 +30,8 @@ Most played, last spun, and stylus hours by record, from the existing play log.
 ### Research notes (#7)
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
 
-### Rail style picker (#9)
-Choose the rail in Settings (walnut, twine, barnwood, pipe, peg are already in the code).
+### Hanging (#9)
+Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. The share image follows the choice.
 
 ### Listening log you can scan (#24)
 Compact play rows, a short log by default with the rest a tap away, written notes that stand out, and delete moved to edit mode.
