@@ -167,6 +167,15 @@ f.onload=async()=>{
     const tile=q('.bgtile[data-bg="preset:grille"] .sw'),tw=tile?tile.getBoundingClientRect().width:0;
     check("settings: Record shop offered, Pegboard gone",!!q('.bgtile[data-bg="preset:shop"]')&&!q('.bgtile[data-bg="preset:pegboard"]'));
     check("settings: background thumbnails show",tw>60&&getComputedStyle(tile).backgroundImage!=="none",`width ${tw}`);
+    // hanging: four tiles, each in its own style whatever the wall uses; picking one restyles the wall and saves it
+    const rack=()=>[...q("#rack").classList].filter(c=>c.startsWith("rail-")).join();
+    check("hanging: four tiles, Barnwood by default",d.querySelectorAll(".hangtile").length===4&&q('.hangtile[data-hang="barn"]').getAttribute("aria-pressed")==="true"&&rack()==="rail-barn",rack());
+    check("hanging: a tile keeps its own style",getComputedStyle(q('.hangtile[data-hang="cork"] .clip')).width==="13px"&&!/rail-/.test(d.body.className));
+    q('.hangtile[data-hang="cork"]').click();await sleep(300);
+    check("hanging: picking Cork restyles the wall and saves",rack()==="rail-cork"&&site().hang==="cork"&&q('.hangtile[data-hang="cork"]').getAttribute("aria-pressed")==="true",rack());
+    site().hang="twine";await emit();
+    check("hanging: an unknown style falls back to Barnwood",rack()==="rail-barn",rack());
+    delete site().hang;await emit();
     q("#closeBtn").click();await sleep(200);
     // settings saves write only what changed
     site().discogs={status:"ok",verifiedUser:"tester"};  // as if the task wrote it and the page hasn't heard yet
