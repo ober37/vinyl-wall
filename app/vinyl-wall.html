@@ -710,7 +710,7 @@ function openSheet(id,keepScroll){
 
   ${isNew?`<div class="actions" style="margin-top:22px"><button class="btn primary" type="button" id="createBtn">Hang it</button><span class="saved" id="saved"></span></div>`:`
   <fieldset class="viewonly" id="logFs"><legend>${wish||ord?"Notes":"Listening log"}</legend>
-    ${!wish&&!ord?(S=>S.count?`<p class="hint" style="margin-top:0">Played ${S.count===1?"once":S.count+" times"} · ${fmtH(S.min/60)} h · last ${esc(playDate(S.last))}</p>`:"")(playStats(r)):""}
+    ${!wish&&!ord?(S=>S?`<p class="hint" style="margin-top:0">Played ${S.count===1?"once":S.count+" times"} · ${fmtH(S.min/60)} h${S.last?" · last "+esc(playDate(S.last)):""}</p>`:"")(recordPlays(r)):""}
     ${!wish&&!ord&&multiSetup()?`<div class="setups editonly" role="radiogroup" aria-label="Played on">${(()=>{const cur=lastSetup();return setups().map(x=>`<label class="chip"><input type="radio" name="playSetup" value="${esc(x.id)}" ${x.id===cur?"checked":""}><span>${esc(x.name)}</span></label>`).join("")})()}</div>`:""}
     ${!wish&&!ord?`<div class="plays editonly"><button class="btn small primary" type="button" data-play="full">Played the whole album</button><button class="btn small" type="button" data-play="side">Played one side</button>
       <span class="hint">${r.runtime?`${esc(r.runtime)} min album`:"Runtime unknown, counting 40 min"} · adds play time to your gear</span></div>`:""}
@@ -825,7 +825,7 @@ function write(id,data,reopen){
     clearTimeout(syncTimer);syncTimer=setTimeout(()=>{if(syncDirty){syncDirty=false;fireTask()}},20000);}
   writing=writing.then(async()=>{
     try{await db.collection("records").doc(id).update(data);
-      const local=records.find(x=>x.id===id); if(local) Object.assign(local,data);
+      const local=records.find(x=>x.id===id); if(local){Object.assign(local,data);rankCache=null}
       const sv=document.getElementById("saved"); if(sv) sv.textContent="Saved";
       if(reopen&&openId===id) openSheet(id);
     }catch(e){flash("Couldn't save: "+(e.message||e.code))}
@@ -976,33 +976,42 @@ function saveGear(id,data){
     .catch(e=>flash("Couldn't save equipment: "+(e.message||e.code)));
   return gearWriting;
 }
-// plays come from the record's log: logPlay writes each one as a dated note "Played … (~N min)"
-function playStats(r){const mo=today().slice(0,7);let count=0,min=0,month=0,last="";
-  let mmin=0;
-  for(const n of r.notes||[]) if(/^Played (one side|the whole album)/.test(n.t||"")){const m=+((n.t.match(/\(~(\d+) min\)/)||[])[1]||40);
-    count++;min+=m;if(String(n.d).startsWith(mo)){month++;mmin+=m}if(n.d>last)last=n.d}
+// plays come from the record's log: logPlay writes each one as a dated note "Played … (~N min)". A note typed by hand counts
+// only if it has that "(~N min)" part, which people rarely type. Dates are read as text, since an imported file may hold anything.
+const PLAY_NOTE=/^Played (?:one side|the whole album)\b.*?\(~(\d+) min\)/;
+function playStats(r){const mo=today().slice(0,7);let count=0,min=0,month=0,mmin=0,last="";
+  for(const n of r.notes||[]){const m=PLAY_NOTE.exec(String(n?.t??""));if(!m)continue;
+    const d=String(n.d??""),t=+m[1];count++;min+=t;if(d.startsWith(mo)){month++;mmin+=t}if(d>last)last=d}
   return {count,min,month,mmin,last}}
-// records with plays, most played first: more plays, then more hours, then the latest play
-function rankedPlays(){return records.map(r=>({r,...playStats(r)})).filter(x=>x.count)
-  .sort((a,b)=>b.count-a.count||b.min-a.min||(b.last>a.last?1:b.last<a.last?-1:0))}
+// most played first: more plays, then more hours, then the latest play
+const byPlays=(n,t)=>(a,b)=>b[n]-a[n]||b[t]-a[t]||b.last.localeCompare(a.last);
+/* owned records with plays, ranked. Kept until the records change (a new snapshot replaces the array; write() clears it)
+   or the day turns, so redrawing a sheet doesn't re-read every note on the wall. */
+let rankCache=null;
+function rankedPlays(){const day=today();
+  if(rankCache&&rankCache.recs===records&&rankCache.day===day) return rankCache.list;
+  const list=records.filter(r=>r.status!=="wish"&&r.status!=="ordered").map(r=>({r,...playStats(r)})).filter(x=>x.count).sort(byPlays("count","min"));
+  rankCache={recs:records,day,list};return list}
+function recordPlays(r){return rankedPlays().find(x=>x.r.id===r.id)}
+// the leader of a ranking earns its badge with at least 2 plays and more than anyone else; a tie earns nothing
+function leader(L,n){return L[0]&&L[0][n]>=2&&!(L[1]&&L[1][n]===L[0][n])?L[0].r.id:null}
 const BADGE_ICON={trophy:'<path d="M8 4h8v4a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 12v4M8 20h8M10 16h4v4h-4z"/>',
   flame:'<path d="M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3-1-3 0-5.5 0-8z"/>',
   disc:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="2.5"/>'};
-// earned on the record sheet: most played ever and this month (one record each, once there are two plays to compare), and hours played
+// earned on the record sheet: most played ever, top this month, and the highest hours mark reached
 function badgesHTML(r){
-  const P=rankedPlays(),S=P.find(x=>x.r.id===r.id),out=[];if(!S)return "";
-  if(P.reduce((n,x)=>n+x.count,0)>=2&&P[0].r.id===r.id) out.push(["b-gold","trophy","Most played ever"]);
-  const M=P.filter(x=>x.month).sort((a,b)=>b.month-a.month||b.mmin-a.mmin||(b.last>a.last?1:b.last<a.last?-1:0));
-  if(M.reduce((n,x)=>n+x.month,0)>=2&&M[0].r.id===r.id) out.push(["b-hot","flame","Top this month"]);
+  const P=rankedPlays(),S=recordPlays(r),out=[];if(!S)return "";
+  if(leader(P,"count")===r.id) out.push(["b-gold","trophy","Most played ever"]);
+  if(leader(P.filter(x=>x.month).sort(byPlays("month","mmin")),"month")===r.id) out.push(["b-hot","flame","Top this month"]);
   const h=S.min/60,tier=h>=100?["b-gold","100+"]:h>=50?["b-silver","50+"]:h>=10?["b-bronze","10+"]:null;
   if(tier) out.push([tier[0],"disc",tier[1]+" hours"]);
   return out.map(([c,i,t])=>`<span class="badge ${c}"><span class="em"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BADGE_ICON[i]}</svg></span>${t}</span>`).join("")}
 function playDate(d){const y=d.slice(0,4);return shortDate(d)+(y!==today().slice(0,4)?", "+y:"")}
 function listeningHTML(){
   const P=rankedPlays();
-  if(!P.length) return `<p class="hint" style="margin-top:0">No plays logged yet. Open a record and tap Played the whole album.</p>`;
+  if(!P.length) return `<p class="hint" style="margin-top:0">No plays logged yet.${canEdit?" Open a record and tap Played the whole album.":""}</p>`;
   const mo=P.reduce((n,x)=>n+x.month,0),all=P.reduce((n,x)=>n+x.count,0),L=P.reduce((a,x)=>x.last>a.last?x:a);
-  return `<p class="hint" style="margin-top:0">${mo?`${mo} play${mo>1?"s":""} this month`:"None yet this month"} · ${all} in all · last spun ${esc(L.r.title)}, ${esc(playDate(L.last))}</p>
+  return `<p class="hint" style="margin-top:0">${mo?`${mo} play${mo>1?"s":""} this month`:"None yet this month"} · ${all} in all · last spun ${esc(L.r.title)}${L.last?", "+esc(playDate(L.last)):""}</p>
     <ul class="mostplayed">${P.slice(0,5).map(x=>`<li><button type="button" data-rec="${esc(x.r.id)}"><span class="tn"><b>${esc(x.r.title)}</b>${x.r.artist?" — "+esc(x.r.artist):""}</span><span class="hrs">${x.count} play${x.count>1?"s":""} · ${fmtH(x.min/60)} h</span></button></li>`).join("")}</ul>`}
 async function logPlay(r,kind){
   const rt=+r.runtime||40, min=kind==="side"?Math.round(rt/2):rt;
@@ -1629,6 +1638,7 @@ async function boot(){
     const before=openId&&openId!=="__new"?JSON.stringify(records.find(x=>x.id===openId)):null;
     records=snap.docs.map(x=>({id:x.id,...x.data()})).filter(x=>!x.deleted);
     recordsLoaded=true; render();
+    if(openId==="__gear") openGear(true);  // its Listening section reads the records
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
       if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");

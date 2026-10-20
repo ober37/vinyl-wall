@@ -34,7 +34,7 @@ f.onload=async()=>{
     await openRecord("Kind of Blue");
     const line=q("#logFs .hint")?.textContent||"";
     check("listening: record line",line.startsWith("Played 3 times · 1.9 h · last "),line);
-    check("badges: top this month, ties by hours",[...d.querySelectorAll(".pills .badge")].map(x=>x.textContent).join()==="Top this month");
+    check("badges: top this month",[...d.querySelectorAll(".pills .badge")].map(x=>x.textContent).join()==="Top this month");
     q("#closeBtn").click();await sleep(200);
     await openRecord("Blue Train");
     const old=q("#logFs .hint")?.textContent||"";
@@ -48,10 +48,20 @@ f.onload=async()=>{
     const sum=q(".secs fieldset .hint")?.textContent||"",top=[...d.querySelectorAll(".mostplayed .tn b")].map(x=>x.textContent);
     check("listening: summary",/ · 21 in all · last spun Kind of Blue, /.test(sum),sum);
     check("listening: most played first, ties by hours",top.join()==="Rumours,Kind of Blue,Blue Train",top.join());
+    w.__data.records.r3.notes=[...w.__data.records.r3.notes,{d:"2020-01-01",t:"Played one side (~21 min)"}];w.__emit("records");await sleep(300);
+    check("listening: Equipment follows record changes",/ · 22 in all /.test(q(".secs fieldset .hint")?.textContent||""),q(".secs fieldset .hint")?.textContent);
     q(".mostplayed button").click();await sleep(300);
     check("listening: row opens the record",q("#sTitle")?.textContent==="Rumours",q("#sTitle")?.textContent);
     const badges=()=>[...d.querySelectorAll(".pills .badge")].map(x=>x.textContent).join();
     check("badges: most played ever and hours",badges()==="Most played ever,10+ hours",badges());
+    const R=w.__data.records,kob=R.r1.notes.slice(),play={d:"2020-01-01",t:"Played the whole album (~46 min)"};
+    R.r1.notes=[...kob,...Array(14).fill(play)];w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Rumours");
+    check("badges: a tie for most played earns nothing",badges()==="10+ hours",badges());
+    R.r1.notes=kob;R.r2.status="wish";w.__emit("records");await sleep(300);q("#closeBtn").click();await sleep(200);
+    await openRecord("Kind of Blue");
+    check("badges: only owned records compete",badges().startsWith("Most played ever"),badges());
+    R.r2.status="own";w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
     // add equipment
     q("#stylusBtn").click();await sleep(300);const cards=d.querySelectorAll(".gcard").length;

@@ -6,7 +6,8 @@
    Calls the page makes to connectors are recorded in window.__calls; Export saves a real file through the browser. */
 (function(){
 const q=new URLSearchParams(location.search), now=Date.now();
-const day=n=>new Date(now-n*864e5).toISOString().slice(0,10);  // a date n days back, for play notes
+// play note dates: n days back, as a local date like the page's today(); first is the 1st of this month
+const day=n=>{const t=new Date(now-n*864e5);return new Date(t-t.getTimezoneOffset()*6e4).toISOString().slice(0,10)}, first=day(0).slice(0,8)+"01";
 const data={
  settings:{site:{title:"My Vinyl Wall",bg:{kind:"preset",preset:"listening"},discogs:{}}},
  setups:{den:{name:"Den",note:"",added:1},living:{name:"Living room",note:"Main hi-fi",added:2}},
@@ -21,9 +22,9 @@ const data={
  records:{
   r1:{title:"Kind of Blue",artist:"Miles Davis",year:"1959",label:"Columbia",status:"own",runtime:46,why:"The record that taught me to sit still and listen.",pressing:"2015 Analogue Productions 45rpm",mediaGrade:"NM",sleeveGrade:"VG+",shop:"A local record shop",paid:"48",acquired:"2024-03-02",notes:[
    {d:day(400),t:"Played the whole album on Den (~46 min)"},{d:day(40),t:"Cleaned it before a spin."},
-   {d:day(40),t:"Played one side on Den (~23 min)"},{d:day(0),t:"Played the whole album on Living room (~46 min). Side B hit different tonight."}],added:1},
+   {d:day(40),t:"Played the whole album at a friend's place."},{d:first,t:"Played one side on Den (~23 min)"},{d:day(0),t:"Played the whole album on Living room (~46 min). Side B hit different tonight."}],added:1},
   r2:{title:"Rumours",artist:"Fleetwood Mac",year:"1977",label:"Warner Bros.",status:"own",runtime:39,notes:[  // played enough for the 10+ hours badge
-   ...Array.from({length:16},(_,i)=>({d:day(25+(15-i)*12),t:"Played the whole album on Living room (~39 min)"})),{d:day(1),t:"Played the whole album (~39 min)"}],added:2},
+   ...Array.from({length:17},(_,i)=>({d:day(40+(16-i)*12),t:"Played the whole album on Living room (~39 min)"}))],added:2},
   r3:{title:"Blue Train",artist:"John Coltrane",year:"1957",label:"Blue Note",status:"own",runtime:42,notes:[{d:day(370),t:"Played the whole album on Den (~42 min)"}],added:3},
   r5:{title:"Aja",artist:"Steely Dan",year:"1977",status:"ordered",orderStatus:"shipped",eta:"2026-10-24",notes:[],added:5},
   r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,notes:[],added:4},
