@@ -71,7 +71,9 @@ f.onload=async()=>{
     q("#modeBtn").click();await sleep(300);
     const dels=[...d.querySelectorAll(".editpart .log .x")];
     check("log: edit mode lists every entry",dels.length===w.__data.records.r1.notes.length,`${dels.length}`);
+    const sh=q("#sheet");sh.scrollTop=sh.scrollHeight;const y0=sh.scrollTop;
     dels.find(x=>x.closest("li").textContent.includes("Cleaned it")).click();await sleep(400);
+    check("log: delete keeps the scroll position",y0>0&&q("#sheet").scrollTop>0,`${y0} → ${q("#sheet").scrollTop}`);
     check("log: delete removes that entry",!w.__data.records.r1.notes.some(n=>n.t.startsWith("Cleaned it"))&&w.__data.records.r1.notes.length===4);
     q("#modeBtn").click();await sleep(300);
     check("log: play count unchanged",(q("#logFs .hint")?.textContent||"").startsWith("Played 3 times"),q("#logFs .hint")?.textContent);
@@ -83,6 +85,16 @@ f.onload=async()=>{
     check("log: Show all shows the rest",rows()===17&&q("#logMore").textContent==="Show fewer");
     q("#closeBtn").click();await sleep(200);await openRecord("Rumours");
     check("log: short again after closing",rows()===5);
+    q("#f-note").value="half typed";q("#logMore").click();await sleep(200);
+    check("log: Show all keeps a half-typed note",q("#f-note").value==="half typed"&&rows()===17);
+    q("#f-note").value="";q("#closeBtn").click();await sleep(200);
+    const BT=w.__data.records.r3,bt=BT.notes.slice();
+    BT.notes=[...bt,null,{d:"March 3, 2024",t:"Bought a second copy."},{d:"2026-01-02",t:"Played the whole album twice at Dave's (~40 min)"}];
+    w.__emit("records");await sleep(300);await openRecord("Blue Train");
+    const texts=[...d.querySelectorAll("#logFs .log li")].map(x=>x.textContent);
+    check("log: hand-typed play shows as written",texts[0].includes("Played the whole album twice at Dave's (~40 min)"),texts[0]);
+    check("log: odd date shows as written, blank entry skipped",texts[1].startsWith("March 3, 2024Bought")&&texts.length===BT.notes.filter(Boolean).length,texts.join(" | "));
+    q("#closeBtn").click();await sleep(200);BT.notes=bt;w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
     // research: pin one entry, save one as a note, keep the pin through new research
     await openRecord("Abbey Road");

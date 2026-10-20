@@ -650,12 +650,13 @@ function factsHTML(r){
 /* The log, newest first. View mode shows the latest few (Show all for the rest) with no delete; edit mode lists every
    entry with its ×. A play note reads as a compact row ("Whole album · Den · 46 min"), with any comment under it. */
 const LOG_SHORT=5;let logAll=false;
-function logRow(n){const t=String(n?.t??""),m=PLAY_NOTE.exec(t);if(!m) return {text:t};
-  const on=/^Played (?:one side|the whole album) on (.+?) \(~\d+ min\)/.exec(t);
-  return {play:[t.startsWith("Played one side")?"One side":"Whole album",on&&on[1],m[1]+" min"].filter(Boolean).join(" · "),
-    text:t.slice(m.index+m[0].length).replace(/^\.\s*/,"").trim()}}
+function logRow(n){const t=String(n?.t??""),m=PLAY_NOTE.exec(t);
+  // only logPlay's own wording turns compact ("Played <kind>[ on <setup>] (~N min)[. comment]"); anything else shows as written
+  const on=m&&/^(?: on (.+))? $/.exec(m[2]);if(!on) return {text:t};
+  return {play:[m[1]==="one side"?"One side":"Whole album",on[1],m[3]+" min"].filter(Boolean).join(" · "),
+    text:t.slice(m[0].length).replace(/^\.\s*/,"").trim()}}
 function logHTML(r,all,edit){
-  const rows=(r.notes||[]).map((n,i)=>({n,i})).reverse();
+  const rows=(r.notes||[]).map((n,i)=>({n,i})).filter(x=>x.n&&typeof x.n==="object").reverse();
   return (all?rows:rows.slice(0,LOG_SHORT)).map(({n,i})=>{const L=logRow(n);
     return `<li><time>${esc(n.d?playDate(String(n.d)):"")}</time><p>${L.play?`<span class="pl">${esc(L.play)}</span>`:""}${esc(L.text)}</p>${edit?`<button class="x" type="button" data-del="${i}" aria-label="Delete">×</button>`:"<span></span>"}</li>`}).join("")}
 function openSheet(id,keepScroll){
@@ -789,8 +790,13 @@ function openSheet(id,keepScroll){
     $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
     s.querySelectorAll("[data-play]").forEach(b=>b.addEventListener("click",()=>logPlay(r,b.dataset.play)));
-    if($("#logMore")) $("#logMore").addEventListener("click",()=>{logAll=!logAll;openSheet(id,true)});
-    s.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{const notes=[...(r.notes||[])];notes.splice(+b.dataset.del,1);write(r.id,{notes},true)}));
+    // redraw only the list, so a half-typed note and the chosen setup stay
+    if($("#logMore")) $("#logMore").addEventListener("click",e=>{logAll=!logAll;$("#log").innerHTML=logHTML(r,logAll,false);
+      e.target.textContent=logAll?"Show fewer":"Show all "+r.notes.length});
+    // save typed edits first, and keep the scroll position: the edit-mode log sits near the bottom of the sheet
+    s.querySelectorAll("[data-del]").forEach(b=>b.addEventListener("click",()=>{clearTimeout(saveTimer);flushPending();
+      const notes=[...((records.find(x=>x.id===r.id)||r).notes||[])];notes.splice(+b.dataset.del,1);
+      write(r.id,{notes}).then(()=>{if(openId===r.id)openSheet(r.id,true)})}));
     $("#delBtn").addEventListener("click",()=>$("#delConfirm").classList.add("on"));
     $("#delNo").addEventListener("click",()=>$("#delConfirm").classList.remove("on"));
     $("#delYes").addEventListener("click",async()=>{try{
@@ -1020,10 +1026,10 @@ function saveGear(id,data){
 }
 // plays come from the record's log: logPlay writes each one as a dated note "Played … (~N min)". A note typed by hand counts
 // only if it has that "(~N min)" part, which people rarely type. Dates are read as text, since an imported file may hold anything.
-const PLAY_NOTE=/^Played (?:one side|the whole album)\b.*?\(~(\d+) min\)/;
+const PLAY_NOTE=/^Played (one side|the whole album)\b(.*?)\(~(\d+) min\)/;
 function playStats(r){const mo=today().slice(0,7);let count=0,min=0,month=0,mmin=0,last="";
   for(const n of r.notes||[]){const m=PLAY_NOTE.exec(String(n?.t??""));if(!m)continue;
-    const d=String(n.d??""),t=+m[1];count++;min+=t;if(d.startsWith(mo)){month++;mmin+=t}if(d>last)last=d}
+    const d=String(n.d??""),t=+m[3];count++;min+=t;if(d.startsWith(mo)){month++;mmin+=t}if(d>last)last=d}
   return {count,min,month,mmin,last}}
 // most played first: more plays, then more hours, then the latest play
 const byPlays=(n,t)=>(a,b)=>b[n]-a[n]||b[t]-a[t]||b.last.localeCompare(a.last);
@@ -1048,7 +1054,7 @@ function badgesHTML(r){
   const h=S.min/60,tier=h>=100?["b-gold","100+"]:h>=50?["b-silver","50+"]:h>=10?["b-bronze","10+"]:null;
   if(tier) out.push([tier[0],"disc",tier[1]+" hours"]);
   return out.map(([c,i,t])=>`<span class="badge ${c}"><span class="em"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${BADGE_ICON[i]}</svg></span>${t}</span>`).join("")}
-function playDate(d){const y=d.slice(0,4);return shortDate(d)+(y!==today().slice(0,4)?", "+y:"")}
+function playDate(d){if(!/^\d{4}-\d\d-\d\d$/.test(d))return d;const y=d.slice(0,4);return shortDate(d)+(y!==today().slice(0,4)?", "+y:"")}
 function listeningHTML(){
   const P=rankedPlays();
   if(!P.length) return `<p class="hint" style="margin-top:0">No plays logged yet.${canEdit?" Open a record and tap Played the whole album.":""}</p>`;
