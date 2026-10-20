@@ -31,7 +31,7 @@ Most played, last spun, and stylus hours by record, from the existing play log.
 Pin a research entry or save it as a note on the record. Research history is already stored as dated entries, so this builds on what's there.
 
 ### Hanging (#9)
-Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. (The share image still draws Barnwood.)
+Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. The share image follows the choice.
 
 ### Listening log you can scan (#24)
 Compact play rows, a short log by default with the rest a tap away, written notes that stand out, and delete moved to edit mode.
