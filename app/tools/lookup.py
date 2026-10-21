@@ -3,22 +3,21 @@
 
 Usage (the background task runs these; see its part L):
   python3 -I lookup.py plan      <records_dir> <artists_dir> <versions.json> <work> [<earlier plan.json>]
-  python3 -I lookup.py group     <work> <group>
   python3 -I lookup.py save      <work> <group> [<record id>=<asset id> ...]
-  python3 -I lookup.py summaries <work> [<group> <claude.json>]
+  python3 -I lookup.py summaries <work> <group> <claude.json>
 
-plan       picks the waiting records, splits them into small groups (the first one smaller) and starts looking every
-           group up in the background, in order. <versions.json> is {"records": {id: version}, "artists": {id: version}}
-           from the list output. Records in an earlier plan.json (a first pass in the same run) are skipped.
+plan       picks the waiting records, splits them into groups (4 first, so the wall starts filling in quickly, then up
+           to 13) and starts looking every group up in the background, in order. Prints group 0's covers to upload.
+           <versions.json> is {"records": {id: version}, "artists": {id: version}} from the list output. Records in an
+           earlier plan.json (a first pass in the same run) are skipped.
            Lookups: Wikipedia + Wikidata in bulk first, Discogs for the exact pressing (cover, tracklist, runtime),
            Deezer/iTunes for covers and runtimes, MusicBrainz only when the others miss.
-group      waits for one group's lookups and prints its covers to upload (COVERS), skipping any uploaded this run.
 save       pass 1, nothing for Claude to write: takes the uploaded asset ids and prints the batch that saves the group's
-           covers, details, key info, tracklists and artist links. It notes the version each write leaves for pass 2.
-summaries  pass 2: with no group, prints the first group's Wikipedia intros. With a group and Claude's <claude.json>
-           {"albums": {record id: {"summary", "recDates"}}, "artists": {artist id: {"summary"}}}, prints that group's
-           writes, then the next group's intros (or DONE with the timings). A record Wikimedia failed on is left for
-           the next run rather than marked done.
+           covers, details, key info, tracklists and artist links, then the next group's covers (or FACTS DONE and
+           the first group's Wikipedia intros). Notes the version each write leaves, for pass 2.
+summaries  pass 2: takes Claude's <claude.json> {"albums": {record id: {"summary", "recDates"}}, "artists": {artist id:
+           {"summary"}}} for a group, prints its writes, then the next group's intros, or DONE with a timeline of every
+           step. A record Wikimedia failed on is left for the next run rather than marked done.
 
 Rules carried over from the task: fill only fields that are empty or listed in autoFilled; never catalog, pressing or
 matrix; only links from typed Wikidata properties; a confident title + artist match or nothing. DISCOGS_TOKEN (optional,
@@ -29,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 UA = "VinylWall/1.0 (https://github.com/ober37/vinyl-wall)"
 TOKEN = os.environ.get("DISCOGS_TOKEN", "")
-FIRST, GROUP, MAX_RECORDS = 4, 8, 60
+FIRST, GROUP, MAX_RECORDS = 4, 13, 60  # 13: two groups fit one 25-file cover upload each
 ARTIST_FRESH_MS = 180 * 86400000
 NO_COVER = "Auto-lookup couldn't find a confident match for the cover. Upload one from this sheet or check the spelling."
 DEL = {"__delete__": True}
@@ -464,6 +463,8 @@ def plan(records_dir, artists_dir, versions_path, work, earlier=None):
         open(os.path.join(work, "prefetch.pid"), "w").write(str(pr.pid))
     print(f"{len(todo)} records waiting, in {len(groups)} groups (sizes {', '.join(str(len(g)) for g in groups) or '-'})"
           + (f"; {later} more wait for the next run" if later else "") + ".")
+    if groups:
+        _print_group(work, json.load(open(os.path.join(work, "plan.json"))), 0)
 
 
 def fetch_group(work, g, p, done):
@@ -667,11 +668,18 @@ def prefetch(work):
 
 
 def _stamp(work, what):
+    """Note when each step ran; the gaps between script steps are Claude's own steps (uploads, batches, writing)."""
     path = os.path.join(work, "times.json")
     t = json.load(open(path)) if os.path.exists(path) else {}
-    t.setdefault(what, time.time())
+    t.setdefault("steps", []).append([what, time.time()])
     json.dump(t, open(path, "w"))
     return t
+
+
+def _timeline(t):
+    t0 = t["steps"][0][1]
+    return (f"plan at {datetime.datetime.fromtimestamp(t0, datetime.timezone.utc):%H:%M:%S} UTC; seconds after it: "
+            + ", ".join(f"{w} {s - t0:.0f}" for w, s in t["steps"][1:]))
 
 
 def _found(work, g):
@@ -714,9 +722,8 @@ def _writer(wdir):
     return writes, add
 
 
-def group(work, g):
-    """Pass 1, step 1: print group g's lookups and the covers to upload (none already uploaded in this run)."""
-    p = json.load(open(os.path.join(work, "plan.json")))
+def _print_group(work, p, g):
+    """Group g's lookups and the covers to upload (none already uploaded in this run)."""
     fj = _wait_found(work, p, g)
     uploaded = _json(os.path.join(work, "assets.json"), {})
     covers = [os.path.abspath(f["cover"]) for rid, f in fj["found"].items() if f.get("cover") and rid not in uploaded]
@@ -729,10 +736,10 @@ def group(work, g):
 
 
 def save(work, g, *pairs):
-    """Pass 1, step 2: <record id>=<asset id> for each uploaded cover. Prints group g's BATCH, then the next group
-    (or FACTS DONE). Records the version each write will leave, for pass 2."""
+    """Pass 1: <record id>=<asset id> for each uploaded cover. Prints group g's BATCH, then the next group's covers, or
+    FACTS DONE and the first summaries to write. Records the version each write will leave, for pass 2."""
     p = json.load(open(os.path.join(work, "plan.json")))
-    _stamp(work, "first save")
+    _stamp(work, f"save {g}")
     uploaded = _json(os.path.join(work, "assets.json"), {})
     uploaded.update(dict(x.split("=", 1) for x in pairs if "=" in x))
     json.dump(uploaded, open(os.path.join(work, "assets.json"), "w"))
@@ -773,10 +780,10 @@ def save(work, g, *pairs):
     json.dump(after, open(os.path.join(work, "versions-after.json"), "w"))
     print(f"BATCH {g}: " + json.dumps(writes))
     if g + 1 < len(p["groups"]):
-        print(f"NEXT: group {g + 1}")
+        _print_group(work, p, g + 1)
     else:
-        _stamp(work, "facts done")
-        print("FACTS DONE: start the summaries.")
+        print("FACTS DONE")
+        summaries(work)
 
 
 def _artist_doc(a):
@@ -805,8 +812,12 @@ def summaries(work, g=None, claude_path=None):
     fjs = [_found(work, i) or {"found": {}, "artists": {}} for i in range(len(p["groups"]))]
     todo = [i for i, fj in enumerate(fjs) if any(f.get("summarise") for f in fj["found"].values())]
     if g is None:
-        _intros(work, p, todo[0]) if todo else print("DONE: nothing to summarise.")
+        if todo:
+            _intros(work, p, todo[0])
+        else:
+            print("DONE. " + _timeline(_stamp(work, "done")))
         return
+    _stamp(work, f"summaries {g}")
     cl = json.load(open(claude_path), strict=False)  # raw newlines in a summary are fine
     albums, arts = cl.get("albums") or {}, cl.get("artists") or {}
     ver = _json(os.path.join(work, "versions-after.json"), {"records": {}, "artists": {}})
@@ -832,10 +843,9 @@ def summaries(work, g=None, claude_path=None):
     if nxt:
         _intros(work, p, nxt[0])
     else:
-        t = _stamp(work, "done")
         retry = sum(f.get("retry", False) for fj in fjs for f in fj["found"].values())
-        print(f"DONE. First facts saved {t['first save'] - t['plan']:.0f}s after plan, all facts {t.get('facts done', t['done']) - t['plan']:.0f}s, "
-              f"summaries {t['done'] - t['plan']:.0f}s." + (f" {retry} records left for the next run (lookups rate-limited)." if retry else ""))
+        print("DONE. " + _timeline(_stamp(work, "done"))
+              + (f". {retry} records left for the next run (lookups rate-limited)." if retry else "."))
 
 
 if __name__ == "__main__":
@@ -844,8 +854,6 @@ if __name__ == "__main__":
         plan(*args)
     elif cmd == "prefetch":
         prefetch(args[0])
-    elif cmd == "group":
-        group(args[0], int(args[1]))
     elif cmd == "save":
         save(args[0], int(args[1]), *args[2:])
     elif cmd == "summaries":
