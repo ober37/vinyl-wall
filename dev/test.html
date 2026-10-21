@@ -19,7 +19,7 @@ f.onload=async()=>{
   const openRecord=async t=>{[...d.querySelectorAll(".sleeve-btn")].find(b=>b.textContent.includes(t)).click();await sleep(300)};
   const site=()=>w.__data.settings.site,emit=()=>{w.__emit("settings");return sleep(200)};  // the mock replaces the doc on each write
   try{
-    check("lookups: records waiting for album info start the task on load",w.__calls.some(c=>c[1]==="fire_trigger"&&/Part F/.test(c[2].text)));
+    check("lookups: records waiting for album info start the task on load",w.__calls.some(c=>c[1]==="fire_trigger"&&/Part L/.test(c[2].text)));
     // filter
     const all=titles().length;
     q('.fchip[data-f="p1"]').click();await sleep(150);
@@ -318,6 +318,25 @@ f.onload=async()=>{
     const call=w.__calls.filter(c=>c[1]==="fire_trigger").pop(),text=call?call[2].text:"";
     check("task start: counts, no titles",call&&!/Kind of Blue|Rumours|Aja/.test(text),text);
     q("#closeBtn").click();await sleep(200);
+    // one background run at a time: a start asked for during a run waits for it to end, then fires once
+    const fires=()=>w.__calls.filter(c=>c[1]==="fire_trigger").length,runFires0=fires();
+    check("one run: starting marks the run",(site().run||{}).startedMs>0,JSON.stringify(site().run));
+    await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();q("#enrichBtn").click();await sleep(400);
+    q("#closeBtn").click();await sleep(200);
+    check("one run: no second start while one runs",fires()===runFires0,fires()-runFires0+" extra");
+    delete site().run;await emit();await sleep(300);
+    check("one run: the waiting start fires once the run ends",fires()===runFires0+1,fires()-runFires0+" extra");
+    delete site().run;await emit();  // that run "ends" too, so later starts aren't held back
+    // ...but not when that run already did everything (an import's own writes queue a start)
+    site().run={startedMs:Date.now()};await emit();
+    await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();await sleep(400);
+    q("#closeBtn").click();await sleep(200);
+    const recsBefore=JSON.stringify(w.__data.records),upBefore=site().update,n1=fires();
+    for(const r of Object.values(w.__data.records)){delete r.needsEnrich;r.aboutAt=r.aboutAt||"2026-01-01";r.aboutV=2}
+    site().update={...(site().update||{}),checkedMs:Date.now()};w.__emit("records");
+    delete site().run;await emit();await sleep(300);
+    check("one run: nothing waiting, no extra run",fires()===n1,fires()-n1+" extra");
+    w.__data.records=JSON.parse(recsBefore);site().update=upBefore;w.__emit("records");await emit();
     // update check takes plain versions only
     site().update={latest:"9.9.9/../../../someone/else/main",checkedMs:Date.now()};await emit();
     check("update: odd version ignored",!q("#settingsBtn").classList.contains("hasupdate"));

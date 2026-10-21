@@ -815,7 +815,7 @@ function factsHTML(r){
     if(r.matrix)f.push(["Runout",runoutHTML(r)])}
   return f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:"";
 }
-/* About: the album and artist summaries and the artist's links, written by the background task (Part F) from MusicBrainz,
+/* About: the album and artist summaries and the artist's links, written by the background task (Part L) from MusicBrainz,
    Wikidata and Wikipedia. Links come only from typed Wikidata ids, never free text; anything that isn't http(s) is dropped. */
 let artists=[];
 const LINK_KINDS={website:"Website",instagram:"Instagram",youtube:"YouTube",spotify:"Spotify",bandcamp:"Bandcamp",applemusic:"Apple Music",
@@ -827,7 +827,7 @@ const summaryOpen=new Set();let tracksAll=false;
 // a summary's short lede and the detail after its first blank line
 function ledeSplit(t){const txt=String(t||"").trim(),k=txt.search(/\n\s*\n/);return {txt,lede:k<0?txt:txt.slice(0,k).trim(),rest:k<0?"":txt.slice(k).trim()}}
 const longDate=d=>/^\d{4}-\d\d-\d\d$/.test(d)?new Date(d+"T12:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}):String(d||"");
-// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part F)
+// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part L)
 function summaryHTML(r){
   if(r.aboutBlocked) return "";
   const ab=r.about||{},open=summaryOpen.has(r.id);
@@ -850,7 +850,7 @@ function keyInfoHTML(r){
   if(list(ab.genres))f.push(["Genre",esc(list(ab.genres))]);
   return f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:"";
 }
-// the track list, by side when positions read A1, B2…; the exact Discogs pressing when the record is linked (Part F)
+// the track list, by side when positions read A1, B2…; the exact Discogs pressing when the record is linked (Part L)
 function tracksHTML(r){
   const ab=!r.aboutBlocked&&r.about||{},T=(Array.isArray(ab.tracks)?ab.tracks:[]).filter(t=>t&&t.title);if(!T.length)return "";
   const side=t=>sideOf(t.pos),sec=trackSecs;
@@ -1327,34 +1327,44 @@ function enrich(r){flash("Looking up "+r.title+"… the cover usually appears wi
 const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude"));
 /* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
    own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
-function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId)return;
+function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId||runActive())return;
   if(!records.some(r=>!r.deleted&&!r.example&&aboutPending(r)))return;
   let t=0;try{t=+localStorage.getItem("vw-lookup")||0}catch(e){}
   if(Date.now()-t<30*60000)return;try{localStorage.setItem("vw-lookup",String(Date.now()))}catch(e){}
   fireTask()}
-function pendingWork(){
+// what's waiting for the background task; `fresh` leaves out records a run already tried (still no cover or runtime)
+function pendingParts(fresh){
   const dz=settings.discogs||{},live=records.filter(r=>!r.deleted&&!r.example),w=[];
   if(dz.hasToken&&(!dz.status||dz.status==="pending")) w.push("verify the Discogs connection (Part B)");
   if(dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-  const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).length;
-  if(enrich) w.push(`fill covers and details (Part A) for ${enrich} record${enrich>1?"s":""}`);
-  const about=live.filter(aboutPending).length;
-  if(about) w.push(`find artist and album info (Part F) for ${about} record${about>1?"s":""}`);
+  const look=live.filter(r=>r.needsEnrich||(!fresh&&(!r.coverAsset||!r.runtime))||aboutPending(r)).length;
+  if(look) w.push(`look up covers, details and album info (Part L) for ${look} record${look>1?"s":""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
   const up=settings.update||{};
   if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
   if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
-  return "Started from the wall. Waiting now: "+(w.length?w.join("; "):"nothing specific; run every part and do whatever is pending")+". Work through every part in the usual order.";
+  return w;
 }
+function pendingWork(){const w=pendingParts(false);
+  return "Started from the wall. Waiting now: "+(w.length?w.join("; ")+". Run only these parts, in the usual order.":"nothing specific; run every part and do whatever is pending.");
+}
+/* One background run at a time: starting the task marks settings.run, and the task clears it when it finishes (a mark
+   older than an hour is a run that died). A start asked for meanwhile waits for that run to end, then fires once,
+   and only if something is still waiting (the run usually did it already). */
+const runActive=()=>Date.now()-((settings.run||{}).startedMs||0)<60*60000;
+let fireAfterRun=false;
+function afterRun(){if(fireAfterRun&&!runActive()){fireAfterRun=false;if(pendingParts(true).length){lastFire=0;fireTask()}}}
 async function fireTask(){
   if(!mcp){flash("Background updates aren't available in this view. Ask Claude in chat to sync.");return}
+  if(runActive()){fireAfterRun=true;return}
   const wait=lastFire+60000-Date.now();
   if(wait>0){clearTimeout(fireTimer);fireTimer=setTimeout(fireTask,wait+500);return}
   lastFire=Date.now();
   // each install stores the id of its own background task in settings (written during setup)
   const taskId=settings.taskId; if(!taskId){lastFire=0;flash("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");return}
+  saveSettings({run:{startedMs:Date.now()}});
   try{await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:taskId,text:pendingWork()},{cache:false})}
-  catch(e){lastFire=0;flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
+  catch(e){lastFire=0;saveSettings({run:{startedMs:0}});flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
 }
 function runoutText(r){
   return `Matrix / Runout: ${r.matrix||""}\n(Observed on my copy: ${[r.pressing,r.catalog].filter(Boolean).join(", ")}.)`;
@@ -2110,7 +2120,7 @@ async function boot(){
   try{myId=u?await u.id():null}catch(e){myId=null}
   db.doc("settings/site").onSnapshot(snap=>{settingsExist=!!snap.exists;settingsLoaded=true;settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); autoLookup()},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); afterRun(); autoLookup()},()=>{});
   db.collection("artists").onSnapshot(snap=>{artists=snap.docs.map(x=>({id:x.id,...x.data()}));
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(!typing&&openId&&!String(openId).startsWith("__")&&records.some(x=>x.id===openId))openSheet(openId,true)},()=>{});

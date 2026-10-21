@@ -11,7 +11,7 @@ const day=n=>{const t=new Date(now-n*864e5);return new Date(t-t.getTimezoneOffse
 const data={
  settings:{site:{title:"My Vinyl Wall",bg:{kind:"preset",preset:"listening"},discogs:{}}},
  setups:{den:{name:"Den",note:"",added:1},living:{name:"Living room",note:"Main hi-fi",added:2}},
- // About info the background task (Part F) writes: one doc per artist, shared by that artist's records. Sample links only.
+ // About info the background task (Part L) writes: one doc per artist, shared by that artist's records. Sample links only.
  artists:{
   "mb-miles":{name:"Miles Davis",source:"claude",wiki:"https://en.wikipedia.org/wiki/Miles_Davis",fetchedAt:1,
    summary:"Miles Davis (1926–1991) was an American jazz trumpeter, bandleader and composer, and one of the most influential figures in jazz.\n\nAcross five decades he was at the front of bebop, cool jazz, hard bop, modal jazz and jazz fusion, and his bands launched the careers of many of the music's great players.",
