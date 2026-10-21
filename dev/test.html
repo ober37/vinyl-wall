@@ -111,6 +111,7 @@ f.onload=async()=>{
     const lastK=()=>{const n=w.__data.records.r1.notes;return n[n.length-1]};
     q('input[name="pk"][value="tracks"]').click();await sleep(50);
     check("tracks: pick tracks before logging",q("#logPlayBtn").disabled&&q("#logPlayBtn").textContent==="Pick tracks"&&!q(".lctracks").hidden);
+    check("tracks: the side chips go away",getComputedStyle(q(".lcsides")).display==="none");
     q('[data-pt="A"]').click();q('[data-pt="C"]').click();await sleep(50);
     check("tracks: the button counts the tracks",q("#logPlayBtn").textContent==="Log 2 tracks",q("#logPlayBtn").textContent);
     q("#logPlayBtn").click();await sleep(500);
@@ -192,7 +193,7 @@ f.onload=async()=>{
     w.__emit("records");await sleep(300);q("#closeBtn").click();await sleep(200);
     await openRecord("Aja");
     q("#closeBtn").click();await sleep(200);await openRecord("Blue Train");
-    check("summary: a record not looked up yet says so",q("#sheet .abwait")?.textContent==="Looking up the album…");
+    check("summary: a record not looked up yet says so",/^Looking up the album\. This can take a minute or two\.$/.test(q("#sheet .abwait")?.textContent));
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
     check("facts: ordered record shows its status; no About, so no tabs",[...d.querySelectorAll("#sheet .kv dt")].map(x=>x.textContent).join()==="Status"&&!d.querySelector('#sheet [role="tablist"]')&&!!q("#sheet .viewpart .statusacts #arrBtn"));
     q("#closeBtn").click();await sleep(200);await openRecord("Abbey Road");
@@ -263,6 +264,11 @@ f.onload=async()=>{
     check("research: no Save as note any more",!q("[data-resnote]"));
     q(`[data-rescont="${ab().researchLog[0].id}"]`).click();await sleep(200);
     check("research: Continue opens a chat from that entry",!!q("#chat"));
+    q("#chatQ").value="Is it worth it?";q("#chatForm").dispatchEvent(new Event("submit",{cancelable:true}));await until(()=>q("#chatSave")&&!q("#chatSave").disabled);
+    q(`[data-rescont="${ab().researchLog[0].id}"]`).click();await sleep(200);
+    check("research: Continue asks before replacing an unsaved chat",!!q("#chatReplaceYes")&&/Is it worth it\?/.test(q("#chat").textContent));
+    q("#chatReplaceNo").click();await sleep(200);
+    check("research: Keep leaves the chat as it was",!q("#chatReplaceYes")&&/Is it worth it\?/.test(q("#chat").textContent));
     q("#chatDiscard").click();await sleep(200);
     ab().researchLog=[...Array.from({length:9},(_,i)=>({id:"x"+i,at:"2026-01-0"+(i+1),headline:"Entry "+i})),ab().researchLog.find(e=>e.id==="ab1")];
     w.__emit("records");await sleep(300);await chatRun("Anything else?");
