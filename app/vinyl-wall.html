@@ -1957,13 +1957,14 @@ async function applyLibrary(){
   if(assets) for(let i=0;i<up.length;i++){
     if(i%5===0){libMsg=`Bringing in covers: ${i} of ${up.length}…`;renderImport()}
     try{moved[up[i]]=(await assets.upload(imageBlob(p.covers[up[i]]))).id}catch(e){}}
-  // album and artist info come across as found (#37); a record missing its album summary or its artist's is looked up again
-  const artistInfo=id=>[...p.artists.map(([aid,d])=>({id:aid,...d})),...p.haveArtists].find(a=>a.id===id)?.summary;
+  // album and artist info come across as found (#37), including "looked up, nothing found" (aboutAt with no summary);
+  // a record whose artist didn't come and isn't on this wall is looked up again
+  const artistKnown=id=>p.artists.some(([aid])=>aid===id)||p.haveArtists.some(a=>a.id===id);
   const writes=[...p.setups.map(([id,d])=>["setups",id,d]),...p.gear.map(([id,d])=>["gear",id,d]),...p.artists.map(([id,d])=>["artists",id,d]),...p.recs.map(([id,d])=>{
     const r=importable(d);if(!has(r.coverOriginal))delete r.coverOriginal;
     if(moved[r.coverAsset])r.coverAsset=moved[r.coverAsset];
     else if(!has(r.coverAsset)){delete r.coverAsset;r.needsEnrich=true}
-    if(!r.aboutBlocked&&(!r.about?.summary||(r.artistRef&&!artistInfo(r.artistRef)))){delete r.aboutAt;delete r.aboutV}
+    if(!r.aboutBlocked&&r.artistRef&&!artistKnown(r.artistRef)){delete r.aboutAt;delete r.aboutV}
     return ["records",id,r]})];
   const recWrites=p.recs.length;let done=0,recsDone=0;
   try{

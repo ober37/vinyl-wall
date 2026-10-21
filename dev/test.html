@@ -419,7 +419,7 @@ f.onload=async()=>{
     check("import: uploaded cover attached, no lookup",IR.i2.coverAsset===ups[0]?.[1]&&!IR.i2.needsEnrich&&IR.i5.coverAsset===IR.i2.coverAsset,JSON.stringify(IR.i2));
     check("import: about kept when album and artist are there",IR.i2.aboutAt==="2026-10-01"&&IR.i2.aboutV===2&&IR.i2.about?.summary&&IA.ar9?.summary==="Nine.",JSON.stringify(IR.i2));
     check("import: missing artist doc is looked up again",!IR.i3.aboutAt&&!IR.i3.aboutV&&IR.i3.about?.summary,JSON.stringify(IR.i3));
-    check("import: missing summary and a bad image are looked up again",!IR.i4.aboutAt&&IR.i4.needsEnrich&&!IR.i4.coverAsset,JSON.stringify(IR.i4));
+    check("import: looked up with nothing found stays done; a bad image is looked up",IR.i4.aboutAt==="2026-10-01"&&IR.i4.aboutV===2&&IR.i4.needsEnrich&&!IR.i4.coverAsset,JSON.stringify(IR.i4));
     check("import: the wall's own artist isn't overwritten",IA["mb-miles"].name==="Miles Davis"&&IR.i5.aboutAt==="2026-10-01",IA["mb-miles"].name);
     check("import: unused artists stay out",!IA.arX);
     check("import: Not this artist is never looked up",IR.i6.aboutBlocked&&IR.i6.aboutAt==="2026-10-01");
