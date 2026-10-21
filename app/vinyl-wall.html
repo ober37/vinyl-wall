@@ -1322,14 +1322,22 @@ Return JSON only, with keys: "headline" (one sentence, at most 14 words, the sin
 
 function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
 /* Runs started with no accompanying message sometimes ended without doing anything, so every start says what's waiting. */
+// not looked up yet, or looked up by an older version (no Claude summary, key info or tracklist yet)
+const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(r.about&&r.about.source!=="claude"));
+/* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
+   own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
+function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId)return;
+  if(!records.some(r=>!r.deleted&&!r.example&&aboutPending(r)))return;
+  let t=0;try{t=+localStorage.getItem("vw-lookup")||0}catch(e){}
+  if(Date.now()-t<30*60000)return;try{localStorage.setItem("vw-lookup",String(Date.now()))}catch(e){}
+  fireTask()}
 function pendingWork(){
   const dz=settings.discogs||{},live=records.filter(r=>!r.deleted&&!r.example),w=[];
   if(dz.hasToken&&(!dz.status||dz.status==="pending")) w.push("verify the Discogs connection (Part B)");
   if(dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
   const enrich=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime).length;
   if(enrich) w.push(`fill covers and details (Part A) for ${enrich} record${enrich>1?"s":""}`);
-  // not looked up yet, or looked up by an older version (no Claude summary, key info or tracklist yet)
-  const about=live.filter(r=>!r.aboutBlocked&&(!r.aboutAt||(r.about&&r.about.source!=="claude"))).length;
+  const about=live.filter(aboutPending).length;
   if(about) w.push(`find artist and album info (Part F) for ${about} record${about>1?"s":""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
   const up=settings.update||{};
@@ -1691,7 +1699,7 @@ function updateHTML(){
     <p class="mono askline" id="st-ask">${esc(updateAsk())}</p>
     <div class="actions" style="margin-top:10px"><button class="btn small editonly" type="button" id="st-copyask">Copy</button><span class="saved" id="upStatus"></span></div></div>`;
 }
-let settingsWriting=Promise.resolve(),settingsExist=false;
+let settingsWriting=Promise.resolve(),settingsExist=false,settingsLoaded=false;
 // only the changed fields are written, so a save never undoes what the background task wrote meanwhile
 function saveSettings(patch){
   settings={...settings,...patch}; applySettings();
@@ -2099,9 +2107,9 @@ async function boot(){
   canEdit=u?((await u.canEdit().catch(()=>false))||(await u.isOwner().catch(()=>false))):false;
   document.getElementById("app").classList.toggle("ro",!canEdit);
   try{myId=u?await u.id():null}catch(e){myId=null}
-  db.doc("settings/site").onSnapshot(snap=>{settingsExist=!!snap.exists;settings=snap.exists?{...snap.data()}:{};applySettings();
+  db.doc("settings/site").onSnapshot(snap=>{settingsExist=!!snap.exists;settingsLoaded=true;settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot()},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); autoLookup()},()=>{});
   db.collection("artists").onSnapshot(snap=>{artists=snap.docs.map(x=>({id:x.id,...x.data()}));
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(!typing&&openId&&!String(openId).startsWith("__")&&records.some(x=>x.id===openId))openSheet(openId,true)},()=>{});
@@ -2118,7 +2126,7 @@ async function boot(){
     if(openId==="__gear") openGear(true);  // its Listening section reads the records
     if(before!==null){const now=records.find(x=>x.id===openId);const ae=document.activeElement;
       const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash("");
+      if(now&&JSON.stringify(now)!==before&&!pending&&!typing) openSheet(openId,true);} flash(""); autoLookup();
   },e=>flash("Couldn't load the wall: "+e.message));
 }
 if(window.claude&&claude.use) boot(); else {flash("This page runs inside claude.ai.");}
