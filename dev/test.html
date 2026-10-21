@@ -122,7 +122,9 @@ f.onload=async()=>{
     check("vibe: a stop shows its word, and Clear appears",q("#vLabel").textContent==="Goosebumps"&&!q(".vibe.unset")&&!q("#vClear").hidden);
     q("#jSave").click();await sleep(500);
     check("vibe: saved on the play and shown",lastK().vibe===5&&!lastK().mood&&q("#logFs .plist li.play .pmood")?.textContent==="Goosebumps",JSON.stringify(lastK()));
-    q('input[name="pk"][value="tracks"]').click();await sleep(50);q('[data-pt="B1"]').click();q('[data-pt="B2"]').click();await sleep(50);q("#logPlayBtn").click();await sleep(500);
+    q('input[name="pk"][value="tracks"]').click();await sleep(50);
+    check("tracks: under a side, a chip reads 1 - title",/^1 - \S/.test(q('[data-pt="B1"]').textContent),q('[data-pt="B1"]').textContent);
+    q('[data-pt="B1"]').click();q('[data-pt="B2"]').click();await sleep(50);q("#logPlayBtn").click();await sleep(500);
     check("tracks: a whole side logs as that side",/^Played one side/.test(lastK().t)&&lastK().side==="B"&&!lastK().tracks,JSON.stringify(lastK()));
     q("#jSkip").click();await sleep(200);
     w.__data.records.r1.notes=K.slice(0,-1);w.__emit("records");await sleep(300);
