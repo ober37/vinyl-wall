@@ -130,7 +130,7 @@ Tell the person, briefly:
 3. **Connect Discogs (optional):** open **Settings** (gear icon) → enter their Discogs username and a personal access token from discogs.com/settings/developers → **Save token**. The token never needs to go through the chat. If they already keep their records on Discogs, once the connection shows as verified they can tap **Import from Discogs** in Settings to bring their collection and wantlist onto the wall.
 4. **Equipment:** tap the Gear pill to add their turntable, cartridge and stylus, and rename "My setup".
 5. Backgrounds and the title are under **Settings**.
-6. **Moving from another wall?** Tap **Import your library** on the welcome card (or **Settings** → **Your library** → **Import from a file**) and pick the file they saved with **Export your library**. Their records, equipment, setups and the wall's look come across, and covers are looked up again.
+6. **Moving from another wall?** Tap **Import your library** on the welcome card (or **Settings** → **Your library** → **Import from a file**) and pick the file they saved with **Export your library**. Their records, equipment, setups and the wall's look come across, with covers and album and artist info. Anything the file doesn't carry, like covers in a file from an older wall, is looked up again.
 
 Mention which approval setting the background task got (from the `create_trigger` result) and, if its runs ask for approval, that they can switch it to automatic approval in the task's settings.
 

@@ -387,6 +387,47 @@ f.onload=async()=>{
     need(q("#lib-yes"),"#lib-yes ("+(q(".libflow")?.textContent||"no import sheet")+")").click();await until(()=>q("#lib-see"));
     const r=w.__data.records.imp1;
     check("import: known fields, fresh sync",r&&!r.discogsSync&&!r.stray&&r.needsSync===true&&r.title==="Imported One",JSON.stringify(r));
+    check("import: an older file without covers looks the cover up",r.needsEnrich===true&&!r.coverAsset,JSON.stringify(r));
+    q("#lib-see").click();await sleep(200);
+    // export carries cover images and the records' artists (#35, #37)
+    w.__blobs.cov1=new w.Blob([new Uint8Array([255,216,255,224,1,2,3])],{type:"image/jpeg"});
+    w.__data.records.r1.coverAsset="cov1";w.__emit("records");await sleep(200);
+    q("#settingsBtn").click();await sleep(300);need(q("#lib-export"),"#lib-export").click();await until(()=>w.__lastSave);
+    const ex=JSON.parse(w.__lastSave||"{}");
+    check("export: cover image in the file",/^data:image\/jpeg;base64,/.test(ex.covers?.cov1||"")&&ex.records?.r1?.coverAsset==="cov1",Object.keys(ex.covers||{}).join());
+    check("export: artists of exported records",!!ex.artists?.["mb-miles"]?.summary&&ex.records.r1.about?.summary&&ex.records.r1.aboutAt,Object.keys(ex.artists||{}).join());
+    check("export: no missing-cover line",!/couldn't be included/.test(q("#libStatus")?.textContent||""),q("#libStatus")?.textContent);
+    q("#closeBtn").click();await sleep(200);
+    // import: covers upload from the file, about info and artists come across, and only what's missing is looked up
+    const img=ex.covers.cov1,abt={summary:"An album.\n\nMore.",source:"claude"};
+    const importFile=async snap=>{const before=w.__calls.length;
+      q("#settingsBtn").click();await sleep(300);need(q("#lib-import"),"#lib-import").click();await sleep(200);
+      const dt=new w.DataTransfer();dt.items.add(new w.File([JSON.stringify({vinylWall:1,...snap})],"lib.json",{type:"application/json"}));
+      q("#lib-file").files=dt.files;q("#lib-file").dispatchEvent(new w.Event("change"));await until(()=>q("#lib-yes"));
+      need(q("#lib-yes"),"#lib-yes ("+(q(".libflow")?.textContent||"no import sheet")+")").click();await until(()=>q("#lib-see"));
+      const msg=q(".libflow").textContent;q("#lib-see").click();await sleep(200);return {msg,calls:w.__calls.slice(before)}};
+    const got=await importFile({records:{
+        i2:{title:"Has All",artist:"Artist Nine",status:"own",notes:[],coverAsset:"c9",artistRef:"ar9",about:abt,aboutAt:"2026-10-01",aboutV:2},
+        i3:{title:"No Artist Doc",artist:"Artist Ten",status:"own",notes:[],coverAsset:"c9",artistRef:"ar10",about:abt,aboutAt:"2026-10-01",aboutV:2},
+        i4:{title:"No Summary",artist:"Artist Eleven",status:"own",notes:[],coverAsset:"c11",aboutAt:"2026-10-01",aboutV:2},
+        i5:{title:"Wall Artist",artist:"Miles Davis",status:"own",notes:[],coverAsset:"c9",artistRef:"mb-miles",about:abt,aboutAt:"2026-10-01",aboutV:2},
+        i6:{title:"Blocked",artist:"Someone",status:"own",notes:[],coverAsset:"c9",aboutBlocked:true,aboutAt:"2026-10-01"}},
+      artists:{ar9:{name:"Artist Nine",summary:"Nine.",source:"claude"},"mb-miles":{name:"Not Miles",summary:"Overwritten."},arX:{name:"Unused",summary:"x"}},
+      covers:{c9:img,c11:"javascript:alert(1)"}});
+    const IR=w.__data.records,IA=w.__data.artists,ups=got.calls.filter(c=>c[0]==="assets.upload");
+    check("import: one upload per cover image",ups.length===1,ups.length);
+    check("import: uploaded cover attached, no lookup",IR.i2.coverAsset===ups[0]?.[1]&&!IR.i2.needsEnrich&&IR.i5.coverAsset===IR.i2.coverAsset,JSON.stringify(IR.i2));
+    check("import: about kept when album and artist are there",IR.i2.aboutAt==="2026-10-01"&&IR.i2.aboutV===2&&IR.i2.about?.summary&&IA.ar9?.summary==="Nine.",JSON.stringify(IR.i2));
+    check("import: missing artist doc is looked up again",!IR.i3.aboutAt&&!IR.i3.aboutV&&IR.i3.about?.summary,JSON.stringify(IR.i3));
+    check("import: missing summary and a bad image are looked up again",!IR.i4.aboutAt&&IR.i4.needsEnrich&&!IR.i4.coverAsset,JSON.stringify(IR.i4));
+    check("import: the wall's own artist isn't overwritten",IA["mb-miles"].name==="Miles Davis"&&IR.i5.aboutAt==="2026-10-01",IA["mb-miles"].name);
+    check("import: unused artists stay out",!IA.arX);
+    check("import: Not this artist is never looked up",IR.i6.aboutBlocked&&IR.i6.aboutAt==="2026-10-01");
+    check("import: done line counts each record once",/Brought in 5 records\. We'll look up covers or album info for 2 of them\./.test(got.msg),got.msg);
+    w.__failUpload=true;
+    const fail=await importFile({records:{i7:{title:"Upload Fails",artist:"Artist Seven",status:"own",notes:[],coverAsset:"c7",about:abt,aboutAt:"2026-10-01"}},covers:{c7:img}});
+    w.__failUpload=false;
+    check("import: a failed upload looks the cover up",IR.i7.needsEnrich&&!IR.i7.coverAsset&&/look up covers for it\./.test(fail.msg),fail.msg);
   }catch(e){check("ran without throwing",false,e.message)}
   check("no script errors",!errs.length,errs.join("; "));
   document.getElementById("out").textContent=out.join("\n");
