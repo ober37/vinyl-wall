@@ -203,10 +203,10 @@ f.onload=async()=>{
     Object.assign(R3,{aboutAt:"2026-10-01",aboutV:3,about:{summary:"Blue Train is a 1957 album.",source:"claude",via:"John Coltrane",
       wiki:"https://en.wikipedia.org/wiki/John_Coltrane#Blue_Note"}});w.__emit("records");await sleep(300);
     check("summary: from the artist's article, credited with the artist",/^Summary by Claude · from John Coltrane on Wikipedia ↗$/.test(q("#sheet .absum .src .hint")?.textContent)&&q("#sheet .absum .src a")?.textContent==="John Coltrane on Wikipedia ↗",q("#sheet .absum .src")?.textContent);
-    R3.about={};w.__emit("records");await sleep(300);q("#tab-about").click();await sleep(100);
-    check("summary: nothing found leaves the top empty and says so in About",!q("#sheet .absum")&&!q("#sheet .abwait")&&q("#albumFs .hint")?.textContent==="Wikipedia has nothing on this album.");
+    R3.about={};w.__emit("records");await sleep(300);
+    check("summary: nothing found says so at the top, without the pulsing dot",!q("#sheet .absum")&&!q("#sheet .abwait")&&q("#sheet .viewpart .abnone")?.textContent==="Wikipedia has nothing on this album."&&!q("#albumFs .abnone"));
     R3.aboutV=2;w.__emit("records");await sleep(300);
-    check("summary: an older lookup with no summary is pending, not 'nothing'",!q("#albumFs > .hint"));
+    check("summary: a redo (aboutAt set, aboutV below 3) shows the lookup line",!q("#sheet .abnone")&&/^Looking up the album/.test(q("#sheet .abwait")?.textContent));
     delete R3.about;delete R3.aboutAt;delete R3.aboutV;w.__emit("records");await sleep(300);q("#tab-task")?.click();await sleep(100);
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
     check("facts: ordered record shows its status; no About, so no tabs",[...d.querySelectorAll("#sheet .kv dt")].map(x=>x.textContent).join()==="Status"&&!d.querySelector('#sheet [role="tablist"]')&&!!q("#sheet .viewpart .statusacts #arrBtn"));

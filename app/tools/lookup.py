@@ -33,6 +33,7 @@ ARTIST_FRESH_MS = 180 * 86400000
 NO_COVER = "Auto-lookup couldn't find a confident match for the cover. Upload one from this sheet or check the spelling."
 DEL = {"__delete__": True}
 NOT_ALBUM = {"Q134556", "Q7366", "Q4167410"}  # single, song, disambiguation page
+MUSIC_IDS = ("P434", "P1953", "P1902", "P2850")  # MusicBrainz, Discogs, Spotify, Apple Music artist ids
 LINKS = [("P856", "website", "{}"), ("P2003", "instagram", "https://www.instagram.com/{}/"),
          ("P2397", "youtube", "https://www.youtube.com/channel/{}"), ("P1902", "spotify", "https://open.spotify.com/artist/{}"),
          ("P3283", "bandcamp", "https://{}.bandcamp.com/"), ("P2850", "applemusic", "https://music.apple.com/us/artist/{}"),
@@ -293,8 +294,9 @@ def wiki_url(t):
 
 def pick_artists(want):
     """record id -> artist Wikidata id, for albums Wikidata couldn't place (#32). want: record id -> (name, MusicBrainz
-    artist id or None). By MusicBrainz id first, then likely article titles; either way the entity must carry that id
-    (or, with none known, some MusicBrainz artist id), so a same-named page about something else doesn't count."""
+    artist id or None). By MusicBrainz id first, then likely article titles, then one Wikipedia search; a page's entity
+    must carry that id (when it has one), else some artist identifier (MusicBrainz, Discogs, Spotify or Apple Music),
+    and have no performer (an album or song does), so a same-named page about something else doesn't count."""
     found = {}
 
     def by_mbid(rid):
@@ -306,17 +308,30 @@ def pick_artists(want):
         for rid, q in ex.map(by_mbid, [rid for rid, (_, mbid) in want.items() if mbid]):
             if q:
                 found[rid] = q
-    miss = {rid: [f"{n} (band)", f"{n} (musician)", f"{n} (singer)", n] for rid, (n, _) in want.items() if rid not in found}
-    qs = resolve([t for ts in miss.values() for t in ts])
-    entities(list(found.values()) + list(qs.values()))
-    for rid, ts in miss.items():
-        name, mbid = want[rid]
-        for t in ts:
-            e = ENT.get(qs.get(t)) or {}
-            ids = claims(e, "P434")
-            if e and artist_ok(name, label(qs[t])) and (mbid in ids if mbid else ids):
-                found[rid] = qs[t]
-                break
+    def check(cands):  # cands: record id -> [titles]
+        qs = resolve([t for ts in cands.values() for t in ts])
+        entities(qs.values())
+        for rid, ts in cands.items():
+            name, mbid = want[rid]
+            for t in ts:
+                e = ENT.get(qs.get(t)) or {}
+                ids = claims(e, "P434")
+                if e and not claims(e, "P175") and artist_ok(name, label(qs[t])) \
+                        and (mbid in ids if mbid and ids else any(claims(e, p) for p in MUSIC_IDS)):
+                    found[rid] = qs[t]
+                    break
+
+    check({rid: [f"{n} (band)", f"{n} (musician)", f"{n} (singer)", n] for rid, (n, _) in want.items() if rid not in found})
+
+    def search(rid):
+        j = fetch("https://en.wikipedia.org/w/api.php", {"action": "query", "format": "json", "formatversion": 2, "list": "search",
+                                                         "srsearch": want[rid][0], "srlimit": 4}) or {}
+        return rid, [x["title"] for x in (j.get("query") or {}).get("search") or []]
+
+    with ThreadPoolExecutor(2) as ex:
+        hits = dict(ex.map(search, [rid for rid in want if rid not in found]))
+    check({rid: ts for rid, ts in hits.items() if ts})
+    entities(found.values())
     return found
 
 
@@ -634,7 +649,7 @@ def fetch_group(work, g, p, done):
             free = lambda k: not r.get(k) or k in auto
             dg_rt = _discogs_runtime(dg)
             cand = {"year": [(released(e) or "")[:4], dz.get("year"), it.get("year"), str((dg or {}).get("year") or "")],
-                    "label": [label((claims(e, "P264") or [""])[0]), dz.get("label"), _clean((((dg or {}).get("labels") or [{}])[0]).get("name"))],
+                    "label": [label((claims(e, "P264") or [""])[0]), dz.get("label"), _dlabel(dg)],
                     "runtime": [dg_rt, dz.get("runtime"), it.get("runtime")]}
             for k, vals in cand.items():
                 v = next((x for x in vals if x and (k != "year" or re.match(r"^\d{4}$", str(x)))), None)
@@ -669,7 +684,7 @@ def fetch_group(work, g, p, done):
                 rel = rel[:10] if re.match(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", rel[:10]) else rel[:4]
                 if not about.get("released") and re.match(r"^\d{4}", rel):
                     about["released"] = rel
-                lab = _clean((((dg.get("labels") or [{}])[0]).get("name")))
+                lab = _dlabel(dg)
                 if not about.get("label") and lab:
                     about["label"] = lab
                 gs = (dg.get("styles") or dg.get("genres") or [])[:3]
@@ -743,6 +758,12 @@ def _discogs_runtime(dg):
     if len(tr) < 6 or not all(secs(t.get("duration")) for t in tr):
         return None
     return round(sum(secs(t["duration"]) for t in tr) / 60) or None
+
+
+def _dlabel(dg):
+    """The pressing's first label; Discogs files self-released records under "Not On Label (… Self-released)"."""
+    s = _clean((((dg or {}).get("labels") or [{}])[0]).get("name"))
+    return "Self-released" if s.lower().startswith("not on label") else s
 
 
 def _clean(s):

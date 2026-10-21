@@ -39,4 +39,7 @@ done = {"title": "x", "aboutAt": "2026-10-01", "aboutV": 2, "about": {"summary":
 check("redo: a summary from an older run stays", not L.needs_f(done))
 check("redo: an older run with no summary goes once more", L.needs_f({**done, "about": {}}))
 check("redo: a redo that found nothing is done", not L.needs_f({**done, "about": {}, "aboutV": 3}))
+lab = lambda n: L._dlabel({"labels": [{"name": n}]})
+check("discogs label: Not On Label reads Self-released", lab("Not On Label (Novelists Self-released)") == "Self-released")
+check("discogs label: a real label keeps its name, without the (2)", lab("ACKOR Music (2)") == "ACKOR Music")
 sys.exit(1 if fails else 0)
