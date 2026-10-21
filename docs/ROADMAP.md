@@ -22,7 +22,7 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. 1.0.0 follows once beta feedback is in.
+The [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped its first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. Still to come: the record sheet redesign with About (#27, with the stylus wear fix #28), a rethink of research (#31) and a progress bar for background lookups (#30). The next beta waits for #28 and #31; 1.0.0 follows once beta feedback is in.
 
 ### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
@@ -32,6 +32,15 @@ Pin a research entry or save it as a note on the record. Research history is alr
 
 ### Hanging (#9)
 Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. The share image follows the choice.
+
+### Record sheet with About (#27)
+A tighter facts list, and an About section: album and artist summaries from Wikipedia with the artist's official links, found by the background task from MusicBrainz and Wikidata.
+
+### Research that answers (#31)
+The research chat answers only from what Claude already knows: it can't look anything up, so newer albums and questions like awards or current prices come back as "go search." Rethink research so it comes back with answers, for example by using what the wall already knows about the album and handing lookup questions to the background task.
+
+### Lookup progress and import speed (#30)
+A status bar at the bottom of the wall showing the background work still waiting (covers and details, album and artist info, a Discogs import or sync), and a review of how long an import takes end to end, from picking the file to every record having its cover and About info.
 
 ### Listening log you can scan (#24)
 Compact play rows, a short log by default with the rest a tap away, written notes that stand out, and delete moved to edit mode.
