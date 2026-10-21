@@ -19,7 +19,7 @@ f.onload=async()=>{
   const openRecord=async t=>{[...d.querySelectorAll(".sleeve-btn")].find(b=>b.textContent.includes(t)).click();await sleep(300)};
   const site=()=>w.__data.settings.site,emit=()=>{w.__emit("settings");return sleep(200)};  // the mock replaces the doc on each write
   try{
-    check("lookups: records waiting for album info start the task on load",w.__calls.some(c=>c[1]==="fire_trigger"&&/Part F/.test(c[2].text)));
+    check("lookups: records waiting for album info start the task on load",w.__calls.some(c=>c[1]==="fire_trigger"&&/Part L/.test(c[2].text)));
     // filter
     const all=titles().length;
     q('.fchip[data-f="p1"]').click();await sleep(150);
