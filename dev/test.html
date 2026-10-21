@@ -318,6 +318,15 @@ f.onload=async()=>{
     const call=w.__calls.filter(c=>c[1]==="fire_trigger").pop(),text=call?call[2].text:"";
     check("task start: counts, no titles",call&&!/Kind of Blue|Rumours|Aja/.test(text),text);
     q("#closeBtn").click();await sleep(200);
+    // one background run at a time: a start asked for during a run waits for it to end, then fires once
+    const fires=()=>w.__calls.filter(c=>c[1]==="fire_trigger").length,runFires0=fires();
+    check("one run: starting marks the run",(site().run||{}).startedMs>0,JSON.stringify(site().run));
+    await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();q("#enrichBtn").click();await sleep(400);
+    q("#closeBtn").click();await sleep(200);
+    check("one run: no second start while one runs",fires()===runFires0,fires()-runFires0+" extra");
+    delete site().run;await emit();await sleep(300);
+    check("one run: the waiting start fires once the run ends",fires()===runFires0+1,fires()-runFires0+" extra");
+    delete site().run;await emit();  // that run "ends" too, so later starts aren't held back
     // update check takes plain versions only
     site().update={latest:"9.9.9/../../../someone/else/main",checkedMs:Date.now()};await emit();
     check("update: odd version ignored",!q("#settingsBtn").classList.contains("hasupdate"));

@@ -1327,7 +1327,7 @@ function enrich(r){flash("Looking up "+r.title+"… the cover usually appears wi
 const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude"));
 /* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
    own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
-function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId)return;
+function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId||runActive())return;
   if(!records.some(r=>!r.deleted&&!r.example&&aboutPending(r)))return;
   let t=0;try{t=+localStorage.getItem("vw-lookup")||0}catch(e){}
   if(Date.now()-t<30*60000)return;try{localStorage.setItem("vw-lookup",String(Date.now()))}catch(e){}
@@ -1344,15 +1344,22 @@ function pendingWork(){
   if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
   return "Started from the wall. Waiting now: "+(w.length?w.join("; ")+". Run only these parts, in the usual order.":"nothing specific; run every part and do whatever is pending.");
 }
+/* One background run at a time: starting the task marks settings.run, and the task clears it when it finishes (a mark
+   older than 30 minutes is a run that died). A start asked for meanwhile waits for that run to end, then fires once. */
+const runActive=()=>Date.now()-((settings.run||{}).startedMs||0)<30*60000;
+let fireAfterRun=false;
+function afterRun(){if(fireAfterRun&&!runActive()){fireAfterRun=false;lastFire=0;fireTask()}}
 async function fireTask(){
   if(!mcp){flash("Background updates aren't available in this view. Ask Claude in chat to sync.");return}
+  if(runActive()){fireAfterRun=true;return}
   const wait=lastFire+60000-Date.now();
   if(wait>0){clearTimeout(fireTimer);fireTimer=setTimeout(fireTask,wait+500);return}
   lastFire=Date.now();
   // each install stores the id of its own background task in settings (written during setup)
   const taskId=settings.taskId; if(!taskId){lastFire=0;flash("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");return}
+  saveSettings({run:{startedMs:Date.now()}});
   try{await mcp.callTool("Claude Code Remote","fire_trigger",{trigger_id:taskId,text:pendingWork()},{cache:false})}
-  catch(e){lastFire=0;flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
+  catch(e){lastFire=0;saveSettings({run:{startedMs:0}});flash(e.code==="not_granted"||e.code==="permission_denied"?"Background updates need permission to start Claude tasks. Allow it for this page and try again.":"Couldn't start the background update: "+(e.message||e.code))}
 }
 function runoutText(r){
   return `Matrix / Runout: ${r.matrix||""}\n(Observed on my copy: ${[r.pressing,r.catalog].filter(Boolean).join(", ")}.)`;
@@ -2108,7 +2115,7 @@ async function boot(){
   try{myId=u?await u.id():null}catch(e){myId=null}
   db.doc("settings/site").onSnapshot(snap=>{settingsExist=!!snap.exists;settingsLoaded=true;settings=snap.exists?{...snap.data()}:{};applySettings();
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
-    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); autoLookup()},()=>{});
+    if(openId==="__settings"&&!typing)openSettings(true); renderWelcome(); renderUpdateDot(); afterRun(); autoLookup()},()=>{});
   db.collection("artists").onSnapshot(snap=>{artists=snap.docs.map(x=>({id:x.id,...x.data()}));
     const ae=document.activeElement;const typing=ae&&$("#sheet").contains(ae)&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName);
     if(!typing&&openId&&!String(openId).startsWith("__")&&records.some(x=>x.id===openId))openSheet(openId,true)},()=>{});
