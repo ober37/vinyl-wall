@@ -1323,7 +1323,8 @@ Return JSON only, with keys: "headline" (one sentence, at most 14 words, the sin
 function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
 /* Runs started with no accompanying message sometimes ended without doing anything, so every start says what's waiting. */
 // not looked up yet, or looked up by an older version (no Claude summary, key info or tracklist yet)
-const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(r.about&&r.about.source!=="claude"));
+// (aboutV marks a redo as done, even one that found nothing)
+const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude"));
 /* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
    own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
 function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId)return;
