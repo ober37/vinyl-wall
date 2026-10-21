@@ -391,11 +391,12 @@ f.onload=async()=>{
     q("#lib-see").click();await sleep(200);
     // export carries cover images and the records' artists (#35, #37)
     w.__blobs.cov1=new w.Blob([new Uint8Array([255,216,255,224,1,2,3])],{type:"image/jpeg"});
-    w.__data.records.r1.coverAsset="cov1";w.__emit("records");await sleep(200);
+    w.__data.records.r1.coverAsset="cov1";w.__emit("records");w.__blobs.bg1=w.__blobs.cov1;site().bg={kind:"photo",assetId:"bg1"};await emit();await sleep(200);
     q("#settingsBtn").click();await sleep(300);need(q("#lib-export"),"#lib-export").click();await until(()=>w.__lastSave);
     const ex=JSON.parse(w.__lastSave||"{}");
     check("export: cover image in the file",/^data:image\/jpeg;base64,/.test(ex.covers?.cov1||"")&&ex.records?.r1?.coverAsset==="cov1",Object.keys(ex.covers||{}).join());
     check("export: artists of exported records",!!ex.artists?.["mb-miles"]?.summary&&ex.records.r1.about?.summary&&ex.records.r1.aboutAt,Object.keys(ex.artists||{}).join());
+    check("export: the photo background travels too",/^data:image\/jpeg;base64,/.test(ex.covers?.bg1||""));
     check("export: no missing-cover line",!/couldn't be included/.test(q("#libStatus")?.textContent||""),q("#libStatus")?.textContent);
     q("#closeBtn").click();await sleep(200);
     // import: covers upload from the file, about info and artists come across, and only what's missing is looked up
@@ -411,9 +412,11 @@ f.onload=async()=>{
         i3:{title:"No Artist Doc",artist:"Artist Ten",status:"own",notes:[],coverAsset:"c9",artistRef:"ar10",about:abt,aboutAt:"2026-10-01",aboutV:2},
         i4:{title:"No Summary",artist:"Artist Eleven",status:"own",notes:[],coverAsset:"c11",aboutAt:"2026-10-01",aboutV:2},
         i5:{title:"Wall Artist",artist:"Miles Davis",status:"own",notes:[],coverAsset:"c9",artistRef:"mb-miles",about:abt,aboutAt:"2026-10-01",aboutV:2},
+        i8:{title:"Svg Cover",artist:"Artist Eight",status:"own",notes:[],coverAsset:"c12"},
+        i9:{title:"Odd Id",artist:"Artist Nine B",status:"own",notes:[],coverAsset:"constructor"},
         i6:{title:"Blocked",artist:"Someone",status:"own",notes:[],coverAsset:"c9",aboutBlocked:true,aboutAt:"2026-10-01"}},
-      artists:{ar9:{name:"Artist Nine",summary:"Nine.",source:"claude"},"mb-miles":{name:"Not Miles",summary:"Overwritten."},arX:{name:"Unused",summary:"x"}},
-      covers:{c9:img,c11:"javascript:alert(1)"}});
+      artists:{ar9:{name:"Artist Nine",summary:"Nine.",source:"claude",stray:"x",fetchedAt:"soon",links:[{kind:"website",url:"https://a.example",extra:1},"bad"]},"mb-miles":{name:"Not Miles",summary:"Overwritten."},arX:{name:"Unused",summary:"x"}},
+      covers:{c9:img,c11:"javascript:alert(1)",c12:"data:image/svg+xml;base64,"+w.btoa("<svg xmlns='http://www.w3.org/2000/svg'><script>alert(1)<\/script></svg>")}});
     const IR=w.__data.records,IA=w.__data.artists,ups=got.calls.filter(c=>c[0]==="assets.upload");
     check("import: one upload per cover image",ups.length===1,ups.length);
     check("import: uploaded cover attached, no lookup",IR.i2.coverAsset===ups[0]?.[1]&&!IR.i2.needsEnrich&&IR.i5.coverAsset===IR.i2.coverAsset,JSON.stringify(IR.i2));
@@ -422,12 +425,22 @@ f.onload=async()=>{
     check("import: looked up with nothing found stays done; a bad image is looked up",IR.i4.aboutAt==="2026-10-01"&&IR.i4.aboutV===2&&IR.i4.needsEnrich&&!IR.i4.coverAsset,JSON.stringify(IR.i4));
     check("import: the wall's own artist isn't overwritten",IA["mb-miles"].name==="Miles Davis"&&IR.i5.aboutAt==="2026-10-01",IA["mb-miles"].name);
     check("import: unused artists stay out",!IA.arX);
+    check("import: artists keep only their own fields",IA.ar9&&!("stray" in IA.ar9)&&!("fetchedAt" in IA.ar9)&&JSON.stringify(IA.ar9.links)==='[{"kind":"website","url":"https://a.example"}]',JSON.stringify(IA.ar9));
+    check("import: an SVG cover isn't uploaded",IR.i8.needsEnrich&&!IR.i8.coverAsset,JSON.stringify(IR.i8));
+    check("import: an odd cover id doesn't break it",IR.i9.needsEnrich&&!IR.i9.coverAsset,JSON.stringify(IR.i9));
     check("import: Not this artist is never looked up",IR.i6.aboutBlocked&&IR.i6.aboutAt==="2026-10-01");
-    check("import: done line counts each record once",/Brought in 5 records\. We'll look up covers or album info for 2 of them\./.test(got.msg),got.msg);
+    check("import: done line counts each record once",/Brought in 7 records\. We'll look up covers or album info for 4 of them\./.test(got.msg),got.msg);
     w.__failUpload=true;
     const fail=await importFile({records:{i7:{title:"Upload Fails",artist:"Artist Seven",status:"own",notes:[],coverAsset:"c7",about:abt,aboutAt:"2026-10-01"}},covers:{c7:img}});
     w.__failUpload=false;
     check("import: a failed upload looks the cover up",IR.i7.needsEnrich&&!IR.i7.coverAsset&&/look up covers for it\./.test(fail.msg),fail.msg);
+    // a brand-new wall takes the file's photo background, uploaded from the file
+    const keep=Object.entries(w.__data.records).filter(([,r])=>!r.deleted).map(([id])=>id);keep.forEach(id=>w.__data.records[id].deleted=true);
+    delete w.__blobs.bg1;site().bg={kind:"preset",preset:"plaster"};await emit();
+    const bgRun=await importFile({records:{i10:{title:"New Wall",artist:"Artist Ten B",status:"own",notes:[]}},settings:{site:{bg:{kind:"photo",assetId:"bg1"}}},covers:{bg1:img}});
+    keep.forEach(id=>delete w.__data.records[id].deleted);w.__emit("records");await sleep(200);
+    const newBg=site().bg,bgUp=bgRun.calls.filter(c=>c[0]==="assets.upload");
+    check("import: a new wall gets the file's photo background",newBg?.kind==="photo"&&bgUp.length===1&&newBg.assetId===bgUp[0][1]&&(site().uploads||[]).some(u=>u.id===newBg.assetId),JSON.stringify(newBg));
   }catch(e){check("ran without throwing",false,e.message)}
   check("no script errors",!errs.length,errs.join("; "));
   document.getElementById("out").textContent=out.join("\n");

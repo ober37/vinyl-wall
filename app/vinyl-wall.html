@@ -1873,10 +1873,13 @@ async function exportLibrary(){
   const byId=list=>Object.fromEntries(list.filter(x=>!x.example&&!x.deleted).map(({id,...d})=>[id,d]));
   const site={};for(const k of ["title","bg","dim","hang"]) if(settings[k]!==undefined) site[k]=settings[k];
   const recs=byId(records),refs=new Set(Object.values(recs).map(r=>r.artistRef).filter(Boolean));
-  // covers travel as images (by asset id) and artists as found, so a new wall needs no lookup for them (#35, #37)
-  const covers={};let missed=0;
-  await Promise.all([...new Set(Object.values(recs).map(r=>r.coverAsset).filter(Boolean))].map(async id=>{
-    try{const res=await fetch("/_blob/"+encodeURIComponent(id));if(!res.ok)throw new Error(res.status);covers[id]=await dataURL(await res.blob())}catch(e){missed++}}));
+  // covers (and a photo background) travel as images by asset id, and artists as found, so a new wall needs no lookup
+  // for them (#35, #37); read 6 at a time so a big wall's reads aren't throttled into "couldn't be included"
+  const covers={},cov=new Set(Object.values(recs).map(r=>r.coverAsset).filter(Boolean)),ids=[...cov];let missed=0,next=0;
+  if(settings.bg?.kind==="photo"&&!cov.has(settings.bg.assetId))ids.push(settings.bg.assetId);
+  await Promise.all(Array.from({length:6},async()=>{while(next<ids.length){const id=ids[next++];
+    try{const res=await fetch("/_blob/"+encodeURIComponent(id));if(!res.ok)throw new Error(res.status);covers[id]=await dataURL(await res.blob())}
+    catch(e){if(cov.has(id))missed++}}}));
   const file={vinylWall:1,exportedAt:nowUTC(),app:APP_VERSION,settings:{site},setups:byId(setupDocs),gear:byId(gear),records:recs,
     artists:byId(artists.filter(a=>refs.has(a.id))),covers};
   try{await downloads.save({filename:`vinyl-wall-${today()}.json`,data:JSON.stringify(file,null,1)});
@@ -1929,7 +1932,7 @@ async function readLibrary(file){
     const haveArtists=(await db.collection("artists").get()).docs.map(x=>({id:x.id,...x.data()}));
     const refs=new Set(recs.map(([,d])=>d.artistRef).filter(Boolean));
     const p={recs,gear:fresh(snap.gear,gear),setups:fresh(snap.setups,setupDocs),skipped,site:snap.settings?.site||{},empty:!have.some(r=>!r.deleted),
-      artists:fresh(snap.artists,haveArtists).filter(([id])=>refs.has(id)),haveArtists,covers:snap.covers&&typeof snap.covers==="object"?snap.covers:{}};
+      artists:fresh(snap.artists,haveArtists).filter(([id,d])=>refs.has(id)&&/^[\w.-]{1,100}$/.test(id)&&typeof d.name==="string"),haveArtists,covers:snap.covers&&typeof snap.covers==="object"?snap.covers:{}};
     if(p.recs.length+p.gear.length+p.setups.length===0){libMsg="Everything in this file is already on the wall.";return renderImport()}
     libPlan=p;libMsg="";libStage="plan";
   }catch(e){libMsg="Couldn't read the wall: "+(e.message||e.code)}
@@ -1939,6 +1942,11 @@ async function readLibrary(file){
 const IMPORT_FIELDS=["title","artist","year","label","catalog","pressing","matrix","runtime","status","why","notes","shop","acquired","paid",
   "mediaGrade","sleeveGrade","priority","budget","orderDate","orderStatus","eta","orderNum","carrier","tracking","orderNotes","discogsId",
   "discogsMatch","coverAsset","coverOriginal","researchLog","added","autoFilled","about","aboutAt","aboutV","artistRef","aboutBlocked"];
+// what an artist may carry in: the lookup's own fields, with the right types
+const ARTIST_FIELDS={name:"string",wiki:"string",wikidata:"string",intro:"string",summary:"string",source:"string",fetchedAt:"number"};
+function importableArtist(d){const a={};for(const [k,t] of Object.entries(ARTIST_FIELDS)) if(typeof d[k]===t) a[k]=d[k];
+  if(Array.isArray(d.links)) a.links=d.links.filter(l=>l&&typeof l.kind==="string"&&typeof l.url==="string").map(l=>({kind:l.kind,url:l.url}));
+  return a}
 function importable(d){const r={};for(const k of IMPORT_FIELDS) if(d[k]!==undefined) r[k]=d[k];
   if(!Array.isArray(r.notes)) r.notes=[];
   r.needsSync=true;  // synced afresh to this wall's Discogs account, if it has one
@@ -1952,30 +1960,37 @@ async function applyLibrary(){
   // a cover id only works on the wall that stored it: anything this wall doesn't hold is uploaded from the file (#35),
   // or looked up again when the file has no image for it or the upload fails
   let stored=null;try{if(assets)stored=new Set((await assets.list()).assets.map(a=>a.id))}catch(e){}
-  const has=id=>!!(id&&stored&&stored.has(id)),moved={};
-  const up=[...new Set(p.recs.map(([,d])=>d.coverAsset).filter(id=>id&&!has(id)&&/^data:image\/[\w.+-]+;base64,/.test(p.covers[id]||"")))];
-  if(assets) for(let i=0;i<up.length;i++){
-    if(i%5===0){libMsg=`Bringing in covers: ${i} of ${up.length}…`;renderImport()}
-    try{moved[up[i]]=(await assets.upload(imageBlob(p.covers[up[i]]))).id}catch(e){}}
+  const has=id=>!!(id&&stored&&stored.has(id)),moved=new Map();
+  // only photos (never SVG), shrunk the way every cover upload is
+  const image=id=>typeof id==="string"&&Object.hasOwn(p.covers,id)&&/^data:image\/(jpeg|png|webp);base64,/.test(p.covers[id])?p.covers[id]:null;
+  const upload=async(id,max)=>{try{moved.set(id,(await assets.upload(await shrinkImage(imageBlob(image(id)),max,.82))).id)}catch(e){}};
+  const up=[...new Set(p.recs.map(([,d])=>d.coverAsset).filter(id=>id&&!has(id)&&image(id)))];
+  if(assets) for(let i=0;i<up.length;i++){await upload(up[i],500);
+    if((i+1)%5===0||i+1===up.length){libMsg=`Bringing in covers: ${i+1} of ${up.length}…`;renderImport()}}
+  libMsg="Bringing in records…";renderImport();
   // album and artist info come across as found (#37), including "looked up, nothing found" (aboutAt with no summary);
   // a record whose artist didn't come and isn't on this wall is looked up again
   const artistKnown=id=>p.artists.some(([aid])=>aid===id)||p.haveArtists.some(a=>a.id===id);
-  const writes=[...p.setups.map(([id,d])=>["setups",id,d]),...p.gear.map(([id,d])=>["gear",id,d]),...p.artists.map(([id,d])=>["artists",id,d]),...p.recs.map(([id,d])=>{
+  const writes=[...p.setups.map(([id,d])=>["setups",id,d]),...p.gear.map(([id,d])=>["gear",id,d]),...p.artists.map(([id,d])=>["artists",id,importableArtist(d)]),...p.recs.map(([id,d])=>{
     const r=importable(d);if(!has(r.coverOriginal))delete r.coverOriginal;
-    if(moved[r.coverAsset])r.coverAsset=moved[r.coverAsset];
+    if(moved.has(r.coverAsset))r.coverAsset=moved.get(r.coverAsset);
     else if(!has(r.coverAsset)){delete r.coverAsset;r.needsEnrich=true}
     if(!r.aboutBlocked&&r.artistRef&&!artistKnown(r.artistRef)){delete r.aboutAt;delete r.aboutV}
     return ["records",id,r]})];
-  const recWrites=p.recs.length;let done=0,recsDone=0;
+  const recWrites=p.recs.length;let recsDone=0;
   try{
-    for(const [c,id,d] of writes){await db.collection(c).doc(id).set(d);done++;
+    for(const [c,id,d] of writes){await db.collection(c).doc(id).set(d);
       if(c==="records"&&++recsDone%5===0){libMsg=`Bringing in records: ${recsDone} of ${recWrites}…`;renderImport()}}
     // a wall that had no records takes the file's look too; an existing wall keeps its own
     if(p.empty){const s=p.site,patch={};
       if(typeof s.title==="string")patch.title=s.title.slice(0,60);
       if(s.bg?.kind==="preset"&&BG_PRESETS.some(x=>x[0]===s.bg.preset))patch.bg={kind:"preset",preset:s.bg.preset};
-      else if(s.bg?.kind==="photo"&&has(s.bg.assetId)){patch.bg={kind:"photo",assetId:s.bg.assetId};
-        if(!(settings.uploads||[]).some(u=>u.id===s.bg.assetId))patch.uploads=[...(settings.uploads||[]),{id:s.bg.assetId,name:"Your photo"}]}
+      else if(s.bg?.kind==="photo"){
+        // the file carries the photo itself; a wall that already holds it uses its own copy
+        let bgId=has(s.bg.assetId)?s.bg.assetId:null;
+        if(!bgId&&assets&&image(s.bg.assetId)){await upload(s.bg.assetId,2000);bgId=moved.get(s.bg.assetId)||null}
+        if(bgId){patch.bg={kind:"photo",assetId:bgId};
+          if(!(settings.uploads||[]).some(u=>u.id===bgId))patch.uploads=[...(settings.uploads||[]),{id:bgId,name:"Your photo"}]}}
       if(typeof s.dim==="number")patch.dim=s.dim;
       if(HANGS.some(x=>x[0]===s.hang))patch.hang=s.hang;
       if(Object.keys(patch).length)await saveSettings(patch);
@@ -1990,7 +2005,7 @@ async function applyLibrary(){
     libMsg=`Brought in ${libCount(p.recs.length,p.gear.length,p.setups.length)}.`+(lookups?` We'll look up ${what} for ${lookups===recs.length?(lookups===1?"it":"them"):lookups+" of them"}. This takes a few minutes.`:"");
     libStage="done";
     if(lookups){lastFire=0;fireTask()}
-  }catch(e){libStage="msg";libMsg=`Stopped after ${done} of ${writes.length}: ${e.message||e.code}. Import the file again to bring in the rest.`}
+  }catch(e){libStage="msg";libMsg=`Stopped after ${recsDone} of ${recWrites} records: ${e.message||e.code}. Import the file again to bring in the rest.`}
   libBusy=false;
   renderImport();
 }
