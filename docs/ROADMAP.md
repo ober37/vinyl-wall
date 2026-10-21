@@ -22,7 +22,7 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. 1.0.0 follows once beta feedback is in.
+The [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped its first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. The record sheet redesign with About (#27) is the last piece. 1.0.0 follows once beta feedback is in.
 
 ### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
@@ -32,6 +32,9 @@ Pin a research entry or save it as a note on the record. Research history is alr
 
 ### Hanging (#9)
 Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. The share image follows the choice.
+
+### Record sheet with About (#27)
+A tighter facts list, and an About section: album and artist summaries from Wikipedia with the artist's official links, found by the background task from MusicBrainz and Wikidata.
 
 ### Listening log you can scan (#24)
 Compact play rows, a short log by default with the rest a tap away, written notes that stand out, and delete moved to edit mode.
