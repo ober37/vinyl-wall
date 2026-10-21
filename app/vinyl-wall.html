@@ -1332,23 +1332,28 @@ function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!setti
   let t=0;try{t=+localStorage.getItem("vw-lookup")||0}catch(e){}
   if(Date.now()-t<30*60000)return;try{localStorage.setItem("vw-lookup",String(Date.now()))}catch(e){}
   fireTask()}
-function pendingWork(){
+// what's waiting for the background task; `fresh` leaves out records a run already tried (still no cover or runtime)
+function pendingParts(fresh){
   const dz=settings.discogs||{},live=records.filter(r=>!r.deleted&&!r.example),w=[];
   if(dz.hasToken&&(!dz.status||dz.status==="pending")) w.push("verify the Discogs connection (Part B)");
   if(dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-  const look=live.filter(r=>r.needsEnrich||!r.coverAsset||!r.runtime||aboutPending(r)).length;
+  const look=live.filter(r=>r.needsEnrich||(!fresh&&(!r.coverAsset||!r.runtime))||aboutPending(r)).length;
   if(look) w.push(`look up covers, details and album info (Part L) for ${look} record${look>1?"s":""}`);
   const sync=records.filter(r=>!r.example&&(r.needsSync||r.deleted||!r.discogsSync)).length;
   const up=settings.update||{};
   if(Date.now()-(up.checkedMs||0)>24*3600000) w.push("check for a newer release (Part E)");
   if(sync&&dz.status==="ok") w.push(`sync ${sync} record${sync>1?"s":""} to Discogs (Part C)`);
+  return w;
+}
+function pendingWork(){const w=pendingParts(false);
   return "Started from the wall. Waiting now: "+(w.length?w.join("; ")+". Run only these parts, in the usual order.":"nothing specific; run every part and do whatever is pending.");
 }
 /* One background run at a time: starting the task marks settings.run, and the task clears it when it finishes (a mark
-   older than 30 minutes is a run that died). A start asked for meanwhile waits for that run to end, then fires once. */
+   older than 30 minutes is a run that died). A start asked for meanwhile waits for that run to end, then fires once,
+   and only if something is still waiting (the run usually did it already). */
 const runActive=()=>Date.now()-((settings.run||{}).startedMs||0)<30*60000;
 let fireAfterRun=false;
-function afterRun(){if(fireAfterRun&&!runActive()){fireAfterRun=false;lastFire=0;fireTask()}}
+function afterRun(){if(fireAfterRun&&!runActive()){fireAfterRun=false;if(pendingParts(true).length){lastFire=0;fireTask()}}}
 async function fireTask(){
   if(!mcp){flash("Background updates aren't available in this view. Ask Claude in chat to sync.");return}
   if(runActive()){fireAfterRun=true;return}

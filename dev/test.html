@@ -327,6 +327,16 @@ f.onload=async()=>{
     delete site().run;await emit();await sleep(300);
     check("one run: the waiting start fires once the run ends",fires()===runFires0+1,fires()-runFires0+" extra");
     delete site().run;await emit();  // that run "ends" too, so later starts aren't held back
+    // ...but not when that run already did everything (an import's own writes queue a start)
+    site().run={startedMs:Date.now()};await emit();
+    await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();await sleep(400);
+    q("#closeBtn").click();await sleep(200);
+    const recsBefore=JSON.stringify(w.__data.records),upBefore=site().update,n1=fires();
+    for(const r of Object.values(w.__data.records)){delete r.needsEnrich;r.aboutAt=r.aboutAt||"2026-01-01";r.aboutV=2}
+    site().update={...(site().update||{}),checkedMs:Date.now()};w.__emit("records");
+    delete site().run;await emit();await sleep(300);
+    check("one run: nothing waiting, no extra run",fires()===n1,fires()-n1+" extra");
+    w.__data.records=JSON.parse(recsBefore);site().update=upBefore;w.__emit("records");await emit();
     // update check takes plain versions only
     site().update={latest:"9.9.9/../../../someone/else/main",checkedMs:Date.now()};await emit();
     check("update: odd version ignored",!q("#settingsBtn").classList.contains("hasupdate"));
