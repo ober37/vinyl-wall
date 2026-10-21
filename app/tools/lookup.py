@@ -128,10 +128,12 @@ def words(s):
     return "".join(w for w in re.split(r"[^a-z0-9]+", s) if w and w != "the")
 
 
+def strip_title(s):  # "Okapi - EP", "Noir (Deluxe Edition)" -> the title alone
+    return re.sub(r"\s+-\s+(single|ep)\s*$", "", EDITION.sub("", s or "").strip(), flags=re.I)
+
+
 def tnorm(s):
-    s = EDITION.sub("", s or "")
-    s = re.sub(r"\s+-\s+(single|ep)\s*$", "", s.strip(), flags=re.I)
-    return words(s)
+    return words(strip_title(s))
 
 
 def title_ok(a, b):
@@ -270,12 +272,17 @@ def pick_albums(recs):
     return found
 
 
-def extracts(titles):
+def extracts(titles, intro=True, failed=None):
+    """title -> its article's intro (or, with intro=False, the whole article, one per call); titles whose call failed
+    go in `failed`."""
     out = {}
-    for part in chunks(dict.fromkeys(t for t in titles if t), 20):
+    for part in chunks(dict.fromkeys(t for t in titles if t), 20 if intro else 1):
         j = fetch("https://en.wikipedia.org/w/api.php", {"action": "query", "format": "json", "formatversion": 2, "redirects": 1,
-                                                         "prop": "extracts", "exintro": 1, "explaintext": 1, "exlimit": 20,
-                                                         "titles": "|".join(part)}) or {}
+                                                         "prop": "extracts", "explaintext": 1, "exlimit": len(part),
+                                                         "titles": "|".join(part), **({"exintro": 1} if intro else {})})
+        if j is None and failed is not None:
+            failed.update(part)
+        j = j or {}
         q = j.get("query") or {}
         step = {x["from"]: x["to"] for x in (q.get("normalized") or []) + (q.get("redirects") or [])}
         pages = {p["title"]: (p.get("extract") or "").strip() for p in q.get("pages") or []}
@@ -288,40 +295,73 @@ def extracts(titles):
     return out
 
 
-def wiki_url(t):
-    return "https://en.wikipedia.org/wiki/" + urllib.parse.quote(t.replace(" ", "_"), safe="_()',!-.")
+def wiki_url(t, section=None):
+    q = lambda x, safe: urllib.parse.quote(x.replace(" ", "_"), safe=safe)
+    return "https://en.wikipedia.org/wiki/" + q(t, "_()',!-.") + ("#" + q(section, "_()',!-.:") if section else "")
 
 
-def pick_artists(want):
-    """record id -> artist Wikidata id, for albums Wikidata couldn't place (#32). want: record id -> (name, MusicBrainz
-    artist id or None). By MusicBrainz id first, then likely article titles, then one Wikipedia search; a page's entity
-    must carry that id (when it has one), else some artist identifier (MusicBrainz, Discogs, Spotify or Apple Music),
-    and have no performer (an album or song does), so a same-named page about something else doesn't count."""
-    found = {}
+PAGES = {}  # whole artist articles, by title
+
+
+def full_texts(titles, failed=None):
+    """Whole articles for these titles (cached in PAGES); titles whose call failed go in `failed`."""
+    need = [t for t in dict.fromkeys(titles) if t and t not in PAGES]
+    with ThreadPoolExecutor(2) as ex:
+        for got in ex.map(lambda t: (t, extracts([t], intro=False, failed=failed).get(t, "")), need):
+            PAGES[got[0]] = got[1]
+    return {t: PAGES.get(t, "") for t in titles if t}
+
+
+def mentions(text, title):
+    t = strip_title(title)
+    return bool(t) and bool(re.search(r"(?<!\w)" + re.escape(t) + r"(?!\w)", text or "", re.I))
+
+
+def pick_artists(want, failed):
+    """record id -> artist Wikidata id, for albums Wikidata couldn't place (#32). want: record id -> (name, title,
+    MusicBrainz artist id or None, Discogs artist id or None). By MusicBrainz id first; then likely article titles, then
+    one Wikipedia search, where a page counts only when its entity is an artist (no performer, as an album or song has)
+    under that name and either carries the MusicBrainz or Discogs id we know, or carries some artist id (MusicBrainz,
+    Discogs, Spotify, Apple Music) and its article mentions the album: a same-named different artist doesn't count.
+    Records whose lookups Wikimedia failed on go in `failed`."""
+    found, wm = {}, stats["wikimedia"]
+    want = {rid: w for rid, w in want.items() if words(w[0]) not in ("variousartists", "various", "va")}
 
     def by_mbid(rid):
         j = fetch("https://www.wikidata.org/w/api.php", {"action": "query", "format": "json", "list": "search", "srlimit": 1,
-                                                         "srsearch": f"haswbstatement:P434={want[rid][1]}"}) or {}
+                                                         "srsearch": f"haswbstatement:P434={want[rid][2]}"}) or {}
         return rid, next((x["title"] for x in (j.get("query") or {}).get("search") or [] if re.match(r"^Q\d+$", x.get("title", ""))), None)
 
     with ThreadPoolExecutor(2) as ex:
-        for rid, q in ex.map(by_mbid, [rid for rid, (_, mbid) in want.items() if mbid]):
+        for rid, q in ex.map(by_mbid, [rid for rid, w in want.items() if w[2]]):
             if q:
                 found[rid] = q
+
     def check(cands):  # cands: record id -> [titles]
         qs = resolve([t for ts in cands.values() for t in ts])
         entities(qs.values())
+        maybe = {}
         for rid, ts in cands.items():
-            name, mbid = want[rid]
+            name, title, mbid, dgid = want[rid]
             for t in ts:
                 e = ENT.get(qs.get(t)) or {}
+                if not e or claims(e, "P175") or not artist_ok(name, label(qs[t])):
+                    continue
                 ids = claims(e, "P434")
-                if e and not claims(e, "P175") and artist_ok(name, label(qs[t])) \
-                        and (mbid in ids if mbid and ids else any(claims(e, p) for p in MUSIC_IDS)):
+                if mbid and ids and mbid not in ids:
+                    continue
+                if (mbid and mbid in ids) or (dgid and str(dgid) in map(str, claims(e, "P1953"))):
                     found[rid] = qs[t]
                     break
+                if any(claims(e, p) for p in MUSIC_IDS) and enwiki(e):
+                    maybe.setdefault(rid, []).append(qs[t])
+        pages = full_texts([enwiki(ENT[q]) for rid, qs_ in maybe.items() if rid not in found for q in qs_])
+        for rid, qs_ in maybe.items():
+            q = next((q for q in qs_ if mentions(pages.get(enwiki(ENT[q])), want[rid][1])), None) if rid not in found else None
+            if q:
+                found[rid] = q
 
-    check({rid: [f"{n} (band)", f"{n} (musician)", f"{n} (singer)", n] for rid, (n, _) in want.items() if rid not in found})
+    check({rid: [f"{n} (band)", f"{n} (musician)", f"{n} (singer)", n] for rid, (n, *_) in want.items() if rid not in found})
 
     def search(rid):
         j = fetch("https://en.wikipedia.org/w/api.php", {"action": "query", "format": "json", "formatversion": 2, "list": "search",
@@ -331,39 +371,56 @@ def pick_artists(want):
     with ThreadPoolExecutor(2) as ex:
         hits = dict(ex.map(search, [rid for rid in want if rid not in found]))
     check({rid: ts for rid, ts in hits.items() if ts})
-    entities(found.values())
+    if stats["wikimedia"] > wm:  # a batched call can't say which record it failed for, so none of the misses count as done
+        failed.update(rid for rid in want if rid not in found)
     return found
 
 
-def full_text(title):
-    j = fetch("https://en.wikipedia.org/w/api.php", {"action": "query", "format": "json", "formatversion": 2, "redirects": 1,
-                                                     "prop": "extracts", "explaintext": 1, "titles": title}) or {}
-    return ((((j.get("query") or {}).get("pages") or [{}])[0]).get("extract") or "").strip()
+ALBUM_CUE = re.compile(r"\b(album|LP|EP|record)\b", re.I)
 
 
 def album_section(text, title):
-    """From an artist's article: the section whose heading names the album, else the prose paragraphs that do, after
-    any lead paragraphs that do. Returns (text, section heading or None), or None. A mention must be capitalised as a
-    title, so an album called "Coda" isn't found in "the song's coda"."""
-    t = re.sub(r"\s+-\s+(single|ep)\s*$", "", EDITION.sub("", title or "").strip(), flags=re.I)
-    if not t:
+    """From an artist's article: the section whose heading names the album (with its subsections), else the prose
+    paragraphs that name it as an album, then any lead paragraphs that do. Returns (text, section heading or None), or
+    None. A heading must list the album as one of its items ("2023–present: Okapi, and CODA"); a paragraph must say
+    album/LP/EP/record and name it mid-sentence with a capital, so "Live performances" and "the song's coda" don't count.
+    A title of digits alone (a year, mostly) is never matched."""
+    t = strip_title(title)
+    if not t or t.isdigit():
         return None
     pat = re.compile(r"(?<!\w)" + re.escape(t) + r"(?!\w)", re.I)
-    names = lambda s: any(not m.group(0)[0].isalpha() or m.group(0)[0].isupper() for m in pat.finditer(s))
-    parts = re.split(r"\n*^(={2,})\s*(.+?)\s*\1\s*$\n*", text, flags=re.M)
-    lead, secs_ = parts[0], [(parts[i + 1], parts[i + 2]) for i in range(1, len(parts) - 2, 3)]
-    paras = lambda s: [p.strip() for p in s.split("\n") if len(p.strip()) >= 80 and names(p)]
-    out, head = paras(lead), None
-    hit = next(((h, b) for h, b in secs_ if names(h) and b.strip()), None)
-    if hit:
-        head = hit[0]
-        out.append(hit[1].strip())
-    else:
-        for h, b in secs_:
+
+    def names(p):
+        return bool(ALBUM_CUE.search(p)) and any(m.group(0)[0].isupper() and not re.search(r"(^|[.!?]\s+)$", p[:m.start()])
+                                                 for m in pat.finditer(p) if m.group(0)[0].isalpha()) \
+            or (not t[0].isalpha() and bool(ALBUM_CUE.search(p)) and bool(pat.search(p)))
+
+    def in_heading(h):
+        return any(title_ok(t, x) for x in re.split(r"\s*(?:[:,–—/&]|\band\b)\s*", h) if x.strip())
+
+    parts = re.split(r"\n*^(={2,})\s*(.+?)\s*\1\s*$\n*", text or "", flags=re.M)
+    lead = parts[0]
+    secs_ = [(len(parts[i]), parts[i + 1], parts[i + 2]) for i in range(1, len(parts) - 2, 3)]  # (level, heading, body)
+    paras = lambda s: [p.strip() for p in s.split("\n") if len(p.strip()) >= 80 and names(p.strip())]
+    out, head = [], None
+    for i, (lv, h, _) in enumerate(secs_):
+        if in_heading(h):
+            body = [secs_[i][2]]
+            for lv2, h2, b2 in secs_[i + 1:]:  # its subsections, up to the next heading at its level or above
+                if lv2 <= lv:
+                    break
+                body.append(b2)
+            body = "\n\n".join(x.strip() for x in body if x.strip())
+            if body:
+                out, head = [body], h
+                break
+    if not out:
+        for _, h, b in secs_:
             ps = paras(b)
             if ps:
                 head = head or h
                 out += ps
+    out += paras(lead)  # last, so a long lead can't crowd the album's own text out of the 1500 characters Claude sees
     return ("\n\n".join(out), head) if out else None
 
 
@@ -617,23 +674,31 @@ def fetch_group(work, g, p, done):
     for rid, q in album_q.items():
         perf = claims(ENT.get(q) or {}, "P175")
         artist_q[rid] = next((a for a in perf if artist_ok(recs[rid]["artist"], label(a))), perf[0] if perf else None)
-    artist_q.update(pick_artists({rid: (recs[rid]["artist"], mbr.get(rid, {}).get("artist")) for rid in F if not artist_q.get(rid)}))
+    wm_own = stats["wikimedia"]  # failures from here to t_wiki are the #32 fallback's; they hold back only its own records
+    wiki_failed, page_failed = set(), set()
+    artist_q.update(pick_artists({rid: (recs[rid]["artist"], recs[rid]["title"], mbr.get(rid, {}).get("artist"), _dartist(src[rid]["discogs"]))
+                                  for rid in F if not artist_q.get(rid)}, wiki_failed))
+    wm_own = stats["wikimedia"] - wm_own
     entities([q for q in artist_q.values() if q])
     entities([v for q in album_q.values() for pr in ("P264", "P162", "P136", "P483") for v in claims(ENT.get(q) or {}, pr)
               if isinstance(v, str) and v.startswith("Q")], props="labels")
     titles = [enwiki(ENT.get(q) or {}) for q in album_q.values()] + [enwiki(ENT.get(q) or {}) for q in artist_q.values() if q]
     intro = extracts(titles)
-    # an album with no article of its own: the section of its artist's article that covers it (#32)
-    pages, via = {}, {}
-    for rid in F:
-        q, aq = album_q.get(rid), artist_q.get(rid)
-        at = enwiki(ENT.get(aq) or {}) if aq else ""
-        if at and not intro.get(enwiki(ENT.get(q) or {}) if q else ""):
-            if at not in pages:
-                pages[at] = full_text(at)
-            hit = album_section(pages[at], recs[rid]["title"])
-            if hit:
-                via[rid] = (*hit, label(aq) or bare_title(at), at)
+    # an album with no article of its own (not one whose intro just failed to load): the section of its artist's
+    # article that covers it (#32)
+    side = {rid: enwiki(ENT.get(artist_q[rid]) or {}) for rid in F if artist_q.get(rid)
+            and not (album_q.get(rid) and enwiki(ENT.get(album_q[rid]) or {}))}
+    side = {rid: at for rid, at in side.items() if at}
+    wm_side = stats["wikimedia"]
+    pages = full_texts(side.values(), page_failed)
+    wm_own += stats["wikimedia"] - wm_side
+    via = {}
+    for rid, at in side.items():
+        if at in page_failed:
+            wiki_failed.add(rid)
+        hit = album_section(pages.get(at), recs[rid]["title"])
+        if hit:
+            via[rid] = (*hit, label(artist_q[rid]) or bare_title(at), at)
     t_wiki = time.time()
 
     found, artists, covers = {}, {}, {}
@@ -664,12 +729,12 @@ def fetch_group(work, g, p, done):
             about = {}
             if q and enwiki(e):
                 t = enwiki(e)
-                about["wiki"] = wiki_url(t)
+                about["wiki"], about["via"] = wiki_url(t), ""  # its own article: no "from <artist>" (update merges about)
                 if intro.get(t):
                     f["albumIntro"] = intro[t]
             if rid in via and not f.get("albumIntro"):
                 text, head, name, at = via[rid]
-                about["wiki"] = wiki_url(at) + ("#" + urllib.parse.quote(head.replace(" ", "_"), safe="_()',!-.:") if head else "")
+                about["wiki"] = wiki_url(at, head)
                 about["via"] = name
                 f["albumIntro"], f["albumFrom"] = text, {"name": name, "section": head}
             if released(e):
@@ -679,17 +744,8 @@ def fetch_group(work, g, p, done):
                 ls = [x for x in ls if x]
                 if ls:
                     about[key] = ls[0] if key == "label" else ls
-            if dg:  # key info Wikidata didn't have, from the linked Discogs pressing (#32)
-                rel = str(dg.get("released") or "")
-                rel = rel[:10] if re.match(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", rel[:10]) else rel[:4]
-                if not about.get("released") and re.match(r"^\d{4}", rel):
-                    about["released"] = rel
-                lab = _dlabel(dg)
-                if not about.get("label") and lab:
-                    about["label"] = lab
-                gs = (dg.get("styles") or dg.get("genres") or [])[:3]
-                if not about.get("genres") and gs:
-                    about["genres"] = gs
+            if dg and not (about.get("released") and about.get("label") and about.get("genres")):
+                about.update({k: v for k, v in _discogs_key_info(dg).items() if not about.get(k)})  # what Wikidata lacked (#32)
             places = [label(v) for v in claims(e, "P483") if isinstance(v, str) and label(v)]
             if places:
                 f["recordedAt"] = ", ".join(places)
@@ -735,10 +791,10 @@ def fetch_group(work, g, p, done):
             covers[rid] = path
     # a record waits for the summaries pass when it has an album intro, or its artist (looked up in this group) has one
     # (a record Wikimedia failed on, with no intro to show for it, is left for the next run instead)
-    failed = stats["wikimedia"] > wm0
+    failed = stats["wikimedia"] - wm_own > wm0  # the #32 fallback's own failures count only for its records
     for rid, f in found.items():
         f["summarise"] = bool(f.get("albumIntro") or (artists.get(f.get("artistKey")) or {}).get("intro"))
-        f["retry"] = failed and f["needF"] and not f.get("albumIntro")
+        f["retry"] = (failed or rid in wiki_failed) and f["needF"] and not f.get("albumIntro")
     tmp = os.path.join(gdir, "found.json.tmp")
     json.dump({"found": found, "artists": artists, "secs": round(time.time() - t0, 1)}, open(tmp, "w"))
     os.replace(tmp, os.path.join(gdir, "found.json"))  # appears whole, so a waiting step never reads half a file
@@ -758,6 +814,24 @@ def _discogs_runtime(dg):
     if len(tr) < 6 or not all(secs(t.get("duration")) for t in tr):
         return None
     return round(sum(secs(t["duration"]) for t in tr) / 60) or None
+
+
+def _dartist(dg):
+    return (((dg or {}).get("artists") or [{}])[0]).get("id")
+
+
+def _discogs_key_info(dg):
+    """Released, label and genres from the linked pressing, for an album Wikidata has none for. A reissue isn't the
+    album: when the master's year differs from the pressing's, only the master's year is used, not the pressing's
+    date or label."""
+    m = fetch(f"https://api.discogs.com/masters/{int(dg['master_id'])}") if str(dg.get("master_id") or "").isdigit() else None
+    rel = str(dg.get("released") or "")
+    rel = rel[:10] if re.match(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", rel[:10]) else rel[:4]
+    first = str((m or {}).get("year") or "")
+    reissue = re.match(r"^\d{4}$", first) and first != rel[:4]
+    out = {"released": first if reissue else rel, "label": "" if reissue else _dlabel(dg),
+           "genres": ((m or {}).get("styles") or (m or {}).get("genres") or dg.get("styles") or dg.get("genres") or [])[:3]}
+    return {k: v for k, v in out.items() if v and (k != "released" or re.match(r"^\d{4}", v))}
 
 
 def _dlabel(dg):

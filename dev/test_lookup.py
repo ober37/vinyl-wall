@@ -9,10 +9,13 @@ ARTICLE = """Novelists are a French metalcore band. They published their fifth s
 == History ==
 
 === 2013–2020: Early years ===
-The debut full-length Souvenirs (2015) on Arising Empire was followed by Noir in 2017, on SharpTone Records, to good reviews.
+The debut album Souvenirs (2015) on Arising Empire was followed by Noir in 2017, on SharpTone Records, to good reviews.
 
 === 2023–present: Okapi, and CODA ===
 The band selected a new vocalist and recorded the album over the winter, mixing it themselves in Paris.
+
+== Live performances ==
+In 2020 the band toured Europe twice, playing the new album live in full on most nights of both legs.
 
 == Musical style ==
 Their songs often end in a long coda that builds slowly over a minute or more before the final chorus returns once more."""
@@ -27,13 +30,21 @@ def check(name, ok, got=""):
 
 
 text, head = L.album_section(ARTICLE, "CODA")
-check("artist article: the section whose heading names the album, after the lead", head == "2023–present: Okapi, and CODA"
-      and text.startswith("Novelists are") and "over the winter" in text and "Souvenirs" not in text, (head, text))
+check("artist article: the section whose heading names the album, then the lead", head == "2023–present: Okapi, and CODA"
+      and text.startswith("The band selected") and text.endswith("own label.") and "Souvenirs" not in text, (head, text))
 check("artist article: case doesn't matter in the title typed", L.album_section(ARTICLE, "Coda")[1] == head)
 text, head = L.album_section(ARTICLE, "Noir")
 check("artist article: else the paragraphs that name it", head == "2013–2020: Early years" and text.startswith("The debut"), (head, text))
 check("artist article: lowercase prose isn't a mention", L.album_section(ARTICLE.replace("CODA", "Other"), "Coda") is None)
 check("artist article: nothing when the album isn't there", L.album_section(ARTICLE, "Okapi Live") is None)
+check("artist article: a heading word isn't the album", L.album_section(ARTICLE, "Live") is None, L.album_section(ARTICLE, "Live"))
+check("artist article: a year title is never matched", L.album_section(ARTICLE, "2020") is None)
+SUB = "Lead.\n\n== Coda ==\n\n=== Recording ===\nRecorded in Paris over two winters with the band producing.\n\n== Tours ==\nToured a lot."
+text, head = L.album_section(SUB, "Coda") or (None, None)
+check("artist article: a section's subsections come with it", head == "Coda" and "Recorded in Paris" in (text or "")
+      and "Toured" not in (text or ""), (head, text))
+check("artist article: a sentence-initial word isn't a mention",
+      L.album_section("Lead.\n\n== History ==\nNoise is what the album was built on, said the drummer about the whole record.", "Noise") is None)
 
 done = {"title": "x", "aboutAt": "2026-10-01", "aboutV": 2, "about": {"summary": "s", "source": "claude"}}
 check("redo: a summary from an older run stays", not L.needs_f(done))
