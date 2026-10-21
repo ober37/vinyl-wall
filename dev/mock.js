@@ -74,11 +74,21 @@ const docRef=(c,id)=>({id,path:c+"/"+id,
   update:async v=>{(data[c]=data[c]||{})[id]={...((data[c]||{})[id]||{}),...v};setTimeout(()=>emit(c),0)},
   delete:async()=>{delete (data[c]||{})[id];setTimeout(()=>emit(c),0)}});
 window.__data=data;window.__emit=emit;window.__calls=[];
+// stored images for export/import: uploads land here and /_blob/<id> serves them (window.__failUpload makes uploads fail)
+const blobs={};window.__blobs=blobs;
+const realFetch=window.fetch.bind(window);
+window.fetch=(u,...o)=>{const m=typeof u==="string"&&u.match(/^\/_blob\/(.+)$/);
+  if(!m)return realFetch(u,...o);const b=blobs[decodeURIComponent(m[1])];
+  return Promise.resolve(b?new Response(b,{status:200}):new Response("",{status:404}))};
+const assetsCap={upload:async b=>{if(window.__failUpload)throw Object.assign(new Error("upload failed"),{code:"unavailable"});
+    const id="a"+Math.random().toString(36).slice(2,10);blobs[id]=b;window.__calls.push(["assets.upload",id]);return {id,url:"/_blob/"+id,sizeBytes:b.size,contentType:b.type}},
+  list:async()=>({assets:Object.keys(blobs).map(id=>({id})),usage:{}}),delete:async id=>{delete blobs[id]}};
 window.claude={use:async n=>
   n==="db"?{collection:coll,doc:p=>{const i=p.lastIndexOf("/");return docRef(p.slice(0,i),p.slice(i+1))}}:
+  n==="assets"?assetsCap:
   n==="user"?{canEdit:async()=>true,isOwner:async()=>true,id:async()=>"u1"}:
   n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);const l=JSON.parse(sessionStorage.getItem("__callLog")||"[]");l.push([a[1],Object.keys(a[2]||{})]);sessionStorage.setItem("__callLog",JSON.stringify(l));return {}}}:
-  n==="downloads"?{save:async({filename,data})=>{window.__calls.push(["downloads.save",filename]);
+  n==="downloads"?{save:async({filename,data})=>{window.__calls.push(["downloads.save",filename]);window.__lastSave=data;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=filename;a.click();return {status:"saved"}}}:
   // Claude for the research chat: canned replies, streamed like the real thing, and a canned summary for Save summary
   n==="sample"?Object.assign(async(input,opts={})=>{const msgs=Array.isArray(input)?input:[{role:"user",content:String(input)}];window.__calls.push(["sample",msgs.length]);
