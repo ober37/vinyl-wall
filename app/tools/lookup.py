@@ -191,14 +191,17 @@ def entities(ids, props="labels|claims|sitelinks"):
     need = [q for q in dict.fromkeys(ids) if q and q not in ENT]
     for part in chunks(need, 50):
         j = fetch("https://www.wikidata.org/w/api.php", {"action": "wbgetentities", "ids": "|".join(part), "props": props,
-                                                         "languages": "en", "sitefilter": "enwiki", "format": "json"}) or {}
+                                                         "languages": "en|mul", "sitefilter": "enwiki", "format": "json"}) or {}
         for q, e in (j.get("entities") or {}).items():
             ENT[q] = e
     return {q: ENT.get(q) or {} for q in ids if q}
 
 
 def label(q):
-    return ((ENT.get(q) or {}).get("labels") or {}).get("en", {}).get("value", "")
+    """English name, else the shared "mul" one (Wikidata has been moving names there since 2024), else the article's."""
+    e = ENT.get(q) or {}
+    ls = e.get("labels") or {}
+    return (ls.get("en") or ls.get("mul") or {}).get("value", "") or bare_title(enwiki(e))
 
 
 def claims(e, p):

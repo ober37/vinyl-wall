@@ -62,6 +62,14 @@ L.fetch = lambda *a, **k: {}
 L.PAGES["Jane Doe"] = "Jane Doe is a singer.\n\n== Discography ==\n\"Quiet Rooms\" (2019 Small Label)"
 check("artist: no ids, no MusicBrainz match, the article names the album: linked",
       L.pick_artists({"r": ("Jane Doe", "Quiet Rooms", None, None)}, set()) == {"r": "Q900"})
+L.ENT["Q901"] = {**singer, "labels": {"mul": {"value": "Jane Roe"}, "fr": {"value": "Jane Roe"}}, "sitelinks": {"enwiki": {"title": "Jane Roe (singer)"}}}
+L.ENT["Q902"] = {"sitelinks": {"enwiki": {"title": "Jane Poe (singer)"}}}
+check("label: the shared mul name when there's no English one", L.label("Q901") == "Jane Roe")
+check("label: else the article title without its parenthetical", L.label("Q902") == "Jane Poe")
+L.resolve = lambda ts: {t: "Q901" for t in ts if t == "Jane Roe (singer)"}
+L.PAGES["Jane Roe (singer)"] = "Jane Roe is a singer.\n\n== Discography ==\n\"Quiet Rooms\" (2019 Small Label)"
+check("artist: a page with only a mul label is picked", L.pick_artists({"r": ("Jane Roe", "Quiet Rooms", None, None)}, set()) == {"r": "Q901"})
+L.resolve = lambda ts: {t: "Q900" for t in ts if t == "Jane Doe"}
 check("artist: the same page without the album named: not linked",
       L.pick_artists({"r": ("Jane Doe", "Loud Rooms", None, None)}, set()) == {})
 lab = lambda n: L._dlabel({"labels": [{"name": n}]})
