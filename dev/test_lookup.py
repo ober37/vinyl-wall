@@ -50,6 +50,20 @@ done = {"title": "x", "aboutAt": "2026-10-01", "aboutV": 2, "about": {"summary":
 check("redo: a summary from an older run stays", not L.needs_f(done))
 check("redo: an older run with no summary goes once more", L.needs_f({**done, "about": {}}))
 check("redo: a redo that found nothing is done", not L.needs_f({**done, "about": {}, "aboutV": 3}))
+snak = lambda v: {"rank": "normal", "mainsnak": {"datavalue": {"value": {"id": v}}}}
+singer = {"claims": {"P31": [snak("Q5")], "P106": [snak("Q488205")]}}
+check("artist: a singer-songwriter with no music ids counts", L.is_artist(singer))
+check("artist: a band counts", L.is_artist({"claims": {"P31": [snak("Q5741069")]}}))
+check("artist: a person with another job doesn't", not L.is_artist({"claims": {"P31": [snak("Q5")], "P106": [snak("Q82955")]}}))
+L.ENT.update({"Q900": {**singer, "labels": {"en": {"value": "Jane Doe"}}, "sitelinks": {"enwiki": {"title": "Jane Doe"}}}})
+L.resolve = lambda ts: {t: "Q900" for t in ts if t == "Jane Doe"}
+L.entities = lambda ids, props=None: {}
+L.fetch = lambda *a, **k: {}
+L.PAGES["Jane Doe"] = "Jane Doe is a singer.\n\n== Discography ==\n\"Quiet Rooms\" (2019 Small Label)"
+check("artist: no ids, no MusicBrainz match, the article names the album: linked",
+      L.pick_artists({"r": ("Jane Doe", "Quiet Rooms", None, None)}, set()) == {"r": "Q900"})
+check("artist: the same page without the album named: not linked",
+      L.pick_artists({"r": ("Jane Doe", "Loud Rooms", None, None)}, set()) == {})
 lab = lambda n: L._dlabel({"labels": [{"name": n}]})
 check("discogs label: Not On Label reads Self-released", lab("Not On Label (Novelists Self-released)") == "Self-released")
 check("discogs label: a real label keeps its name, without the (2)", lab("ACKOR Music (2)") == "ACKOR Music")

@@ -34,6 +34,10 @@ NO_COVER = "Auto-lookup couldn't find a confident match for the cover. Upload on
 DEL = {"__delete__": True}
 NOT_ALBUM = {"Q134556", "Q7366", "Q4167410"}  # single, song, disambiguation page
 MUSIC_IDS = ("P434", "P1953", "P1902", "P2850")  # MusicBrainz, Discogs, Spotify, Apple Music artist ids
+# a page with none of those still counts as an artist when it's a musical group or a person with a music occupation
+GROUPS = {"Q215380", "Q5741069", "Q2088357", "Q9212979", "Q56816954", "Q641066", "Q216337"}
+MUSICIANS = {"Q177220", "Q488205", "Q639669", "Q36834", "Q2252262", "Q855091", "Q753110", "Q386854", "Q584301", "Q486748",
+             "Q130857", "Q183945", "Q1259917", "Q158852", "Q1415090"}
 LINKS = [("P856", "website", "{}"), ("P2003", "instagram", "https://www.instagram.com/{}/"),
          ("P2397", "youtube", "https://www.youtube.com/channel/{}"), ("P1902", "spotify", "https://open.spotify.com/artist/{}"),
          ("P3283", "bandcamp", "https://{}.bandcamp.com/"), ("P2850", "applemusic", "https://music.apple.com/us/artist/{}"),
@@ -321,8 +325,8 @@ def pick_artists(want, failed):
     """record id -> artist Wikidata id, for albums Wikidata couldn't place (#32). want: record id -> (name, title,
     MusicBrainz artist id or None, Discogs artist id or None). By MusicBrainz id first; then likely article titles, then
     one Wikipedia search, where a page counts only when its entity is an artist (no performer, as an album or song has)
-    under that name and either carries the MusicBrainz or Discogs id we know, or carries some artist id (MusicBrainz,
-    Discogs, Spotify, Apple Music) and its article mentions the album: a same-named different artist doesn't count.
+    under that name and either carries the MusicBrainz or Discogs id we know, or is an artist (see is_artist) whose
+    article mentions the album: a same-named different artist doesn't count.
     Records whose lookups Wikimedia failed on go in `failed`."""
     found, wm = {}, stats["wikimedia"]
     want = {rid: w for rid, w in want.items() if words(w[0]) not in ("variousartists", "various", "va")}
@@ -353,7 +357,7 @@ def pick_artists(want, failed):
                 if (mbid and mbid in ids) or (dgid and str(dgid) in map(str, claims(e, "P1953"))):
                     found[rid] = qs[t]
                     break
-                if any(claims(e, p) for p in MUSIC_IDS) and enwiki(e):
+                if is_artist(e) and enwiki(e):
                     maybe.setdefault(rid, []).append(qs[t])
         pages = full_texts([enwiki(ENT[q]) for rid, qs_ in maybe.items() if rid not in found for q in qs_])
         for rid, qs_ in maybe.items():
@@ -374,6 +378,13 @@ def pick_artists(want, failed):
     if stats["wikimedia"] > wm:  # a batched call can't say which record it failed for, so none of the misses count as done
         failed.update(rid for rid in want if rid not in found)
     return found
+
+
+def is_artist(e):
+    """Some artist id (MusicBrainz, Discogs, Spotify, Apple Music), or a musical group, or a person with a music
+    occupation: many smaller artists' pages carry no ids at all."""
+    p31 = set(claims(e, "P31"))
+    return any(claims(e, p) for p in MUSIC_IDS) or bool(p31 & GROUPS) or ("Q5" in p31 and bool(set(claims(e, "P106")) & MUSICIANS))
 
 
 ALBUM_CUE = re.compile(r"\b(album|LP|EP|record)\b", re.I)
