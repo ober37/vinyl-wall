@@ -195,6 +195,7 @@ f.onload=async()=>{
     await openRecord("Aja");
     q("#closeBtn").click();await sleep(200);await openRecord("Blue Train");
     check("summary: a record not looked up yet says so",/^Looking up the album\. This can take a minute or two\.$/.test(q("#sheet .abwait")?.textContent));
+    check("summary: the lookup line has room below it",getComputedStyle(q("#sheet .abwait")).marginBottom==="20px",getComputedStyle(q("#sheet .abwait")).marginBottom);
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
     check("facts: ordered record shows its status; no About, so no tabs",[...d.querySelectorAll("#sheet .kv dt")].map(x=>x.textContent).join()==="Status"&&!d.querySelector('#sheet [role="tablist"]')&&!!q("#sheet .viewpart .statusacts #arrBtn"));
     q("#closeBtn").click();await sleep(200);await openRecord("Abbey Road");
