@@ -291,6 +291,67 @@ def wiki_url(t):
     return "https://en.wikipedia.org/wiki/" + urllib.parse.quote(t.replace(" ", "_"), safe="_()',!-.")
 
 
+def pick_artists(want):
+    """record id -> artist Wikidata id, for albums Wikidata couldn't place (#32). want: record id -> (name, MusicBrainz
+    artist id or None). By MusicBrainz id first, then likely article titles; either way the entity must carry that id
+    (or, with none known, some MusicBrainz artist id), so a same-named page about something else doesn't count."""
+    found = {}
+
+    def by_mbid(rid):
+        j = fetch("https://www.wikidata.org/w/api.php", {"action": "query", "format": "json", "list": "search", "srlimit": 1,
+                                                         "srsearch": f"haswbstatement:P434={want[rid][1]}"}) or {}
+        return rid, next((x["title"] for x in (j.get("query") or {}).get("search") or [] if re.match(r"^Q\d+$", x.get("title", ""))), None)
+
+    with ThreadPoolExecutor(2) as ex:
+        for rid, q in ex.map(by_mbid, [rid for rid, (_, mbid) in want.items() if mbid]):
+            if q:
+                found[rid] = q
+    miss = {rid: [f"{n} (band)", f"{n} (musician)", f"{n} (singer)", n] for rid, (n, _) in want.items() if rid not in found}
+    qs = resolve([t for ts in miss.values() for t in ts])
+    entities(list(found.values()) + list(qs.values()))
+    for rid, ts in miss.items():
+        name, mbid = want[rid]
+        for t in ts:
+            e = ENT.get(qs.get(t)) or {}
+            ids = claims(e, "P434")
+            if e and artist_ok(name, label(qs[t])) and (mbid in ids if mbid else ids):
+                found[rid] = qs[t]
+                break
+    return found
+
+
+def full_text(title):
+    j = fetch("https://en.wikipedia.org/w/api.php", {"action": "query", "format": "json", "formatversion": 2, "redirects": 1,
+                                                     "prop": "extracts", "explaintext": 1, "titles": title}) or {}
+    return ((((j.get("query") or {}).get("pages") or [{}])[0]).get("extract") or "").strip()
+
+
+def album_section(text, title):
+    """From an artist's article: the section whose heading names the album, else the prose paragraphs that do, after
+    any lead paragraphs that do. Returns (text, section heading or None), or None. A mention must be capitalised as a
+    title, so an album called "Coda" isn't found in "the song's coda"."""
+    t = re.sub(r"\s+-\s+(single|ep)\s*$", "", EDITION.sub("", title or "").strip(), flags=re.I)
+    if not t:
+        return None
+    pat = re.compile(r"(?<!\w)" + re.escape(t) + r"(?!\w)", re.I)
+    names = lambda s: any(not m.group(0)[0].isalpha() or m.group(0)[0].isupper() for m in pat.finditer(s))
+    parts = re.split(r"\n*^(={2,})\s*(.+?)\s*\1\s*$\n*", text, flags=re.M)
+    lead, secs_ = parts[0], [(parts[i + 1], parts[i + 2]) for i in range(1, len(parts) - 2, 3)]
+    paras = lambda s: [p.strip() for p in s.split("\n") if len(p.strip()) >= 80 and names(p)]
+    out, head = paras(lead), None
+    hit = next(((h, b) for h, b in secs_ if names(h) and b.strip()), None)
+    if hit:
+        head = hit[0]
+        out.append(hit[1].strip())
+    else:
+        for h, b in secs_:
+            ps = paras(b)
+            if ps:
+                head = head or h
+                out += ps
+    return ("\n\n".join(out), head) if out else None
+
+
 def released(e):
     best = None
     for v in claims(e, "P577"):
@@ -440,7 +501,8 @@ def needs_f(r):
     if r.get("deleted") or r.get("example") or r.get("aboutBlocked"):
         return False
     ab = r.get("about") or {}
-    return not r.get("aboutAt") or (not r.get("aboutV") and bool(r.get("about")) and ab.get("source") != "claude")
+    return not r.get("aboutAt") or (not r.get("aboutV") and bool(r.get("about")) and ab.get("source") != "claude") \
+        or ((r.get("aboutV") or 0) < 3 and not ab.get("summary"))  # once more for albums with no article of their own (#32)
 
 
 def plan(records_dir, artists_dir, versions_path, work, earlier=None):
@@ -540,11 +602,23 @@ def fetch_group(work, g, p, done):
     for rid, q in album_q.items():
         perf = claims(ENT.get(q) or {}, "P175")
         artist_q[rid] = next((a for a in perf if artist_ok(recs[rid]["artist"], label(a))), perf[0] if perf else None)
+    artist_q.update(pick_artists({rid: (recs[rid]["artist"], mbr.get(rid, {}).get("artist")) for rid in F if not artist_q.get(rid)}))
     entities([q for q in artist_q.values() if q])
     entities([v for q in album_q.values() for pr in ("P264", "P162", "P136", "P483") for v in claims(ENT.get(q) or {}, pr)
               if isinstance(v, str) and v.startswith("Q")], props="labels")
     titles = [enwiki(ENT.get(q) or {}) for q in album_q.values()] + [enwiki(ENT.get(q) or {}) for q in artist_q.values() if q]
     intro = extracts(titles)
+    # an album with no article of its own: the section of its artist's article that covers it (#32)
+    pages, via = {}, {}
+    for rid in F:
+        q, aq = album_q.get(rid), artist_q.get(rid)
+        at = enwiki(ENT.get(aq) or {}) if aq else ""
+        if at and not intro.get(enwiki(ENT.get(q) or {}) if q else ""):
+            if at not in pages:
+                pages[at] = full_text(at)
+            hit = album_section(pages[at], recs[rid]["title"])
+            if hit:
+                via[rid] = (*hit, label(aq) or bare_title(at), at)
     t_wiki = time.time()
 
     found, artists, covers = {}, {}, {}
@@ -578,6 +652,11 @@ def fetch_group(work, g, p, done):
                 about["wiki"] = wiki_url(t)
                 if intro.get(t):
                     f["albumIntro"] = intro[t]
+            if rid in via and not f.get("albumIntro"):
+                text, head, name, at = via[rid]
+                about["wiki"] = wiki_url(at) + ("#" + urllib.parse.quote(head.replace(" ", "_"), safe="_()',!-.:") if head else "")
+                about["via"] = name
+                f["albumIntro"], f["albumFrom"] = text, {"name": name, "section": head}
             if released(e):
                 about["released"] = released(e)
             for key, prop, n in (("label", "P264", 1), ("producers", "P162", 3), ("genres", "P136", 3)):
@@ -585,6 +664,17 @@ def fetch_group(work, g, p, done):
                 ls = [x for x in ls if x]
                 if ls:
                     about[key] = ls[0] if key == "label" else ls
+            if dg:  # key info Wikidata didn't have, from the linked Discogs pressing (#32)
+                rel = str(dg.get("released") or "")
+                rel = rel[:10] if re.match(r"^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$", rel[:10]) else rel[:4]
+                if not about.get("released") and re.match(r"^\d{4}", rel):
+                    about["released"] = rel
+                lab = _clean((((dg.get("labels") or [{}])[0]).get("name")))
+                if not about.get("label") and lab:
+                    about["label"] = lab
+                gs = (dg.get("styles") or dg.get("genres") or [])[:3]
+                if not about.get("genres") and gs:
+                    about["genres"] = gs
             places = [label(v) for v in claims(e, "P483") if isinstance(v, str) and label(v)]
             if places:
                 f["recordedAt"] = ", ".join(places)
@@ -782,7 +872,7 @@ def save(work, g, *pairs):
             if f.get("artistKey"):
                 d["artistRef"] = f["artistKey"]
             if not f["summarise"] and not f["retry"]:  # nothing to write: done now; a rate-limited miss waits for the next run
-                d["aboutAt"], d["aboutV"] = today, 2
+                d["aboutAt"], d["aboutV"] = today, 3
         v = p["records"][rid]["version"]
         add("update", "records", rid, d, v)
         after["records"][rid] = (v or 0) + 1
@@ -808,7 +898,9 @@ def _intros(work, p, g):
         if f.get("albumIntro"):
             r = p["records"][rid]["data"]
             rec_at = f" (recorded at: {f['recordedAt']})" if f.get("recordedAt") else ""
-            print(f"\nALBUM {rid} | {r['title']} / {r['artist']}{rec_at}\n{f['albumIntro'][:1500]}")
+            fr = f.get("albumFrom")
+            via = (f" (from the {fr['name']} article" + (f", section \"{fr['section']}\")" if fr.get("section") else ")")) if fr else ""
+            print(f"\nALBUM {rid} | {r['title']} / {r['artist']}{rec_at}{via}\n{f['albumIntro'][:1500]}")
     for key, a in fj["artists"].items():
         if a.get("intro"):
             print(f"\nARTIST {key} | {a['name']}\n{a['intro'][:1500]}")
@@ -843,7 +935,7 @@ def summaries(work, g=None, claude_path=None):
                 about.update(summary=al["summary"].strip(), source="claude", at=today)
             if f.get("recordedAt"):
                 about["recorded"] = f["recordedAt"] + (" · " + al["recDates"].strip() if (al.get("recDates") or "").strip() else "")
-            d = {"aboutAt": today, "aboutV": 2}
+            d = {"aboutAt": today, "aboutV": 3}
             if about:
                 d["about"] = about
             add("update", "records", rid, d, ver["records"].get(rid))

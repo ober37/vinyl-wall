@@ -827,7 +827,8 @@ const summaryOpen=new Set();let tracksAll=false;
 // a summary's short lede and the detail after its first blank line
 function ledeSplit(t){const txt=String(t||"").trim(),k=txt.search(/\n\s*\n/);return {txt,lede:k<0?txt:txt.slice(0,k).trim(),rest:k<0?"":txt.slice(k).trim()}}
 const longDate=d=>/^\d{4}-\d\d-\d\d$/.test(d)?new Date(d+"T12:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}):String(d||"");
-// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part L)
+// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part L), or from
+// the section of the artist's article that covers it when the album has none (about.via names the artist, #32)
 function summaryHTML(r){
   if(r.aboutBlocked) return "";
   const ab=r.about||{},open=summaryOpen.has(r.id);
@@ -837,7 +838,7 @@ function summaryHTML(r){
   const {txt,lede,rest}=ledeSplit(ab.summary);
   const long=rest?true:txt.length>220;
   return `<div class="absum">${rest?`<p class="abt">${esc(lede)}</p>${open?`<p class="abt">${esc(rest)}</p>`:""}`:`<p class="abt${long&&!open?" clamp":""}">${esc(txt)}</p>`}
-    <div class="src">${long?`<button class="linkbtn" type="button" id="sumMore">${open?"Less":"More"}</button>`:""}<span class="hint" style="margin:0">Summary by Claude${okUrl(ab.wiki)?` · <a href="${esc(okUrl(ab.wiki))}" target="_blank" rel="noopener">Wikipedia ↗</a>`:""}</span></div></div>`}
+    <div class="src">${long?`<button class="linkbtn" type="button" id="sumMore">${open?"Less":"More"}</button>`:""}<span class="hint" style="margin:0">Summary by Claude${okUrl(ab.wiki)?` · ${ab.via?"from ":""}<a href="${esc(okUrl(ab.wiki))}" target="_blank" rel="noopener">${ab.via?esc(ab.via)+" on ":""}Wikipedia ↗</a>`:""}</span></div></div>`}
 // key info about the album (from Wikidata, with the record's own label as a fallback)
 function keyInfoHTML(r){
   const ab=!r.aboutBlocked&&r.about||{},list=a=>Array.isArray(a)?a.filter(Boolean).map(String).join(", "):"",f=[];
@@ -1014,6 +1015,8 @@ function openSheet(id,keepScroll){
      About (when it has anything); with only the task, there's no tab bar */
     const own=!wish&&!ord,album=keyInfoHTML(r),copy=copyHTML(r),tracks=tracksHTML(r),artist=artistHTML(r),res=own&&(canEdit||researchEntries(r).length),
       notesN=(r.notes||[]).filter(n=>n&&typeof n==="object"&&!isPlay(n)).length,plays=own?(r.notes||[]).filter(isPlay).length:0;
+    // looked up and no album summary found: said once, in About, not atop every sheet (#32)
+    const none=!!r.aboutAt&&!r.aboutBlocked&&!r.about?.summary&&!aboutPending(r);
     const tabs=["task",...(res?["research"]:[]),...(notesN?["notes"]:[]),...(album||copy||tracks||artist?["about"]:[])],tab=tabs.includes(sheetTab)?sheetTab:"task";
     const tabBtn=(k,label)=>`<button type="button" role="tab" id="tab-${k}" data-tab="${k}" aria-controls="tp-${k}" aria-selected="${tab===k}" tabindex="${tab===k?0:-1}">${label}</button>`;
     const panel=(k,html)=>`<div class="viewonly" id="tp-${k}"${tabs.length>1?` role="tabpanel" aria-labelledby="tab-${k}"`:""}${tab===k?"":" hidden"}>${html}</div>`;
@@ -1039,7 +1042,7 @@ function openSheet(id,keepScroll){
   </fieldset>
   <fieldset class="viewonly" id="findFs"><legend>Search elsewhere</legend><div class="links">${linkSet(r)}</div></fieldset>`):""}
   ${tabs.includes("about")?panel("about",`
-    ${album?`<fieldset id="albumFs"><legend>About the album</legend>${album}</fieldset>`:""}
+    ${album||none?`<fieldset id="albumFs"><legend>About the album</legend>${none?`<p class="hint">Wikipedia has nothing on this album.</p>`:""}${album}</fieldset>`:""}
     ${copy?`<fieldset id="copyFs"><legend>Your copy</legend>${copy}</fieldset>`:""}
     ${tracks?`<fieldset id="tracksFs"><legend>Tracklist</legend>${tracks}</fieldset>`:""}
     ${artist?`<fieldset id="aboutFs"><legend>About the artist</legend>${artist}</fieldset>`:""}`):""}`})()}
@@ -1323,8 +1326,8 @@ Return JSON only, with keys: "headline" (one sentence, at most 14 words, the sin
 function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
 /* Runs started with no accompanying message sometimes ended without doing anything, so every start says what's waiting. */
 // not looked up yet, or looked up by an older version (no Claude summary, key info or tracklist yet)
-// (aboutV marks a redo as done, even one that found nothing)
-const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude"));
+// (aboutV marks a redo as done, even one that found nothing; below 3, an album with no summary gets one more try, #32)
+const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude")||((r.aboutV||0)<3&&!r.about?.summary));
 /* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
    own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
 function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId||runActive())return;
