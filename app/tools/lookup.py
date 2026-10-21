@@ -3,27 +3,28 @@
 
 Usage (the background task runs these; see its part L):
   python3 -I lookup.py plan      <records_dir> <artists_dir> <versions.json> <work> [<earlier plan.json>]
-  python3 -I lookup.py fetch     <work>
-  python3 -I lookup.py facts     <work> <covers.json>
-  python3 -I lookup.py summaries <work> [<group> <claude.json> <versions.json>]
+  python3 -I lookup.py group     <work> <group>
+  python3 -I lookup.py save      <work> <group> [<record id>=<asset id> ...]
+  python3 -I lookup.py summaries <work> [<group> <claude.json>]
 
-plan       picks the waiting records and splits them into small groups (the first one smaller). <versions.json> is
-           {"records": {id: version}, "artists": {id: version}} from the list output. Records in an earlier plan.json
-           (a first pass in the same run) are skipped, so a second pass only takes new ones.
-fetch      looks up every group: Wikipedia + Wikidata in bulk first, Discogs for the exact pressing (cover, tracklist,
-           runtime), Deezer/iTunes for covers and runtimes, MusicBrainz only when the others miss. Downloads and shrinks
-           covers into <work>/g<group>/covers/<record id>.jpg and prints them (COVERS) for one upload.
-facts      pass 1, nothing for Claude to write: takes <covers.json> {record id: asset id} and prints the batches that save
-           covers, details, key info, tracklists and artist links (BATCH n lines, at most 50 writes each).
-summaries  pass 2: with no group, prints the first group's Wikipedia intros. With a group, Claude's <claude.json>
-           {"albums": {record id: {"summary", "recDates"}}, "artists": {artist id: {"summary"}}} and the versions after
-           pass 1, prints that group's writes, then the next group's intros (or DONE with the timings).
+plan       picks the waiting records, splits them into small groups (the first one smaller) and starts looking every
+           group up in the background, in order. <versions.json> is {"records": {id: version}, "artists": {id: version}}
+           from the list output. Records in an earlier plan.json (a first pass in the same run) are skipped.
+           Lookups: Wikipedia + Wikidata in bulk first, Discogs for the exact pressing (cover, tracklist, runtime),
+           Deezer/iTunes for covers and runtimes, MusicBrainz only when the others miss.
+group      waits for one group's lookups and prints its covers to upload (COVERS), skipping any uploaded this run.
+save       pass 1, nothing for Claude to write: takes the uploaded asset ids and prints the batch that saves the group's
+           covers, details, key info, tracklists and artist links. It notes the version each write leaves for pass 2.
+summaries  pass 2: with no group, prints the first group's Wikipedia intros. With a group and Claude's <claude.json>
+           {"albums": {record id: {"summary", "recDates"}}, "artists": {artist id: {"summary"}}}, prints that group's
+           writes, then the next group's intros (or DONE with the timings). A record Wikimedia failed on is left for
+           the next run rather than marked done.
 
 Rules carried over from the task: fill only fields that are empty or listed in autoFilled; never catalog, pressing or
 matrix; only links from typed Wikidata properties; a confident title + artist match or nothing. DISCOGS_TOKEN (optional,
 from the environment) raises Discogs' rate limit; it is only ever sent to api.discogs.com.
 """
-import datetime, glob, json, os, re, sys, threading, time, urllib.error, urllib.parse, urllib.request
+import datetime, glob, json, os, re, subprocess, sys, threading, time, urllib.error, urllib.parse, urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
 UA = "VinylWall/1.0 (https://github.com/ober37/vinyl-wall)"
@@ -38,13 +39,26 @@ LINKS = [("P856", "website", "{}"), ("P2003", "instagram", "https://www.instagra
          ("P3283", "bandcamp", "https://{}.bandcamp.com/"), ("P2850", "applemusic", "https://music.apple.com/us/artist/{}"),
          ("P3040", "soundcloud", "https://soundcloud.com/{}"), ("P7085", "tiktok", "https://www.tiktok.com/@{}"),
          ("P2002", "x", "https://x.com/{}"), ("P2013", "facebook", "https://www.facebook.com/{}")]
-try:
-    from PIL import Image
-except ImportError:
-    Image = None
+Image = None
 
 
-# ---------- HTTP, with per-host spacing (MusicBrainz 1/s, Discogs 1/s with a token, else 25/min) ----------
+def ensure_pillow(work):
+    """Pillow shrinks covers; without it (and if it can't be installed) covers keep their source size."""
+    global Image
+    try:
+        from PIL import Image as I
+    except ImportError:
+        lib = os.path.join(work, ".pylib")
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--target", lib, "pillow"], capture_output=True, timeout=180)
+        sys.path.insert(0, lib)
+        try:
+            from PIL import Image as I
+        except ImportError:
+            return
+    Image = I
+
+
+# ---------- HTTP, with per-host spacing (MusicBrainz 1/s, Discogs 1/s with a token, else 25/min, Wikimedia 2/s) ----------
 
 class Gate:
     def __init__(self, gap):
@@ -57,8 +71,10 @@ class Gate:
         time.sleep(max(0.0, t - time.time()))
 
 
-GATES = {"musicbrainz.org": Gate(1.1), "api.discogs.com": Gate(1.1 if TOKEN else 2.5)}
-stats = {"calls": 0, "errors": 0}
+GATES = {"musicbrainz.org": Gate(1.1), "api.discogs.com": Gate(1.1 if TOKEN else 2.5),
+         "en.wikipedia.org": Gate(0.5), "www.wikidata.org": Gate(0.5)}
+WIKIMEDIA = ("en.wikipedia.org", "www.wikidata.org")
+stats = {"calls": 0, "errors": 0, "wikimedia": 0}
 
 
 def fetch(url, params=None, raw=False):
@@ -68,7 +84,8 @@ def fetch(url, params=None, raw=False):
     headers = {"User-Agent": UA}
     if TOKEN and host == "api.discogs.com":
         headers["Authorization"] = "Discogs token=" + TOKEN
-    for attempt in range(3):
+    tries = 6  # a batched Wikimedia call that gives up costs many albums at once, so rate limits get waited out
+    for attempt in range(tries):
         if host in GATES:
             GATES[host].wait()
         stats["calls"] += 1
@@ -77,18 +94,23 @@ def fetch(url, params=None, raw=False):
                 body = r.read()
                 return body if raw else json.loads(body or b"{}")
         except urllib.error.HTTPError as e:
-            if e.code in (429, 502, 503) and attempt < 2:
-                time.sleep(5 * (attempt + 1))
+            if e.code in (429, 502, 503) and attempt < tries - 1:
+                wait = e.headers.get("Retry-After", "") if e.headers else ""
+                time.sleep(min(60, int(wait) if wait.isdigit() else 5 * 2 ** attempt))
                 continue
-            if e.code != 404:
-                stats["errors"] += 1
-            return None
-        except Exception:
+            if e.code == 404:
+                return None
+            err = e
+        except Exception as e:
             if attempt < 2:
                 time.sleep(2)
                 continue
-            stats["errors"] += 1
-            return None
+            err = e
+        stats["errors"] += 1
+        if host in WIKIMEDIA:
+            stats["wikimedia"] += 1
+        print(f"lookup failed: {host} {err}", file=sys.stderr)
+        return None
 
 
 def chunks(xs, n):
@@ -242,7 +264,7 @@ def pick_albums(recs):
                                                          "srsearch": f"{r['title']} {r['artist']} album", "srlimit": 4}) or {}
         return rid, [x["title"] for x in (j.get("query") or {}).get("search") or []]
 
-    with ThreadPoolExecutor(6) as ex:
+    with ThreadPoolExecutor(2) as ex:
         hits = dict(ex.map(search, miss))
     check({rid: ts for rid, ts in hits.items() if ts})
     return found
@@ -435,13 +457,18 @@ def plan(records_dir, artists_dir, versions_path, work, earlier=None):
     json.dump({"groups": groups, "records": {rid: {"data": recs[rid], "version": ver.get("records", {}).get(rid)} for rid in todo},
                "artists": {aid: {"data": a, "version": ver.get("artists", {}).get(aid)} for aid, a in arts.items()}},
               open(os.path.join(work, "plan.json"), "w"))
+    if groups:  # look every group up in the background, in order, while the task saves the earlier ones
+        log = open(os.path.join(work, "prefetch.log"), "w")
+        pr = subprocess.Popen([sys.executable, "-I", os.path.abspath(__file__), "prefetch", work], stdout=log, stderr=log,
+                              stdin=subprocess.DEVNULL, start_new_session=True)
+        open(os.path.join(work, "prefetch.pid"), "w").write(str(pr.pid))
     print(f"{len(todo)} records waiting, in {len(groups)} groups (sizes {', '.join(str(len(g)) for g in groups) or '-'})"
           + (f"; {later} more wait for the next run" if later else "") + ".")
 
 
 def fetch_group(work, g, p, done):
     """Look up one group; `done` holds artist ids already taken by an earlier group of this run."""
-    t0 = time.time()
+    t0, wm0 = time.time(), stats["wikimedia"]
     gdir = os.path.join(work, f"g{g}")
     os.makedirs(os.path.join(gdir, "covers"), exist_ok=True)
     recs = {rid: p["records"][rid]["data"] for rid in p["groups"][g]}
@@ -599,17 +626,16 @@ def fetch_group(work, g, p, done):
         if path:
             covers[rid] = path
     # a record waits for the summaries pass when it has an album intro, or its artist (looked up in this group) has one
+    # (a record Wikimedia failed on, with no intro to show for it, is left for the next run instead)
+    failed = stats["wikimedia"] > wm0
     for rid, f in found.items():
         f["summarise"] = bool(f.get("albumIntro") or (artists.get(f.get("artistKey")) or {}).get("intro"))
-    json.dump({"found": found, "artists": artists}, open(os.path.join(gdir, "found.json"), "w"))
-    t_end = time.time()
-    print(f"GROUP {g}: {len(recs)} records, {len(covers)} covers; sources {t_src - t0:.1f}s, musicbrainz {t_mb - t_src:.1f}s, "
-          f"wikipedia {t_wiki - t_mb:.1f}s, covers {t_end - t_wiki:.1f}s")
-    for rid, f in found.items():
-        r = recs[rid]
-        bits = [k for k in f["fill"]] + (["cover"] if f.get("cover") else []) + (["about"] if f.get("about") else [])
-        print(f"- {rid}: {r['title']} / {r['artist']}: {', '.join(bits) or 'nothing found'}")
-    return covers
+        f["retry"] = failed and f["needF"] and not f.get("albumIntro")
+    tmp = os.path.join(gdir, "found.json.tmp")
+    json.dump({"found": found, "artists": artists, "secs": round(time.time() - t0, 1)}, open(tmp, "w"))
+    os.replace(tmp, os.path.join(gdir, "found.json"))  # appears whole, so a waiting step never reads half a file
+    print(f"group {g}: sources {t_src - t0:.1f}s, musicbrainz {t_mb - t_src:.1f}s, wikipedia {t_wiki - t_mb:.1f}s, "
+          f"covers {time.time() - t_wiki:.1f}s", flush=True)
 
 
 def _discogs_image(dg):
@@ -630,26 +656,48 @@ def _clean(s):
     return re.sub(r"\s*\(\d+\)$", "", (s or "").replace("*", "")).strip()
 
 
-def fetch_all(work):
+def prefetch(work):
+    """Runs in the background from plan: looks up every group in order while the task saves the earlier ones."""
+    ensure_pillow(work)
     p = json.load(open(os.path.join(work, "plan.json")))
-    done, covers = set(), {}
+    done = set()
     for g in range(len(p["groups"])):
-        covers.update(fetch_group(work, g, p, done))
-    _stamp(work, "fetched")
-    print(f"{stats['calls']} calls, {stats['errors']} errors")
-    print("COVERS: " + json.dumps([os.path.abspath(c) for c in covers.values()]))
+        fetch_group(work, g, p, done)
+    print(f"{stats['calls']} calls, {stats['errors']} errors, {stats['wikimedia']} from Wikimedia", flush=True)
 
 
 def _stamp(work, what):
     path = os.path.join(work, "times.json")
     t = json.load(open(path)) if os.path.exists(path) else {}
-    t[what] = time.time()
+    t.setdefault(what, time.time())
     json.dump(t, open(path, "w"))
     return t
 
 
-def _found(work, p):
-    return [json.load(open(os.path.join(work, f"g{g}", "found.json"))) for g in range(len(p["groups"]))]
+def _found(work, g):
+    path = os.path.join(work, f"g{g}", "found.json")
+    return json.load(open(path)) if os.path.exists(path) else None
+
+
+def _wait_found(work, p, g):
+    """The background lookup's result for group g; if that process is gone, look the group up here instead."""
+    while _found(work, g) is None:
+        try:
+            os.kill(int(open(os.path.join(work, "prefetch.pid")).read()), 0)
+            alive = True
+        except (OSError, ValueError):
+            alive = False
+        if not alive:
+            done = {k for i in range(g) for k in (_found(work, i) or {}).get("artists", {})}
+            ensure_pillow(work)
+            fetch_group(work, g, p, done)
+            break
+        time.sleep(1)
+    return _found(work, g)
+
+
+def _json(path, default):
+    return json.load(open(path)) if os.path.exists(path) else default
 
 
 def _writer(wdir):
@@ -666,65 +714,79 @@ def _writer(wdir):
     return writes, add
 
 
-def _artist_doc(a, summary=""):
+def group(work, g):
+    """Pass 1, step 1: print group g's lookups and the covers to upload (none already uploaded in this run)."""
+    p = json.load(open(os.path.join(work, "plan.json")))
+    fj = _wait_found(work, p, g)
+    uploaded = _json(os.path.join(work, "assets.json"), {})
+    covers = [os.path.abspath(f["cover"]) for rid, f in fj["found"].items() if f.get("cover") and rid not in uploaded]
+    print(f"GROUP {g} of {len(p['groups'])} (looked up in {fj.get('secs', '?')}s)")
+    for rid, f in fj["found"].items():
+        r = p["records"][rid]["data"]
+        bits = list(f["fill"]) + (["cover"] if f.get("cover") else []) + (["about"] if f.get("about") else [])
+        print(f"- {rid}: {r['title']} / {r['artist']}: {', '.join(bits) or 'nothing found'}")
+    print(f"COVERS {g}: " + json.dumps(covers))
+
+
+def save(work, g, *pairs):
+    """Pass 1, step 2: <record id>=<asset id> for each uploaded cover. Prints group g's BATCH, then the next group
+    (or FACTS DONE). Records the version each write will leave, for pass 2."""
+    p = json.load(open(os.path.join(work, "plan.json")))
+    _stamp(work, "first save")
+    uploaded = _json(os.path.join(work, "assets.json"), {})
+    uploaded.update(dict(x.split("=", 1) for x in pairs if "=" in x))
+    json.dump(uploaded, open(os.path.join(work, "assets.json"), "w"))
+    after = _json(os.path.join(work, "versions-after.json"), {"records": {}, "artists": {}})
+    fj = _wait_found(work, p, g)
+    today = datetime.date.today().isoformat()
+    writes, add = _writer(os.path.join(work, f"g{g}", "facts"))
+    for key, a in fj["artists"].items():
+        v = (p["artists"].get(key) or {}).get("version")
+        add("set", "artists", key, _artist_doc(a), v)
+        after["artists"][key] = (v or 0) + 1
+    for rid, f in fj["found"].items():
+        r, d = p["records"][rid]["data"], {}
+        if f["needA"]:
+            filled = dict(f["fill"])
+            if not r.get("coverAsset") and uploaded.get(rid):
+                filled["coverAsset"] = uploaded[rid]
+            d.update(filled)
+            if filled:
+                d["autoFilled"] = sorted(set(r.get("autoFilled") or []) | set(filled))
+            d["needsEnrich"], d["coverHint"] = DEL, DEL
+            notes = list(r.get("notes") or [])
+            has = any((n or {}).get("t") == NO_COVER for n in notes)
+            if "coverAsset" in filled and has:
+                d["notes"] = [n for n in notes if (n or {}).get("t") != NO_COVER]
+            elif not r.get("coverAsset") and not f.get("coverUrl") and not has:
+                d["notes"] = notes + [{"d": today, "t": NO_COVER}]
+        if f["needF"]:
+            if f.get("about"):
+                d["about"] = f["about"]
+            if f.get("artistKey"):
+                d["artistRef"] = f["artistKey"]
+            if not f["summarise"] and not f["retry"]:  # nothing to write: done now; a rate-limited miss waits for the next run
+                d["aboutAt"], d["aboutV"] = today, 2
+        v = p["records"][rid]["version"]
+        add("update", "records", rid, d, v)
+        after["records"][rid] = (v or 0) + 1
+    json.dump(after, open(os.path.join(work, "versions-after.json"), "w"))
+    print(f"BATCH {g}: " + json.dumps(writes))
+    if g + 1 < len(p["groups"]):
+        print(f"NEXT: group {g + 1}")
+    else:
+        _stamp(work, "facts done")
+        print("FACTS DONE: start the summaries.")
+
+
+def _artist_doc(a):
     data = {k: v for k, v in a.items() if k != "intro" and v not in (None, "", [])}
-    if summary:
-        data.update(summary=summary, source="claude")
     data["fetchedAt"] = int(time.time() * 1000)
     return data
 
 
-def _about(f, al=None):
-    about, al = dict(f.get("about") or {}), al or {}
-    if (al.get("summary") or "").strip():
-        about.update(summary=al["summary"].strip(), source="claude", at=datetime.date.today().isoformat())
-    if f.get("recordedAt"):
-        about["recorded"] = f["recordedAt"] + (" · " + al["recDates"].strip() if (al.get("recDates") or "").strip() else "")
-    return about
-
-
-def facts(work, covers_path):
-    """Pass 1, no Claude writing: covers, details, key info, tracklists, artist links. Records with nothing to summarise
-    are finished here; the rest get aboutAt in pass 2, so an interrupted run picks their summaries up next time."""
-    p = json.load(open(os.path.join(work, "plan.json")))
-    covers = json.load(open(covers_path)) if os.path.exists(covers_path) else {}
-    today = datetime.date.today().isoformat()
-    writes, add = _writer(os.path.join(work, "facts"))
-    for fj in _found(work, p):
-        for key, a in fj["artists"].items():
-            add("set", "artists", key, _artist_doc(a), (p["artists"].get(key) or {}).get("version"))
-        for rid, f in fj["found"].items():
-            r, d = p["records"][rid]["data"], {}
-            if f["needA"]:
-                filled = dict(f["fill"])
-                if not r.get("coverAsset") and covers.get(rid):
-                    filled["coverAsset"] = covers[rid]
-                d.update(filled)
-                if filled:
-                    d["autoFilled"] = sorted(set(r.get("autoFilled") or []) | set(filled))
-                d["needsEnrich"], d["coverHint"] = DEL, DEL
-                notes = list(r.get("notes") or [])
-                has = any((n or {}).get("t") == NO_COVER for n in notes)
-                if "coverAsset" in filled and has:
-                    d["notes"] = [n for n in notes if (n or {}).get("t") != NO_COVER]
-                elif not r.get("coverAsset") and not f.get("coverUrl") and not has:
-                    d["notes"] = notes + [{"d": today, "t": NO_COVER}]
-            if f["needF"]:
-                about = _about(f)
-                if about:
-                    d["about"] = about
-                if f.get("artistKey"):
-                    d["artistRef"] = f["artistKey"]
-                if not f["summarise"]:
-                    d["aboutAt"], d["aboutV"] = today, 2
-            add("update", "records", rid, d, p["records"][rid]["version"])
-    _stamp(work, "facts")
-    for i, part in enumerate(chunks(writes, 50)):
-        print(f"BATCH {i}: " + json.dumps(part))
-
-
 def _intros(work, p, g):
-    fj = json.load(open(os.path.join(work, f"g{g}", "found.json")))
+    fj = _found(work, g)
     print(f"SUMMARISE GROUP {g}")
     for rid, f in fj["found"].items():
         if f.get("albumIntro"):
@@ -736,51 +798,57 @@ def _intros(work, p, g):
             print(f"\nARTIST {key} | {a['name']}\n{a['intro'][:1500]}")
 
 
-def summaries(work, g=None, claude_path=None, versions_path=None):
+def summaries(work, g=None, claude_path=None):
     """Pass 2. With no group: print the first group's intros. With a group and Claude's file: print that group's writes
-    (versions from <versions.json>, as left by pass 1), then the next group's intros, or DONE with the timings."""
+    (only the summaries; update merges them into what pass 1 saved), then the next group's intros, or DONE."""
     p = json.load(open(os.path.join(work, "plan.json")))
-    fjs = _found(work, p)
+    fjs = [_found(work, i) or {"found": {}, "artists": {}} for i in range(len(p["groups"]))]
     todo = [i for i, fj in enumerate(fjs) if any(f.get("summarise") for f in fj["found"].values())]
     if g is None:
-        if todo:
-            _intros(work, p, todo[0])
-        else:
-            print("DONE: nothing to summarise.")
+        _intros(work, p, todo[0]) if todo else print("DONE: nothing to summarise.")
         return
-    cl, ver = json.load(open(claude_path), strict=False), json.load(open(versions_path))  # raw newlines in a summary are fine
+    cl = json.load(open(claude_path), strict=False)  # raw newlines in a summary are fine
     albums, arts = cl.get("albums") or {}, cl.get("artists") or {}
+    ver = _json(os.path.join(work, "versions-after.json"), {"records": {}, "artists": {}})
     today = datetime.date.today().isoformat()
     writes, add = _writer(os.path.join(work, f"g{g}", "summaries"))
     for key, a in fjs[g]["artists"].items():
         s = ((arts.get(key) or {}).get("summary") or "").strip()
         if a.get("intro") and s:
-            add("set", "artists", key, _artist_doc(a, s), ver.get("artists", {}).get(key))
+            add("update", "artists", key, {"summary": s, "source": "claude"}, ver["artists"].get(key))
     for rid, f in fjs[g]["found"].items():
         if f.get("summarise"):
+            al, about = albums.get(rid) or {}, {}
+            if (al.get("summary") or "").strip():
+                about.update(summary=al["summary"].strip(), source="claude", at=today)
+            if f.get("recordedAt"):
+                about["recorded"] = f["recordedAt"] + (" · " + al["recDates"].strip() if (al.get("recDates") or "").strip() else "")
             d = {"aboutAt": today, "aboutV": 2}
-            about = _about(f, albums.get(rid))
             if about:
                 d["about"] = about
-            add("update", "records", rid, d, ver.get("records", {}).get(rid))
+            add("update", "records", rid, d, ver["records"].get(rid))
     print(f"WRITES {g}: " + json.dumps(writes))
     nxt = [i for i in todo if i > g]
     if nxt:
         _intros(work, p, nxt[0])
     else:
         t = _stamp(work, "done")
-        print(f"DONE. Facts ready {t['facts'] - t['plan']:.0f}s after plan; summaries done {t['done'] - t['plan']:.0f}s after plan.")
+        retry = sum(f.get("retry", False) for fj in fjs for f in fj["found"].values())
+        print(f"DONE. First facts saved {t['first save'] - t['plan']:.0f}s after plan, all facts {t.get('facts done', t['done']) - t['plan']:.0f}s, "
+              f"summaries {t['done'] - t['plan']:.0f}s." + (f" {retry} records left for the next run (lookups rate-limited)." if retry else ""))
 
 
 if __name__ == "__main__":
     cmd, args = sys.argv[1], sys.argv[2:]
     if cmd == "plan":
         plan(*args)
-    elif cmd == "fetch":
-        fetch_all(args[0])
-    elif cmd == "facts":
-        facts(*args)
+    elif cmd == "prefetch":
+        prefetch(args[0])
+    elif cmd == "group":
+        group(args[0], int(args[1]))
+    elif cmd == "save":
+        save(args[0], int(args[1]), *args[2:])
     elif cmd == "summaries":
-        summaries(args[0], int(args[1]), args[2], args[3]) if len(args) > 1 else summaries(args[0])
+        summaries(args[0], int(args[1]), args[2]) if len(args) > 1 else summaries(args[0])
     else:
         sys.exit(__doc__)
