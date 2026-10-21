@@ -198,6 +198,16 @@ f.onload=async()=>{
     q("#closeBtn").click();await sleep(200);await openRecord("Blue Train");
     check("summary: a record not looked up yet says so",/^Looking up the album\. This can take a minute or two\.$/.test(q("#sheet .abwait")?.textContent));
     check("summary: the lookup line has room below it",getComputedStyle(q("#sheet .abwait")).marginBottom==="20px",getComputedStyle(q("#sheet .abwait")).marginBottom);
+    // #32: a summary from the artist's article names it; nothing found is said once, in About; an older miss is pending
+    const R3=w.__data.records.r3;
+    Object.assign(R3,{aboutAt:"2026-10-01",aboutV:3,about:{summary:"Blue Train is a 1957 album.",source:"claude",via:"John Coltrane",
+      wiki:"https://en.wikipedia.org/wiki/John_Coltrane#Blue_Note"}});w.__emit("records");await sleep(300);
+    check("summary: from the artist's article, credited with the artist",/^Summary by Claude · from John Coltrane on Wikipedia ↗$/.test(q("#sheet .absum .src .hint")?.textContent)&&q("#sheet .absum .src a")?.textContent==="John Coltrane on Wikipedia ↗",q("#sheet .absum .src")?.textContent);
+    R3.about={};w.__emit("records");await sleep(300);
+    check("summary: nothing found says so at the top, without the pulsing dot",!q("#sheet .absum")&&!q("#sheet .abwait")&&q("#sheet .viewpart .abnone")?.textContent==="Wikipedia has nothing on this album."&&!q("#albumFs .abnone"));
+    R3.aboutV=2;w.__emit("records");await sleep(300);
+    check("summary: a redo (aboutAt set, aboutV below 3) shows the lookup line",!q("#sheet .abnone")&&/^Looking up the album/.test(q("#sheet .abwait")?.textContent));
+    delete R3.about;delete R3.aboutAt;delete R3.aboutV;w.__emit("records");await sleep(300);q("#tab-task")?.click();await sleep(100);
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
     check("facts: ordered record shows its status; no About, so no tabs",[...d.querySelectorAll("#sheet .kv dt")].map(x=>x.textContent).join()==="Status"&&!d.querySelector('#sheet [role="tablist"]')&&!!q("#sheet .viewpart .statusacts #arrBtn"));
     q("#closeBtn").click();await sleep(200);await openRecord("Abbey Road");
@@ -332,7 +342,7 @@ f.onload=async()=>{
     await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();await sleep(400);
     q("#closeBtn").click();await sleep(200);
     const recsBefore=JSON.stringify(w.__data.records),upBefore=site().update,n1=fires();
-    for(const r of Object.values(w.__data.records)){delete r.needsEnrich;r.aboutAt=r.aboutAt||"2026-01-01";r.aboutV=2}
+    for(const r of Object.values(w.__data.records)){delete r.needsEnrich;r.aboutAt=r.aboutAt||"2026-01-01";r.aboutV=3}
     site().update={...(site().update||{}),checkedMs:Date.now()};w.__emit("records");
     delete site().run;await emit();await sleep(300);
     check("one run: nothing waiting, no extra run",fires()===n1,fires()-n1+" extra");

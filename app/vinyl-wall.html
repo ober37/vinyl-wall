@@ -397,7 +397,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .dangerzone{margin-top:36px;padding-top:16px;border-top:1px dashed var(--line)} .dangerzone .linkbtn{margin:0;font-size:13px}
 .newrec{margin-top:18px} .newrec .btn:disabled{opacity:.45;cursor:default}
 div.f{display:flex;flex-direction:column;align-items:flex-start;gap:4px;font-size:12px;color:var(--ink-2);min-width:0} .moredet{margin-top:18px} .moredet>summary{cursor:pointer;font-size:14px;color:var(--ink-2)}
-.statusacts{margin-top:18px;justify-content:flex-start;gap:8px} .statusacts .btn{flex:0 0 auto;min-height:44px;padding:12px 18px} .absum .abt+.abt,.abart .abt+.abt{margin-top:10px} .hint.abwait{margin:14px 0 20px;display:flex;align-items:center;gap:8px}
+.statusacts{margin-top:18px;justify-content:flex-start;gap:8px} .statusacts .btn{flex:0 0 auto;min-height:44px;padding:12px 18px} .absum .abt+.abt,.abart .abt+.abt{margin-top:10px} .hint.abwait{margin:14px 0 20px;display:flex;align-items:center;gap:8px} .hint.abnone{margin:14px 0 20px}
 .abwait::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--brass);flex:none;animation:abpulse 1.4s ease-in-out infinite} @keyframes abpulse{50%{opacity:.25}}
 legend+.kv,legend+.tracks,legend+.abart{margin-top:0}
 /* sections on the record sheet's tabs get a little more air between them than the default 22px */
@@ -827,17 +827,20 @@ const summaryOpen=new Set();let tracksAll=false;
 // a summary's short lede and the detail after its first blank line
 function ledeSplit(t){const txt=String(t||"").trim(),k=txt.search(/\n\s*\n/);return {txt,lede:k<0?txt:txt.slice(0,k).trim(),rest:k<0?"":txt.slice(k).trim()}}
 const longDate=d=>/^\d{4}-\d\d-\d\d$/.test(d)?new Date(d+"T12:00").toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}):String(d||"");
-// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part L)
+// the album summary at the top of every sheet: Claude's write-up from the album's Wikipedia article (Part L), or from
+// the section of the artist's article that covers it when the album has none (about.via names the artist, #32)
 function summaryHTML(r){
   if(r.aboutBlocked) return "";
   const ab=r.about||{},open=summaryOpen.has(r.id);
-  if(!ab.summary) return !r.aboutAt?`<p class="hint abwait" role="status">Looking up the album. This can take a minute or two.</p>`:"";
+  // pending (a first lookup or a redo): the pulsing line; looked up with nothing: a plain line in the same place (#32)
+  if(!ab.summary) return aboutPending(r)?`<p class="hint abwait" role="status">Looking up the album. This can take a minute or two.</p>`:
+    r.aboutAt?`<p class="hint abnone">Wikipedia has nothing on this album.</p>`:"";
   // a short lede, then the detail after the first blank line: the lede shows and More opens the rest;
   // a summary in one block (older lookups) clamps to 3 lines instead
   const {txt,lede,rest}=ledeSplit(ab.summary);
   const long=rest?true:txt.length>220;
   return `<div class="absum">${rest?`<p class="abt">${esc(lede)}</p>${open?`<p class="abt">${esc(rest)}</p>`:""}`:`<p class="abt${long&&!open?" clamp":""}">${esc(txt)}</p>`}
-    <div class="src">${long?`<button class="linkbtn" type="button" id="sumMore">${open?"Less":"More"}</button>`:""}<span class="hint" style="margin:0">Summary by Claude${okUrl(ab.wiki)?` · <a href="${esc(okUrl(ab.wiki))}" target="_blank" rel="noopener">Wikipedia ↗</a>`:""}</span></div></div>`}
+    <div class="src">${long?`<button class="linkbtn" type="button" id="sumMore">${open?"Less":"More"}</button>`:""}<span class="hint" style="margin:0">Summary by Claude${okUrl(ab.wiki)?` · ${ab.via?"from ":""}<a href="${esc(okUrl(ab.wiki))}" target="_blank" rel="noopener">${ab.via?esc(ab.via)+" on ":""}Wikipedia ↗</a>`:""}</span></div></div>`}
 // key info about the album (from Wikidata, with the record's own label as a fallback)
 function keyInfoHTML(r){
   const ab=!r.aboutBlocked&&r.about||{},list=a=>Array.isArray(a)?a.filter(Boolean).map(String).join(", "):"",f=[];
@@ -1323,8 +1326,8 @@ Return JSON only, with keys: "headline" (one sentence, at most 14 words, the sin
 function enrich(r){flash("Looking up "+r.title+"… the cover usually appears within a few minutes.");fireTask()}
 /* Runs started with no accompanying message sometimes ended without doing anything, so every start says what's waiting. */
 // not looked up yet, or looked up by an older version (no Claude summary, key info or tracklist yet)
-// (aboutV marks a redo as done, even one that found nothing)
-const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude"));
+// (aboutV marks a redo as done, even one that found nothing; below 3, an album with no summary gets one more try, #32)
+const aboutPending=r=>!r.aboutBlocked&&(!r.aboutAt||(!r.aboutV&&r.about&&r.about.source!=="claude")||((r.aboutV||0)<3&&!r.about?.summary));
 /* Records waiting for album and artist info (a fresh import, or a wall just updated) start the background task on their
    own, at most every 30 minutes across reloads, so "Looking up the album" doesn't wait for some other reason to run it. */
 function autoLookup(){if(!recordsLoaded||!settingsLoaded||!canEdit||!mcp||!settings.taskId||runActive())return;
