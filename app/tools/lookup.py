@@ -38,7 +38,7 @@ LINKS = [("P856", "website", "{}"), ("P2003", "instagram", "https://www.instagra
          ("P3283", "bandcamp", "https://{}.bandcamp.com/"), ("P2850", "applemusic", "https://music.apple.com/us/artist/{}"),
          ("P3040", "soundcloud", "https://soundcloud.com/{}"), ("P7085", "tiktok", "https://www.tiktok.com/@{}"),
          ("P2002", "x", "https://x.com/{}"), ("P2013", "facebook", "https://www.facebook.com/{}")]
-Image = None
+Image, PILLOW = None, None
 
 
 def ensure_pillow(work):
@@ -446,7 +446,7 @@ def needs_f(r):
 def plan(records_dir, artists_dir, versions_path, work, earlier=None):
     recs, arts, ver = load_dir(records_dir), load_dir(artists_dir) if os.path.isdir(artists_dir) else {}, json.load(open(versions_path))
     tried = set(json.load(open(earlier))["records"]) if earlier else set()
-    todo = [rid for rid, r in recs.items() if rid not in tried and (needs_a(r) or needs_f(r))]
+    todo = [rid for rid, r in recs.items() if rid not in tried and r.get("title") and r.get("artist") and (needs_a(r) or needs_f(r))]
     todo.sort(key=lambda rid: (-(recs[rid].get("added") or 0), recs[rid].get("title") or ""))  # newest first: a fresh add goes first
     later = max(0, len(todo) - MAX_RECORDS)
     todo = todo[:MAX_RECORDS]
@@ -464,7 +464,7 @@ def plan(records_dir, artists_dir, versions_path, work, earlier=None):
     print(f"{len(todo)} records waiting, in {len(groups)} groups (sizes {', '.join(str(len(g)) for g in groups) or '-'})"
           + (f"; {later} more wait for the next run" if later else "") + ".")
     if groups:
-        _print_group(work, json.load(open(os.path.join(work, "plan.json"))), 0)
+        _print_group(work, json.load(open(os.path.join(work, "plan.json"))), 0, pr)
 
 
 def fetch_group(work, g, p, done):
@@ -536,9 +536,9 @@ def fetch_group(work, g, p, done):
     # artists, key info labels and intros, in bulk
     entities(album_q.values())
     artist_q = {}
+    entities([a for q in album_q.values() for a in claims(ENT.get(q) or {}, "P175")])
     for rid, q in album_q.items():
-        perf = [a for a in claims(ENT.get(q) or {}, "P175")]
-        entities(perf)
+        perf = claims(ENT.get(q) or {}, "P175")
         artist_q[rid] = next((a for a in perf if artist_ok(recs[rid]["artist"], label(a))), perf[0] if perf else None)
     entities([q for q in artist_q.values() if q])
     entities([v for q in album_q.values() for pr in ("P264", "P162", "P136", "P483") for v in claims(ENT.get(q) or {}, pr)
@@ -618,6 +618,8 @@ def fetch_group(work, g, p, done):
                     done.add(key)
         found[rid] = f
 
+    if PILLOW:
+        PILLOW.join()
     with ThreadPoolExecutor(6) as ex:
         paths = dict(zip([rid for rid in found if found[rid]["coverUrl"]],
                          ex.map(lambda rid: get_cover(found[rid]["coverUrl"], os.path.join(gdir, "covers", rid + ".jpg")),
@@ -659,7 +661,9 @@ def _clean(s):
 
 def prefetch(work):
     """Runs in the background from plan: looks up every group in order while the task saves the earlier ones."""
-    ensure_pillow(work)
+    global PILLOW
+    PILLOW = threading.Thread(target=ensure_pillow, args=(work,))
+    PILLOW.start()  # alongside the first lookups; covers wait for it
     p = json.load(open(os.path.join(work, "plan.json")))
     done = set()
     for g in range(len(p["groups"])):
@@ -687,14 +691,19 @@ def _found(work, g):
     return json.load(open(path)) if os.path.exists(path) else None
 
 
-def _wait_found(work, p, g):
-    """The background lookup's result for group g; if that process is gone, look the group up here instead."""
+def _wait_found(work, p, g, proc=None):
+    """The background lookup's result for group g; if that process is gone, look the group up here instead.
+    `proc` is the process itself when the caller started it (plan): a crashed child of ours would still answer
+    a kill(pid, 0) probe until it's reaped, so ask it directly."""
     while _found(work, g) is None:
-        try:
-            os.kill(int(open(os.path.join(work, "prefetch.pid")).read()), 0)
-            alive = True
-        except (OSError, ValueError):
-            alive = False
+        if proc is not None:
+            alive = proc.poll() is None
+        else:
+            try:
+                os.kill(int(open(os.path.join(work, "prefetch.pid")).read()), 0)
+                alive = True
+            except (OSError, ValueError):
+                alive = False
         if not alive:
             done = {k for i in range(g) for k in (_found(work, i) or {}).get("artists", {})}
             ensure_pillow(work)
@@ -722,9 +731,9 @@ def _writer(wdir):
     return writes, add
 
 
-def _print_group(work, p, g):
+def _print_group(work, p, g, proc=None):
     """Group g's lookups and the covers to upload (none already uploaded in this run)."""
-    fj = _wait_found(work, p, g)
+    fj = _wait_found(work, p, g, proc)
     uploaded = _json(os.path.join(work, "assets.json"), {})
     covers = [os.path.abspath(f["cover"]) for rid, f in fj["found"].items() if f.get("cover") and rid not in uploaded]
     print(f"GROUP {g} of {len(p['groups'])} (looked up in {fj.get('secs', '?')}s)")
@@ -749,7 +758,7 @@ def save(work, g, *pairs):
     writes, add = _writer(os.path.join(work, f"g{g}", "facts"))
     for key, a in fj["artists"].items():
         v = (p["artists"].get(key) or {}).get("version")
-        add("set", "artists", key, _artist_doc(a), v)
+        add("update" if v else "set", "artists", key, _artist_doc(a), v)  # update keeps an existing summary until pass 2
         after["artists"][key] = (v or 0) + 1
     for rid, f in fj["found"].items():
         r, d = p["records"][rid]["data"], {}
