@@ -202,10 +202,17 @@ f.onload=async()=>{
     const R3=w.__data.records.r3;
     Object.assign(R3,{aboutAt:"2026-10-01",aboutV:3,about:{summary:"Blue Train is a 1957 album.",source:"claude",via:"John Coltrane",
       wiki:"https://en.wikipedia.org/wiki/John_Coltrane#Blue_Note"}});w.__emit("records");await sleep(300);
+    const dot=()=>q('#rack .sleeve-btn[data-id="r3"]'),pend=()=>Object.values(w.__data.records).filter(r=>!r.example&&!r.deleted&&!r.aboutBlocked&&(r.needsEnrich||!r.aboutAt||!r.aboutV&&r.about&&r.about.source!=="claude"||(r.aboutV||0)<3&&!r.about?.summary)).length;
+    check("wall: a looked-up record has no dot",!dot().querySelector(".upd")&&!dot().title&&!/looking up/.test(dot().getAttribute("aria-label")));
+    check("wall: the counts line counts what's waiting",pend()?q("#updLine").textContent===`Looking up ${pend()} record${pend()===1?"":"s"}…`&&!q("#updLine").hidden:q("#updLine").hidden,q("#updLine").textContent+" / "+pend()+" "+[...d.querySelectorAll("#rack .upd")].map(x=>x.closest(".sleeve-btn").dataset.id));
     check("summary: from the artist's article, credited with the artist",/^Summary by Claude · from John Coltrane on Wikipedia ↗$/.test(q("#sheet .absum .src .hint")?.textContent)&&q("#sheet .absum .src a")?.textContent==="John Coltrane on Wikipedia ↗",q("#sheet .absum .src")?.textContent);
     R3.about={};w.__emit("records");await sleep(300);
     check("summary: nothing found says so at the top, without the pulsing dot",!q("#sheet .absum")&&!q("#sheet .abwait")&&q("#sheet .viewpart .abnone")?.textContent==="Wikipedia has nothing on this album."&&!q("#albumFs .abnone"));
     R3.aboutV=2;w.__emit("records");await sleep(300);
+    check("wall: a record waiting for album info gets the dot, a tooltip and a spoken hint",!!dot().querySelector(".upd[aria-hidden=true]")&&dot().title==="Looking up details"&&dot().getAttribute("aria-label")==="Open Blue Train by John Coltrane, looking up details");
+    R3.aboutV=3;R3.about={summary:"x"};R3.needsEnrich=true;w.__emit("records");await sleep(300);
+    check("wall: a record waiting for its cover gets the same dot; no Finding cover badge",!!dot().querySelector(".upd")&&!d.querySelector("#rack .finding"));
+    delete R3.needsEnrich;R3.aboutV=2;R3.about={};w.__emit("records");await sleep(300);
     check("summary: a redo (aboutAt set, aboutV below 3) shows the lookup line",!q("#sheet .abnone")&&/^Looking up the album/.test(q("#sheet .abwait")?.textContent));
     delete R3.about;delete R3.aboutAt;delete R3.aboutV;w.__emit("records");await sleep(300);q("#tab-task")?.click();await sleep(100);
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
