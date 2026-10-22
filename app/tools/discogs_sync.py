@@ -12,6 +12,8 @@ Mapping:
   status own      -> Collection (Uncategorized), Media/Sleeve condition + Notes fields
   status wish     -> Wantlist with notes (priority, target pressing, budget)
   status ordered  -> Wantlist with notes ("On order from ...")
+  moreCopies      -> each copy with a release id is on the wantlist too, with its own notes; a copy that goes
+                     (removed, or the record deleted) comes off it. discogsSync.copyRids holds what the wall put there.
   deleted: true   -> removed from Discogs (only items the wall created / wantlist), doc deleted
 Never deletes collection items the wall did not create.
 """
@@ -204,9 +206,71 @@ def want_notes(d):
         return s[:255]
     pr = {1: "Top want", 2: "Want", 3: "Someday"}.get(int(d.get("priority") or 2), "Want")
     bits = [pr]
-    if d.get("pressing"): bits.append("Target: " + d["pressing"])
-    if d.get("budget"): bits.append(f"Budget ${d['budget']}")
+    more = [c for c in (d.get("moreCopies") or []) if isinstance(c, dict)]
+    if more:
+        # several copies: each by name (or pressing) with its budget
+        def one(c):
+            t = c.get("name") or first_line(c.get("pressing"))
+            return t + (f" (${c['budget']})" if c.get("budget") else "")
+        first = {"name": d.get("copyName"), "pressing": d.get("pressing"), "budget": d.get("budget")}
+        ts = [x for x in map(one, [first] + more) if x]
+        if ts: bits.append("Targets: " + "; ".join(ts))
+    else:
+        if d.get("pressing"): bits.append("Target: " + d["pressing"])
+        if d.get("budget"): bits.append(f"Budget ${d['budget']}")
     return ". ".join(bits)[:255]
+
+
+def first_line(t):
+    return " ".join(str(t or "").split("\n")[0].split())
+
+
+def copy_rids(d, rid):
+    """Release ids of the copies a record still hunts (moreCopies), other than its own release."""
+    out = []
+    for c in d.get("moreCopies") or []:
+        try:
+            n = int(str((c or {}).get("discogsId") or "").strip() or 0)
+        except ValueError:
+            n = 0
+        if n > 0 and n != rid and n not in out:
+            out.append(n)
+    return out
+
+
+def copy_notes(d, c):
+    pr = {1: "Top want", 2: "Want", 3: "Someday"}.get(int(d.get("priority") or 2), "Want")
+    bits = [pr]
+    t = c.get("name") or first_line(c.get("pressing"))
+    if t: bits.append("Target: " + t)
+    if c.get("budget"): bits.append(f"Budget ${c['budget']}")
+    return ". ".join(bits)[:255]
+
+
+def sync_copies(d, rid, wants, sync):
+    """Put each still-hunted copy's release on the wantlist with its notes; take off the ones the wall put there
+    that aren't copies any more."""
+    keep = [] if d.get("deleted") else copy_rids(d, rid)
+    by = {}
+    for c in d.get("moreCopies") or []:
+        try:
+            by.setdefault(int(str((c or {}).get("discogsId") or "").strip() or 0), c)
+        except ValueError:
+            pass
+    for old in sync.get("copyRids") or []:
+        if old not in keep and old != rid and old in wants:
+            call("DELETE", f"/users/{USER}/wants/{old}")
+            wants.discard(old)
+    for n in keep:
+        if n not in wants:
+            call("PUT", f"/users/{USER}/wants/{n}")
+            wants.add(n)
+        call("POST", f"/users/{USER}/wants/{n}", body={"notes": copy_notes(d, by.get(n) or {})})
+    if keep:
+        sync["copyRids"] = keep
+    else:
+        sync.pop("copyRids", None)
+    return keep
 
 
 def drop(rid, sync, wants):
@@ -229,21 +293,29 @@ def sync_one(d, wants, sync):
     if isinstance(rid, str):
         rid = int("".join(c for c in rid if c.isdigit()) or 0) or None
     if d.get("deleted"):
+        sync_copies(d, rid, wants, sync)
         drop(sync.get("rid") or rid, sync, wants)
         return None
     if not rid:
         rid, how = find_release(d)
         if not rid:
-            if sync.get("rid") and not sync.get("adopted"):  # was linked to something else: take it back off
+            keep = sync_copies(d, None, wants, sync)
+            if sync.get("rid") and not sync.get("adopted") and sync["rid"] not in keep:  # was linked to something else: take it back off
                 drop(sync["rid"], sync, wants)
-            return {"discogsSync": {"state": "no-match", "at": now(),
+            return {"discogsSync": {"state": "no-match", "at": now(), **({"copyRids": keep} if keep else {}),
                                     "msg": "No vinyl pressing found on Discogs. Paste the release number from its Discogs URL."},
                     "discogsMatch": {"__delete__": True},
                     "needsSync": {"__delete__": True}}
         out["discogsId"] = rid
         out["discogsMatch"] = how
-    if sync.get("rid") and sync["rid"] != rid:  # release changed: clean up the old one
-        drop(sync["rid"], sync, wants)
+    keep = sync_copies(d, rid, wants, sync)
+    if sync.get("rid") and sync["rid"] != rid:  # release changed: clean up the old one, unless it's still a copy wanted
+        if sync["rid"] in keep:
+            iid = sync.get("instanceId")
+            if iid and not sync.get("adopted"):
+                drop(sync["rid"], {"instanceId": iid}, set())  # the wall's collection copy only; the wantlist entry stays
+        else:
+            drop(sync["rid"], sync, wants)
         sync.pop("instanceId", None)
     status = d.get("status") or "own"
     if status == "own":

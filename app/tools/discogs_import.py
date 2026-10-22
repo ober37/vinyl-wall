@@ -12,6 +12,10 @@ Rules:
   - Nothing already on the wall is changed. A Discogs item is "already on the wall" if a record has the
     same release id (discogsId or discogsSync.rid) or the same artist + title (ignoring case, punctuation,
     "The", and Discogs' "(2)"/"*" suffixes). A release in both the collection and the wantlist is imported once, as owned.
+  - Several wantlist releases of one album make one record: the first is the record's own pressing, the others become
+    its more copies (moreCopies, each with its release id, listed in discogsSync.copyRids so the sync manages them).
+    An album in the collection keeps its wantlist pressings as copies it still wants. An album already on the wall
+    gets none of them.
   - Imported records are marked as already synced (discogsSync), so the wall -> Discogs sync never re-adds
     them, and collection copies are marked adopted, so the wall never deletes them from Discogs.
   - Covers, runtime etc. are left for the background task (needsEnrich).
@@ -146,7 +150,8 @@ def main():
     coll = pages(f"/users/{urllib.parse.quote(user)}/collection/folders/0/releases", "releases")
     wants = pages(f"/users/{urllib.parse.quote(user)}/wants", "wants")
 
-    writes, seen, n_own, n_want, skipped = [], set(), 0, 0, 0
+    writes, seen, n_own, n_want, skipped, n_copies = [], set(), 0, 0, 0, 0
+    hunts = {}  # (artist, title) -> the record made in this run, for the album's other wantlist pressings
     ms = int(time.time() * 1000)
 
     def already(bi):
@@ -173,10 +178,21 @@ def main():
                               "instanceId": it.get("instance_id"), "adopted": True}
         writes.append({"op": "set", "collection": "records", "doc_id": f"dg-{bi['id']}", "data": rec})
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_own += 1
+        hunts.setdefault((norm(rec["artist"]), norm(rec["title"])), rec)
 
     for it in wants:
         bi = it.get("basic_information") or {}
         if not bi.get("id"):
+            continue
+        key = (norm(artist_of(bi)), norm(bi.get("title")))
+        if key in hunts and bi["id"] not in seen:
+            lab = (bi.get("labels") or [{}])[0]
+            hunts[key].setdefault("moreCopies", []).append({
+                "name": "", "pressing": pressing_of(bi), "label": clean_name(lab.get("name")),
+                "catalog": "" if (lab.get("catno") or "").lower() == "none" else (lab.get("catno") or ""),
+                "budget": "", "discogsId": bi["id"]})
+            hunts[key]["discogsSync"].setdefault("copyRids", []).append(bi["id"])
+            seen.add(bi["id"]); n_copies += 1
             continue
         if already(bi):
             skipped += 1
@@ -188,11 +204,13 @@ def main():
         rec["discogsSync"] = {"state": "synced", "at": now(), "rid": bi["id"], "where": "wantlist"}
         writes.append({"op": "set", "collection": "records", "doc_id": f"dg-{bi['id']}", "data": rec})
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_want += 1
+        hunts[key] = rec
 
     with open(dst, "w") as fh:
         json.dump(writes, fh, indent=1)
     capped = " (stopped at 1000 items)" if len(coll) >= MAX_ITEMS or len(wants) >= MAX_ITEMS else ""
-    print(f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted); {skipped} skipped as already on the wall{capped}.")
+    more = (f"; {n_copies} more pressings became copies" if n_copies != 1 else "; 1 more pressing became a copy") if n_copies else ""
+    print(f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted){more}; {skipped} skipped as already on the wall{capped}.")
 
 
 if __name__ == "__main__":
