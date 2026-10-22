@@ -520,10 +520,15 @@ def mb_tracks(gid):
     rels = j.get("releases") or []
     if not rels:
         return None
-    vinyl = [r for r in rels if any("Vinyl" in (m.get("format") or "") for m in r.get("media") or [])]
+    isv = lambda m: "Vinyl" in (m.get("format") or "")
+    vinyl = [r for r in rels if any(isv(m) for m in r.get("media") or [])]
+    # an all-vinyl release first; from a box or combo (LP + CD + DVD) only its vinyl media, so the tracks aren't listed twice
+    vinyl.sort(key=lambda r: not all(isv(m) for m in r.get("media") or []))
     r = vinyl[0] if vinyl else sorted(rels, key=lambda r: r.get("date") or "9999")[0]
     out = []
     for m in r.get("media") or []:
+        if vinyl and not isv(m):
+            continue
         for t in m.get("tracks") or []:
             x = {"pos": t.get("number") or str(t.get("position", "")), "title": t.get("title", "")}
             if t.get("length"):

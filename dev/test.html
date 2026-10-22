@@ -404,7 +404,9 @@ f.onload=async()=>{
     check("shop website: no shop name, the address stands in",sa?.textContent==="roughtrade.com ↗"&&sa.href==="https://roughtrade.com/"&&sa.target==="_blank",fromDd()?.innerHTML);
     q("#modeBtn").click();await sleep(300);
     const su2=q("#f-shopurl");su2.value="javascript:alert(1)";su2.dispatchEvent(new Event("input",{bubbles:true}));await sleep(1200);
-    check("shop website: a non-web address gets a hint",!q("#shopUrlHint").hidden);
+    check("shop website: no hint while typing",q("#shopUrlHint").hidden);
+    su2.dispatchEvent(new Event("change",{bubbles:true}));await sleep(100);
+    check("shop website: a non-web address gets a hint when done typing",!q("#shopUrlHint").hidden);
     q("#closeBtn").click();await sleep(300);await openRecord("Aja");
     check("shop website: a non-web address doesn't link",!fromDd()&&![...d.querySelectorAll("#sheet a")].some(x=>/javascript/i.test(x.getAttribute("href")||"")),fromDd()?.innerHTML);
     q("#closeBtn").click();await sleep(200);delete w.__data.records.r5.shopUrl;

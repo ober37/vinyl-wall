@@ -1145,7 +1145,10 @@ function openSheet(id,keepScroll){
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
   baseline=isNew?{}:collect(r);
-  $("#f-shopurl")?.addEventListener("input",e=>{const u=e.target.value.trim();$("#shopUrlHint").hidden=!u||!!shopHref(u)});
+  // the hint waits until they're done typing, and goes as soon as what's typed would link
+  const shopOk=()=>{const u=$("#f-shopurl").value.trim();return !u||!!shopHref(u)};
+  $("#f-shopurl")?.addEventListener("input",()=>{if(shopOk())$("#shopUrlHint").hidden=true});
+  $("#f-shopurl")?.addEventListener("change",()=>{$("#shopUrlHint").hidden=shopOk()});
 
   if(isNew){
     $("#createBtn").addEventListener("click",()=>createRecord());
