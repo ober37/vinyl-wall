@@ -70,6 +70,7 @@ The sync only writes to *your* collection and wantlist, and the import only adds
 | `app/tools/lookup.py` | Looks up covers, details and album and artist info for new records, a few at a time |
 | `app/backgrounds/` | The photo backgrounds |
 | `tasks/background-task.md` | Instructions for the background task (covers, runtimes, Discogs) |
+| `skills/vinyl-wall/SKILL.md` | A Claude skill for adding records from a chat; setup offers to save it to your account |
 | `SETUP.md` | Step-by-step instructions Claude follows to install or update a wall |
 
 ## Credits and licenses

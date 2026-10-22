@@ -46,6 +46,7 @@ app/backgrounds/record-shop.jpg
 app/backgrounds/coffee-shop.jpg
 app/backgrounds/coffee-shop-2.jpg
 tasks/background-task.md
+skills/vinyl-wall/SKILL.md
 ```
 
 e.g. `curl -fsSL "$BASE/app/vinyl-wall.html" -o app/vinyl-wall.html` for each. Check every file downloaded (non-empty; images are real JPEGs, not HTML error pages). Read `app/vinyl-wall.html` once before publishing it.
@@ -121,7 +122,11 @@ Then create the person's first setup so the equipment page has a home: `set` `se
 
 Report each check in one line. If one fails, fix it once; if it still fails, say what failed.
 
-## 7. Hand over
+## 7. Offer the chat skill
+
+`skills/vinyl-wall/SKILL.md` teaches a chat how to add records to the wall (for example, looking up the shop's website). Offer it as one of the person's own skills, the review card they save with one click, and tell them in one sentence what it's for. If they save it, `update` `settings/site` with `{"skillVersion": <the number on its "Skill version" line>}`. If they skip it, or this session can't offer skills, carry on: the wall works without it, and you can give them the file to add under Settings → Skills later.
+
+## 8. Hand over
 
 Tell the person, briefly:
 
@@ -130,7 +135,8 @@ Tell the person, briefly:
 3. **Connect Discogs (optional):** open **Settings** (gear icon) → enter their Discogs username and a personal access token from discogs.com/settings/developers → **Save token**. The token never needs to go through the chat. If they already keep their records on Discogs, once the connection shows as verified they can tap **Import from Discogs** in Settings to bring their collection and wantlist onto the wall.
 4. **Equipment:** tap the Gear pill to add their turntable, cartridge and stylus, and rename "My setup".
 5. Backgrounds and the title are under **Settings**.
-6. **Moving from another wall?** Tap **Import your library** on the welcome card (or **Settings** → **Your library** → **Import from a file**) and pick the file they saved with **Export your library**. Their records, equipment, setups and the wall's look come across, with covers and album and artist info. Anything the file doesn't carry, like covers in a file from an older wall, is looked up again.
+6. **Adding from a chat:** they can open the wall, start a chat from it and say what they bought, photos welcome; with the skill saved, Claude fills in details like the shop's website.
+7. **Moving from another wall?** Tap **Import your library** on the welcome card (or **Settings** → **Your library** → **Import from a file**) and pick the file they saved with **Export your library**. Their records, equipment, setups and the wall's look come across, with covers and album and artist info. Anything the file doesn't carry, like covers in a file from an older wall, is looked up again.
 
 Mention which approval setting the background task got (from the `create_trigger` result) and, if its runs ask for approval, that they can switch it to automatic approval in the task's settings.
 
@@ -153,8 +159,9 @@ The wall's background task checks for new releases (background-task part E), and
    **Upgrade 2** (from v0.1.x):
    - *Re-match non-vinyl Discogs links.* v0.1.0 could link records to a CD, DVD or single. `list` `records` and, in one `batch`, `update` every document whose `discogsMatch` is exactly `"master main release"` with `{"discogsId": {"__delete__": true}, "discogsMatch": {"__delete__": true}, "needsSync": true}` (pin each to its version). Never touch records with any other `discogsMatch` value; the person chose those. If any were updated, start the background task once (`fire_trigger` with `taskId`): it re-matches them to vinyl and swaps the wrong wantlist entries.
    - *Shrink existing covers.* Older walls stored covers at full size (often 1000px, 100–300 KB). For each record with a `coverAsset` and no `coverOriginal`: read the asset (`Artifact` `action: "read"`, `path` = the asset id), shrink it in Python Pillow so the longest side is at most 500px, save as JPEG quality 82, upload it (`asset: true`), then `update` the record with `{"coverAsset": <new id>, "coverOriginal": <old id>}` (pin to its version; batch the updates). Skip a cover whose shrunk file isn't smaller. Don't delete the originals; `coverOriginal` keeps them recoverable.
-6. **Unused images (only if the person asks to tidy up).** List the page's assets (`Artifact` `action: "list"`, `scope: "assets"`) and find ids that no record (`coverAsset`, `coverOriginal`) and no setting (`settings/site` `bg.assetId`, `uploads[].id`) refers to. Show them to the person and delete only the ones they approve.
-7. Tell the person what changed in one or two lines.
+6. **Chat skill.** Read the number on the "Skill version" line of the downloaded `skills/vinyl-wall/SKILL.md`. If it's higher than `skillVersion` in `settings/site` (missing means `0`), offer the skill as in setup step 7, saying it replaces their saved copy, and `update` `skillVersion` if they save it. Otherwise skip this.
+7. **Unused images (only if the person asks to tidy up).** List the page's assets (`Artifact` `action: "list"`, `scope: "assets"`) and find ids that no record (`coverAsset`, `coverOriginal`) and no setting (`settings/site` `bg.assetId`, `uploads[].id`) refers to. Show them to the person and delete only the ones they approve.
+8. Tell the person what changed in one or two lines.
 
 ## Removing a wall
 
