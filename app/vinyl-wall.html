@@ -451,7 +451,7 @@ input[type=date]::-webkit-date-and-time-value{text-align:left}
 .log p{margin:0;white-space:pre-wrap;overflow-wrap:anywhere;min-width:0}
 
 .addlog{display:flex;gap:8px;margin-top:10px}
-.addlog input{flex:1}
+.addlog input,.addlog textarea{flex:1} #logForm{align-items:flex-end}
 .links{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
 .links a{font:500 13px/1 var(--body);color:var(--ink);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:8px 12px}
 .links a:hover{border-color:var(--ink-2)}
@@ -1081,7 +1081,7 @@ function openSheet(id,keepScroll){
     const tabs=["task",...(res?["research"]:[]),...(notesN?["notes"]:[]),...(album||copy||tracks||artist?["about"]:[])],tab=tabs.includes(sheetTab)?sheetTab:"task";
     const tabBtn=(k,label)=>`<button type="button" role="tab" id="tab-${k}" data-tab="${k}" aria-controls="tp-${k}" aria-selected="${tab===k}" tabindex="${tab===k?0:-1}">${label}</button>`;
     const panel=(k,html)=>`<div class="viewonly" id="tp-${k}"${tabs.length>1?` role="tabpanel" aria-labelledby="tab-${k}"`:""}${tab===k?"":" hidden"}>${html}</div>`;
-    const noteForm=`<form class="addlog editonly" id="logForm"><input id="f-note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Add a note about this record…"}" autocomplete="off"><button class="btn small" type="submit">Add note</button></form>`;
+    const noteForm=`<form class="addlog editonly" id="logForm"><textarea id="f-note" class="grow" rows="2" aria-label="Note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Add a note about this record…"}"></textarea><button class="btn small" type="submit">Add note</button></form>`;
     return `${tabs.length>1?`<div class="tabs viewonly" role="tablist" aria-label="Record">${tabBtn("task",wish?"Research":ord?"Order":"Listening")}${res?tabBtn("research","Research"):""}${notesN?tabBtn("notes",`Notes <span class="tabn">${notesN}</span>`):""}${tabs.includes("about")?tabBtn("about","About"):""}</div>`:""}
   ${panel("task",`
   ${ord?`<div class="ordfacts">${factsHTML(r)}<div class="links slim">${ownLinks(r)}</div></div>`:""}
@@ -1130,13 +1130,15 @@ function openSheet(id,keepScroll){
       s.querySelector(`input[name="fst"][value="${x.value}"]`)?.focus()}));
     wireRuns(()=>{});
   } else {
-    s.querySelectorAll('input:not([type=file]):not(#f-note):not([name="fst"]),textarea,select').forEach(el=>el.addEventListener("input",()=>schedule(r,false)));
+    s.querySelectorAll('input:not([type=file]):not([name="fst"]),textarea:not(#f-note),select').forEach(el=>el.addEventListener("input",()=>schedule(r,false)));
     // status moves the same way the Ordered it / Got it / It arrived buttons do
     s.querySelectorAll('input[name="fst"]').forEach(x=>x.addEventListener("change",()=>moveStatus(r,x.value)));
     wireRuns(()=>schedule(r,false));
     const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
     $("#modeBtn").addEventListener("click",()=>setMode(!editing));
     if($("#whyAdd")) $("#whyAdd").addEventListener("click",()=>setMode(true,"f-why"));
+    // the note box takes several lines: Enter is a new line, Cmd/Ctrl+Enter adds the note
+    if($("#f-note")) $("#f-note").addEventListener("keydown",e=>{if(e.key==="Enter"&&(e.metaKey||e.ctrlKey)){e.preventDefault();$("#logForm").requestSubmit()}});
     if($("#logForm")) $("#logForm").addEventListener("submit",e=>{e.preventDefault();const t=$("#f-note").value.trim();if(!t)return;
       const notes=[...(r.notes||[]),{d:today(),t}];write(r.id,{notes},true)});
     // Log a play: whole album or one side (and which), then a prompt for thoughts on that spin

@@ -307,6 +307,8 @@ f.onload=async()=>{
     q("#modeBtn").click();await sleep(300);q('input[name="fst"][value="wish"]').click();await sleep(500);
     check("copies: back to Want, the record's copy first and the others after",w.__data.records.rcp.status==="wish"&&w.__data.records.rcp.copyName==="Third"&&w.__data.records.rcp.moreCopies[0].name==="Later",JSON.stringify(w.__data.records.rcp));
     q("#modeBtn").click();await sleep(300);
+    const fn=q("#f-note");fn.value="Line one\nLine two";fn.dispatchEvent(new w.KeyboardEvent("keydown",{key:"Enter",ctrlKey:true,bubbles:true}));await sleep(500);
+    check("notes: the note box takes several lines; Ctrl+Enter adds it",fn.tagName==="TEXTAREA"&&(w.__data.records.rcp.notes||[]).some(n=>n.t==="Line one\nLine two"),JSON.stringify(w.__data.records.rcp.notes));
     delete w.__data.records.rcp;w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
     // research: a chat in the sheet, saved as a summary entry; pins survive new sessions
