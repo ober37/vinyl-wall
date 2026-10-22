@@ -782,6 +782,9 @@ function editFormHTML(r,isNew){
   const st=r.status,wish=st==="wish",ord=st==="ordered",own=!wish&&!ord;
   const lab=(t,h,w)=>`<label class="f"${w?' style="grid-column:1/-1"':""}>${t}${h}</label>`,inp=(id,v,ph,x="")=>`<input id="${id}" value="${esc(v)}"${ph?` placeholder="${esc(ph)}"`:""}${x}>`;
   const grade=(id,v)=>`<select id="${id}">${GRADE_OPTS.map(([k,l])=>`<option value="${k}" ${k===(v||"")?"selected":""}>${l}</option>`).join("")}</select>`;
+  // the shop's website, under its name (#47); a hint when what's typed won't link
+  const shopUrlField=ph=>lab("Shop website",inp("f-shopurl",r.shopUrl,ph,' type="url" autocapitalize="off" autocomplete="off"')+
+    `<span class="hint" id="shopUrlHint"${!r.shopUrl||shopHref(r.shopUrl)?" hidden":""}>Not a web address, so it won't link</span>`,1);
   const labelCat=lab("Label",inp("f-label",r.label,"e.g. Columbia"))+lab("Catalog no.",inp("f-cat",r.catalog,"e.g. CS 8163",' class="mono"'));
   const fs=(id,legend,body)=>`<fieldset class="editpart" id="${id}"><legend>${legend}</legend>${body}</fieldset>`;
   const why=fs("e-why",wish||ord?"Why you want it":"Why it's on the wall",`<textarea id="f-why" placeholder="${wish||ord?"What drew you to it: the track that hooked you, a show, who recommended it.":"What makes this one special front to back: a favorite side, the track that hooked you, where you first heard it."}">${esc(r.why)}</textarea>`);
@@ -790,7 +793,7 @@ function editFormHTML(r,isNew){
   const press=(v,ph,x='id="f-press"')=>`<textarea ${x} class="grow" rows="2" placeholder="${esc(ph)}">${esc(v)}</textarea>`;
   const copy=fs("e-copy","Your copy",`<div class="grid2">${lab("Pressing",press(pressingText(r),"e.g. 2015 Analogue Productions 45rpm reissue"),1)}
     ${lab("Bought on",`<input id="f-acq" type="date" value="${esc(r.acquired)}">`)}${lab("Paid",money("f-paid",r.paid))}
-    ${lab("Bought from",inp("f-shop",r.shop,"e.g. a local record shop"),1)}
+    ${lab("Bought from",inp("f-shop",r.shop,"e.g. a local record shop"),1)}${shopUrlField("e.g. https://www.roughtrade.com")}
     ${lab("Vinyl",grade("f-mg",r.mediaGrade))}${lab("Sleeve",grade("f-sg",r.sleeveGrade))}
     <div class="f runs" style="grid-column:1/-1"><span>Runout</span>${(runs.length?runs:[{side:"A",v:""},{side:"B",v:""}]).map(runRow).join("")}
       <button class="linkbtn" type="button" id="addSide">+ Add side</button></div></div>
@@ -814,7 +817,7 @@ function editFormHTML(r,isNew){
   // ordered: one group for the copy ordered, its own fields as on Want, then the order's
   const order=fs("e-order","The copy you ordered",`<div class="grid2">${lab("Name",inp("f-cname",C[0].name,"e.g. MoFi one-step"),1)}
     ${lab("Pressing",press(pressingText(r),"e.g. 2024 indie-store colored vinyl"),1)}${labelCat}${lab("Budget",money("f-budget",r.budget,"60"))}
-    ${lab("From",inp("f-shop",r.shop,"e.g. the band's webstore, a Discogs seller"),1)}
+    ${lab("From",inp("f-shop",r.shop,"e.g. the band's webstore, a Discogs seller"),1)}${shopUrlField("e.g. https://yourband.bandcamp.com")}
     ${lab("Status",`<select id="f-ostat">${Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("")}</select>`)}${lab("Paid",money("f-paid",r.paid,"incl. shipping"))}
     ${lab("Ordered on",`<input id="f-odate" type="date" value="${esc(r.orderDate)}">`)}${lab("Expected",`<input id="f-eta" type="date" value="${esc(r.eta)}">`)}
     ${lab("Order #",inp("f-onum",r.orderNum,"",' class="mono"'))}${lab("Carrier",inp("f-carrier",r.carrier,"USPS, UPS, FedEx, DHL"))}
@@ -838,7 +841,7 @@ function runoutHTML(r){const parts=runParts(r.matrix);
 function factsHTML(r){
   const wish=r.status==="wish",ord=r.status==="ordered",own=!wish&&!ord,f=[],p=pressingText(r);
   if(p&&own)f.push(["Pressing",`<span class="pl">${esc(p)}</span>`]);
-  if(own){const b=[r.acquired?playDate(r.acquired):"",r.shop,r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
+  if(own){const b=[r.acquired?esc(playDate(r.acquired)):"",shopHTML(r),r.paid?esc("$"+r.paid):""].filter(Boolean).join(" · ");if(b)f.push(["Bought",b]);
     const g=gradeText(r);if(g)f.push(["Grade",esc(g)]);
     if(r.matrix)f.push(["Runout",runoutHTML(r)])}
   return f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:"";
@@ -849,6 +852,11 @@ let artists=[];
 const LINK_KINDS={website:"Website",instagram:"Instagram",youtube:"YouTube",spotify:"Spotify",bandcamp:"Bandcamp",applemusic:"Apple Music",
   soundcloud:"SoundCloud",tiktok:"TikTok",x:"X",facebook:"Facebook"},LINK_ORDER=Object.keys(LINK_KINDS),LINKS_SHOWN=5;
 const okUrl=u=>{try{const x=new URL(String(u||""));return /^https?:$/.test(x.protocol)?x.href:""}catch(e){return ""}};
+// the shop's website (#47): "roughtrade.com" gets https:// in front; anything still not http(s) won't link
+const shopHref=u=>{u=String(u||"").trim();return okUrl(/^[a-z][a-z\d+.-]*:/i.test(u)||!u.includes(".")?u:"https://"+u)};
+// the shop's name, linked to its website when there's one; its address stands in for a missing name
+function shopHTML(r){const u=shopHref(r.shopUrl);if(!u)return esc(r.shop);
+  return `<a href="${esc(u)}" target="_blank" rel="noopener">${esc(r.shop||new URL(u).hostname.replace(/^www\./,""))} ↗</a>`}
 function artistOf(r){return r.artistRef&&!r.aboutBlocked?artists.find(a=>a.id===r.artistRef)||null:null}
 const artistOpen=new Set();
 const summaryOpen=new Set();let tracksAll=false;
@@ -937,7 +945,7 @@ function orderEntryHTML(r){const c=wantCopies(r)[0],t=c.name||c.pressing.split("
   if(c.label||c.catalog)f.push(["Label",esc(c.label)+(c.catalog?`<span class="mut">${c.label?" · ":""}${esc(c.catalog)}</span>`:"")]);
   f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(playDate(r.eta)):"")+
     (r.tracking?` · <a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track ↗</a>`:"")]);
-  if(r.shop)f.push(["From",esc(r.shop)]);
+  if(r.shop||shopHref(r.shopUrl))f.push(["From",shopHTML(r)]);
   if(r.paid)f.push(["Paid","$"+esc(r.paid)]); else if(c.budget)f.push(["Budget","Up to $"+esc(c.budget)]);
   if(r.orderDate)f.push(["Ordered",esc(playDate(r.orderDate))]);
   return `<div class="reslog"><details class="resentry copyentry ordentry"${foldOrder.has(r.id)?"":" open"}><summary><span class="ct">${esc(t)}</span><span class="cb">${st}</span></summary>
@@ -1137,6 +1145,10 @@ function openSheet(id,keepScroll){
   $("#closeBtn").addEventListener("click",closeSheet);
   if(!keepScroll) $("#closeBtn").focus();
   baseline=isNew?{}:collect(r);
+  // the hint waits until they're done typing, and goes as soon as what's typed would link
+  const shopOk=()=>{const u=$("#f-shopurl").value.trim();return !u||!!shopHref(u)};
+  $("#f-shopurl")?.addEventListener("input",()=>{if(shopOk())$("#shopUrlHint").hidden=true});
+  $("#f-shopurl")?.addEventListener("change",()=>{$("#shopUrlHint").hidden=shopOk()});
 
   if(isNew){
     $("#createBtn").addEventListener("click",()=>createRecord());
@@ -1296,6 +1308,7 @@ function collect(r){
   // a release number, or a pasted Discogs release link
   if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n}
   if(document.getElementById("f-shop")) o.shop=val("f-shop");
+  if(document.getElementById("f-shopurl")){const u=val("f-shopurl");o.shopUrl=shopHref(u)||u}
   if(document.getElementById("f-ostat")){o.orderStatus=val("f-ostat");o.orderDate=val("f-odate");o.eta=val("f-eta");o.orderNum=val("f-onum");o.carrier=val("f-carrier");o.tracking=val("f-track");if(document.getElementById("f-onotes"))o.orderNotes=document.getElementById("f-onotes").value}
   for(const k in o) if(o[k]===undefined) delete o[k];
   return o;
@@ -2042,7 +2055,7 @@ async function readLibrary(file){
   renderImport();
 }
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
-const IMPORT_FIELDS=["title","artist","year","label","catalog","pressing","matrix","runtime","status","why","notes","shop","acquired","paid",
+const IMPORT_FIELDS=["title","artist","year","label","catalog","pressing","matrix","runtime","status","why","notes","shop","shopUrl","acquired","paid",
   "mediaGrade","sleeveGrade","priority","budget","copyName","moreCopies","orderDate","orderStatus","eta","orderNum","carrier","tracking","orderNotes","discogsId",
   "discogsMatch","coverAsset","coverOriginal","researchLog","added","autoFilled","about","aboutAt","aboutV","artistRef","aboutBlocked"];
 // what an artist may carry in: the lookup's own fields, with the right types

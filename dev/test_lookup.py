@@ -75,4 +75,13 @@ check("artist: the same page without the album named: not linked",
 lab = lambda n: L._dlabel({"labels": [{"name": n}]})
 check("discogs label: Not On Label reads Self-released", lab("Not On Label (Novelists Self-released)") == "Self-released")
 check("discogs label: a real label keeps its name, without the (2)", lab("ACKOR Music (2)") == "ACKOR Music")
+med = lambda f, *ns: {"format": f, "tracks": [{"number": n, "title": n} for n in ns]}
+box = {"id": "box", "media": [med("12\" Vinyl", "A1", "B1"), med("12\" Vinyl", "C1", "D1"), med("CD", "1", "2"), med("DVD", "1", "2")]}
+L.fetch = lambda *a, **k: {"releases": [box]}
+got = [t["pos"] for t in L.mb_tracks("g")["tracks"]]
+check("tracks: a box set lists only its vinyl", got == ["A1", "B1", "C1", "D1"], got)
+L.fetch = lambda *a, **k: {"releases": [box, {"id": "lp", "media": [med("12\" Vinyl", "A1", "B1")]}]}
+check("tracks: an all-vinyl release wins over a box set", L.mb_tracks("g")["tracksUrl"].endswith("/lp"))
+L.fetch = lambda *a, **k: {"releases": [{"id": "cd", "media": [med("CD", "1", "2")]}]}
+check("tracks: no vinyl, the earliest release's tracks", [t["pos"] for t in L.mb_tracks("g")["tracks"]] == ["1", "2"])
 sys.exit(1 if fails else 0)
