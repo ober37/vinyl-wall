@@ -254,6 +254,11 @@ f.onload=async()=>{
     check("add: the record is hung as wanted",!!nr&&nr[1].status==="wish"&&nr[1].artist==="Test Artist",JSON.stringify(nr&&nr[1]));
     if(nr){delete w.__data.records[nr[0]];w.__emit("records");await sleep(300)}
     q("#closeBtn").click();await sleep(200);
+    // a looked-up label alone isn't a copy (#33): no card
+    w.__data.records.rc0={title:"Looked Up",artist:"Tester",status:"wish",priority:2,notes:[],added:97,label:"Columbia",autoFilled:["year","label"],about:{label:"Columbia Records"}};
+    w.__emit("records");await sleep(300);await openRecord("Looked Up");
+    check("copies: a looked-up label alone shows no card",!q("#wantFs"),q("#wantFs")?.textContent);
+    q("#closeBtn").click();await sleep(200);delete w.__data.records.rc0;w.__emit("records");await sleep(300);
     // one copy: an open card with its name, pressing, label · catalog and budget
     w.__data.records.rc1={title:"One Copy",artist:"Tester",status:"wish",priority:2,notes:[],added:98,copyName:"Blue vinyl",pressing:"2020 blue",label:"Lab",catalog:"L 9",budget:"35"};
     w.__emit("records");await sleep(300);await openRecord("One Copy");
@@ -265,14 +270,14 @@ f.onload=async()=>{
       moreCopies:[{name:"Deluxe",pressing:"Deluxe box",label:"Big Label",catalog:"BL 1",budget:"90"}]};w.__emit("records");await sleep(300);
     check("copies: the sleeve tag shows the highest budget",/≤\$90/.test([...d.querySelectorAll(".slot")].find(x=>x.textContent.includes("Copies Test")).textContent));
     await openRecord("Copies Test");
-    const heads=()=>[...d.querySelectorAll("#wantFs .copyentry")].map(x=>x.querySelector(".ct").textContent+" "+x.querySelector(".cb").textContent).join();
-    check("copies: folded rows, name or pressing and budget on each",q("#wantFs legend").textContent==="The copies you want"&&heads()==="Plain press ≤$20,Deluxe ≤$90"&&
-      !q("#wantFs .copyentry:first-child details")&&!!q("#wantFs .copyentry:first-child .crow")&&q('#wantFs details[data-copy="1"]')&&!q('#wantFs details[data-copy="1"]').open&&
-      /Deluxe box.*Big Label · BL 1/.test(q('#wantFs details[data-copy="1"]').textContent),heads()+" | "+q("#wantFs").textContent);
+    const heads=()=>[...d.querySelectorAll("#wantFs .copyentry")].map(x=>x.querySelector(".ct").textContent).join();
+    check("copies: folded rows, the title on the row, the budget inside",q("#wantFs legend").textContent==="The copies you want"&&heads()==="Plain press,Deluxe"&&
+      !q("#wantFs .copyentry .cb")&&!/Pressing/.test(q('#wantFs details[data-copy="0"]').textContent)&&/Up to \$20/.test(q('#wantFs details[data-copy="0"]').textContent)&&
+      !q('#wantFs details[data-copy="1"]').open&&/Deluxe box.*Big Label · BL 1.*Up to \$90/.test(q('#wantFs details[data-copy="1"]').textContent),heads()+" | "+q("#wantFs").textContent);
     q('#wantFs details[data-copy="1"] summary').click();await sleep(100);
     check("copies: a row opens to its pressing and label",q('#wantFs details[data-copy="1"]').open);
     q("#modeBtn").click();await sleep(300);
-    check("copies: Edit has a block per copy",d.querySelectorAll("#e-target .ecopy").length===2&&d.querySelectorAll("[data-rmcopy]").length===2);
+    check("copies: Edit has a block per copy, pressing as a text box",q("#f-press").tagName==="TEXTAREA"&&q("#e-target [data-cf=\"pressing\"]").tagName==="TEXTAREA"&&d.querySelectorAll("#e-target .ecopy").length===2&&d.querySelectorAll("[data-rmcopy]").length===2);
     q("#addCopy").click();await sleep(400);
     const ec=()=>d.querySelectorAll("#e-target .ecopy");
     const nc=[...ec()].pop().querySelector('[data-cf="name"]');nc.value="Third";nc.dispatchEvent(new Event("input"));await sleep(900);
@@ -282,12 +287,26 @@ f.onload=async()=>{
     check("copies: removing the first moves the next into the record's own fields",CPa.pressing==="Deluxe box"&&CPa.copyName==="Deluxe"&&CPa.budget==="90"&&CPa.moreCopies.map(c=>c.name).join()==="Third",JSON.stringify(CPa));
     q("#modeBtn").click();await sleep(300);
     q("#gotBtn").click();await sleep(400);
-    check("copies: Got it asks which copy",w.__data.records.rcp.status==="wish"&&d.querySelectorAll("[data-pickcopy]").length===2&&/other copies will be removed/.test(q(".pickcopy").textContent));
+    check("copies: Got it asks which copy",w.__data.records.rcp.status==="wish"&&d.querySelectorAll("[data-pickcopy]").length===2&&/other copies stay on this record as copies you still want/.test(q(".pickcopy").textContent));
     q("#pickNo").click();await sleep(300);
     check("copies: Cancel keeps the hunt",!q(".pickcopy")&&w.__data.records.rcp.status==="wish");
     q("#gotBtn").click();await sleep(400);q('[data-pickcopy="1"]').click();await sleep(500);
     const G=w.__data.records.rcp;
-    check("copies: the picked copy becomes your copy, the others go",G.status==="own"&&G.copyName==="Third"&&G.pressing===""&&G.moreCopies.length===0,JSON.stringify(G));
+    check("copies: the picked copy becomes your copy, the others stay as still wanted",G.status==="own"&&G.copyName==="Third"&&G.pressing===""&&G.moreCopies.map(c=>c.name).join()==="Deluxe",JSON.stringify(G));
+    q("#tab-research").click();await sleep(200);
+    check("copies: an owned record shows the copy it still wants on Research",q("#tp-research #wantFs legend")?.textContent==="The copy you still want"&&/Deluxe box/.test(q("#tp-research #wantFs").textContent),q("#tp-research")?.textContent);
+    q("#modeBtn").click();await sleep(300);
+    check("copies: Edit has the copies still wanted after Your copy",!!q("#e-copy + #e-still")&&d.querySelectorAll("#e-still .ecopy").length===1&&!!q('#e-still [data-rmcopy="1"]')&&!!q("#e-still #addCopy"));
+    q('#e-still [data-rmcopy="1"]').click();await sleep(400);
+    check("copies: the last copy still wanted can go",w.__data.records.rcp.moreCopies.length===0&&!q("#e-still")&&w.__data.records.rcp.copyName==="Third",JSON.stringify(w.__data.records.rcp));
+    q("#modeBtn").click();await sleep(300);q("#closeBtn").click();await sleep(200);
+    // ordered with a copy still wanted: Order | Research | Notes | About, and back to Want brings every copy back
+    Object.assign(w.__data.records.rcp,{status:"ordered",moreCopies:[{name:"Later",pressing:"",label:"",catalog:"",budget:"70",discogsId:""}]});w.__emit("records");await sleep(300);
+    await openRecord("Copies Test");
+    check("copies: an ordered record gets a Research tab for the copies it still wants",tabNames().startsWith("Order*,Research")&&!!q("#tp-research #wantFs")&&d.querySelectorAll("#f-note").length===1,tabNames());
+    q("#modeBtn").click();await sleep(300);q('input[name="fst"][value="wish"]').click();await sleep(500);
+    check("copies: back to Want, the record's copy first and the others after",w.__data.records.rcp.status==="wish"&&w.__data.records.rcp.copyName==="Third"&&w.__data.records.rcp.moreCopies[0].name==="Later",JSON.stringify(w.__data.records.rcp));
+    q("#modeBtn").click();await sleep(300);
     delete w.__data.records.rcp;w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);
     // research: a chat in the sheet, saved as a summary entry; pins survive new sessions
@@ -295,7 +314,7 @@ f.onload=async()=>{
     const order=[...d.querySelectorAll("#tp-task > fieldset > legend")].map(x=>x.textContent).join();
     check("research: the copies you want, the note box, then Research and Search elsewhere",order==="The copies you want,Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
     // #33: the copy's pressing, label · catalog and budget sit in the card, not above the tabs or in About
-    check("wanted: the copies you want show pressing, label · catalog, budget",/UK first≤\$150.*Pressing.*UK first pressing.*Label.*Apple · PCS 7088/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
+    check("wanted: the copies you want show pressing, label · catalog, budget",/UK first\s*Pressing.*UK first pressing.*Label.*Apple · PCS 7088.*Budget.*Up to \$150/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
     q("#f-note").value="Saw one at the local shop for $45";q("#logForm").dispatchEvent(new Event("submit",{cancelable:true}));await sleep(500);
     check("notes: the first note brings up a Notes tab with it",tabNames()==="Research*,Notes 1,About"&&/local shop/.test(q("#notesLog").textContent),tabNames());
     const chatRun=async q1=>{q("#resBtn").click();await sleep(200);q("#chatQ").value=q1;q("#chatForm").dispatchEvent(new Event("submit",{cancelable:true}));

@@ -6,6 +6,7 @@ CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
 PORT="${PORT:-8799}"
 python3 build.py >/dev/null || exit 1
 python3 -I test_lookup.py || exit 1
+python3 -I test_discogs.py >/dev/null || { python3 -I test_discogs.py | grep -v "^PASS"; exit 1; }
 python3 -m http.server "$PORT" >/dev/null 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null; rm -rf "$PROFILE"' EXIT
