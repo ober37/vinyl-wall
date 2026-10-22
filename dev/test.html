@@ -257,7 +257,9 @@ f.onload=async()=>{
     // research: a chat in the sheet, saved as a summary entry; pins survive new sessions
     await openRecord("Abbey Road");
     const order=[...d.querySelectorAll("#tp-task > fieldset > legend")].map(x=>x.textContent).join();
-    check("research: note box on top, then Research and Search elsewhere",order==="Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
+    check("research: the copy you want, the note box, then Research and Search elsewhere",order==="The copy you want,Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
+    // #33: the copy's pressing, label · catalog and budget sit in the card, not above the tabs or in About
+    check("wanted: the copy you want shows pressing, label · catalog, budget",/Pressing.*UK first pressing.*Label.*Apple · PCS 7088.*Budget.*Up to \$150/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
     q("#f-note").value="Saw one at the local shop for $45";q("#logForm").dispatchEvent(new Event("submit",{cancelable:true}));await sleep(500);
     check("notes: the first note brings up a Notes tab with it",tabNames()==="Research*,Notes 1,About"&&/local shop/.test(q("#notesLog").textContent),tabNames());
     const chatRun=async q1=>{q("#resBtn").click();await sleep(200);q("#chatQ").value=q1;q("#chatForm").dispatchEvent(new Event("submit",{cancelable:true}));

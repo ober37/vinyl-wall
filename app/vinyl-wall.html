@@ -759,7 +759,7 @@ function researchHTML(r){
 
 let sheetMode={id:null,edit:false},newDraft=null;
 /* Edit and Add mirror the view: the record (album, artist, cover, status), then Why, then the status's own section
-   (Your copy / Target / Order + Edition), About the album, Discogs, and Remove set apart at the end. */
+   (Your copy / Priority + The copy you want / Order + Edition), About the album, Discogs, and Remove set apart at the end. */
 const GRADE_OPTS=[["","Not graded"],["M","Mint (M)"],["NM","Near mint (NM)"],["VG+","Very good plus (VG+)"],["VG","Very good (VG)"],["G+","Good plus (G+)"],["G","Good (G)"],["F","Fair (F)"],["P","Poor (P)"]];
 const STATUS_OPTS=[["own","Own","I own it"],["ordered","Ordered","On order"],["wish","Want","I want it"]];
 // a runout's parts, separated by " · " or ";"
@@ -786,10 +786,10 @@ function editFormHTML(r,isNew){
       <button class="linkbtn" type="button" id="addSide">+ Add side</button></div></div>
     ${isNew?"":`<div class="ediscogs">${discogsHTML(r)}</div>`}`);
   const prio=r.priority==1?1:r.priority==3?3:2;
-  const target=fs("e-target","Target",`<div class="grid2">${lab("Pressing",inp("f-press",pressingText(r),"e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye"),1)}
-    ${lab("Budget",money("f-budget",r.budget,"60"))}
-    <div class="f">Priority<span class="seg" role="radiogroup" aria-label="Priority">${[[1,"Top"],[2,"Want"],[3,"Someday"]].map(([v,l])=>`<label><input type="radio" name="fprio" value="${v}" ${prio===v?"checked":""}><span>${l}</span></label>`).join("")}</span></div>
-    ${labelCat}</div>`);
+  // priority ranks the record; the copy's fields (pressing, label, catalog, budget) describe the pressing being hunted (#33)
+  const priority=fs("e-prio","Priority",`<span class="seg" role="radiogroup" aria-label="Priority">${[[1,"Top"],[2,"Want"],[3,"Someday"]].map(([v,l])=>`<label><input type="radio" name="fprio" value="${v}" ${prio===v?"checked":""}><span>${l}</span></label>`).join("")}</span>`);
+  const target=fs("e-target","The copy you want",`<div class="grid2">${lab("Pressing",inp("f-press",pressingText(r),"e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye"),1)}
+    ${labelCat}${lab("Budget",money("f-budget",r.budget,"60"))}</div>`);
   const order=fs("e-order","Order",`<div class="grid2">${lab("From",inp("f-shop",r.shop,"e.g. the band's webstore, a Discogs seller"),1)}
     ${lab("Status",`<select id="f-ostat">${Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("")}</select>`)}${lab("Paid",money("f-paid",r.paid,"incl. shipping"))}
     ${lab("Ordered on",`<input id="f-odate" type="date" value="${esc(r.orderDate)}">`)}${lab("Expected",`<input id="f-eta" type="date" value="${esc(r.eta)}">`)}
@@ -800,7 +800,7 @@ function editFormHTML(r,isNew){
   const album=fs("e-album","About the album",`<div class="grid2">${lab("Year",inp("f-year",r.year,"e.g. 1959",' class="mono" inputmode="numeric"'))}
     ${lab("Runtime (min)",inp("f-runtime",r.runtime,r.needsEnrich?"Looking it up…":"e.g. 46",' class="mono" inputmode="numeric"'))}${own?labelCat:""}</div>`);
   const discogs=isNew?"":fs("e-discogs","Discogs",discogsHTML(r));
-  return why+(own?copy+album:wish?target+album+discogs:ord?order+album+discogs:"");
+  return why+(own?copy+album:wish?priority+target+album+discogs:ord?order+album+discogs:"");
 }
 
 const GRADE_NAME={M:"Mint",NM:"Near mint",F:"Fair",P:"Poor"};
@@ -814,13 +814,10 @@ function runoutHTML(r){const parts=runParts(r.matrix);
     ${parts.map(x=>`<div class="mono">${esc(x)}</div>`).join("")}</details>`}
 function factsHTML(r){
   const wish=r.status==="wish",ord=r.status==="ordered",own=!wish&&!ord,f=[],p=pressingText(r);
-  if(p)f.push([wish?"Target":ord?"Edition":"Pressing",esc(p)]);
-  if(wish&&r.budget)f.push(["Budget","Up to $"+esc(r.budget)]);
+  if(p&&!wish)f.push([ord?"Edition":"Pressing",esc(p)]);
   if(ord){f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(playDate(r.eta)):"")+
       (r.tracking?` · <a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track ↗</a>`:"")]);
     if(r.shop)f.push(["From",esc(r.shop)])}
-  // the label is part of About the Album for owned and ordered records; the hunt keeps it with its target
-  if(wish&&(r.label||r.catalog))f.push(["Label",esc(r.label)+(r.catalog?`<span class="mut">${r.label?" · ":""}${esc(r.catalog)}</span>`:"")]);
   if(own){const b=[r.acquired?playDate(r.acquired):"",r.shop,r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
     const g=gradeText(r);if(g)f.push(["Grade",esc(g)]);
     if(r.matrix)f.push(["Runout",runoutHTML(r)])}
@@ -856,7 +853,7 @@ function summaryHTML(r){
 function keyInfoHTML(r){
   const ab=!r.aboutBlocked&&r.about||{},list=a=>Array.isArray(a)?a.filter(Boolean).map(String).join(", "):"",f=[];
   if(ab.released)f.push(["Released",esc(longDate(ab.released))]);
-  const lab=ab.label||r.label,cat=r.status!=="wish"&&!(r.matrix&&r.status!=="ordered")?r.catalog:"";
+  const lab=ab.label||(r.status!=="wish"?r.label:""),cat=r.status!=="wish"&&!(r.matrix&&r.status!=="ordered")?r.catalog:"";
   if(lab||cat)f.push(["Label",esc(lab||"")+(cat?`<span class="mut">${lab?" · ":""}${esc(cat)}</span>`:"")]);
   if(list(ab.producers))f.push(["Producer",esc(list(ab.producers))]);
   // place, then dates on their own line (split at the last " · ")
@@ -879,6 +876,15 @@ function tracksHTML(r){
     <p class="hint">From ${srcUrl?`<a href="${esc(srcUrl)}" target="_blank" rel="noopener">${srcName} ↗</a>`:srcName}</p>`}
 // Your copy (owned records): the pressing's facts and its Discogs links
 function copyHTML(r){const f=r.status!=="wish"&&r.status!=="ordered"?factsHTML(r):"";return f?`${f}<div class="links slim">${ownLinks(r)}</div>`:""}
+// The copy you want (wanted records): the pressing being hunted, at the top of the Research tab; its label shows even when
+// it's the original's, since here it names the copy. An imported original label alone isn't a copy, so it shows only beside
+// a pressing, catalog or budget, or when it differs from the original (#33)
+function wantCopyHTML(r){const orig=!r.aboutBlocked&&r.about&&r.about.label||"",p=pressingText(r),cat=r.catalog||"",f=[];
+  const lab=p||cat||r.budget||r.label&&r.label!==orig?r.label||"":"";
+  if(p)f.push(["Pressing",esc(p)]);
+  if(lab||cat)f.push(["Label",esc(lab)+(cat?`<span class="mut">${lab?" · ":""}${esc(cat)}</span>`:"")]);
+  if(r.budget)f.push(["Budget","Up to $"+esc(r.budget)]);
+  return f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:""}
 // About the Artist: name, summary with its source, and the artist's official links
 function artistHTML(r){
   const A=artistOf(r),src=x=>x==="discogs"?"Discogs":"Wikipedia";
@@ -1003,7 +1009,6 @@ function openSheet(id,keepScroll){
   ${isNew?"":`<div class="viewpart">
     ${summaryHTML(r)}
     ${r.why?`<blockquote class="why">${esc(r.why)}</blockquote>`:`<button class="whyadd editonly" type="button" id="whyAdd">${wish||ord?"Why do you want this one? Add a few words…":"Why is this one on the wall? Add a few words…"}</button>`}
-    ${wish?factsHTML(r):""}
     ${wish||ord?`<div class="actions statusacts editonly">${ord?`<button class="btn primary" type="button" id="arrBtn">It arrived</button>`:
       `<button class="btn primary" type="button" id="ordBtn">Ordered it</button><button class="btn" type="button" id="gotBtn">Got it</button>`}</div>`:""}
     ${moveMsg&&moveMsg.id===r.id&&moveMsg.msg?`<p class="hint" role="status">${esc(moveMsg.msg)}</p>`:""}
@@ -1035,6 +1040,7 @@ function openSheet(id,keepScroll){
     return `${tabs.length>1?`<div class="tabs viewonly" role="tablist" aria-label="Record">${tabBtn("task",wish?"Research":ord?"Order":"Listening")}${res?tabBtn("research","Research"):""}${notesN?tabBtn("notes",`Notes <span class="tabn">${notesN}</span>`):""}${tabs.includes("about")?tabBtn("about","About"):""}</div>`:""}
   ${panel("task",`
   ${ord?`<div class="ordfacts">${factsHTML(r)}<div class="links slim">${ownLinks(r)}</div></div>`:""}
+  ${wish&&wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>The copy you want</legend>${wantCopyHTML(r)}</fieldset>`:""}
   ${own?"":`<div class="notetop">${noteForm}</div>`}
   ${wish?`<fieldset class="viewonly" id="resFs"><legend>Research</legend>
     ${chatHTML(r)}
