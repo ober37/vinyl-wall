@@ -204,8 +204,18 @@ def want_notes(d):
         return s[:255]
     pr = {1: "Top want", 2: "Want", 3: "Someday"}.get(int(d.get("priority") or 2), "Want")
     bits = [pr]
-    if d.get("pressing"): bits.append("Target: " + d["pressing"])
-    if d.get("budget"): bits.append(f"Budget ${d['budget']}")
+    more = [c for c in (d.get("moreCopies") or []) if isinstance(c, dict)]
+    if more:
+        # several copies: each by name (or pressing) with its budget
+        def one(c):
+            t = c.get("name") or c.get("pressing") or ""
+            return t + (f" (${c['budget']})" if c.get("budget") else "")
+        first = {"name": d.get("copyName"), "pressing": d.get("pressing"), "budget": d.get("budget")}
+        ts = [x for x in map(one, [first] + more) if x]
+        if ts: bits.append("Targets: " + "; ".join(ts))
+    else:
+        if d.get("pressing"): bits.append("Target: " + d["pressing"])
+        if d.get("budget"): bits.append(f"Budget ${d['budget']}")
     return ". ".join(bits)[:255]
 
 

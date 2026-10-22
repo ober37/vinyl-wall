@@ -254,17 +254,53 @@ f.onload=async()=>{
     check("add: the record is hung as wanted",!!nr&&nr[1].status==="wish"&&nr[1].artist==="Test Artist",JSON.stringify(nr&&nr[1]));
     if(nr){delete w.__data.records[nr[0]];w.__emit("records");await sleep(300)}
     q("#closeBtn").click();await sleep(200);
+    // one copy: an open card with its name, pressing, label · catalog and budget
+    w.__data.records.rc1={title:"One Copy",artist:"Tester",status:"wish",priority:2,notes:[],added:98,copyName:"Blue vinyl",pressing:"2020 blue",label:"Lab",catalog:"L 9",budget:"35"};
+    w.__emit("records");await sleep(300);await openRecord("One Copy");
+    check("copies: one copy is an open card",q("#wantFs legend").textContent==="The copy you want"&&!q("#wantFs details")&&
+      /Blue vinyl.*Pressing.*2020 blue.*Label.*Lab · L 9.*Budget.*Up to \$35/.test(q("#wantFs").textContent),q("#wantFs").textContent);
+    q("#closeBtn").click();await sleep(200);delete w.__data.records.rc1;w.__emit("records");await sleep(300);
+    // several copies of one hunt: a card each, the highest budget on the tag, add and remove in Edit, pick one on Got it
+    w.__data.records.rcp={title:"Copies Test",artist:"Tester",status:"wish",priority:2,notes:[],added:99,pressing:"Plain press",budget:"20",
+      moreCopies:[{name:"Deluxe",pressing:"Deluxe box",label:"Big Label",catalog:"BL 1",budget:"90"}]};w.__emit("records");await sleep(300);
+    check("copies: the sleeve tag shows the highest budget",/≤\$90/.test([...d.querySelectorAll(".slot")].find(x=>x.textContent.includes("Copies Test")).textContent));
+    await openRecord("Copies Test");
+    const heads=()=>[...d.querySelectorAll("#wantFs .copyentry")].map(x=>x.querySelector(".ct").textContent+" "+x.querySelector(".cb").textContent).join();
+    check("copies: folded rows, name or pressing and budget on each",q("#wantFs legend").textContent==="The copies you want"&&heads()==="Plain press ≤$20,Deluxe ≤$90"&&
+      !q("#wantFs .copyentry:first-child details")&&!!q("#wantFs .copyentry:first-child .crow")&&q('#wantFs details[data-copy="1"]')&&!q('#wantFs details[data-copy="1"]').open&&
+      /Deluxe box.*Big Label · BL 1/.test(q('#wantFs details[data-copy="1"]').textContent),heads()+" | "+q("#wantFs").textContent);
+    q('#wantFs details[data-copy="1"] summary').click();await sleep(100);
+    check("copies: a row opens to its pressing and label",q('#wantFs details[data-copy="1"]').open);
+    q("#modeBtn").click();await sleep(300);
+    check("copies: Edit has a block per copy",d.querySelectorAll("#e-target .ecopy").length===2&&d.querySelectorAll("[data-rmcopy]").length===2);
+    q("#addCopy").click();await sleep(400);
+    const ec=()=>d.querySelectorAll("#e-target .ecopy");
+    const nc=[...ec()].pop().querySelector('[data-cf="name"]');nc.value="Third";nc.dispatchEvent(new Event("input"));await sleep(900);
+    check("copies: Add another copy saves a new one",ec().length===3&&(w.__data.records.rcp.moreCopies||[]).map(c=>c.name).join()==="Deluxe,Third",JSON.stringify(w.__data.records.rcp.moreCopies));
+    q('[data-rmcopy="0"]').click();await sleep(400);
+    const CPa=w.__data.records.rcp;
+    check("copies: removing the first moves the next into the record's own fields",CPa.pressing==="Deluxe box"&&CPa.copyName==="Deluxe"&&CPa.budget==="90"&&CPa.moreCopies.map(c=>c.name).join()==="Third",JSON.stringify(CPa));
+    q("#modeBtn").click();await sleep(300);
+    q("#gotBtn").click();await sleep(400);
+    check("copies: Got it asks which copy",w.__data.records.rcp.status==="wish"&&d.querySelectorAll("[data-pickcopy]").length===2&&/other copies will be removed/.test(q(".pickcopy").textContent));
+    q("#pickNo").click();await sleep(300);
+    check("copies: Cancel keeps the hunt",!q(".pickcopy")&&w.__data.records.rcp.status==="wish");
+    q("#gotBtn").click();await sleep(400);q('[data-pickcopy="1"]').click();await sleep(500);
+    const G=w.__data.records.rcp;
+    check("copies: the picked copy becomes your copy, the others go",G.status==="own"&&G.copyName==="Third"&&G.pressing===""&&G.moreCopies.length===0,JSON.stringify(G));
+    delete w.__data.records.rcp;w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);
     // research: a chat in the sheet, saved as a summary entry; pins survive new sessions
     await openRecord("Abbey Road");
     const order=[...d.querySelectorAll("#tp-task > fieldset > legend")].map(x=>x.textContent).join();
-    check("research: the copy you want, the note box, then Research and Search elsewhere",order==="The copy you want,Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
+    check("research: the copies you want, the note box, then Research and Search elsewhere",order==="The copies you want,Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
     // #33: the copy's pressing, label · catalog and budget sit in the card, not above the tabs or in About
-    check("wanted: the copy you want shows pressing, label · catalog, budget",/Pressing.*UK first pressing.*Label.*Apple · PCS 7088.*Budget.*Up to \$150/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
+    check("wanted: the copies you want show pressing, label · catalog, budget",/UK first≤\$150.*Pressing.*UK first pressing.*Label.*Apple · PCS 7088/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
     q("#f-note").value="Saw one at the local shop for $45";q("#logForm").dispatchEvent(new Event("submit",{cancelable:true}));await sleep(500);
     check("notes: the first note brings up a Notes tab with it",tabNames()==="Research*,Notes 1,About"&&/local shop/.test(q("#notesLog").textContent),tabNames());
     const chatRun=async q1=>{q("#resBtn").click();await sleep(200);q("#chatQ").value=q1;q("#chatForm").dispatchEvent(new Event("submit",{cancelable:true}));
       await until(()=>q("#chatSave")&&!q("#chatSave").disabled);q("#chatSave").click();await until(()=>!q("#chat"));await sleep(300)};
-    const resOrder=()=>[...d.querySelectorAll(".resentry")].map(x=>x.dataset.res).join();
+    const resOrder=()=>[...d.querySelectorAll("#research .resentry")].map(x=>x.dataset.res).join();
     q('[data-respin="ab1"]').click();await sleep(300);
     const ab=()=>w.__data.records.r4;
     check("research: pinned entry goes first, open",resOrder()==="ab1,ab2"&&q('.resentry[data-res="ab1"]').open&&ab().researchLog.find(e=>e.id==="ab1").pinned,resOrder());
@@ -413,6 +449,7 @@ f.onload=async()=>{
     w.__data.records.r1.coverAsset="cov1";w.__emit("records");w.__blobs.bg1=w.__blobs.cov1;site().bg={kind:"photo",assetId:"bg1"};await emit();await sleep(200);
     q("#settingsBtn").click();await sleep(300);need(q("#lib-export"),"#lib-export").click();await until(()=>w.__lastSave);
     const ex=JSON.parse(w.__lastSave||"{}");
+    check("export: a hunt's copies are in the file",ex.records?.r4?.copyName==="UK first"&&ex.records.r4.moreCopies?.[0]?.name==="Half-speed reissue",JSON.stringify(ex.records?.r4?.moreCopies));
     check("export: cover image in the file",/^data:image\/jpeg;base64,/.test(ex.covers?.cov1||"")&&ex.records?.r1?.coverAsset==="cov1",Object.keys(ex.covers||{}).join());
     check("export: artists of exported records",!!ex.artists?.["mb-miles"]?.summary&&ex.records.r1.about?.summary&&ex.records.r1.aboutAt,Object.keys(ex.artists||{}).join());
     check("export: the photo background travels too",/^data:image\/jpeg;base64,/.test(ex.covers?.bg1||""));
@@ -449,6 +486,11 @@ f.onload=async()=>{
     check("import: an odd cover id doesn't break it",IR.i9.needsEnrich&&!IR.i9.coverAsset,JSON.stringify(IR.i9));
     check("import: Not this artist is never looked up",IR.i6.aboutBlocked&&IR.i6.aboutAt==="2026-10-01");
     check("import: done line counts each record once",/Brought in 7 records\. We'll look up covers or album info for 4 of them\./.test(got.msg),got.msg);
+    await importFile({records:{i12:{title:"Hunt Copies",artist:"Artist Twelve",status:"wish",notes:[],copyName:"First",pressing:"P1",
+      moreCopies:[{name:"Second",pressing:"P2",budget:"50",discogsId:"123",evil:"x"},"bad",{name:{},discogsId:"x"}]}}});
+    const H=w.__data.records.i12;
+    check("import: a hunt's copies come in, cleaned",H.copyName==="First"&&H.moreCopies.length===2&&H.moreCopies[0].name==="Second"&&H.moreCopies[0].discogsId===123&&
+      !("evil" in H.moreCopies[0])&&H.moreCopies[1].name===""&&H.moreCopies[1].discogsId==="",JSON.stringify(H.moreCopies));
     w.__failUpload=true;
     const fail=await importFile({records:{i7:{title:"Upload Fails",artist:"Artist Seven",status:"own",notes:[],coverAsset:"c7",about:abt,aboutAt:"2026-10-01"}},covers:{c7:img}});
     w.__failUpload=false;

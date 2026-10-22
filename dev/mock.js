@@ -44,7 +44,7 @@ const data={
    ...Array.from({length:17},(_,i)=>({d:day(40+(16-i)*12),t:"Played the whole album on Living room (~39 min)"}))],added:2},
   r3:{title:"Blue Train",artist:"John Coltrane",year:"1957",label:"Blue Note",status:"own",runtime:42,notes:[{d:day(370),t:"Played the whole album on Den (~42 min)"}],added:3},
   r5:{title:"Aja",artist:"Steely Dan",year:"1977",status:"ordered",orderStatus:"shipped",eta:"2026-10-24",notes:[],added:5},
-  r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,pressing:"UK first pressing",budget:"150",label:"Apple",catalog:"PCS 7088",notes:[],added:4,artistRef:"mb-beatles",aboutAt:1,
+  r4:{title:"Abbey Road",artist:"The Beatles",year:"1969",status:"wish",priority:1,copyName:"UK first",pressing:"UK first pressing",budget:"150",label:"Apple",catalog:"PCS 7088",moreCopies:[{name:"Half-speed reissue",pressing:"2019 50th Anniversary half-speed",label:"Apple",catalog:"",budget:"40"}],notes:[],added:4,artistRef:"mb-beatles",aboutAt:1,
    about:{wiki:"https://en.wikipedia.org/wiki/Abbey_Road",source:"claude",
     summary:"Abbey Road is the Beatles' eleventh studio album, released in September 1969 and the last they recorded together, though Let It Be came out later.\n\nProduced by George Martin, it pairs standouts like Come Together and George Harrison's Something and Here Comes the Sun with the long medley that closes side two. Its polished sound made early use of the Moog synthesizer, and the cover photo of the band on the zebra crossing outside the studio became one of the most imitated images in popular music.",
     released:"1969-09-26",label:"Apple",producers:["George Martin"],recorded:"EMI Studios, Olympic and Trident, London · February–August 1969",genres:["Rock"],
