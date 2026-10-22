@@ -393,6 +393,28 @@ f.onload=async()=>{
     const a=[...d.querySelectorAll("#sheet a")].find(x=>x.textContent.startsWith("Track"));
     check("tracking link: no injected attribute",a&&!a.hasAttribute("data-injected"),a?[...a.attributes].map(x=>x.name).join():"no link");
     q("#closeBtn").click();await sleep(200);
+    // the shop's website (#47): https:// added when left off, linked from the shop's name, only http(s) links
+    const fromDd=()=>[...d.querySelectorAll("#sheet .kv dt")].find(x=>x.textContent==="From")?.nextElementSibling;
+    await openRecord("Aja");q("#modeBtn").click();await sleep(300);
+    const su=q("#f-shopurl");check("shop website: under From in the order's edit",!!su&&su.type==="url"&&q("#shopUrlHint").hidden);
+    su.value="roughtrade.com";su.dispatchEvent(new Event("input",{bubbles:true}));await sleep(1200);
+    check("shop website: https:// added",w.__data.records.r5.shopUrl==="https://roughtrade.com/",w.__data.records.r5.shopUrl);
+    q("#closeBtn").click();await sleep(300);await openRecord("Aja");
+    let sa=fromDd()?.querySelector("a");
+    check("shop website: no shop name, the address stands in",sa?.textContent==="roughtrade.com ↗"&&sa.href==="https://roughtrade.com/"&&sa.target==="_blank",fromDd()?.innerHTML);
+    q("#modeBtn").click();await sleep(300);
+    const su2=q("#f-shopurl");su2.value="javascript:alert(1)";su2.dispatchEvent(new Event("input",{bubbles:true}));await sleep(1200);
+    check("shop website: a non-web address gets a hint",!q("#shopUrlHint").hidden);
+    q("#closeBtn").click();await sleep(300);await openRecord("Aja");
+    check("shop website: a non-web address doesn't link",!fromDd()&&![...d.querySelectorAll("#sheet a")].some(x=>/javascript/i.test(x.getAttribute("href")||"")),fromDd()?.innerHTML);
+    q("#closeBtn").click();await sleep(200);delete w.__data.records.r5.shopUrl;
+    w.__data.records.r1.shopUrl="https://www.example.com/shop";w.__emit("records");await sleep(300);
+    await openRecord("Kind of Blue");
+    const bd=[...d.querySelectorAll("#sheet .kv dt")].find(x=>x.textContent==="Bought")?.nextElementSibling;
+    check("shop website: Bought links the shop's name",bd?.querySelector("a")?.textContent==="A local record shop ↗"&&/ · \$48$/.test(bd.textContent),bd?.innerHTML);
+    q("#modeBtn").click();await sleep(300);
+    check("shop website: under Bought from in Your copy's edit",q("#e-copy #f-shopurl")?.value==="https://www.example.com/shop");
+    q("#modeBtn").click();await sleep(300);q("#closeBtn").click();await sleep(200);delete w.__data.records.r1.shopUrl;w.__emit("records");await sleep(300);
     // starting the task never passes record text along
     await openRecord("Kind of Blue");q("#modeBtn").click();await sleep(300);q("#enrichBtn").click();await sleep(400);
     const call=w.__calls.filter(c=>c[1]==="fire_trigger").pop(),text=call?call[2].text:"";
@@ -460,13 +482,13 @@ f.onload=async()=>{
     check("settings: save keeps others' changes",site().title==="Test wall"&&site().discogs?.status==="ok",JSON.stringify(site()));
     need(q("#closeBtn"),"#closeBtn after settings").click();await sleep(200);
     // import takes known record fields only, with fresh sync state
-    const file=new w.File([JSON.stringify({vinylWall:1,records:{imp1:{title:"Imported One",artist:"Tester",status:"own",notes:[],
+    const file=new w.File([JSON.stringify({vinylWall:1,records:{imp1:{title:"Imported One",artist:"Tester",status:"own",notes:[],shopUrl:"https://shop.example",
       discogsSync:{state:"synced",rid:5,instanceId:6},needsSync:false,stray:"x"}}})],"lib.json",{type:"application/json"});
     q("#settingsBtn").click();await sleep(300);need(q("#lib-import"),"#lib-import").click();await sleep(200);
     const dt=new w.DataTransfer();dt.items.add(file);q("#lib-file").files=dt.files;q("#lib-file").dispatchEvent(new w.Event("change"));await until(()=>q("#lib-yes"));
     need(q("#lib-yes"),"#lib-yes ("+(q(".libflow")?.textContent||"no import sheet")+")").click();await until(()=>q("#lib-see"));
     const r=w.__data.records.imp1;
-    check("import: known fields, fresh sync",r&&!r.discogsSync&&!r.stray&&r.needsSync===true&&r.title==="Imported One",JSON.stringify(r));
+    check("import: known fields, fresh sync",r&&!r.discogsSync&&!r.stray&&r.needsSync===true&&r.title==="Imported One"&&r.shopUrl==="https://shop.example",JSON.stringify(r));
     check("import: an older file without covers looks the cover up",r.needsEnrich===true&&!r.coverAsset,JSON.stringify(r));
     q("#lib-see").click();await sleep(200);
     // export carries cover images and the records' artists (#35, #37)
