@@ -318,7 +318,9 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .whyadd:hover{border-color:var(--brass);color:var(--ink)}
 /* the record's facts: a compact label / value list; the runout folds behind a tap */
 .wcopy h4{font:600 15px/1.25 var(--body);margin:14px 0 0} .wcopy h4+.kv{margin-top:8px}
-.copyentry summary{grid-template-columns:minmax(0,1fr) auto} .copyentry .crow{padding:9px 0}
+.resentry.copyentry summary{grid-template-columns:minmax(0,1fr) auto}
+.resentry.ordentry summary{grid-template-columns:minmax(0,1fr) auto auto} .ordentry .cb{font:12px var(--mono);color:var(--ink-2);white-space:nowrap}
+.ordentrywrap{margin-top:20px} .notetop+.ordentrywrap{margin-top:16px} .copyentry .crow{padding:9px 0}
 .kv .pl{white-space:pre-line} textarea.grow{min-height:0;overflow:hidden}
 .copyentry .resbody .kv{margin-top:12px} #wantFs .reslog{margin-top:6px}
 .ecopy+.ecopy{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
@@ -765,7 +767,7 @@ function researchHTML(r){
 
 let sheetMode={id:null,edit:false},newDraft=null;
 /* Edit and Add mirror the view: the record (album, artist, cover, status), then Why, then the status's own section
-   (Your copy / Priority + The copy you want / Order + Edition), About the album, Discogs, and Remove set apart at the end. */
+   (Your copy / Priority + The copy you want / The copy you ordered, then any copies still wanted), About the album, Discogs, and Remove set apart at the end. */
 const GRADE_OPTS=[["","Not graded"],["M","Mint (M)"],["NM","Near mint (NM)"],["VG+","Very good plus (VG+)"],["VG","Very good (VG)"],["G+","Good plus (G+)"],["G","Good (G)"],["F","Fair (F)"],["P","Poor (P)"]];
 const STATUS_OPTS=[["own","Own","I own it"],["ordered","Ordered","On order"],["wish","Want","I want it"]];
 // a runout's parts, separated by " · " or ";"
@@ -809,13 +811,15 @@ function editFormHTML(r,isNew){
     ${labelCat}${lab("Budget",money("f-budget",r.budget,"60"))}</div>${rmCopy(0)}</div>`).join("")}${addCopy}</fieldset>`;
   // owned and ordered: the copies still hunted, after Your copy / Edition, only while there are any
   const still=!wish&&C.length>1?`<fieldset class="editpart copygroup" id="e-still"><legend>${C.length>2?"The copies you still want":"The copy you still want"}</legend>${C.slice(1).map((c,i)=>extra(c,i+1)).join("")}${addCopy}</fieldset>`:"";
-  const order=fs("e-order","Order",`<div class="grid2">${lab("From",inp("f-shop",r.shop,"e.g. the band's webstore, a Discogs seller"),1)}
+  // ordered: one group for the copy ordered, its own fields as on Want, then the order's
+  const order=fs("e-order","The copy you ordered",`<div class="grid2">${lab("Name",inp("f-cname",C[0].name,"e.g. MoFi one-step"),1)}
+    ${lab("Pressing",press(pressingText(r),"e.g. 2024 indie-store colored vinyl"),1)}${labelCat}${lab("Budget",money("f-budget",r.budget,"60"))}
+    ${lab("From",inp("f-shop",r.shop,"e.g. the band's webstore, a Discogs seller"),1)}
     ${lab("Status",`<select id="f-ostat">${Object.entries(OSTAT).map(([k,v])=>`<option value="${k}" ${(r.orderStatus||"ordered")===k?"selected":""}>${v}</option>`).join("")}</select>`)}${lab("Paid",money("f-paid",r.paid,"incl. shipping"))}
     ${lab("Ordered on",`<input id="f-odate" type="date" value="${esc(r.orderDate)}">`)}${lab("Expected",`<input id="f-eta" type="date" value="${esc(r.eta)}">`)}
     ${lab("Order #",inp("f-onum",r.orderNum,"",' class="mono"'))}${lab("Carrier",inp("f-carrier",r.carrier,"USPS, UPS, FedEx, DHL"))}
     ${lab("Tracking #",inp("f-track",r.tracking,"",' class="mono" autocapitalize="characters" autocomplete="off"'),1)}
-    ${r.orderNotes?lab("Order notes",`<textarea id="f-onotes">${esc(r.orderNotes)}</textarea>`,1):""}</div>`)+
-    fs("e-edition","Edition",`<div class="grid2">${lab("Pressing",press(pressingText(r),"e.g. 2024 indie-store colored vinyl"),1)}${labelCat}</div>`);
+    ${r.orderNotes?lab("Order notes",`<textarea id="f-onotes">${esc(r.orderNotes)}</textarea>`,1):""}</div>`);
   const album=fs("e-album","About the album",`<div class="grid2">${lab("Year",inp("f-year",r.year,"e.g. 1959",' class="mono" inputmode="numeric"'))}
     ${lab("Runtime (min)",inp("f-runtime",r.runtime,r.needsEnrich?"Looking it up…":"e.g. 46",' class="mono" inputmode="numeric"'))}${own?labelCat:""}</div>`);
   const discogs=isNew?"":fs("e-discogs","Discogs",discogsHTML(r));
@@ -833,10 +837,7 @@ function runoutHTML(r){const parts=runParts(r.matrix);
     ${parts.map(x=>`<div class="mono">${esc(x)}</div>`).join("")}</details>`}
 function factsHTML(r){
   const wish=r.status==="wish",ord=r.status==="ordered",own=!wish&&!ord,f=[],p=pressingText(r);
-  if(p&&!wish)f.push([ord?"Edition":"Pressing",`<span class="pl">${esc(p)}</span>`]);
-  if(ord){f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(playDate(r.eta)):"")+
-      (r.tracking?` · <a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track ↗</a>`:"")]);
-    if(r.shop)f.push(["From",esc(r.shop)])}
+  if(p&&own)f.push(["Pressing",`<span class="pl">${esc(p)}</span>`]);
   if(own){const b=[r.acquired?playDate(r.acquired):"",r.shop,r.paid?"$"+r.paid:""].filter(Boolean).join(" · ");if(b)f.push(["Bought",esc(b)]);
     const g=gradeText(r);if(g)f.push(["Grade",esc(g)]);
     if(r.matrix)f.push(["Runout",runoutHTML(r)])}
@@ -917,7 +918,8 @@ function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">$
   if(!L.length)return "";
   // one copy: an open card, the hunt at a glance on the tab that opens first. A hunt's own label shows beside the rest
   // of the copy, or on its own only when the owner typed it (a looked-up label is the album's, not the copy's)
-  if(L.length===1){const [c,i]=L[0],typed=!(r.autoFilled||[]).includes("label"),orig=!r.aboutBlocked&&r.about&&r.about.label||"";
+  // copies still wanted on an owned or ordered record keep the folded rows they had before the order (#33 retest)
+  if(L.length===1&&r.status==="wish"){const [c,i]=L[0],typed=!(r.autoFilled||[]).includes("label"),orig=!r.aboutBlocked&&r.about&&r.about.label||"";
     const lab=i>0||c.name||c.pressing||c.catalog||c.budget||typed&&c.label&&c.label!==orig?c.label:"";
     const body=kv([...pressRow(c),...labRow(c,lab),...budRow(c)]);
     return body||c.name?`<div class="wcopy">${c.name?`<h4>${esc(c.name)}</h4>`:""}${body}</div>`:""}
@@ -926,7 +928,20 @@ function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">$
     const body=kv([...(c.name?pressRow(c):[]),...labRow(c,c.label),...budRow(c)]);
     return body?`<details class="resentry copyentry" data-copy="${i}"${openCopies.has(r.id+":"+i)?" open":""}><summary><span class="ct">${esc(t)}</span></summary><div class="resbody">${body}</div></details>`:
       `<div class="resentry copyentry"><div class="crow"><span class="ct">${esc(t)}</span></div></div>`}).join("")}</div>`}
-const openCopies=new Set();
+const openCopies=new Set(),foldOrder=new Set();
+// The Order tab: the ordered copy as one entry like the copies on Research, open to start: the copy's own fields, then the
+// order's (status with tracking, from, paid, ordered on), the budget only until something's paid, and its Discogs links
+function orderEntryHTML(r){const c=wantCopies(r)[0],t=c.name||c.pressing.split("\n")[0].trim()||"Your order",f=[];
+  const st=esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?" · "+esc(shortDate(r.eta)):"");
+  if(c.pressing&&c.pressing.split("\n")[0].trim()!==t)f.push(["Pressing",`<span class="pl">${esc(c.pressing)}</span>`]);
+  if(c.label||c.catalog)f.push(["Label",esc(c.label)+(c.catalog?`<span class="mut">${c.label?" · ":""}${esc(c.catalog)}</span>`:"")]);
+  f.push(["Status",esc(OSTAT[r.orderStatus||"ordered"])+(r.eta?", expected "+esc(playDate(r.eta)):"")+
+    (r.tracking?` · <a href="${esc(trackUrl(r.carrier,r.tracking))}" target="_blank" rel="noopener">Track ↗</a>`:"")]);
+  if(r.shop)f.push(["From",esc(r.shop)]);
+  if(r.paid)f.push(["Paid","$"+esc(r.paid)]); else if(c.budget)f.push(["Budget","Up to $"+esc(c.budget)]);
+  if(r.orderDate)f.push(["Ordered",esc(playDate(r.orderDate))]);
+  return `<div class="reslog"><details class="resentry copyentry ordentry"${foldOrder.has(r.id)?"":" open"}><summary><span class="ct">${esc(t)}</span><span class="cb">${st}</span></summary>
+    <div class="resbody"><dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl><div class="links slim">${ownLinks(r)}</div></div></details></div>`}
 const copyHas=c=>COPY_KEYS.some(k=>c[k]);
 // About the Artist: name, summary with its source, and the artist's official links
 function artistHTML(r){
@@ -1084,9 +1099,9 @@ function openSheet(id,keepScroll){
     const noteForm=`<form class="addlog editonly" id="logForm"><textarea id="f-note" class="grow" rows="2" aria-label="Note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Add a note about this record…"}"></textarea><button class="btn small" type="submit">Add note</button></form>`;
     return `${tabs.length>1?`<div class="tabs viewonly" role="tablist" aria-label="Record">${tabBtn("task",wish?"Research":ord?"Order":"Listening")}${res?tabBtn("research","Research"):""}${notesN?tabBtn("notes",`Notes <span class="tabn">${notesN}</span>`):""}${tabs.includes("about")?tabBtn("about","About"):""}</div>`:""}
   ${panel("task",`
-  ${ord?`<div class="ordfacts">${factsHTML(r)}<div class="links slim">${ownLinks(r)}</div></div>`:""}
   ${wish&&wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}
-  ${own?"":`<div class="notetop">${noteForm}</div>`}
+  ${own||ord&&res?"":`<div class="notetop">${noteForm}</div>`}
+  ${ord?`<div class="ordentrywrap">${orderEntryHTML(r)}</div>`:""}
   ${wish?`<fieldset class="viewonly" id="resFs"><legend>Research</legend>
     ${chatHTML(r)}
     ${researchEntries(r).length?`<div class="research" id="research">${researchHTML(r)}</div>`:""}
@@ -1097,7 +1112,7 @@ function openSheet(id,keepScroll){
     <div class="links">${linkSet(r)}</div>
   </fieldset>`:""}`)}
   ${notesN?panel("notes",`<ul class="log" id="notesLog">${notesHTML(r)}</ul>`):""}
-  ${res?panel("research",`${wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}${own?`<div class="notetop">${noteForm}</div>`:""}
+  ${res?panel("research",`${wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}<div class="notetop">${noteForm}</div>
   <fieldset class="viewonly" id="resFs"><legend>Research</legend>
     ${chatHTML(r)}
     ${researchEntries(r).length?`<div class="research" id="research">${researchHTML(r)}</div>`:""}
@@ -1222,7 +1237,8 @@ function openSheet(id,keepScroll){
     if($("#linksMore")) $("#linksMore").addEventListener("click",()=>{artistOpen.add(r.id);openSheet(id,true)});
     if($("#enrichBtn")) $("#enrichBtn").addEventListener("click",async()=>{await write(r.id,{needsEnrich:true},true);enrich(r)});
     s.querySelectorAll("textarea.grow").forEach(t=>{const fit=()=>{if(!t.offsetParent)return;t.style.height="auto";t.style.height=t.scrollHeight+2+"px"};fit();t.addEventListener("input",fit)});
-    s.querySelectorAll("details.copyentry").forEach(d=>d.addEventListener("toggle",()=>{const k=r.id+":"+d.dataset.copy;d.open?openCopies.add(k):openCopies.delete(k)}));
+    s.querySelectorAll("details.ordentry").forEach(d=>d.addEventListener("toggle",()=>{d.open?foldOrder.delete(r.id):foldOrder.add(r.id)}));
+    s.querySelectorAll("details.copyentry:not(.ordentry)").forEach(d=>d.addEventListener("toggle",()=>{const k=r.id+":"+d.dataset.copy;d.open?openCopies.add(k):openCopies.delete(k)}));
     s.querySelectorAll(".resentry:not(.copyentry)").forEach(d=>d.addEventListener("toggle",()=>{const k=r.id+":"+d.dataset.res;
       // a pinned entry opens by itself (which also fires toggle): only an entry someone opened stays open after Unpin
       if(d.open){shutResearch.delete(k);if(!d.hasAttribute("data-pinned"))openResearch.add(k)}else{openResearch.delete(k);shutResearch.add(k)}}));
@@ -1262,7 +1278,7 @@ function moveStatus(r,to,ci){const from=r.status==="wish"||r.status==="ordered"?
   if(to==="ordered"){Object.assign(data,{orderStatus:"ordered",orderDate:t});notes.push({d:t,t:"Ordered."});msg="Marked as ordered today."}
   if(to==="wish") msg="Moved back to the hunt.";
   data.notes=notes;if(!sheetMode.edit)moveMsg={id:r.id,msg};return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
-function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();chats.forEach(c=>{c.open=false;c.confirm=false;c.replace=null});clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();chats.forEach(c=>{c.open=false;c.confirm=false;c.replace=null});clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 function collect(r){
@@ -1270,7 +1286,8 @@ function collect(r){
   const o={title:val("f-title"),artist:val("f-artist"),year:val("f-year"),status:document.querySelector('#sheet input[name="fst"]:checked')?.value,why:document.getElementById("f-why")?.value??"",
     label:val("f-label"),catalog:val("f-cat"),pressing:val("f-press"),matrix:document.querySelector("#sheet [data-run]")?R.map(x=>`Side ${x.dataset.run}: ${x.value.trim()}`).join(" · "):undefined};
   if(document.getElementById("f-runtime")){const n=parseInt(val("f-runtime"),10);o.runtime=isNaN(n)?"":n}
-  if(document.getElementById("f-budget")){o.budget=val("f-budget");o.priority=+(document.querySelector('#sheet input[name="fprio"]:checked')?.value||2)}
+  if(document.getElementById("f-budget")) o.budget=val("f-budget");
+  if(document.querySelector('#sheet input[name="fprio"]')) o.priority=+(document.querySelector('#sheet input[name="fprio"]:checked')?.value||2);
   if(document.getElementById("f-cname")) o.copyName=val("f-cname");
   if(document.querySelector("#sheet .copygroup")){
     o.moreCopies=[...document.querySelectorAll('#sheet .ecopy:not([data-ci="0"])')].map(b=>({...Object.fromEntries(COPY_KEYS.map(k=>[k,b.querySelector(`[data-cf="${k}"]`).value.trim()])),discogsId:+b.dataset.did||""}))}

@@ -217,6 +217,10 @@ f.onload=async()=>{
     delete R3.about;delete R3.aboutAt;delete R3.aboutV;w.__emit("records");await sleep(300);q("#tab-task")?.click();await sleep(100);
     q("#closeBtn").click();await sleep(200);await openRecord("Aja");
     check("facts: ordered record shows its status; no About, so no tabs",[...d.querySelectorAll("#sheet .kv dt")].map(x=>x.textContent).join()==="Status"&&!d.querySelector('#sheet [role="tablist"]')&&!!q("#sheet .viewpart .statusacts #arrBtn"));
+    check("order: the ordered copy is one open entry with its status on the row",q("#tp-task details.ordentry")?.open&&q(".ordentry .ct").textContent==="Your order"&&/^Shipped · /.test(q(".ordentry .cb").textContent)&&!!q(".ordentry .resbody .links"),q("#tp-task")?.textContent);
+    q("#modeBtn").click();await sleep(300);
+    check("order: Edit has one group for the copy ordered",q("#e-order legend").textContent==="The copy you ordered"&&!q("#e-edition")&&!!q("#e-order #f-cname")&&!!q("#e-order #f-budget")&&!!q("#e-order #f-track"));
+    q("#modeBtn").click();await sleep(300);
     q("#closeBtn").click();await sleep(200);await openRecord("Abbey Road");
     const tr2=d.querySelectorAll("#tracksFs .tracks li:not(.tside)").length;
     check("tracks: a long list shows 8 and Show all",tr2===8&&q("#tracksMore")?.textContent==="Show all 17 tracks",`${tr2}`);
@@ -303,7 +307,7 @@ f.onload=async()=>{
     // ordered with a copy still wanted: Order | Research | Notes | About, and back to Want brings every copy back
     Object.assign(w.__data.records.rcp,{status:"ordered",moreCopies:[{name:"Later",pressing:"",label:"",catalog:"",budget:"70",discogsId:""}]});w.__emit("records");await sleep(300);
     await openRecord("Copies Test");
-    check("copies: an ordered record gets a Research tab for the copies it still wants",tabNames().startsWith("Order*,Research")&&!!q("#tp-research #wantFs")&&d.querySelectorAll("#f-note").length===1,tabNames());
+    check("copies: an ordered record gets a Research tab for the copies it still wants",tabNames().startsWith("Order*,Research")&&!!q("#tp-research #wantFs details")&&d.querySelectorAll("#f-note").length===1&&!!q("#tp-research #f-note")&&!q("#tp-task #f-note"),tabNames());
     q("#modeBtn").click();await sleep(300);q('input[name="fst"][value="wish"]').click();await sleep(500);
     check("copies: back to Want, the record's copy first and the others after",w.__data.records.rcp.status==="wish"&&w.__data.records.rcp.copyName==="Third"&&w.__data.records.rcp.moreCopies[0].name==="Later",JSON.stringify(w.__data.records.rcp));
     q("#modeBtn").click();await sleep(300);
