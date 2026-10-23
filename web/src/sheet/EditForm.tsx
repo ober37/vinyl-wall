@@ -149,7 +149,7 @@ export function EditForm({ form, own, wish, set }: Props) {
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>
         {wish && (
-          <FieldDescription>Copies, budget and priority aren't in this prototype yet.</FieldDescription>
+          <p className="text-foreground-muted text-sm">Copies, budget and priority aren't in this prototype yet.</p>
         )}
       </Fieldset>
     </div>

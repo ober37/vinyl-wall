@@ -45,6 +45,16 @@ describe('record sheet', () => {
     expect(await screen.findByText('Saved')).toBeTruthy()
   })
 
+  it('edits a wanted record', async () => {
+    const { fake, user } = setup()
+    await open(user, /Open Pet Sounds/)
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    await user.type(screen.getByRole('textbox', { name: 'Why' }), 'x')
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await waitFor(() => expect(fake.calls.length).toBe(1))
+    expect(fake.calls[0]).toEqual({ path: 'records/r6', op: 'update', data: { why: 'x', needsSync: true } })
+  })
+
   it('writes pending edits at once on Done', async () => {
     const { fake, user } = setup()
     await open(user, /Open Blue Train/)
