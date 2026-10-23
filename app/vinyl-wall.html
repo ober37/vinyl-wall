@@ -344,6 +344,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .links.slim{gap:6px;margin-top:12px}
 .absum{margin:16px 0 22px}
 /* a wanted or ordered record's next step, above the tabs: comfortable touch targets, wrapping to full width on phones */
+.research li .want,.research li .have{margin:0 0 0 6px;font-size:12px;white-space:nowrap} .research li .have{color:var(--ink-2)} .research li .nw{white-space:nowrap} .resst .linkbtn{margin:0}
 .resask .actions{margin-top:12px} .resask+.research{margin-top:16px} .resst{margin:0} .askline.prose{word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .resq{margin:12px 0 0}.resq b{display:block;font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:6px}
 .tabs .tabn{font:500 11px/1 var(--mono);color:var(--ink-2);margin-left:4px}
@@ -740,26 +741,39 @@ function researchEntries(r){
 function firstSentence(t){t=String(t||"").trim();const m=t.match(/^.+?[.!?](\s|$)/);return (m?m[0]:t).trim().slice(0,140)}
 // a pinned entry opens expanded unless it was collapsed since the page loaded
 const openResearch=new Set(),shutResearch=new Set();
+// a researched pressing is "<pressing>: <why>"; + Want on a hunt adds the pressing as a copy you want (#52), and the entry
+// then says what was added, with Edit and Undo, until the sheet closes or the next one is added
+const pressOf=t=>String(t||"").split(": ")[0].trim();
+let wantMsg=null;
 function researchHTML(r){
   const items=researchEntries(r); if(!items.length) return "";
   const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
   // sources come from the chat: links only when they're http(s)
   const srcs=a=>{a=(Array.isArray(a)?a:[]).filter(x=>x&&/^https?:\/\//i.test(String(x.url||"")));
     return a.length?`<h4>Sources</h4><ul>${a.map(x=>`<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a></li>`).join("")}</ul>`:""};
+  // already wanted: the same pressing in other words (one contains the other, past a few letters), or the copy's catalog no. named
+  const C=stillCopies(r).map(([c])=>c),low=v=>String(v||"").trim().toLowerCase();
+  const wanted=(x,p)=>C.some(c=>{const a=low(p),b=low(c.pressing),cat=low(c.catalog);
+    return b&&(a===b||Math.min(a.length,b.length)>=8&&(a.includes(b)||b.includes(a)))||cat.length>=4&&low(x).includes(cat)});
+  // the action keeps the item's last word with it, so it never wraps onto a line of its own
+  const plist=(a,key)=>r.status!=="wish"?list(a):`<ul>${a.map((x,j)=>{const p=pressOf(x),t=String(x),sp=t.lastIndexOf(" ");
+    const act=!p?"":wanted(t,p)?`<span class="have editonly">✓ Added</span>`:`<button class="linkbtn want editonly" type="button" data-reswant="${esc(key)}" data-pi="${j}">+ Want</button>`;
+    return `<li>${act?`${esc(t.slice(0,sp+1))}<span class="nw">${esc(t.slice(sp+1))} ${act}</span>`:esc(t)}</li>`}).join("")}</ul>`;
+  const wm=key=>wantMsg&&wantMsg.id===r.id&&wantMsg.key===key?`Added "${esc(wantMsg.p)}" · <button class="linkbtn" type="button" id="wantEdit">Edit</button> · <button class="linkbtn" type="button" id="wantUndo">Undo</button>`:"";
   return `<div class="reslog">${items.map((e,i)=>({e,key:e.id||String(i)})).sort((a,b)=>!!b.e.pinned-!!a.e.pinned).map(({e,key})=>{const k=r.id+":"+key;
     return `<details class="resentry" data-res="${esc(key)}"${e.pinned?" data-pinned":""} ${openResearch.has(k)||e.pinned&&!shutResearch.has(k)?"open":""}>
     <summary><time>${esc(shortDate(e.at)||e.at||"")}</time><span>${e.pinned?`<span class="pinlbl">Pinned</span>`:""}${esc(e.headline||firstSentence(e.summary)||"Research notes")}</span></summary>
     <div class="resbody">
       ${e.question?`<p class="resq"><b>You asked</b>${esc(e.question)}</p>`:""}
       ${(()=>{const sm=String(e.summary||"").trim();const body=e.headline?sm:sm.slice(firstSentence(sm).length).trim();return body?`<p>${esc(body)}</p>`:""})()}
-      ${e.pressings?.length?`<h4>Pressings</h4>${list(e.pressings)}`:""}
+      ${e.pressings?.length?`<h4>Pressings</h4>${plist(e.pressings,key)}`:""}
       ${e.check?.length?`<h4>Check in a listing</h4>${list(e.check)}`:""}
       ${e.where?.length?`<h4>Where to look</h4>${list(e.where)}`:""}
       ${e.price?`<h4>Price</h4><p>${esc(e.price)}</p>`:""}
       ${srcs(e.sources)}
       <div class="resacts editonly"><button class="linkbtn" type="button" data-respin="${esc(key)}">${e.pinned?"Unpin":"Pin"}</button>
         ${r.status!=="ordered"?`<button class="linkbtn" type="button" data-resfollow="${esc(key)}">Follow up in chat</button>`:""}
-        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button><span class="hint resst" role="status"></span></div>
+        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button><span class="hint resst" role="status">${wm(key)}</span></div>
       <p class="mono askline prose" hidden></p>
     </div></details>`}).join("")}</div>`;
 }
@@ -910,14 +924,20 @@ const COPY_KEYS=["name","pressing","label","catalog","budget"];
 function wantCopies(r){const s=v=>typeof v==="string"||typeof v==="number"?String(v):"",did=v=>{const n=parseInt(v,10);return n>0?n:""};
   return [{name:s(r.copyName),pressing:pressingText(r),label:s(r.label),catalog:s(r.catalog),budget:s(r.budget),discogsId:did(r.discogsId)},
     ...(Array.isArray(r.moreCopies)?r.moreCopies:[]).filter(c=>c&&typeof c==="object").map(c=>({...Object.fromEntries(COPY_KEYS.map(k=>[k,s(c[k])])),discogsId:did(c.discogsId)}))]}
-// a copy's name for headings and the status picker: its name, else its pressing, else "Copy N"
-const copyTitle=(c,i)=>c.name||c.pressing.split("\n")[0].trim()||"Copy "+(i+1);
+// a copy's name for headings and the status picker: its name, else its pressing, else its Discogs release, else "Copy N"
+const copyTitle=(c,i)=>c.name||c.pressing.split("\n")[0].trim()||(c.discogsId?"Discogs release "+c.discogsId:"Copy "+(i+1));
 // the most the hunt would pay for any of its copies (the sleeve tag's ≤$)
 function topBudget(r){let best="";for(const c of wantCopies(r)){const n=parseFloat(c.budget);if(!isNaN(n)&&(best===""||n>parseFloat(best)))best=c.budget}return best}
 // The copy you want (wanted records): the pressing being hunted, at the top of the Research tab; its label shows even when
 // it's the original's, since here it names the copy. An imported original label alone isn't a copy, so it shows only beside
 // a pressing, catalog or budget, or when it differs from the original (#33)
-function stillCopies(r){const C=wantCopies(r);return (r.status==="wish"?C.map((c,i)=>[c,i]):C.slice(1).map((c,i)=>[c,i+1])).filter(([c])=>copyHas(c))}
+// the record's own fields are a copy the person chose only when they filled them in: an album label the lookup found, or a
+// Discogs release the sync's matcher picked, isn't one (#52). These are the matcher's own discogsMatch values (tools/discogs_sync.py,
+// kept in step by dev/test_discogs.py); any other value, like an import or a release someone confirmed in chat, was chosen
+const AUTO_MATCH=["master main release","vinyl: master main release","vinyl: earliest original pressing","vinyl: first matching release","catalog","catalog+pressing"];
+function firstCopyChosen(r){const c=wantCopies(r)[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",auto=AUTO_MATCH.includes(r.discogsMatch);
+  return !!(c.name||c.pressing||c.catalog||c.budget||c.discogsId&&!auto||!(r.autoFilled||[]).includes("label")&&c.label&&c.label!==orig)}
+function stillCopies(r){const C=wantCopies(r);return (r.status==="wish"?C.map((c,i)=>[c,i]):C.slice(1).map((c,i)=>[c,i+1])).filter(([c,i])=>i?copyHas(c):firstCopyChosen(r))}
 const copiesLegend=r=>(stillCopies(r).length>1?"The copies you ":"The copy you ")+(r.status==="wish"?"want":"still want");
 function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:"";
   const labRow=(c,lab)=>lab||c.catalog?[["Label",esc(lab)+(c.catalog?`<span class="mut">${lab?" · ":""}${esc(c.catalog)}</span>`:"")]]:[];
@@ -927,7 +947,7 @@ function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">$
   // of the copy, or on its own only when the owner typed it (a looked-up label is the album's, not the copy's)
   // copies still wanted on an owned or ordered record keep the folded rows they had before the order (#33 retest)
   if(L.length===1&&r.status==="wish"){const [c,i]=L[0],typed=!(r.autoFilled||[]).includes("label"),orig=!r.aboutBlocked&&r.about&&r.about.label||"";
-    const lab=i>0||c.name||c.pressing||c.catalog||c.budget||typed&&c.label&&c.label!==orig?c.label:"";
+    const lab=i>0||c.name||c.pressing||c.catalog||c.budget||c.discogsId&&!AUTO_MATCH.includes(r.discogsMatch)||typed&&c.label&&c.label!==orig?c.label:"";
     const body=kv([...pressRow(c),...labRow(c,lab),...budRow(c)]);
     return body||c.name?`<div class="wcopy">${c.name?`<h4>${esc(c.name)}</h4>`:""}${body}</div>`:""}
   // several: folded rows like the research entries, the title on the row and the rest (budget too) inside
@@ -1268,6 +1288,20 @@ function openSheet(id,keepScroll){
       const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k);const box=b.closest(".resbody").querySelector(".askline.prose");
       if(e)copyResPrompt(resPrompt(r,e),"Copied. Paste it into Claude to pick up from here.",b.parentNode.querySelector(".resst"),box)}));
     const rc=$("#resCopy");if(rc)rc.addEventListener("click",()=>copyResPrompt(resPrompt(r),"Copied. Paste it into Claude and add your question.",$("#resStatus"),$("#resAsk")));
+    // + Want: the record's first copy when it has none yet (a looked-up label alone isn't a copy, as in wantCopyHTML), else another copy
+    s.querySelectorAll("[data-reswant]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.reswant;
+      const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k),p=e&&pressOf((e.pressings||[])[+b.dataset.pi]);if(!p)return;
+      // a release the matcher picked isn't this pressing, so it goes (Undo puts it back) and the sync matches the pressing afresh
+      const C=wantCopies(r),first=!firstCopyChosen(r),did=first&&r.discogsId?{discogsId:r.discogsId,discogsMatch:r.discogsMatch||""}:null;
+      wantMsg={id:r.id,key:k,p,ci:first?0:C.length,did};openResearch.add(r.id+":"+k);
+      write(r.id,first?{pressing:p,...(did?{discogsId:"",discogsMatch:""}:{})}:{moreCopies:[...C.slice(1),{...Object.fromEntries(COPY_KEYS.map(x=>[x,""])),pressing:p,discogsId:""}]},true)}));
+    if($("#wantEdit")) $("#wantEdit").addEventListener("click",()=>{const ci=wantMsg.ci;wantMsg=null;sheetMode={id,edit:true};openSheet(id,true);
+      const el=ci?s.querySelector(`.ecopy[data-ci="${ci}"] [data-cf="name"]`):$("#f-cname");if(el){el.focus();el.scrollIntoView({block:"center"})}});
+    // Undo takes back only the copy it added, if it's still there as added
+    if($("#wantUndo")) $("#wantUndo").addEventListener("click",()=>{const {ci,p,did}=wantMsg,C=wantCopies(r);wantMsg=null;
+      if(ci===0&&C[0].pressing===p) write(r.id,{pressing:"",...(did||{})},true);
+      else if(ci&&C[ci]&&C[ci].pressing===p) write(r.id,{moreCopies:C.slice(1).filter((c,j)=>j!==ci-1)},true);
+      else openSheet(id,true)});
     s.querySelectorAll("[data-resdel]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resdel;
       const rest=researchEntries(r).filter((e,i)=>(e.id||String(i))!==k);
       write(r.id,{researchLog:rest,research:null},true)}));
@@ -1300,7 +1334,7 @@ function moveStatus(r,to,ci,det){const from=r.status==="wish"||r.status==="order
   // what was entered goes into the move's own note too ("Ordered · $48 from New Shop"); another shop drops the old one's website
   if(det){if(det.paid!==(r.paid||""))data.paid=det.paid;if(det.shop!==(r.shop||"")){data.shop=det.shop;if(r.shopUrl)data.shopUrl=""}}
   data.notes=notes;moveMsg=null;return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
-function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;moveMsg=null;wantMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 const dollars=v=>v.replace(/^\$\s*/,"");  // "$32" is saved as 32, since the $ is shown beside it
@@ -1317,7 +1351,8 @@ function collect(r){
   if(document.getElementById("f-mg")){o.mediaGrade=val("f-mg");o.sleeveGrade=val("f-sg");o.acquired=val("f-acq")}
   if(document.getElementById("f-paid")) o.paid=dollars(val("f-paid"));
   // a release number, or a pasted Discogs release link
-  if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n}
+  if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n;
+    if(String(o.discogsId)!==String(r.discogsId||""))o.discogsMatch=""}  // a release typed in is the person's own choice
   if(document.getElementById("f-shop")) o.shop=val("f-shop");
   if(document.getElementById("f-shopurl")){const u=val("f-shopurl");o.shopUrl=shopHref(u)||u}
   if(document.getElementById("f-ostat")){o.orderStatus=val("f-ostat");o.orderDate=val("f-odate");o.eta=val("f-eta");o.orderNum=val("f-onum");o.carrier=val("f-carrier");o.tracking=val("f-track");if(document.getElementById("f-onotes"))o.orderNotes=document.getElementById("f-onotes").value}

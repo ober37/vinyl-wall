@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 7.
+Skill version 11.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -72,12 +72,16 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 - **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
 - **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt (starting `Follow up on my research from <date>: "<headline>"`, ending `My follow-up: …`) names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.
 
+- **A pressing worth hunting** (wanted records, `status: "wish"`): when you recommend one, ask once whether to add it to the copies they want ("Add the 2019 half-speed to the copies you want?"), and add it if they say yes, as below.
+
+To add a copy they want, `get` the record and skip it if one of its copies already has that pressing or Discogs release. The record's own fields are its first copy: if `copyName`, `pressing`, `catalog`, `budget` and `discogsId` are all empty, fill those (`copyName` for the name). Two things don't count as a copy they chose: a `label` listed in `autoFilled` (looked up for the album), and a `discogsId` the wall's sync matched by itself, which it marks with a `discogsMatch` of exactly `"master main release"`, `"vinyl: master main release"`, `"vinyl: earliest original pressing"`, `"vinyl: first matching release"`, `"catalog"` or `"catalog+pressing"`. Any other `discogsMatch` (an import, or a release someone confirmed) is a copy they chose. When you fill the first copy over a matched release, replace `discogsId` with the release you found (or `""`) and set `discogsMatch` to `""`. Otherwise append `{"name", "pressing", "label", "catalog", "budget", "discogsId"}` to `moreCopies` (empty strings for what you don't know, `discogsId` as a number). Fill in what you found: a short name, the pressing (word for word the `<pressing>` part you used, or will use, in the research entry's `pressings`, so the wall shows it as added; put extra detail in the name, label or catalog number instead), label, catalog number, the Discogs release, and a `budget` (a number as text) from the price you discussed. `update` with `if_version` and `needsSync: true`.
+
 To save, `get` the record and `update` it (pass its `version` as `if_version`; on a conflict, `get` it again and redo) with:
 
 - `researchLog`: the new entry first, then the record's existing entries (an older record may have a single `research` object instead; treat it as one entry). Keep at most 10: drop the oldest entries that aren't `pinned`, and never drop a pinned one.
 - `research: null`.
 
-The new entry: `id` (a fresh random id of 10 letters and digits), `at` (today, `YYYY-MM-DD`), `question` (their question, as they asked it), `headline` (the single most useful takeaway, one sentence of at most 14 words), `summary` (two to four sentences) and `sources` (up to 4 `{"title": …, "url": …}`, `https://` links only). Only when the conversation covered them: `pressings` (up to 4 pressings worth hunting and why), `check` (up to 3 things to verify in a listing), `where` (up to 3 places to look) and `price` (one sentence of rough US prices). Plain text, no markdown. Saving research needs no `needsSync`.
+The new entry: `id` (a fresh random id of 10 letters and digits), `at` (today, `YYYY-MM-DD`), `question` (their question, as they asked it), `headline` (the single most useful takeaway, one sentence of at most 14 words), `summary` (two to four sentences) and `sources` (up to 4 `{"title": …, "url": …}`, `https://` links only). Only when the conversation covered them: `pressings` (up to 4, each `"<pressing>: <why>"`, with no colon inside the pressing part, so the wall's + Want can add it as a copy), `check` (up to 3 things to verify in a listing), `where` (up to 3 places to look) and `price` (one sentence of rough US prices). Plain text, no markdown. Saving research needs no `needsSync`.
 
 Then tell them in one line that it's saved; it shows up in the record's Research section.
 

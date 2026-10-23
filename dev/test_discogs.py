@@ -17,6 +17,15 @@ def check(name, ok, detail=""):
     print(("PASS " if ok else "FAIL ") + name + ("" if ok or not detail else " - " + str(detail)))
 
 
+# --- the wall treats the matcher's own discogsMatch values as not chosen by the person (#52): its list must cover them all
+import re
+here = os.path.dirname(os.path.abspath(__file__))
+src = open(os.path.join(here, "..", "app", "tools", "discogs_sync.py")).read()
+page = open(os.path.join(here, "..", "app", "vinyl-wall.html")).read()
+hows = set(re.findall(r'return [^\n]*?, "([^"]+)"\s*$', src, re.M))
+auto = set(json.loads(re.search(r"const AUTO_MATCH=(\[[^\]]*\]);", page).group(1)))
+check("match: the wall's AUTO_MATCH lists every value the matcher writes", hows and hows <= auto, sorted(hows - auto) or hows)
+
 # --- import: an album's other wantlist pressings become its copies
 def rel(i, title, artist, lab="Apple", cat="PCS 7088"):
     return {"basic_information": {"id": i, "title": title, "artists": [{"name": artist}], "labels": [{"name": lab, "catno": cat}],
