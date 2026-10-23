@@ -129,10 +129,26 @@ const PLAY_NOTE = /^Played (one side|the whole album|\d+ tracks?)\b(.*?)\(~(\d+)
 const noteList = (r: Rec): Note[] =>
   (Array.isArray(r.notes) ? r.notes : []).filter((n): n is Note => !!n && typeof n === 'object')
 export const isPlay = (n: Note) => PLAY_NOTE.test(String(n.t ?? ''))
-const VIBES = ['Background', 'Easy', 'Locked in', 'Lost in it', 'Goosebumps']
+export const VIBES = ['Background', 'Easy', 'Locked in', 'Lost in it', 'Goosebumps']
 const MOOD_VIBE: Record<string, number> = { loved: 5, good: 3, meh: 2 }
+// the vibe of a spin, 1–5 (older plays kept a mood, read here as a vibe); 0 when none
+export const vibeOf = (n: Note) => {
+  const v = +(n.vibe ?? MOOD_VIBE[String(n.mood)] ?? 0)
+  return v >= 1 && v <= 5 ? v : 0
+}
 
-export type Play = { key: number; date: string; what: string; setup: string; min: number; vibe: string; thoughts: string }
+// ref finds the play's note again for the journal (see model/notes.ts)
+export type Play = {
+  key: number
+  ref: { i: number; d?: string; t?: string }
+  day: string
+  date: string
+  what: string
+  setup: string
+  min: number
+  vibe: number
+  thoughts: string
+}
 export type PlayMonth = { month: string; name: string; plays: Play[]; min: number }
 
 // the play history, newest first, grouped by month
@@ -157,14 +173,15 @@ export function playMonths(r: Rec): PlayMonth[] {
           ? 'Side ' + n.side
           : 'One side'
         : `${cnt} track${cnt === 1 ? '' : 's'}${tp.length ? ' · ' + tp.slice(0, 2).map(title).join(', ') + (tp.length > 2 ? ` +${tp.length - 2}` : '') : ''}`
-    const v = +(n.vibe ?? MOOD_VIBE[String(n.mood)] ?? 0)
     const play: Play = {
       key: i,
+      ref: { i, d: n.d, t: n.t },
+      day: d,
       date: d ? playDate(d) : '',
       what,
       setup: (/ on (.+?) \(~\d+ min\)/.exec(t) || [])[1] || '',
       min: +m[3] || 0,
-      vibe: v >= 1 && v <= 5 ? VIBES[v - 1] : '',
+      vibe: vibeOf(n),
       thoughts: String(n.j ?? t.slice(m[0].length).replace(/^\.\s*/, '')).trim(),
     }
     const month = /^\d{4}-\d\d-\d\d$/.test(d) ? d.slice(0, 7) : ''

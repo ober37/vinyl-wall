@@ -81,6 +81,6 @@ describe('record sheet', () => {
     await user.click(await screen.findByRole('button', { name: 'Edit' }))
     await user.type(screen.getByRole('textbox', { name: 'Why' }), 'x')
     await user.click(screen.getByRole('button', { name: 'Done' }))
-    expect(await screen.findByText(/Couldn't save/)).toBeTruthy()
+    expect((await screen.findAllByText(/Couldn't save/)).length).toBeGreaterThan(0)
   })
 })

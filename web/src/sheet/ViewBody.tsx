@@ -1,22 +1,12 @@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
-import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@appica/ui-react/tabs'
-import {
-  fmtH,
-  gradeText,
-  keyInfo,
-  kindOf,
-  playDate,
-  playMonths,
-  pressingText,
-  recordTracks,
-  runParts,
-  shopHref,
-  today,
-  type Rec,
-} from '../model/record'
+import { gradeText, keyInfo, kindOf, playDate, pressingText, recordTracks, runParts, shopHref, type Rec } from '../model/record'
+import { useRuntime } from '../runtime/runtime'
+import { Listening } from './Listening'
+import { NotesTab, noteCount } from './NotesTab'
+import { StatusActions } from './StatusActions'
 
 function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
   return (
@@ -71,40 +61,6 @@ function copyFacts(r: Rec): [string, React.ReactNode][] {
   return f
 }
 
-function Listening({ r }: { r: Rec }) {
-  const months = playMonths(r)
-  const cur = today().slice(0, 7)
-  const firstOpen = months.some((m) => m.month === cur) ? cur : months[0]?.month
-  if (!months.length) return <p className="text-foreground-muted text-sm">No plays logged yet.</p>
-  return (
-    <Accordion variant="flush" multiple defaultValue={firstOpen === undefined ? [] : [firstOpen]}>
-      {months.map((m) => (
-        <AccordionItem key={m.month} value={m.month}>
-          <AccordionTrigger>
-            <span className="flex w-full items-center justify-between gap-2">
-              <span>{m.name}</span>
-              <span className="text-foreground-muted text-sm font-normal whitespace-nowrap">
-                {m.plays.length} play{m.plays.length > 1 ? 's' : ''} · {fmtH(m.min / 60)} h
-              </span>
-            </span>
-          </AccordionTrigger>
-          <AccordionContent>
-            <ul className="divide-border flex flex-col divide-y">
-              {m.plays.map((p) => (
-                <li key={p.key} className="py-2 text-sm">
-                  <div className="text-foreground">{[p.date, p.what, p.setup].filter(Boolean).join(' · ')}</div>
-                  {p.vibe && <div className="text-foreground-muted">{p.vibe}</div>}
-                  {p.thoughts && <p className="text-foreground-muted mt-1 whitespace-pre-line">{p.thoughts}</p>}
-                </li>
-              ))}
-            </ul>
-          </AccordionContent>
-        </AccordionItem>
-      ))}
-    </Accordion>
-  )
-}
-
 function Tracks({ r }: { r: Rec }) {
   const T = recordTracks(r)
   const [all, setAll] = useState(false)
@@ -130,31 +86,72 @@ function Tracks({ r }: { r: Rec }) {
   )
 }
 
-export function ViewBody({ r }: { r: Rec }) {
-  const own = kindOf(r) === 'own'
+export function ViewBody({ r, msg, onMoved, onAddWhy }: {
+  r: Rec
+  msg: string
+  onMoved: (msg: string) => void
+  onAddWhy: () => void
+}) {
+  const { canEdit } = useRuntime()
+  const k = kindOf(r)
+  const own = k === 'own'
   const info = keyInfo(r)
   const copy = copyFacts(r)
   const hasTracks = recordTracks(r).length > 0
   const about = info.length > 0 || copy.length > 0 || hasTracks
+  const notesN = noteCount(r)
+  const notes = canEdit || notesN > 0
   const summary = !r.aboutBlocked && r.about?.summary ? String(r.about.summary) : ''
-  const tabs = [...(own ? ['listening'] : []), ...(about ? ['about'] : [])]
+  const tabs = [...(own ? ['listening'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
+  // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
+  const titled = (name: string, node: React.ReactNode) =>
+    tabs.length === 1 ? (
+      <Fieldset>
+        <FieldsetLegend>{name}</FieldsetLegend>
+        {node}
+      </Fieldset>
+    ) : (
+      node
+    )
   return (
     <div className="flex flex-col gap-5">
       {summary && <p className="text-foreground line-clamp-6 text-sm whitespace-pre-line">{summary}</p>}
-      {r.why && (
+      {r.why ? (
         <blockquote className="border-primary text-foreground-intense border-s-2 ps-4 text-base italic">{r.why}</blockquote>
+      ) : (
+        canEdit && (
+          <Button variant="soft" className="h-auto justify-start py-3 text-start whitespace-normal" onClick={onAddWhy}>
+            {own ? 'Why is this one on the wall? Add a few words…' : 'Why do you want this one? Add a few words…'}
+          </Button>
+        )
+      )}
+      {canEdit && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
+      {msg && (
+        <p role="status" className="text-foreground-muted text-sm">
+          {msg}
+        </p>
       )}
       {tabs.length > 0 && (
-        <Tabs defaultValue={tabs[0]}>
+        <Tabs key={"tabs" + r.id + k} defaultValue={tabs[0]}>
           {tabs.length > 1 && (
             <TabsList variant="line" size="sm">
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
+              {notes && (
+                <TabsTrigger value="notes">
+                  Notes{notesN > 0 && <span className="text-foreground-muted ms-1">{notesN}</span>}
+                </TabsTrigger>
+              )}
               {about && <TabsTrigger value="about">About</TabsTrigger>}
             </TabsList>
           )}
           {own && (
             <TabsContent value="listening" className="pt-4">
-              <Listening r={r} />
+              {titled('Listening', <Listening r={r} />)}
+            </TabsContent>
+          )}
+          {notes && (
+            <TabsContent value="notes" className="pt-4">
+              {titled('Notes', <NotesTab r={r} />)}
             </TabsContent>
           )}
           {about && (

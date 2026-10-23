@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
 import { useTheme } from '@appica/ui-react/hooks/use-theme'
+import { Boundary } from './Boundary'
 import { useRuntime } from './runtime/runtime'
 import { RecordSheet } from './sheet/RecordSheet'
 import { Wall } from './wall/Wall'
@@ -31,7 +32,11 @@ export function App() {
           {MESSAGE[status] || error}
         </p>
       )}
-      {status === 'ready' && <Wall records={records} onOpen={setOpenId} />}
+      {status === 'ready' && (
+        <Boundary title="Couldn't show the wall">
+          <Wall records={records} onOpen={setOpenId} />
+        </Boundary>
+      )}
       <RecordSheet id={openId} onClose={() => setOpenId(null)} />
     </main>
   )

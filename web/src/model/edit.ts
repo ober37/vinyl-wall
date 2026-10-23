@@ -20,8 +20,14 @@ export type Form = {
   sleeveGrade?: string
 }
 
-// fields whose changes Discogs sync pushes (production's SYNCED, limited to what this form writes)
-const SYNCED = new Set(['title', 'artist', 'pressing', 'shop', 'acquired', 'paid', 'why', 'mediaGrade', 'sleeveGrade'])
+// fields whose changes Discogs sync pushes (production's SYNCED)
+const SYNCED = new Set([
+  'title', 'artist', 'status', 'pressing', 'matrix', 'shop', 'acquired', 'paid', 'why', 'mediaGrade', 'sleeveGrade', 'priority',
+  'budget', 'copyName', 'moreCopies', 'orderDate', 'orderStatus', 'eta', 'discogsId', 'deleted',
+])
+// every write goes through this: a synced field changed means the background task pushes it to Discogs
+export const withSync = (patch: Record<string, unknown>) =>
+  Object.keys(patch).some((k) => SYNCED.has(k)) ? { ...patch, needsSync: true } : patch
 
 const s = (v: unknown) => (v === undefined || v === null ? '' : String(v))
 
@@ -53,7 +59,7 @@ function stored(f: Form): Record<string, unknown> {
   return o
 }
 
-// what to write: the fields that differ from the baseline, plus the bookkeeping production adds
+// what to write: the fields that differ from the baseline, plus the autoFilled bookkeeping (needsSync is withSync's)
 export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unknown> {
   const a = stored(baseline)
   const b = stored(form)
@@ -64,6 +70,5 @@ export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unk
   // a field the person typed is no longer auto-filled
   if (Array.isArray(r.autoFilled) && keys.some((k) => r.autoFilled!.includes(k)))
     patch.autoFilled = r.autoFilled.filter((k) => !(k in patch))
-  if (keys.some((k) => SYNCED.has(k))) patch.needsSync = true
   return patch
 }

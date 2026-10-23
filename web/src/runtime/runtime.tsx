@@ -1,5 +1,6 @@
 // The claude.ai runtime as React state: boots db and user once, keeps the records live, and is the only path to writes.
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { withSync } from '../model/edit'
 import type { Rec } from '../model/record'
 
 type Db = ClaudeCapabilityMap['db']
@@ -11,7 +12,13 @@ type Runtime = {
   canEdit: boolean
   // one write at a time, so a record never has two in flight; resolves false when the write was refused
   update: (id: string, patch: Record<string, unknown>) => Promise<boolean>
+  // a write computed from the record as the database has it right now (for the notes array, which is replaced whole);
+  // fn returns null to write nothing, or throws to report why it can't
+  mutate: (id: string, fn: (latest: Rec) => Record<string, unknown> | null) => Promise<boolean>
+  // a record synced to Discogs is marked deleted so the background task can take it off Discogs; others go for good
+  remove: (id: string) => Promise<boolean>
   error: string
+  clearError: () => void
 }
 
 const Ctx = createContext<Runtime | null>(null)
@@ -60,25 +67,42 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     }
   }, [claude])
 
+  // every write waits its turn; a fresh one reads the record first, so it builds on what's there now
+  const queue = (id: string, fn: (latest: Rec) => Record<string, unknown> | 'delete' | null, fresh = false) => {
+    const next = writing.current.then(async () => {
+      try {
+        const ref = db.current!.collection('records').doc(id)
+        let latest = {} as Rec
+        if (fresh) {
+          const snap = await ref.get()
+          if (!snap.exists) throw new Error('This record is gone.')
+          latest = { ...snap.data(), id } as Rec
+        }
+        const patch = fn(latest)
+        if (patch === 'delete') await ref.delete()
+        else if (patch) await ref.update(withSync(patch))
+        setError('')
+        return !!patch
+      } catch (e) {
+        setError("Couldn't save: " + ((e as { message?: string }).message || String(e)))
+        return false
+      }
+    })
+    writing.current = next
+    return next
+  }
+
   const value = useMemo<Runtime>(
     () => ({
       status,
       records,
       canEdit,
       error,
-      update: (id, patch) => {
-        const next = writing.current.then(async () => {
-          try {
-            await db.current!.collection('records').doc(id).update(patch)
-            return true
-          } catch (e) {
-            setError("Couldn't save: " + ((e as { message?: string }).message || String(e)))
-            return false
-          }
-        })
-        writing.current = next
-        return next
-      },
+      clearError: () => setError(''),
+      update: (id, patch) => queue(id, () => patch),
+      mutate: (id, fn) => queue(id, fn, true),
+      remove: (id) =>
+        queue(id, (r) => (r.discogsSync && (r.discogsSync as { rid?: unknown }).rid ? { deleted: true } : 'delete'), true),
     }),
     [status, records, canEdit, error],
   )

@@ -3,12 +3,25 @@ import { Field, FieldLabel, FieldDescription } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@appica/ui-react/select'
+import { useState } from 'react'
+import { Button } from '@appica/ui-react/button'
 import { Textarea } from '@appica/ui-react/textarea'
 import type { Form } from '../model/edit'
-import { GRADES, shopHref } from '../model/record'
+import { GRADES, shopHref, type Kind } from '../model/record'
+import { Confirm } from './Confirm'
+import { Segmented } from './Segmented'
 
 type Key = keyof Form
-type Props = { form: Form; own: boolean; wish: boolean; set: (k: Key, v: string) => void }
+type Props = {
+  form: Form
+  kind: Kind
+  set: (k: Key, v: string) => void
+  title: string
+  focusWhy: boolean
+  // null when the status can't be changed here (a hunt with more than one copy)
+  onStatus: ((to: Kind) => void) | null
+  onRemove: () => void
+}
 
 // "YYYY-MM-DD" <-> a local Date at noon, so a timezone never moves the day
 const toDate = (s: string | undefined) => (s && /^\d{4}-\d\d-\d\d$/.test(s) ? new Date(s + 'T12:00') : null)
@@ -66,11 +79,29 @@ function Grade({ k, label, form, set }: { k: Key; label: string; form: Form; set
   )
 }
 
-export function EditForm({ form, own, wish, set }: Props) {
+export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove }: Props) {
   const p = { form, set }
+  const own = kind === 'own'
+  const wish = kind !== 'own'
+  const [confirm, setConfirm] = useState(false)
   const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
   return (
     <div className="flex flex-col gap-8">
+      {onStatus && (
+        <Fieldset>
+          <FieldsetLegend>Status</FieldsetLegend>
+          <Segmented
+            label="Status"
+            value={kind}
+            onChange={onStatus}
+            options={[
+              ['own', 'Owned'],
+              ['ordered', 'Ordered'],
+              ['wish', 'Wanted'],
+            ]}
+          />
+        </Fieldset>
+      )}
       <Fieldset>
         <FieldsetLegend>The record</FieldsetLegend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -84,6 +115,7 @@ export function EditForm({ form, own, wish, set }: Props) {
         <Textarea
           aria-label="Why"
           rows={3}
+          autoFocus={focusWhy}
           value={form.why}
           onChange={(e) => set('why', e.target.value)}
           placeholder={
@@ -152,6 +184,17 @@ export function EditForm({ form, own, wish, set }: Props) {
           <p className="text-foreground-muted text-sm">Copies, budget and priority aren't in this prototype yet.</p>
         )}
       </Fieldset>
+
+      <Button variant="outline" size="sm" className="self-start" onClick={() => setConfirm(true)}>
+        Remove from the wall…
+      </Button>
+      <Confirm
+        open={confirm}
+        title={`Remove ${title} and its notes for good?`}
+        yes="Remove"
+        onYes={onRemove}
+        onClose={() => setConfirm(false)}
+      />
     </div>
   )
 }

@@ -9,9 +9,12 @@ import {
   DrawerDescription,
   DrawerBody,
 } from '@appica/ui-react/drawer'
+import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Thumbnail } from '@appica/ui-react/thumbnail'
+import { Boundary } from '../Boundary'
 import { patchFor, toForm, type Form } from '../model/edit'
-import { coverUrl, kindOf, KIND_LABEL, type Rec } from '../model/record'
+import { coverUrl, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
+import { movePatch, wantedCopies } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { EditForm } from './EditForm'
 import { ViewBody } from './ViewBody'
@@ -28,7 +31,9 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
   const latest = useRef({ r, form })
   latest.current = { r, form }
 
-  // the form starts from the record when editing starts; later snapshots don't overwrite what's being typed
+  // the form starts from the record when editing starts, and again when its status changes (the fields differ);
+  // later snapshots don't overwrite what's being typed
+  const kind = r ? kindOf(r) : undefined
   useEffect(() => {
     if (editing && r) {
       const f = toForm(r)
@@ -37,7 +42,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
       setSaved('')
     } else setForm(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [editing, r?.id])
+  }, [editing, r?.id, kind])
 
   const flush = () => {
     clearTimeout(timer.current)
@@ -56,17 +61,47 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
     timer.current = setTimeout(flush, SAVE_DELAY)
   }
 
+  // drop what hasn't been written yet (the record is about to go)
+  const cancel = () => {
+    clearTimeout(timer.current)
+    baseline.current = latest.current.form
+  }
+
   useEffect(() => () => clearTimeout(timer.current), [])
-  return { form, set, saved, flush }
+  return { form, set, saved, setSaved, flush, cancel }
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { records, canEdit } = useRuntime()
+  const { records, canEdit, error, clearError, mutate, remove } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
-  const { form, set, saved, flush } = useAutosave(r, editing && canEdit)
+  const [focusWhy, setFocusWhy] = useState(false)
+  const [msg, setMsg] = useState('')
+  const { form, set, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
 
-  useEffect(() => setEditing(false), [id])
+  useEffect(() => {
+    setEditing(false)
+    setMsg('')
+    clearError()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id])
+
+  // edit mode's status control moves without asking what was paid, as production's does
+  const moveTo = (to: Kind) => {
+    if (!r) return
+    flush()
+    let m = ''
+    mutate(r.id, (latest) => {
+      const x = movePatch(latest, to)
+      m = x?.msg || ''
+      return x?.patch ?? null
+    }).then((ok) => ok && setSaved(m))
+  }
+  const removeIt = () => {
+    if (!r) return
+    cancel()
+    remove(r.id).then((ok) => ok && onClose())
+  }
 
   const close = () => {
     flush()
@@ -110,11 +145,34 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
               </div>
             </DrawerHeader>
             <DrawerBody>
-              {editing && form ? (
-                <EditForm form={form} own={k === 'own'} wish={k !== 'own'} set={set} />
-              ) : (
-                <ViewBody r={r} />
-              )}
+              <Boundary key={r.id} title="Couldn't show this record" onClose={close}>
+                {error && (
+                  <Alert variant="error" className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
+                    <AlertTitle>{error}</AlertTitle>
+                  </Alert>
+                )}
+                {editing && form ? (
+                  <EditForm
+                    form={form}
+                    kind={k}
+                    set={set}
+                    title={r.title || 'this record'}
+                    focusWhy={focusWhy}
+                    onStatus={k === 'wish' && wantedCopies(r) > 1 ? null : moveTo}
+                    onRemove={removeIt}
+                  />
+                ) : (
+                  <ViewBody
+                    r={r}
+                    msg={msg}
+                    onMoved={setMsg}
+                    onAddWhy={() => {
+                      setFocusWhy(true)
+                      setEditing(true)
+                    }}
+                  />
+                )}
+              </Boundary>
             </DrawerBody>
           </>
         )}

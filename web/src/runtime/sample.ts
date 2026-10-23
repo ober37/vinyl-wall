@@ -33,7 +33,11 @@ export const sample = () => ({
       added: 1,
     },
     r3: { title: 'Blue Train', artist: 'John Coltrane', year: '1957', label: 'Blue Note', status: 'own', runtime: 42, notes: [], added: 3 },
-    r5: { title: 'Aja', artist: 'Steely Dan', year: '1977', status: 'ordered', orderStatus: 'shipped', eta: '2026-10-24', notes: [], added: 5 },
-    r6: { title: 'Pet Sounds', artist: 'The Beach Boys', year: '1966', status: 'wish', priority: 3, notes: [], added: 6 },
+    r5: { title: 'Aja', artist: 'Steely Dan', year: '1977', status: 'ordered', orderStatus: 'shipped', eta: '2026-10-24', shop: 'Rough Trade', notes: [], added: 5 },
+    r6: { title: 'Pet Sounds', artist: 'The Beach Boys', year: '1966', status: 'wish', priority: 3, discogsSync: { rid: 123 }, notes: [], added: 6 },
+    r7: {
+      title: 'Abbey Road', artist: 'The Beatles', year: '1969', status: 'wish', priority: 1, copyName: 'UK first', pressing: 'UK first pressing', budget: '150',
+      moreCopies: [{ name: 'Half-speed reissue', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '40' }], notes: [], added: 4,
+    },
   } as Record<string, Record<string, unknown>>,
 })

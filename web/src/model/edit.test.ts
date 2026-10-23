@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { patchFor, toForm } from './edit'
+import { patchFor, toForm, withSync } from './edit'
 import type { Rec } from './record'
 
 const owned: Rec = {
@@ -20,11 +20,16 @@ describe('patchFor', () => {
     expect(patchFor(owned, f, { ...f, why: 'hi' })).not.toHaveProperty('pressing')
   })
 
-  it('writes only changed fields, and flags Discogs sync for synced ones', () => {
+  it('writes only changed fields', () => {
     const f = toForm(owned)
     expect(patchFor(owned, f, { ...f, title: 'Kind of Blue ' })).toEqual({})
-    expect(patchFor(owned, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue', needsSync: true })
+    expect(patchFor(owned, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
     expect(patchFor(owned, f, { ...f, catalog: 'CS 8163' })).toEqual({ catalog: 'CS 8163' })
+  })
+
+  it('flags Discogs sync only for synced fields', () => {
+    expect(withSync({ title: 'a' })).toEqual({ title: 'a', needsSync: true })
+    expect(withSync({ catalog: 'a', notes: [] })).toEqual({ catalog: 'a', notes: [] })
   })
 
   it('stores production shapes', () => {
