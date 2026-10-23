@@ -1247,9 +1247,12 @@ function openSheet(id,keepScroll){
       if(!moveMsg.focused){moveMsg.focused=true;const p=$("#m-paid");p.focus();p.scrollIntoView({block:"center"})}
       $("#moveNo").addEventListener("click",()=>{moveMsg.ask=null;openSheet(r.id,true)});
       $("#moveDet").addEventListener("submit",e=>{e.preventDefault();const paid=dollars(val("m-paid")),shop=val("m-shop");
-        const said=[paid?"$"+paid:"",shop?"from "+shop:""].filter(Boolean).join(" "),data={},c=records.find(x=>x.id===r.id)||r;
+        const said=[paid?"$"+paid:"",shop?"from "+shop:""].filter(Boolean).join(" "),data={},c=records.find(x=>x.id===r.id)||r,mv=moveMsg.note;
         if(paid!==(c.paid||""))data.paid=paid;if(shop!==(c.shop||"")){data.shop=shop;if(c.shopUrl)data.shopUrl=""}  // another shop: the old one's website no longer fits
-        moveMsg={id:r.id,msg:(ask==="own"?"Got it today":"Ordered today")+(said?" · "+said:"")};
+        // what was entered goes into the move's own note, one event: "Ordered · $48 from New Shop"
+        const N=[...(c.notes||[])],k=mv?N.findLastIndex(n=>n&&n.d===mv.d&&n.t===mv.t):-1;
+        if(said&&k>=0){N[k]={...N[k],t:(ask==="own"?"Found it":"Ordered")+" · "+said};data.notes=N}
+        moveMsg=null;
         Object.keys(data).length?write(r.id,data,true):openSheet(r.id,true)})}
     if($("#gotBtn")) $("#gotBtn").addEventListener("click",()=>moveStatus(r,"own"));
     if($("#ordBtn")) $("#ordBtn").addEventListener("click",()=>moveStatus(r,"ordered"));
@@ -1303,7 +1306,7 @@ function moveStatus(r,to,ci){const from=r.status==="wish"||r.status==="ordered"?
   if(to==="ordered"){Object.assign(data,{orderStatus:"ordered",orderDate:t});notes.push({d:t,t:"Ordered."});msg="Marked as ordered today."}
   if(to==="wish") msg="Moved back to the hunt.";
   // a hunt that's just been ordered or found asks what was paid and where, in the view (#45); Edit has the fields already
-  data.notes=notes;if(!sheetMode.edit)moveMsg={id:r.id,msg,ask:from==="wish"?to:null};return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
+  data.notes=notes;if(!sheetMode.edit)moveMsg={id:r.id,msg,ask:from==="wish"?to:null,note:notes.at(-1)};return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
 function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();chats.forEach(c=>{c.open=false;c.confirm=false;c.replace=null});clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}

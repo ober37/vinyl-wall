@@ -420,13 +420,14 @@ f.onload=async()=>{
     q("#m-paid").value="$32";q("#m-shop").value="Rough Trade";q("#moveDet button[type=submit]").click();await sleep(500);
     check("move details: Save writes paid and shop, without a typed $",PS().paid==="32"&&PS().shop==="Rough Trade"&&PS().needsSync,JSON.stringify(PS()));
     check("move details: a new shop drops the old one's website",PS().shopUrl==="",PS().shopUrl);
-    check("move details: then one line says what was saved",!q("#moveDet")&&/Ordered today · \$32 from Rough Trade/.test(sts()),sts());
+    check("move details: what was entered goes into the move's note",PS().notes.length===1&&PS().notes[0].t==="Ordered · $32 from Rough Trade",JSON.stringify(PS().notes));
+    check("move details: then nothing under the button",!q("#moveDet")&&!sts().includes("Ordered")&&!sts().includes("Marked"),sts());
     Object.assign(PS(),{status:"wish",paid:"",shop:"",shopUrl:"",orderStatus:"",orderDate:"",notes:[]});w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
     q("#gotBtn").click();await sleep(500);
     check("move details: Got it asks too, with Bought from",PS().status==="own"&&/Bought from/.test(q("#moveDet")?.textContent||""));
     q("#moveNo").click();await sleep(300);
-    check("move details: Not now writes nothing",!q("#moveDet")&&!PS().paid&&!PS().shop,JSON.stringify(PS()));
+    check("move details: Not now writes nothing, the move's note as it was",!q("#moveDet")&&!PS().paid&&!PS().shop&&PS().notes.at(-1).t==="Found it. Moved to the wall.",JSON.stringify(PS()));
     Object.assign(PS(),{status:"wish",acquired:"",notes:[]});w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
     q("#gotBtn").click();await sleep(500);q("#modeBtn").click();await sleep(300);
