@@ -369,12 +369,15 @@ f.onload=async()=>{
     wx().querySelector(".want").click();await sleep(400);q("#wantEdit").click();await sleep(300);
     check("want: Edit opens that copy's name",q("#modeBtn").textContent==="Done"&&d.activeElement===q(`.ecopy[data-ci="${nc0+1}"] [data-cf="name"]`),d.activeElement?.outerHTML.slice(0,80));
     q("#modeBtn").click();await sleep(300);
-    const r4=ab(),saved={copyName:r4.copyName,pressing:r4.pressing,budget:r4.budget,catalog:r4.catalog,autoFilled:r4.autoFilled,moreCopies:r4.moreCopies};
-    Object.assign(r4,{copyName:"",pressing:"",budget:"",catalog:"",autoFilled:["label"],moreCopies:[]});w.__emit("records");await sleep(300);
+    const r4=ab(),saved={copyName:r4.copyName,pressing:r4.pressing,budget:r4.budget,catalog:r4.catalog,autoFilled:r4.autoFilled,moreCopies:r4.moreCopies,discogsId:r4.discogsId,discogsMatch:r4.discogsMatch};
+    // a looked-up label and a release the matcher picked aren't a copy the owner chose (owner test on #53)
+    Object.assign(r4,{copyName:"",pressing:"",budget:"",catalog:"",autoFilled:["label"],discogsId:4321,discogsMatch:"vinyl: master main release",moreCopies:[{name:"",pressing:"Mono reissue",label:"",catalog:"",budget:""}]});w.__emit("records");await sleep(300);
+    check("want: the copies card skips a first copy that's only a looked-up label and a matched release",q("#wantFs legend")?.textContent==="The copy you want"&&!/Copy 1/.test(q("#wantFs").textContent),q("#wantFs")?.textContent);
+    r4.moreCopies=[];w.__emit("records");await sleep(300);
     wx().open=true;await sleep(100);wx().querySelectorAll(".want")[2].click();await sleep(400);
-    check("want: with no copy yet (a looked-up label isn't one), it becomes the first copy",ab().pressing==="Half-speed"&&!ab().moreCopies.length&&/The copy you want/.test(q("#wantFs")?.textContent||""),JSON.stringify([ab().pressing,ab().moreCopies]));
+    check("want: with no copy yet (a looked-up label or matched release isn't one), it becomes the first copy, dropping the matched release",ab().pressing==="Half-speed"&&!ab().moreCopies.length&&ab().discogsId===""&&!ab().discogsMatch&&/The copy you want/.test(q("#wantFs")?.textContent||""),JSON.stringify([ab().pressing,ab().moreCopies]));
     q("#wantUndo").click();await sleep(400);
-    check("want: Undo clears the first copy it filled",ab().pressing==="",ab().pressing);
+    check("want: Undo clears the first copy it filled and puts the matched release back",ab().pressing===""&&ab().discogsId===4321&&ab().discogsMatch==="vinyl: master main release",JSON.stringify([ab().pressing,ab().discogsId,ab().discogsMatch]));
     Object.assign(ab(),saved);ab().researchLog=ab().researchLog.filter(e=>e.id!=="wx");w.__emit("records");await sleep(300);
     q('[data-respin="ab1"]').click();await sleep(300);
     check("research: unpinned entry closes again",!q('.resentry[data-res="ab1"]').open);

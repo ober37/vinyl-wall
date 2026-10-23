@@ -926,7 +926,11 @@ function topBudget(r){let best="";for(const c of wantCopies(r)){const n=parseFlo
 // The copy you want (wanted records): the pressing being hunted, at the top of the Research tab; its label shows even when
 // it's the original's, since here it names the copy. An imported original label alone isn't a copy, so it shows only beside
 // a pressing, catalog or budget, or when it differs from the original (#33)
-function stillCopies(r){const C=wantCopies(r);return (r.status==="wish"?C.map((c,i)=>[c,i]):C.slice(1).map((c,i)=>[c,i+1])).filter(([c])=>copyHas(c))}
+// the record's own fields are a copy the person chose only when they filled them in: an album label the lookup found, or a
+// Discogs release the matcher picked (any discogsMatch but an import from their own Discogs), isn't one (#52)
+function firstCopyChosen(r){const c=wantCopies(r)[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",auto=!!r.discogsMatch&&r.discogsMatch!=="imported from Discogs";
+  return !!(c.name||c.pressing||c.catalog||c.budget||c.discogsId&&!auto||!(r.autoFilled||[]).includes("label")&&c.label&&c.label!==orig)}
+function stillCopies(r){const C=wantCopies(r);return (r.status==="wish"?C.map((c,i)=>[c,i]):C.slice(1).map((c,i)=>[c,i+1])).filter(([c,i])=>i?copyHas(c):firstCopyChosen(r))}
 const copiesLegend=r=>(stillCopies(r).length>1?"The copies you ":"The copy you ")+(r.status==="wish"?"want":"still want");
 function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">${f.map(([k,v])=>`<dt>${k}</dt><dd>${v}</dd>`).join("")}</dl>`:"";
   const labRow=(c,lab)=>lab||c.catalog?[["Label",esc(lab)+(c.catalog?`<span class="mut">${lab?" · ":""}${esc(c.catalog)}</span>`:"")]]:[];
@@ -1280,15 +1284,15 @@ function openSheet(id,keepScroll){
     // + Want: the record's first copy when it has none yet (a looked-up label alone isn't a copy, as in wantCopyHTML), else another copy
     s.querySelectorAll("[data-reswant]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.reswant;
       const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k),p=e&&pressOf((e.pressings||[])[+b.dataset.pi]);if(!p)return;
-      const C=wantCopies(r),c0=C[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",lab=!(r.autoFilled||[]).includes("label")&&c0.label&&c0.label!==orig;
-      const first=!(c0.name||c0.pressing||c0.catalog||c0.budget||c0.discogsId||lab);
-      wantMsg={id:r.id,key:k,p,ci:first?0:C.length};openResearch.add(r.id+":"+k);
-      write(r.id,first?{pressing:p}:{moreCopies:[...C.slice(1),{...Object.fromEntries(COPY_KEYS.map(x=>[x,""])),pressing:p,discogsId:""}]},true)}));
+      // a release the matcher picked isn't this pressing, so it goes (Undo puts it back) and the sync matches the pressing afresh
+      const C=wantCopies(r),first=!firstCopyChosen(r),did=first&&r.discogsId?{discogsId:r.discogsId,discogsMatch:r.discogsMatch||""}:null;
+      wantMsg={id:r.id,key:k,p,ci:first?0:C.length,did};openResearch.add(r.id+":"+k);
+      write(r.id,first?{pressing:p,...(did?{discogsId:"",discogsMatch:""}:{})}:{moreCopies:[...C.slice(1),{...Object.fromEntries(COPY_KEYS.map(x=>[x,""])),pressing:p,discogsId:""}]},true)}));
     if($("#wantEdit")) $("#wantEdit").addEventListener("click",()=>{const ci=wantMsg.ci;wantMsg=null;sheetMode={id,edit:true};openSheet(id,true);
       const el=ci?s.querySelector(`.ecopy[data-ci="${ci}"] [data-cf="name"]`):$("#f-cname");if(el){el.focus();el.scrollIntoView({block:"center"})}});
     // Undo takes back only the copy it added, if it's still there as added
-    if($("#wantUndo")) $("#wantUndo").addEventListener("click",()=>{const {ci,p}=wantMsg,C=wantCopies(r);wantMsg=null;
-      if(ci===0&&C[0].pressing===p) write(r.id,{pressing:""},true);
+    if($("#wantUndo")) $("#wantUndo").addEventListener("click",()=>{const {ci,p,did}=wantMsg,C=wantCopies(r);wantMsg=null;
+      if(ci===0&&C[0].pressing===p) write(r.id,{pressing:"",...(did||{})},true);
       else if(ci&&C[ci]&&C[ci].pressing===p) write(r.id,{moreCopies:C.slice(1).filter((c,j)=>j!==ci-1)},true);
       else openSheet(id,true)});
     s.querySelectorAll("[data-resdel]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resdel;
@@ -1340,7 +1344,8 @@ function collect(r){
   if(document.getElementById("f-mg")){o.mediaGrade=val("f-mg");o.sleeveGrade=val("f-sg");o.acquired=val("f-acq")}
   if(document.getElementById("f-paid")) o.paid=dollars(val("f-paid"));
   // a release number, or a pasted Discogs release link
-  if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n}
+  if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n;
+    if(String(o.discogsId)!==String(r.discogsId||""))o.discogsMatch=""}  // a release typed in is the person's own choice
   if(document.getElementById("f-shop")) o.shop=val("f-shop");
   if(document.getElementById("f-shopurl")){const u=val("f-shopurl");o.shopUrl=shopHref(u)||u}
   if(document.getElementById("f-ostat")){o.orderStatus=val("f-ostat");o.orderDate=val("f-odate");o.eta=val("f-eta");o.orderNum=val("f-onum");o.carrier=val("f-carrier");o.tracking=val("f-track");if(document.getElementById("f-onotes"))o.orderNotes=document.getElementById("f-onotes").value}
