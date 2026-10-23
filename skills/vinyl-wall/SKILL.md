@@ -66,7 +66,7 @@ Use the vinyl-wall skill, and save a summary to the record when we're done.
 My question: …
 ```
 
-The `Wall:` line can be missing; then find the wall as for a new record. Use the record id when the prompt gives one; otherwise find the record by artist and title, and ask if there's more than one.
+The `Wall:` line can be missing; then find the wall as for a new record. When the prompt gives a record id, `get` that record directly, with no `list` or duplicate check. Otherwise find the record by artist and title, and ask if there's more than one.
 
 - **Answer the question asked.** `get` the record first for context (its pressing, notes and `about`). Search the web for anything recent or factual, such as awards, charts, prices or pressing details, rather than answering from memory. Keep it short and give your sources.
 - **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
