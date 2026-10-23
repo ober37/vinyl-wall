@@ -5,7 +5,7 @@ description: Add or update records on the person's Vinyl Wall (a published artif
 
 # Adding records to a Vinyl Wall
 
-Skill version 4.
+Skill version 5.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -23,6 +23,8 @@ The wall is a published artifact. Its records are documents in the page's `recor
 - Wish: `copyName`, `budget`.
 
 Write only what the person said or the photos show; leave the rest out. Before adding, `list` `records` and check it isn't already there (same artist and title); if it is, ask whether this is another copy or a change to the one there.
+
+Ask either/or questions as a yes/no where you can ("Is it new or sealed?", not "New or used?"), so a "yes" is never ambiguous.
 
 If a shop listing shows a release date still to come (a pre-order), ask whether they have it in hand before adding it as owned rather than ordered.
 
