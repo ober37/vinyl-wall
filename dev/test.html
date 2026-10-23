@@ -415,10 +415,13 @@ f.onload=async()=>{
     await openRecord("Pet Sounds");q("#ordBtn").click();await sleep(500);
     const PS=()=>w.__data.records.r6,sts=()=>[...d.querySelectorAll("#sheet [role=status]")].map(x=>x.textContent).join(" | ");
     check("move details: Ordered it moves at once, then asks Paid and From",PS().status==="ordered"&&!!q("#moveDet #m-paid")&&/^From/.test(q("#m-shop")?.parentElement.textContent)&&/Marked as ordered today/.test(sts()),sts());
-    q("#m-paid").value="32";q("#m-shop").value="Rough Trade";q("#moveDet button[type=submit]").click();await sleep(500);
-    check("move details: Save writes paid and shop",PS().paid==="32"&&PS().shop==="Rough Trade"&&PS().needsSync,JSON.stringify(PS()));
+    check("move details: Paid has focus, ready to type",d.activeElement===q("#m-paid"));
+    PS().shopUrl="https://old.example";w.__emit("records");await sleep(300);
+    q("#m-paid").value="$32";q("#m-shop").value="Rough Trade";q("#moveDet button[type=submit]").click();await sleep(500);
+    check("move details: Save writes paid and shop, without a typed $",PS().paid==="32"&&PS().shop==="Rough Trade"&&PS().needsSync,JSON.stringify(PS()));
+    check("move details: a new shop drops the old one's website",PS().shopUrl==="",PS().shopUrl);
     check("move details: then one line says what was saved",!q("#moveDet")&&/Ordered today · \$32 from Rough Trade/.test(sts()),sts());
-    Object.assign(PS(),{status:"wish",paid:"",shop:"",orderStatus:"",orderDate:"",notes:[]});w.__emit("records");await sleep(300);
+    Object.assign(PS(),{status:"wish",paid:"",shop:"",shopUrl:"",orderStatus:"",orderDate:"",notes:[]});w.__emit("records");await sleep(300);
     q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
     q("#gotBtn").click();await sleep(500);
     check("move details: Got it asks too, with Bought from",PS().status==="own"&&/Bought from/.test(q("#moveDet")?.textContent||""));

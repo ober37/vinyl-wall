@@ -1083,7 +1083,7 @@ function openSheet(id,keepScroll){
   ${pickMove&&pickMove.id===r.id?`<div class="pickcopy" role="group" aria-labelledby="pickQ"><p id="pickQ">Which copy ${pickMove.to==="own"?"did you get":"did you order"}? The other copies stay on this record as copies you still want.</p>
     <div class="actions">${wantCopies(r).filter(copyHas).map((c,i)=>`<button class="btn small" type="button" data-pickcopy="${i}">${pickMove.to==="own"?"Got":"Ordered"}: ${esc(copyTitle(c,i))}</button>`).join("")}<button class="linkbtn" type="button" id="pickNo">Cancel</button></div></div>`:""}
   ${moveMsg&&moveMsg.id===r.id&&moveMsg.ask?`<form class="pickcopy movedet editonly viewonly" id="moveDet"><p>What did you pay?</p>
-    <div class="mdrow"><label class="f">Paid${money("m-paid",r.paid,"e.g. 32.00")}</label><label class="f">${moveMsg.ask==="own"?"Bought from":"From"}<input id="m-shop" value="${esc(r.shop)}" placeholder="e.g. Rough Trade"></label></div>
+    <div class="mdrow"><label class="f">Paid${money("m-paid",r.paid,"32.00")}</label><label class="f">${moveMsg.ask==="own"?"Bought from":"From"}<input id="m-shop" value="${esc(r.shop)}" placeholder="e.g. Rough Trade"></label></div>
     <div class="actions"><button class="btn small primary" type="submit">Save</button><button class="linkbtn" type="button" id="moveNo">Not now</button></div></form>`:""}`}
 
   ${isNew?`<div class="newrec">
@@ -1243,10 +1243,12 @@ function openSheet(id,keepScroll){
     s.querySelectorAll("[data-pickcopy]").forEach(b=>b.addEventListener("click",()=>{const to=pickMove.to;pickMove=null;moveStatus(r,to,+b.dataset.pickcopy)}));
     if($("#pickNo")) $("#pickNo").addEventListener("click",()=>{pickMove=null;openSheet(r.id,true)});
     if($("#moveDet")){const ask=moveMsg.ask;
+      // ready to type and Enter, once, when it first appears
+      if(!moveMsg.focused){moveMsg.focused=true;const p=$("#m-paid");p.focus();p.scrollIntoView({block:"center"})}
       $("#moveNo").addEventListener("click",()=>{moveMsg.ask=null;openSheet(r.id,true)});
-      $("#moveDet").addEventListener("submit",e=>{e.preventDefault();const paid=val("m-paid"),shop=val("m-shop");
-        const said=[paid?"$"+paid:"",shop?"from "+shop:""].filter(Boolean).join(" "),data={};
-        if(paid!==(r.paid||""))data.paid=paid;if(shop!==(r.shop||""))data.shop=shop;
+      $("#moveDet").addEventListener("submit",e=>{e.preventDefault();const paid=dollars(val("m-paid")),shop=val("m-shop");
+        const said=[paid?"$"+paid:"",shop?"from "+shop:""].filter(Boolean).join(" "),data={},c=records.find(x=>x.id===r.id)||r;
+        if(paid!==(c.paid||""))data.paid=paid;if(shop!==(c.shop||"")){data.shop=shop;if(c.shopUrl)data.shopUrl=""}  // another shop: the old one's website no longer fits
         moveMsg={id:r.id,msg:(ask==="own"?"Got it today":"Ordered today")+(said?" · "+said:"")};
         Object.keys(data).length?write(r.id,data,true):openSheet(r.id,true)})}
     if($("#gotBtn")) $("#gotBtn").addEventListener("click",()=>moveStatus(r,"own"));
@@ -1305,6 +1307,7 @@ function moveStatus(r,to,ci){const from=r.status==="wish"||r.status==="ordered"?
 function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();chats.forEach(c=>{c.open=false;c.confirm=false;c.replace=null});clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
+const dollars=v=>v.replace(/^\$\s*/,"");  // "$32" is saved as 32, since the $ is shown beside it
 function collect(r){
   const R=[...document.querySelectorAll("#sheet [data-run]")].filter(x=>x.value.trim());
   const o={title:val("f-title"),artist:val("f-artist"),year:val("f-year"),status:document.querySelector('#sheet input[name="fst"]:checked')?.value,why:document.getElementById("f-why")?.value??"",
@@ -1316,7 +1319,7 @@ function collect(r){
   if(document.querySelector("#sheet .copygroup")){
     o.moreCopies=[...document.querySelectorAll('#sheet .ecopy:not([data-ci="0"])')].map(b=>({...Object.fromEntries(COPY_KEYS.map(k=>[k,b.querySelector(`[data-cf="${k}"]`).value.trim()])),discogsId:+b.dataset.did||""}))}
   if(document.getElementById("f-mg")){o.mediaGrade=val("f-mg");o.sleeveGrade=val("f-sg");o.acquired=val("f-acq")}
-  if(document.getElementById("f-paid")) o.paid=val("f-paid");
+  if(document.getElementById("f-paid")) o.paid=dollars(val("f-paid"));
   // a release number, or a pasted Discogs release link
   if(document.getElementById("f-discogs")){const v=val("f-discogs")||"",m=/release\/(\d+)/.exec(v)||/(\d+)/.exec(v),n=m?parseInt(m[1],10):NaN;o.discogsId=isNaN(n)?"":n}
   if(document.getElementById("f-shop")) o.shop=val("f-shop");
