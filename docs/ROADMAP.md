@@ -39,6 +39,9 @@ A tighter facts list, and an About section: album and artist summaries from Wiki
 ### Research that answers (#31)
 Research moves to the Claude chat beside the wall, which can search the web: the record's Research section copies a prompt naming the record, and the chat skill saves a summary of the session (the question, the answer and its sources) back to the record. The in-page chat, which could only answer from what Claude already knew, is gone.
 
+### Want a researched pressing (#52)
+A pressing that research recommends on a wanted record becomes one of the copies you want in one step: + Want beside it in the research entry, or a yes when the chat offers it.
+
 ### Lookup progress and import speed (#30)
 A status bar at the bottom of the wall showing the background work still waiting (covers and details, album and artist info, a Discogs import or sync), and a review of how long an import takes end to end, from picking the file to every record having its cover and About info.
 

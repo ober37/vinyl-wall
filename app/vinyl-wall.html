@@ -344,6 +344,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .links.slim{gap:6px;margin-top:12px}
 .absum{margin:16px 0 22px}
 /* a wanted or ordered record's next step, above the tabs: comfortable touch targets, wrapping to full width on phones */
+.research li .want,.research li .have{margin:0 0 0 6px;font-size:12px;white-space:nowrap} .research li .have{color:var(--ink-2)} .resst .linkbtn{margin:0}
 .resask .actions{margin-top:12px} .resask+.research{margin-top:16px} .resst{margin:0} .askline.prose{word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .resq{margin:12px 0 0}.resq b{display:block;font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:6px}
 .tabs .tabn{font:500 11px/1 var(--mono);color:var(--ink-2);margin-left:4px}
@@ -740,26 +741,34 @@ function researchEntries(r){
 function firstSentence(t){t=String(t||"").trim();const m=t.match(/^.+?[.!?](\s|$)/);return (m?m[0]:t).trim().slice(0,140)}
 // a pinned entry opens expanded unless it was collapsed since the page loaded
 const openResearch=new Set(),shutResearch=new Set();
+// a researched pressing is "<pressing>: <why>"; + Want on a hunt adds the pressing as a copy you want (#52), and the entry
+// then says what was added, with Edit and Undo, until the sheet closes or the next one is added
+const pressOf=t=>String(t||"").split(": ")[0].trim();
+let wantMsg=null;
 function researchHTML(r){
   const items=researchEntries(r); if(!items.length) return "";
   const list=a=>Array.isArray(a)&&a.length?`<ul>${a.map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`:"";
   // sources come from the chat: links only when they're http(s)
   const srcs=a=>{a=(Array.isArray(a)?a:[]).filter(x=>x&&/^https?:\/\//i.test(String(x.url||"")));
     return a.length?`<h4>Sources</h4><ul>${a.map(x=>`<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a></li>`).join("")}</ul>`:""};
+  const have=new Set(wantCopies(r).map(c=>c.pressing.trim().toLowerCase()).filter(Boolean));
+  const plist=(a,key)=>r.status!=="wish"?list(a):`<ul>${a.map((x,j)=>{const p=pressOf(x);return `<li>${esc(x)}${!p?"":have.has(p.toLowerCase())?` <span class="have editonly">✓ Added</span>`:
+    ` <button class="linkbtn want editonly" type="button" data-reswant="${esc(key)}" data-pi="${j}">+ Want</button>`}</li>`}).join("")}</ul>`;
+  const wm=key=>wantMsg&&wantMsg.id===r.id&&wantMsg.key===key?`Added "${esc(wantMsg.p)}" · <button class="linkbtn" type="button" id="wantEdit">Edit</button> · <button class="linkbtn" type="button" id="wantUndo">Undo</button>`:"";
   return `<div class="reslog">${items.map((e,i)=>({e,key:e.id||String(i)})).sort((a,b)=>!!b.e.pinned-!!a.e.pinned).map(({e,key})=>{const k=r.id+":"+key;
     return `<details class="resentry" data-res="${esc(key)}"${e.pinned?" data-pinned":""} ${openResearch.has(k)||e.pinned&&!shutResearch.has(k)?"open":""}>
     <summary><time>${esc(shortDate(e.at)||e.at||"")}</time><span>${e.pinned?`<span class="pinlbl">Pinned</span>`:""}${esc(e.headline||firstSentence(e.summary)||"Research notes")}</span></summary>
     <div class="resbody">
       ${e.question?`<p class="resq"><b>You asked</b>${esc(e.question)}</p>`:""}
       ${(()=>{const sm=String(e.summary||"").trim();const body=e.headline?sm:sm.slice(firstSentence(sm).length).trim();return body?`<p>${esc(body)}</p>`:""})()}
-      ${e.pressings?.length?`<h4>Pressings</h4>${list(e.pressings)}`:""}
+      ${e.pressings?.length?`<h4>Pressings</h4>${plist(e.pressings,key)}`:""}
       ${e.check?.length?`<h4>Check in a listing</h4>${list(e.check)}`:""}
       ${e.where?.length?`<h4>Where to look</h4>${list(e.where)}`:""}
       ${e.price?`<h4>Price</h4><p>${esc(e.price)}</p>`:""}
       ${srcs(e.sources)}
       <div class="resacts editonly"><button class="linkbtn" type="button" data-respin="${esc(key)}">${e.pinned?"Unpin":"Pin"}</button>
         ${r.status!=="ordered"?`<button class="linkbtn" type="button" data-resfollow="${esc(key)}">Follow up in chat</button>`:""}
-        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button><span class="hint resst" role="status"></span></div>
+        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button><span class="hint resst" role="status">${wm(key)}</span></div>
       <p class="mono askline prose" hidden></p>
     </div></details>`}).join("")}</div>`;
 }
@@ -1268,6 +1277,20 @@ function openSheet(id,keepScroll){
       const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k);const box=b.closest(".resbody").querySelector(".askline.prose");
       if(e)copyResPrompt(resPrompt(r,e),"Copied. Paste it into Claude to pick up from here.",b.parentNode.querySelector(".resst"),box)}));
     const rc=$("#resCopy");if(rc)rc.addEventListener("click",()=>copyResPrompt(resPrompt(r),"Copied. Paste it into Claude and add your question.",$("#resStatus"),$("#resAsk")));
+    // + Want: the record's first copy when it has none yet (a looked-up label alone isn't a copy, as in wantCopyHTML), else another copy
+    s.querySelectorAll("[data-reswant]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.reswant;
+      const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k),p=e&&pressOf((e.pressings||[])[+b.dataset.pi]);if(!p)return;
+      const C=wantCopies(r),c0=C[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",lab=!(r.autoFilled||[]).includes("label")&&c0.label&&c0.label!==orig;
+      const first=!(c0.name||c0.pressing||c0.catalog||c0.budget||c0.discogsId||lab);
+      wantMsg={id:r.id,key:k,p,ci:first?0:C.length};openResearch.add(r.id+":"+k);
+      write(r.id,first?{pressing:p}:{moreCopies:[...C.slice(1),{...Object.fromEntries(COPY_KEYS.map(x=>[x,""])),pressing:p,discogsId:""}]},true)}));
+    if($("#wantEdit")) $("#wantEdit").addEventListener("click",()=>{const ci=wantMsg.ci;wantMsg=null;sheetMode={id,edit:true};openSheet(id,true);
+      const el=ci?s.querySelector(`.ecopy[data-ci="${ci}"] [data-cf="name"]`):$("#f-cname");if(el){el.focus();el.scrollIntoView({block:"center"})}});
+    // Undo takes back only the copy it added, if it's still there as added
+    if($("#wantUndo")) $("#wantUndo").addEventListener("click",()=>{const {ci,p}=wantMsg,C=wantCopies(r);wantMsg=null;
+      if(ci===0&&C[0].pressing===p) write(r.id,{pressing:""},true);
+      else if(ci&&C[ci]&&C[ci].pressing===p) write(r.id,{moreCopies:C.slice(1).filter((c,j)=>j!==ci-1)},true);
+      else openSheet(id,true)});
     s.querySelectorAll("[data-resdel]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resdel;
       const rest=researchEntries(r).filter((e,i)=>(e.id||String(i))!==k);
       write(r.id,{researchLog:rest,research:null},true)}));
@@ -1300,7 +1323,7 @@ function moveStatus(r,to,ci,det){const from=r.status==="wish"||r.status==="order
   // what was entered goes into the move's own note too ("Ordered · $48 from New Shop"); another shop drops the old one's website
   if(det){if(det.paid!==(r.paid||""))data.paid=det.paid;if(det.shop!==(r.shop||"")){data.shop=det.shop;if(r.shopUrl)data.shopUrl=""}}
   data.notes=notes;moveMsg=null;return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
-function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
+function closeSheet(){newDraft=null;moveMsg=null;wantMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
 const dollars=v=>v.replace(/^\$\s*/,"");  // "$32" is saved as 32, since the $ is shown beside it

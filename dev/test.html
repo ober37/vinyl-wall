@@ -356,6 +356,26 @@ f.onload=async()=>{
     ab().researchLog=[{id:"cx",at:"2026-10-22",question:"Has it won any awards?",headline:"A Grammy for Best Engineered Album.",summary:"It won in 1970.",sources:[{title:"Wikipedia",url:"https://en.wikipedia.org/wiki/Abbey_Road"}]},...ab().researchLog];
     w.__emit("records");await sleep(300);
     check("research: a session the chat saves shows up without a reload",/A Grammy for Best Engineered Album/.test(q("#research")?.textContent||""),q("#research")?.textContent);
+    // #52: + Want turns a researched pressing into a copy you want, with Edit and Undo beside the entry
+    ab().researchLog=[{id:"wx",at:"2026-10-22",headline:"Pressings to hunt.",pressings:["2009 stereo remaster: cheap and easy to find","UK FIRST PRESSING: the collector's copy","Half-speed: 2019: odd"]},...ab().researchLog];
+    w.__emit("records");await sleep(300);const wx=()=>q('.resentry[data-res="wx"]');wx().open=true;await sleep(100);
+    const wl=()=>[...wx().querySelectorAll(".resbody li")].map(x=>x.querySelector(".want")?"want":x.querySelector(".have")?.textContent||"-").join();
+    check("want: each new pressing gets + Want; one already wanted reads ✓ Added",wl()==="want,✓ Added,want"&&wx().querySelector(".want").textContent==="+ Want",wl());
+    const nc0=ab().moreCopies.length;wx().querySelector(".want").click();await sleep(400);
+    check("want: + Want adds another copy and says so, with Edit and Undo",ab().moreCopies.length===nc0+1&&ab().moreCopies[nc0].pressing==="2009 stereo remaster"&&!ab().moreCopies[nc0].name
+      &&wx().open&&wl()==="✓ Added,✓ Added,want"&&/^Added "2009 stereo remaster" · Edit · Undo$/.test(wx().querySelector(".resst").textContent)&&/2009 stereo remaster/.test(q("#wantFs").textContent),wl()+" | "+wx().querySelector(".resst").textContent);
+    q("#wantUndo").click();await sleep(400);
+    check("want: Undo takes the copy back",ab().moreCopies.length===nc0&&wl()==="want,✓ Added,want"&&!wx().querySelector(".resst").textContent,wl());
+    wx().querySelector(".want").click();await sleep(400);q("#wantEdit").click();await sleep(300);
+    check("want: Edit opens that copy's name",q("#modeBtn").textContent==="Done"&&d.activeElement===q(`.ecopy[data-ci="${nc0+1}"] [data-cf="name"]`),d.activeElement?.outerHTML.slice(0,80));
+    q("#modeBtn").click();await sleep(300);
+    const r4=ab(),saved={copyName:r4.copyName,pressing:r4.pressing,budget:r4.budget,catalog:r4.catalog,autoFilled:r4.autoFilled,moreCopies:r4.moreCopies};
+    Object.assign(r4,{copyName:"",pressing:"",budget:"",catalog:"",autoFilled:["label"],moreCopies:[]});w.__emit("records");await sleep(300);
+    wx().open=true;await sleep(100);wx().querySelectorAll(".want")[2].click();await sleep(400);
+    check("want: with no copy yet (a looked-up label isn't one), it becomes the first copy",ab().pressing==="Half-speed"&&!ab().moreCopies.length&&/The copy you want/.test(q("#wantFs")?.textContent||""),JSON.stringify([ab().pressing,ab().moreCopies]));
+    q("#wantUndo").click();await sleep(400);
+    check("want: Undo clears the first copy it filled",ab().pressing==="",ab().pressing);
+    Object.assign(ab(),saved);ab().researchLog=ab().researchLog.filter(e=>e.id!=="wx");w.__emit("records");await sleep(300);
     q('[data-respin="ab1"]').click();await sleep(300);
     check("research: unpinned entry closes again",!q('.resentry[data-res="ab1"]').open);
     q("#closeBtn").click();await sleep(200);
