@@ -2,7 +2,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
-import vendor from './vendor/package.json' with { type: 'json' }
+import lock from './cdn-lock.json' with { type: 'json' }
 
 const VERSION = readFileSync(resolve(import.meta.dirname, '../VERSION'), 'utf8').trim()
 const define = { __APP_VERSION__: JSON.stringify(VERSION) }
@@ -36,19 +36,30 @@ const backgrounds = () => ({
   },
 })
 
-// React and appica load from one vendor file (web/vendor/, published to npm and served by jsdelivr), so the page holds
-// only the app's own code and stays readable for SETUP, which has Claude read it before publishing it. One file means one
-// copy of each library and its shared state: jsdelivr's per-component files each carry their own (#60).
+// React and appica load from jsdelivr through the import map in cdn-lock.json (scripts/cdn-lock.mjs): appica, Base UI
+// and the rest as their own published files, one URL per file, so every part shares one copy of each library's state
+// (#60). The page holds only the app's own code and stays readable for SETUP, which has Claude read it before publishing
+// it. Those files are written for bundlers and read process.env.NODE_ENV, so the page defines it first.
 // BUNDLE=1 builds the fallback instead: one self-contained file with everything inlined.
-export const VENDOR_URL = `https://cdn.jsdelivr.net/npm/${vendor.name}@${vendor.version}/vendor.js`
-const external = (id: string) => /^(react|react-dom|@appica\/ui-react)(\/|$)/.test(id)
+const cdn = () => ({
+  name: 'cdn-import-map',
+  transformIndexHtml: () => [
+    { tag: 'script', children: 'globalThis.process={env:{NODE_ENV:"production"}}', injectTo: 'head-prepend' as const },
+    { tag: 'script', attrs: { type: 'importmap' }, children: JSON.stringify(lock.importMap), injectTo: 'head-prepend' as const },
+  ],
+})
+const external = (id: string) => {
+  if (!/^(react|react-dom|@appica\/ui-react)(\/|$)/.test(id)) return false
+  if (!(id in lock.importMap.imports)) throw new Error(`${id} isn't in cdn-lock.json: run npm run cdn:lock`)
+  return true
+}
 
 export default defineConfig(({ command }) =>
   process.env.BUNDLE || command === 'serve'
     ? { define, plugins: [react(), tailwindcss(), themeScript(), versionMeta(), backgrounds(), viteSingleFile()] }
     : {
         define,
-        plugins: [react(), tailwindcss(), themeScript(), versionMeta(), viteSingleFile()],
-        build: { minify: false, rollupOptions: { external, output: { paths: () => VENDOR_URL } } },
+        plugins: [react(), tailwindcss(), themeScript(), versionMeta(), cdn(), viteSingleFile()],
+        build: { minify: false, rollupOptions: { external } },
       },
 )

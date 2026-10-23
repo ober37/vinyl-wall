@@ -1,16 +1,13 @@
 // Loads the built page (dist/index.html) in Chrome the way claude.ai would serve it, with a tiny stand-in runtime, and
 // uses it: filters the wall with a chip, opens a record, picks Side in Log a play. Fails on any page error or on a control
 // that doesn't work (a Toggle that never finds its group is what loading appica as separate CDN files did, #60).
-// The page imports React and appica from the vendor file on jsdelivr; --local serves web/vendor/vendor.js in its place,
-// to check a vendor build before it's published. Needs Chrome; set CHROME to its path if it isn't in the usual macOS place.
+// The page loads React and appica from jsdelivr through its import map, so this needs the network. It also reports how
+// many files a first visit fetches and how long until the wall shows. Needs Chrome; set CHROME to its path if it isn't
+// in the usual macOS place.
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import puppeteer from 'puppeteer-core'
-import vendor from '../vendor/package.json' with { type: 'json' }
-
-const VENDOR_URL = `https://cdn.jsdelivr.net/npm/${vendor.name}@${vendor.version}/vendor.js`
-const local = process.argv.includes('--local')
 
 const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
 const server = createServer((req, res) => {
@@ -55,18 +52,13 @@ try {
   // failed loads are reported with their URL by the response listener
   page.on('console', (m) => m.type() === 'error' && !m.text().startsWith('Failed to load resource') && fail.push('console: ' + m.text()))
   page.on('response', (r) => r.status() >= 400 && fail.push(`${r.status()} ${r.url()}`))
-  if (local) {
-    const body = readFileSync(join(import.meta.dirname, '../vendor/vendor.js'))
-    await page.setRequestInterception(true)
-    page.on('request', (r) =>
-      r.url() === VENDOR_URL
-        ? r.respond({ status: 200, contentType: 'text/javascript', headers: { 'Access-Control-Allow-Origin': '*' }, body })
-        : r.continue(),
-    )
-  }
+  let cdnFiles = 0
+  page.on('request', (r) => r.url().startsWith('https://cdn.jsdelivr.net/') && cdnFiles++)
+  const t0 = Date.now()
   await page.evaluateOnNewDocument(stub)
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle0', timeout: 60000 })
   await page.waitForSelector('[data-testid=sleeve]', { timeout: 15000 })
+  console.log(`first visit: ${cdnFiles} files from jsdelivr, wall shown after ${((Date.now() - t0) / 1000).toFixed(1)} s`)
   const sleeves = () => page.$$eval('[data-testid=sleeve]', (b) => b.length)
   const click = async (xpath) => {
     const [el] = await page.$$('xpath/' + xpath)
@@ -85,7 +77,6 @@ try {
   await new Promise((r) => setTimeout(r, 800)) // the sheet slides in; click once it's still
   await click(`.//button[normalize-space()="Side"]`)
   if (!(await page.$('xpath/.//button[normalize-space()="Side A"]'))) fail.push('Log a play: choosing Side did nothing')
-  console.log(`vendor: ${local ? 'web/vendor/vendor.js (local)' : VENDOR_URL}`)
 } catch (e) {
   fail.push(String(e.message || e))
 } finally {

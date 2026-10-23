@@ -8,7 +8,7 @@
     "test": "vitest run",
     "build:bundle": "BUNDLE=1 vite build",
     "check:cdn": "node scripts/check-cdn.mjs",
-    "vendor:build": "vite build --config vendor/vite.config.ts && node scripts/vendor-versions.mjs"
+    "cdn:lock": "node scripts/cdn-lock.mjs"
   },
   "type": "module",
   "dependencies": {
@@ -24,6 +24,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "es-module-lexer": "^3.0.4",
     "happy-dom": "^21.0.4",
     "puppeteer-core": "^25.16.0",
     "tailwindcss": "^4.3.3",
