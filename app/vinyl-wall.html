@@ -344,7 +344,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .links.slim{gap:6px;margin-top:12px}
 .absum{margin:16px 0 22px}
 /* a wanted or ordered record's next step, above the tabs: comfortable touch targets, wrapping to full width on phones */
-.research li .want,.research li .have{margin:0 0 0 6px;font-size:12px;white-space:nowrap} .research li .have{color:var(--ink-2)} .resst .linkbtn{margin:0}
+.research li .want,.research li .have{margin:0 0 0 6px;font-size:12px;white-space:nowrap} .research li .have{color:var(--ink-2)} .research li .nw{white-space:nowrap} .resst .linkbtn{margin:0}
 .resask .actions{margin-top:12px} .resask+.research{margin-top:16px} .resst{margin:0} .askline.prose{word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .resq{margin:12px 0 0}.resq b{display:block;font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:6px}
 .tabs .tabn{font:500 11px/1 var(--mono);color:var(--ink-2);margin-left:4px}
@@ -751,9 +751,14 @@ function researchHTML(r){
   // sources come from the chat: links only when they're http(s)
   const srcs=a=>{a=(Array.isArray(a)?a:[]).filter(x=>x&&/^https?:\/\//i.test(String(x.url||"")));
     return a.length?`<h4>Sources</h4><ul>${a.map(x=>`<li><a href="${esc(x.url)}" target="_blank" rel="noopener">${esc(x.title||x.url)} ↗</a></li>`).join("")}</ul>`:""};
-  const have=new Set(wantCopies(r).map(c=>c.pressing.trim().toLowerCase()).filter(Boolean));
-  const plist=(a,key)=>r.status!=="wish"?list(a):`<ul>${a.map((x,j)=>{const p=pressOf(x);return `<li>${esc(x)}${!p?"":have.has(p.toLowerCase())?` <span class="have editonly">✓ Added</span>`:
-    ` <button class="linkbtn want editonly" type="button" data-reswant="${esc(key)}" data-pi="${j}">+ Want</button>`}</li>`}).join("")}</ul>`;
+  // already wanted: the same pressing in other words (one contains the other, past a few letters), or the copy's catalog no. named
+  const C=stillCopies(r).map(([c])=>c),low=v=>String(v||"").trim().toLowerCase();
+  const wanted=(x,p)=>C.some(c=>{const a=low(p),b=low(c.pressing),cat=low(c.catalog);
+    return b&&(a===b||Math.min(a.length,b.length)>=8&&(a.includes(b)||b.includes(a)))||cat.length>=4&&low(x).includes(cat)});
+  // the action keeps the item's last word with it, so it never wraps onto a line of its own
+  const plist=(a,key)=>r.status!=="wish"?list(a):`<ul>${a.map((x,j)=>{const p=pressOf(x),t=String(x),sp=t.lastIndexOf(" ");
+    const act=!p?"":wanted(t,p)?`<span class="have editonly">✓ Added</span>`:`<button class="linkbtn want editonly" type="button" data-reswant="${esc(key)}" data-pi="${j}">+ Want</button>`;
+    return `<li>${act?`${esc(t.slice(0,sp+1))}<span class="nw">${esc(t.slice(sp+1))} ${act}</span>`:esc(t)}</li>`}).join("")}</ul>`;
   const wm=key=>wantMsg&&wantMsg.id===r.id&&wantMsg.key===key?`Added "${esc(wantMsg.p)}" · <button class="linkbtn" type="button" id="wantEdit">Edit</button> · <button class="linkbtn" type="button" id="wantUndo">Undo</button>`:"";
   return `<div class="reslog">${items.map((e,i)=>({e,key:e.id||String(i)})).sort((a,b)=>!!b.e.pinned-!!a.e.pinned).map(({e,key})=>{const k=r.id+":"+key;
     return `<details class="resentry" data-res="${esc(key)}"${e.pinned?" data-pinned":""} ${openResearch.has(k)||e.pinned&&!shutResearch.has(k)?"open":""}>
