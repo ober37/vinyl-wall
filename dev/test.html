@@ -297,6 +297,7 @@ f.onload=async()=>{
     q("#gotBtn").click();await sleep(400);q('[data-pickcopy="1"]').click();await sleep(500);
     const G=w.__data.records.rcp;
     check("copies: the picked copy becomes your copy, the others stay as still wanted",G.status==="own"&&G.copyName==="Third"&&G.pressing===""&&G.moreCopies.map(c=>c.name).join()==="Deluxe",JSON.stringify(G));
+    check("move details: after the copy pick, asks what was paid, with Bought from",!!q("#moveDet")&&!q("[data-pickcopy]")&&/Bought from/.test(q("#moveDet").textContent));
     q("#tab-research").click();await sleep(200);
     check("copies: an owned record shows the copy it still wants on Research",q("#tp-research #wantFs legend")?.textContent==="The copy you still want"&&/Deluxe box/.test(q("#tp-research #wantFs").textContent),q("#tp-research")?.textContent);
     q("#modeBtn").click();await sleep(300);
@@ -410,6 +411,30 @@ f.onload=async()=>{
     q("#closeBtn").click();await sleep(300);await openRecord("Aja");
     check("shop website: a non-web address doesn't link",!fromDd()&&![...d.querySelectorAll("#sheet a")].some(x=>/javascript/i.test(x.getAttribute("href")||"")),fromDd()?.innerHTML);
     q("#closeBtn").click();await sleep(200);delete w.__data.records.r5.shopUrl;
+    // Ordered it / Got it ask what was paid and where, right after the move (#45)
+    await openRecord("Pet Sounds");q("#ordBtn").click();await sleep(500);
+    const PS=()=>w.__data.records.r6,sts=()=>[...d.querySelectorAll("#sheet [role=status]")].map(x=>x.textContent).join(" | ");
+    check("move details: Ordered it moves at once, then asks Paid and From",PS().status==="ordered"&&!!q("#moveDet #m-paid")&&/^From/.test(q("#m-shop")?.parentElement.textContent)&&/Marked as ordered today/.test(sts()),sts());
+    q("#m-paid").value="32";q("#m-shop").value="Rough Trade";q("#moveDet button[type=submit]").click();await sleep(500);
+    check("move details: Save writes paid and shop",PS().paid==="32"&&PS().shop==="Rough Trade"&&PS().needsSync,JSON.stringify(PS()));
+    check("move details: then one line says what was saved",!q("#moveDet")&&/Ordered today · \$32 from Rough Trade/.test(sts()),sts());
+    Object.assign(PS(),{status:"wish",paid:"",shop:"",orderStatus:"",orderDate:"",notes:[]});w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
+    q("#gotBtn").click();await sleep(500);
+    check("move details: Got it asks too, with Bought from",PS().status==="own"&&/Bought from/.test(q("#moveDet")?.textContent||""));
+    q("#moveNo").click();await sleep(300);
+    check("move details: Not now writes nothing",!q("#moveDet")&&!PS().paid&&!PS().shop,JSON.stringify(PS()));
+    Object.assign(PS(),{status:"wish",acquired:"",notes:[]});w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
+    q("#gotBtn").click();await sleep(500);q("#modeBtn").click();await sleep(300);
+    check("move details: switching to Edit drops it",!q("#moveDet"));
+    q("#modeBtn").click();await sleep(300);
+    check("move details: gone back in the view too",!q("#moveDet"));
+    q("#closeBtn").click();await sleep(200);
+    await openRecord("Aja");
+    check("move details: none on an ordered record's sheet",!q("#moveDet"));
+    q("#closeBtn").click();await sleep(200);
+    Object.assign(PS(),{status:"wish",acquired:"",notes:[]});w.__emit("records");await sleep(300);
     w.__data.records.r1.shopUrl="https://www.example.com/shop";w.__emit("records");await sleep(300);
     await openRecord("Kind of Blue");
     const bd=[...d.querySelectorAll("#sheet .kv dt")].find(x=>x.textContent==="Bought")?.nextElementSibling;

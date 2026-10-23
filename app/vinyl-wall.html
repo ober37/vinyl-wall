@@ -325,6 +325,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .copyentry .resbody .kv{margin-top:12px} #wantFs .reslog{margin-top:6px}
 .ecopy+.ecopy{border-top:1px solid var(--line);margin-top:16px;padding-top:12px}
 .pickcopy{margin-top:16px;padding:12px 14px;border:1px solid var(--brass);border-radius:10px} .pickcopy p{margin:0 0 10px}
+.mdrow{display:grid;grid-template-columns:7em minmax(0,1fr);gap:10px;margin-bottom:12px}
 .kv{display:grid;grid-template-columns:72px minmax(0,1fr);gap:7px 12px;margin:18px 0 0;font-size:14px}
 @media (min-width:600px){.kv{grid-template-columns:84px minmax(0,1fr)}}
 .kv dt{font:500 11px/1.9 var(--mono);color:var(--ink-2)}
@@ -1080,7 +1081,10 @@ function openSheet(id,keepScroll){
     ${moveMsg&&moveMsg.id===r.id&&moveMsg.msg?`<p class="hint" role="status">${esc(moveMsg.msg)}</p>`:""}
   </div>
   ${pickMove&&pickMove.id===r.id?`<div class="pickcopy" role="group" aria-labelledby="pickQ"><p id="pickQ">Which copy ${pickMove.to==="own"?"did you get":"did you order"}? The other copies stay on this record as copies you still want.</p>
-    <div class="actions">${wantCopies(r).filter(copyHas).map((c,i)=>`<button class="btn small" type="button" data-pickcopy="${i}">${pickMove.to==="own"?"Got":"Ordered"}: ${esc(copyTitle(c,i))}</button>`).join("")}<button class="linkbtn" type="button" id="pickNo">Cancel</button></div></div>`:""}`}
+    <div class="actions">${wantCopies(r).filter(copyHas).map((c,i)=>`<button class="btn small" type="button" data-pickcopy="${i}">${pickMove.to==="own"?"Got":"Ordered"}: ${esc(copyTitle(c,i))}</button>`).join("")}<button class="linkbtn" type="button" id="pickNo">Cancel</button></div></div>`:""}
+  ${moveMsg&&moveMsg.id===r.id&&moveMsg.ask?`<form class="pickcopy movedet editonly viewonly" id="moveDet"><p>What did you pay?</p>
+    <div class="mdrow"><label class="f">Paid${money("m-paid",r.paid,"e.g. 32.00")}</label><label class="f">${moveMsg.ask==="own"?"Bought from":"From"}<input id="m-shop" value="${esc(r.shop)}" placeholder="e.g. Rough Trade"></label></div>
+    <div class="actions"><button class="btn small primary" type="submit">Save</button><button class="linkbtn" type="button" id="moveNo">Not now</button></div></form>`:""}`}
 
   ${isNew?`<div class="newrec">
     <div class="grid2"><label class="f">Album<input id="f-title" value="${esc(r.title)}" placeholder="e.g. Kind of Blue"></label><label class="f">Artist<input id="f-artist" value="${esc(r.artist)}" placeholder="e.g. Miles Davis"></label></div>
@@ -1161,7 +1165,7 @@ function openSheet(id,keepScroll){
     // status moves the same way the Ordered it / Got it / It arrived buttons do
     s.querySelectorAll('input[name="fst"]').forEach(x=>x.addEventListener("change",()=>moveStatus(r,x.value)));
     wireRuns(()=>schedule(r,false));
-    const setMode=(edit,focus)=>{sheetMode={id,edit};openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
+    const setMode=(edit,focus)=>{sheetMode={id,edit};if(edit&&moveMsg)moveMsg.ask=null;openSheet(id,true);if(focus){const el=document.getElementById(focus);if(el){el.focus();el.scrollIntoView({block:"center"})}}};
     $("#modeBtn").addEventListener("click",()=>setMode(!editing));
     if($("#whyAdd")) $("#whyAdd").addEventListener("click",()=>setMode(true,"f-why"));
     // the note box takes several lines: Enter is a new line, Cmd/Ctrl+Enter adds the note
@@ -1238,6 +1242,13 @@ function openSheet(id,keepScroll){
     // a hunt with several copies asks which one was ordered or found
     s.querySelectorAll("[data-pickcopy]").forEach(b=>b.addEventListener("click",()=>{const to=pickMove.to;pickMove=null;moveStatus(r,to,+b.dataset.pickcopy)}));
     if($("#pickNo")) $("#pickNo").addEventListener("click",()=>{pickMove=null;openSheet(r.id,true)});
+    if($("#moveDet")){const ask=moveMsg.ask;
+      $("#moveNo").addEventListener("click",()=>{moveMsg.ask=null;openSheet(r.id,true)});
+      $("#moveDet").addEventListener("submit",e=>{e.preventDefault();const paid=val("m-paid"),shop=val("m-shop");
+        const said=[paid?"$"+paid:"",shop?"from "+shop:""].filter(Boolean).join(" "),data={};
+        if(paid!==(r.paid||""))data.paid=paid;if(shop!==(r.shop||""))data.shop=shop;
+        moveMsg={id:r.id,msg:(ask==="own"?"Got it today":"Ordered today")+(said?" · "+said:"")};
+        Object.keys(data).length?write(r.id,data,true):openSheet(r.id,true)})}
     if($("#gotBtn")) $("#gotBtn").addEventListener("click",()=>moveStatus(r,"own"));
     if($("#ordBtn")) $("#ordBtn").addEventListener("click",()=>moveStatus(r,"ordered"));
     if($("#arrBtn")) $("#arrBtn").addEventListener("click",()=>moveStatus(r,"own"));
@@ -1289,7 +1300,8 @@ function moveStatus(r,to,ci){const from=r.status==="wish"||r.status==="ordered"?
     else notes.push({d:t,t:"Found it. Moved to the wall."});msg="Moved to the wall. Acquired today."}
   if(to==="ordered"){Object.assign(data,{orderStatus:"ordered",orderDate:t});notes.push({d:t,t:"Ordered."});msg="Marked as ordered today."}
   if(to==="wish") msg="Moved back to the hunt.";
-  data.notes=notes;if(!sheetMode.edit)moveMsg={id:r.id,msg};return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
+  // a hunt that's just been ordered or found asks what was paid and where, in the view (#45); Edit has the fields already
+  data.notes=notes;if(!sheetMode.edit)moveMsg={id:r.id,msg,ask:from==="wish"?to:null};return write(r.id,data,true).then(()=>{const sv=$("#saved");if(sv&&sheetMode.edit)sv.textContent=msg})}
 function closeSheet(){newDraft=null;moveMsg=null;pickMove=null;openCopies.clear();foldOrder.clear();sheetTab="task";monthOpen.clear();noteOpen.clear();journalOpen.clear();chats.forEach(c=>{c.open=false;c.confirm=false;c.replace=null});clearTimeout(saveTimer);flushPending();if(syncDirty){syncDirty=false;clearTimeout(syncTimer);writing.then(()=>fireTask())}openId=null;$("#sheet").classList.remove("on");$("#scrim").classList.remove("on")}
 
 function val(id){const el=document.getElementById(id);return el?el.value.trim():undefined}
