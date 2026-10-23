@@ -158,7 +158,7 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
   const { settings, canEdit, hasMcp, fireTask } = useRuntime()
   const update = useUpdateAvailable()
   const [copyNote, setCopyNote] = useState('')
-  const ask = useRef<HTMLParagraphElement>(null)
+  const ask = useRef<HTMLSpanElement>(null)
 
   // opening Settings checks for a newer release at most once a day, on the owner's own wall
   useEffect(() => {
@@ -179,9 +179,9 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
               <AlertTitle>An update is available</AlertTitle>
               <AlertDescription className="flex flex-col gap-2">
                 <span>To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are.</span>
-                <p ref={ask} className="bg-background-strong rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all">
+                <span ref={ask} className="bg-background-strong block rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all">
                   {updateAsk(settings)}
-                </p>
+                </span>
                 <span className="flex items-center gap-2">
                   <CopyButton
                     size="sm"

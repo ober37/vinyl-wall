@@ -18,7 +18,9 @@ import { RuntimeProvider } from './runtime/runtime'
 const files = (process.env.VW_SNAPSHOTS || '').split(',').filter(Boolean)
 type Snap = { settings?: { site?: Record<string, unknown> }; records: Record<string, Record<string, unknown>>; [k: string]: unknown }
 
-describe.skipIf(!files.length).each(files)('%s', (file: string) => {
+it.skipIf(files.length)('needs VW_SNAPSHOTS (exported wall files) to run', () => {})
+
+describe.each(files)('%s', (file: string) => {
   const snap = JSON.parse(readFileSync(file, 'utf8')) as Snap
   const recs = Object.entries(snap.records).map(([id, r]) => ({ ...r, id }) as Rec)
 
