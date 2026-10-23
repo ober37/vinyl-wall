@@ -588,12 +588,14 @@ fieldset.gsec>p.hint{margin-bottom:12px}
 (function(){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
-/* note text with its http(s) addresses as links: everything else is escaped, trailing punctuation stays outside the link,
+/* note text with its http(s) addresses as links: everything else is escaped, trailing punctuation stays outside the link
+   (a closing bracket only when it has no opening one in the address, so ".../Ten_(Pearl_Jam_album)" keeps its own),
    and a long address shows as its host plus a shortened path */
 const shortUrl=u=>{try{const x=new URL(u),rest=x.pathname.replace(/\/$/,"")+x.search,seg=x.pathname.split("/")[1];
   return x.host.replace(/^www\./,"")+(rest.length>24?"/"+(seg&&seg.length<=24?seg+"/…":"…"):rest)}catch{return u}};
-const linkify=s=>String(s??"").split(/(https?:\/\/[^\s<>"']+)/).map((p,i)=>{if(!(i%2))return esc(p);
-  const [,u,tail]=p.match(/^(.*?)([.,;:!?)\]]*)$/);
+const linkify=s=>String(s??"").split(/(https?:\/\/[^\s<>"']+)/i).map((p,i)=>{if(!(i%2))return esc(p);
+  const n=(t,c)=>t.split(c).length-1;let u=p,tail="";
+  while(/[.,;:!?)\]]$/.test(u)){const c=u.slice(-1);if(c===")"&&n(u,")")<=n(u,"(")||c==="]"&&n(u,"]")<=n(u,"["))break;tail=c+tail;u=u.slice(0,-1)}
   return `<a href="${esc(u)}" title="${esc(u)}" target="_blank" rel="noopener">${esc(shortUrl(u))}</a>${esc(tail)}`}).join("");
 let db=null,assets=null,mcp=null,downloads=null,canEdit=false;
 let lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
