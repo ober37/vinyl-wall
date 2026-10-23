@@ -7,8 +7,8 @@
     "typecheck": "tsc",
     "test": "vitest run",
     "build:bundle": "BUNDLE=1 vite build",
-    "cdn:lock": "node scripts/cdn-lock.mjs",
-    "check:cdn": "node scripts/check-cdn.mjs"
+    "check:cdn": "node scripts/check-cdn.mjs",
+    "vendor:build": "vite build --config vendor/vite.config.ts && node scripts/vendor-versions.mjs"
   },
   "type": "module",
   "dependencies": {

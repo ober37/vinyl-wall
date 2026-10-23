@@ -12,7 +12,7 @@ and is now going to full parity with the plain-JS page (v0.9.4). **1.0 on `main`
 | appica re-themed to Vinyl Wall's palette and fonts (`web/src/theme.css`) | Stock appica reads as a generic dashboard; re-theming keeps the wall's identity. `theme.css` is the only file with colour values |
 | Rack, sleeves, disc and hang tags are custom CSS on tokens (`web/src/wall/wall.css`) | appica has no component for illustration and texture |
 | Record sheet is appica's Drawer from the right, full width on phones | A bottom drawer's swipe-to-close fights scrolling long logs |
-| React and appica load from jsdelivr at locked versions (`web/cdn-lock.json`) | SETUP has Claude read the page before publishing it. Bundled, the page is ~850 KB in 62 lines (about 4x today's tokens, and lines too long to read); from the CDN it's ~245 KB with readable lines, like today's page. The lock's import map keeps one copy of React; `npm run check:cdn` fails if a second one runs. `BUNDLE=1` builds the all-in-one fallback |
+| React and appica load from one vendor file, `vinyl-wall-vendor` on npm, served by jsdelivr (`web/vendor/`) | SETUP has Claude read the page before publishing it. Bundled, the page is ~850 KB in 62 lines (about 4x today's tokens, and lines too long to read); with the vendor file outside it, it's ~250 KB with readable lines, like today's page. One vendor file means one copy of React, Base UI and appica's shared state: loading appica as jsdelivr's per-component files broke every parent/child pair (filter chips, Log a play, #60). `check:cdn` uses the built page in Chrome (`--local` serves a vendor build before it's published); `BUNDLE=1` builds the all-in-one fallback |
 | The built page replaces `app/vinyl-wall.html` at the same path | SETUP.md and the in-app update keep working unchanged |
 | Same data shapes as production; no migration | Existing walls update in place and can roll back |
 
@@ -71,6 +71,6 @@ On the personal account (has Claude Code Remote), from the draft PR's checklist:
 - Walls keep the runtime contract they were installed with: the page must work without newer capability methods.
 - appica: some parts only work inside their parent (`FieldDescription` outside `Field` crashes); `ThemeProvider`
   assumes server rendering (its script is injected into `<head>` at build); `index.css` scans only the components in
-  use, and a test keeps that list honest; after adding a component, run `npm run cdn:lock`.
+  use, and a test keeps that list honest; the vendor holds all of appica, so new components need no vendor change; a React or appica upgrade needs `npm run vendor:build`, a new vendor version and a publish.
 - Tests: explicit Testing Library cleanup, Motion animations off, and an in-memory `localStorage` (Node 25's own one
   shadows happy-dom's), all in `web/src/test-setup.ts`.
