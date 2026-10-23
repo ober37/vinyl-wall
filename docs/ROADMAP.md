@@ -37,7 +37,7 @@ Choose how the records hang in Settings: Barnwood, Pegs, Cork or Floating. The s
 A tighter facts list, and an About section: album and artist summaries from Wikipedia with the artist's official links, found by the background task from MusicBrainz and Wikidata.
 
 ### Research that answers (#31)
-The research chat answers only from what Claude already knows: it can't look anything up, so newer albums and questions like awards or current prices come back as "go search." Rethink research so it comes back with answers, for example by using what the wall already knows about the album and handing lookup questions to the background task.
+Research moves to the Claude chat beside the wall, which can search the web: the record's Research section copies a prompt naming the record, and the chat skill saves a summary of the session (the question, the answer and its sources) back to the record. The in-page chat, which could only answer from what Claude already knew, is gone.
 
 ### Lookup progress and import speed (#30)
 A status bar at the bottom of the wall showing the background work still waiting (covers and details, album and artist info, a Discogs import or sync), and a review of how long an import takes end to end, from picking the file to every record having its cover and About info.
