@@ -9,7 +9,7 @@ const q=new URLSearchParams(location.search), now=Date.now();
 // play note dates: n days back, as a local date like the page's today(); first is the 1st of this month
 const day=n=>{const t=new Date(now-n*864e5);return new Date(t-t.getTimezoneOffset()*6e4).toISOString().slice(0,10)}, first=day(0).slice(0,8)+"01";
 const data={
- settings:{site:{title:"My Vinyl Wall",bg:{kind:"preset",preset:"listening"},discogs:{}}},
+ settings:{site:{title:"My Vinyl Wall",url:"https://claude.ai/artifact/preview",bg:{kind:"preset",preset:"listening"},discogs:{}}},
  setups:{den:{name:"Den",note:"",added:1},living:{name:"Living room",note:"Main hi-fi",added:2}},
  // About info the background task (Part L) writes: one doc per artist, shared by that artist's records. Sample links only.
  artists:{
@@ -52,7 +52,7 @@ const data={
      ["B1","Here Comes the Sun","3:05"],["B2","Because","2:45"],["B3","You Never Give Me Your Money","4:02"],["B4","Sun King","2:26"],["B5","Mean Mr. Mustard","1:06"],["B6","Polythene Pam","1:12"],
      ["B7","She Came In Through the Bathroom Window","1:57"],["B8","Golden Slumbers","1:31"],["B9","Carry That Weight","1:36"],["B10","The End","2:05"],["B11","Her Majesty","0:23"]].map(([pos,title,dur])=>({pos,title,dur})),
     tracksSource:"musicbrainz",tracksUrl:"https://musicbrainz.org/release-group/9162580e-5df4-32de-80cc-f45a8d8a9b1d"},researchLog:[
-   {id:"ab2",at:day(3),headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
+   {id:"ab2",at:day(3),question:"Which pressing should I hunt?",sources:[{title:"Discogs: Abbey Road releases",url:"https://www.discogs.com/master/24047"},{title:"Not a link",url:"javascript:alert(1)"}],headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
    {id:"ab1",at:day(60),headline:"UK first pressings are collector money.",summary:"Check the Her Majesty listing on the sleeve to spot a true first.",check:["Her Majesty not listed on the back"],price:"UK firsts $150-400."}]},
   r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6}}};
 if(q.get("data")){try{const x=new XMLHttpRequest();x.open("GET",q.get("data"),false);x.send();const snap=JSON.parse(x.responseText);
@@ -90,17 +90,5 @@ window.claude={use:async n=>
   n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);const l=JSON.parse(sessionStorage.getItem("__callLog")||"[]");l.push([a[1],Object.keys(a[2]||{})]);sessionStorage.setItem("__callLog",JSON.stringify(l));return {}}}:
   n==="downloads"?{save:async({filename,data})=>{window.__calls.push(["downloads.save",filename]);window.__lastSave=data;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=filename;a.click();return {status:"saved"}}}:
-  // Claude for the research chat: canned replies, streamed like the real thing, and a canned summary for Save summary
-  n==="sample"?Object.assign(async(input,opts={})=>{const msgs=Array.isArray(input)?input:[{role:"user",content:String(input)}];window.__calls.push(["sample",msgs.length]);
-    const q=msgs[msgs.length-1].content.split("\n\n").pop().trim();
-    // canned answers for the starter questions; anything else says plainly that the preview can't ask Claude
-    const canned={"Which pressing should I hunt?":"For a great-sounding copy, the 2019 50th Anniversary half-speed is the best value. UK 1969 first pressings on Apple (PCS 7088) are collector money.\n- Check the runout and the label against the Discogs entry",
-      "What should it cost?":"Expect about $30-40 for the 2019 edition in near-mint shape. Clean UK first pressings run $150-400 depending on condition.",
-      "How do I spot a first pressing?":"A UK first has Her Majesty missing from the back sleeve, a misaligned Apple logo on the label, and a matrix ending -1 on both sides.",
-      "What's my copy worth?":"Recent sales of this pressing in similar condition land around $40-60. What it sells for, under Your copy, shows real sales."};
-    const text=window.fakeReply||canned[q]||`This is the preview, so there's no real Claude to ask. On your wall, Claude would answer "${q}" here.`;
-    for(let i=40;i<text.length;i+=40){opts.onText&&opts.onText({text:text.slice(0,i),delta:""});await new Promise(r=>setTimeout(r,30))}
-    opts.onText&&opts.onText({text,delta:""});return {text,truncated:false}},
-   {json:async()=>window.fakeSample||{headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 half-speed is the best value; UK firsts are for collectors.",pressings:["2019 50th Anniversary half-speed: best value","1969 UK first pressing: collector money"],check:["Runout matches the Discogs entry","Watch for warps"],where:["Discogs","Local shops"],price:"About $30-40 for 2019; firsts $150+."}}):
   null};
 })();

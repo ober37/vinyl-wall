@@ -1,11 +1,11 @@
 ---
 name: vinyl-wall
-description: Add or update records on the person's Vinyl Wall (a published artifact) from a chat, often from photos of the record. Use whenever they ask to add, hang, log or change a record, an order or a wanted album on their wall.
+description: Add, update or research records on the person's Vinyl Wall (a published artifact) from a chat, often from photos of the record. Use whenever they ask to add, hang, log or change a record, an order or a wanted album on their wall, or to research one of its records and save what you found.
 ---
 
 # Adding records to a Vinyl Wall
 
-Skill version 5.
+Skill version 7.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -52,6 +52,34 @@ When you add a record they own, or an order arrives, set `mediaGrade` (vinyl) an
 
 - **Clearly new:** the photos show it sealed, they say it's new or sealed, or the shop listing is for a new copy. "Just bought" or "bought today" gives the date, not the condition. Set both to `"M"` without asking, and say so in your reply.
 - **Used, or you can't tell:** ask for the vinyl and sleeve grades before writing them, or let them skip. Never assume Mint for a used record.
+
+## Research
+
+The wall's Research section hands the person a prompt like this, which they paste with their question at the end:
+
+```
+Research a record on my Vinyl Wall
+Record: "<title>" by <artist> (record <id>)
+Wall: <wall URL>
+Use the vinyl-wall skill, and save a summary to the record when we're done.
+
+My question: …
+```
+
+The `Wall:` line can be missing; then find the wall as for a new record. When the prompt gives a record id, `get` that record directly, with no `list` or duplicate check. Otherwise find the record by artist and title, and ask if there's more than one.
+
+- **Answer the question asked.** `get` the record first for context (its pressing, notes and `about`). Search the web for anything recent or factual, such as awards, charts, prices or pressing details, rather than answering from memory. Keep it short and give your sources.
+- **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
+- **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt (starting `Follow up on my research from <date>: "<headline>"`, ending `My follow-up: …`) names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.
+
+To save, `get` the record and `update` it (pass its `version` as `if_version`; on a conflict, `get` it again and redo) with:
+
+- `researchLog`: the new entry first, then the record's existing entries (an older record may have a single `research` object instead; treat it as one entry). Keep at most 10: drop the oldest entries that aren't `pinned`, and never drop a pinned one.
+- `research: null`.
+
+The new entry: `id` (a fresh random id of 10 letters and digits), `at` (today, `YYYY-MM-DD`), `question` (their question, as they asked it), `headline` (the single most useful takeaway, one sentence of at most 14 words), `summary` (two to four sentences) and `sources` (up to 4 `{"title": …, "url": …}`, `https://` links only). Only when the conversation covered them: `pressings` (up to 4 pressings worth hunting and why), `check` (up to 3 things to verify in a listing), `where` (up to 3 places to look) and `price` (one sentence of rough US prices). Plain text, no markdown. Saving research needs no `needsSync`.
+
+Then tell them in one line that it's saved; it shows up in the record's Research section.
 
 ## When you're done
 
