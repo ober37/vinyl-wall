@@ -924,8 +924,8 @@ const COPY_KEYS=["name","pressing","label","catalog","budget"];
 function wantCopies(r){const s=v=>typeof v==="string"||typeof v==="number"?String(v):"",did=v=>{const n=parseInt(v,10);return n>0?n:""};
   return [{name:s(r.copyName),pressing:pressingText(r),label:s(r.label),catalog:s(r.catalog),budget:s(r.budget),discogsId:did(r.discogsId)},
     ...(Array.isArray(r.moreCopies)?r.moreCopies:[]).filter(c=>c&&typeof c==="object").map(c=>({...Object.fromEntries(COPY_KEYS.map(k=>[k,s(c[k])])),discogsId:did(c.discogsId)}))]}
-// a copy's name for headings and the status picker: its name, else its pressing, else "Copy N"
-const copyTitle=(c,i)=>c.name||c.pressing.split("\n")[0].trim()||"Copy "+(i+1);
+// a copy's name for headings and the status picker: its name, else its pressing, else its Discogs release, else "Copy N"
+const copyTitle=(c,i)=>c.name||c.pressing.split("\n")[0].trim()||(c.discogsId?"Discogs release "+c.discogsId:"Copy "+(i+1));
 // the most the hunt would pay for any of its copies (the sleeve tag's ≤$)
 function topBudget(r){let best="";for(const c of wantCopies(r)){const n=parseFloat(c.budget);if(!isNaN(n)&&(best===""||n>parseFloat(best)))best=c.budget}return best}
 // The copy you want (wanted records): the pressing being hunted, at the top of the Research tab; its label shows even when

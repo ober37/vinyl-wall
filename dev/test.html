@@ -378,7 +378,7 @@ f.onload=async()=>{
     r4.discogsMatch="chosen by you: 2016 mono";w.__emit("records");await sleep(300);wx().open=true;await sleep(100);
     check("want: a release someone chose is a copy, not cleared by + Want",/The copy you want\s*Label\s*Apple/.test(q("#wantFs")?.textContent||"")&&wx().querySelectorAll(".want").length>0,q("#wantFs")?.textContent);
     wx().querySelector(".want").click();await sleep(400);
-    check("want: … so + Want adds another copy and keeps it",ab().discogsId===4321&&ab().moreCopies.length===1,JSON.stringify([ab().discogsId,ab().moreCopies]));
+    check("want: … so + Want adds another copy and keeps it, titled by its release",/Discogs release 4321/.test(q("#wantFs").textContent)&&ab().discogsId===4321&&ab().moreCopies.length===1,JSON.stringify([ab().discogsId,ab().moreCopies]));
     q("#wantUndo").click();await sleep(400);ab().discogsMatch="vinyl: master main release";w.__emit("records");await sleep(300);
     wx().open=true;await sleep(100);wx().querySelectorAll(".want")[2].click();await sleep(400);
     check("want: with no copy yet (a looked-up label or matched release isn't one), it becomes the first copy, dropping the matched release",ab().pressing==="Japanese pressing"&&!ab().moreCopies.length&&ab().discogsId===""&&!ab().discogsMatch&&/The copy you want/.test(q("#wantFs")?.textContent||""),JSON.stringify([ab().pressing,ab().moreCopies]));
