@@ -55,11 +55,22 @@ When you add a record they own, or an order arrives, set `mediaGrade` (vinyl) an
 
 ## Research
 
-The wall's Research section hands the person a prompt like `Research my record "<title>" by <artist> on my Vinyl Wall (<wall URL>, record <id>) … My question: …`. Use the record id when the prompt gives one; otherwise find the record by artist and title, and ask if there's more than one.
+The wall's Research section hands the person a prompt like this, which they paste with their question at the end:
+
+```
+Research a record on my Vinyl Wall
+Record: "<title>" by <artist> (record <id>)
+Wall: <wall URL>
+Use the vinyl-wall skill, and save a summary to the record when we're done.
+
+My question: …
+```
+
+The `Wall:` line can be missing; then find the wall as for a new record. Use the record id when the prompt gives one; otherwise find the record by artist and title, and ask if there's more than one.
 
 - **Answer the question asked.** `get` the record first for context (its pressing, notes and `about`). Search the web for anything recent or factual, such as awards, charts, prices or pressing details, rather than answering from memory. Keep it short and give your sources.
 - **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
-- **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt ("Pick up my research … from the <date> entry") names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.
+- **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt (starting `Follow up on my research from <date>: "<headline>"`, ending `My follow-up: …`) names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.
 
 To save, `get` the record and `update` it (pass its `version` as `if_version`; on a conflict, `get` it again and redo) with:
 

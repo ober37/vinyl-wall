@@ -336,16 +336,20 @@ f.onload=async()=>{
     check("research: pin survives reopening",resOrder()==="ab1,ab2",resOrder());
     // #31: research happens in the Claude chat; the sheet copies a prompt naming the record and shows what the chat saved
     let clip=null,clipOk=true;Object.defineProperty(w.navigator,"clipboard",{configurable:true,value:{writeText:async t=>{if(!clipOk)throw new Error("blocked");clip=t}}});
-    const copied=()=>/^Copied\./.test(q("#resStatus").textContent)&&q("#resAsk").hidden&&clip===q("#resAsk").textContent;
+    // the status shows beside the control that was tapped, and only one at a time
+    const copied=(st,box)=>/^Copied\./.test(st.textContent)&&box.hidden&&clip===box.textContent&&[...d.querySelectorAll(".resst")].filter(x=>x.textContent).length===1;
     check("research: Copy for Claude is plain once there's research",!!q("#resCopy")&&!q("#resCopy").classList.contains("primary")&&!q("#chat"));
     q("#resCopy").click();await sleep(300);
-    check("research: Copy for Claude hands over the record and the wall",copied()&&q("#resAsk").textContent==='Research my record "Abbey Road" by The Beatles on my Vinyl Wall (https://claude.ai/artifact/preview, record r4). Use the vinyl-wall skill and save a summary to the record when we\'re done. My question: ',q("#resStatus").textContent+" | "+q("#resAsk").textContent);
+    check("research: Copy for Claude hands over the record and the wall, on short lines",copied(q("#resStatus"),q("#resAsk"))&&q("#resStatus").textContent==="Copied. Paste it into Claude and add your question."&&q("#resStatus").parentNode===q("#resCopy").parentNode
+      &&q("#resAsk").textContent==='Research a record on my Vinyl Wall\nRecord: "Abbey Road" by The Beatles (record r4)\nWall: https://claude.ai/artifact/preview\nUse the vinyl-wall skill, and save a summary to the record when we\'re done.\n\nMy question: ',q("#resStatus").textContent+" | "+q("#resAsk").textContent);
     const e2=q('.resentry[data-res="ab2"]');e2.open=true;await sleep(100);
     check("research: an entry shows what was asked and its sources, http(s) only",/You asked\s*Which pressing should I hunt\?/.test(e2.textContent)&&e2.querySelectorAll(".resbody a").length===1&&e2.querySelector(".resbody a").getAttribute("href").startsWith("https://")&&e2.querySelector(".resbody a").rel==="noopener",e2.textContent);
     q('[data-resfollow="ab2"]').click();await sleep(300);
-    check("research: Follow up in chat picks up from that entry",copied()&&/^Pick up my research on "Abbey Road" by The Beatles \(Vinyl Wall https:\/\/claude\.ai\/artifact\/preview, record r4\) from the .* entry, "Hunt the 2019 half-speed reissue under \$40"\..*My follow-up: $/.test(q("#resAsk").textContent),q("#resAsk").textContent);
+    const fst=e2.querySelector(".resst"),fbox=e2.querySelector(".askline.prose");
+    check("research: Follow up in chat picks up from that entry, confirmed beside it",copied(fst,fbox)&&fst.textContent==="Copied. Paste it into Claude to pick up from here."&&!q("#resStatus").textContent
+      &&/^Follow up on my research from .*: "Hunt the 2019 half-speed reissue under \$40"\nRecord: "Abbey Road" by The Beatles \(record r4\)\nWall: https:\/\/claude\.ai\/artifact\/preview\nUse the vinyl-wall skill, and save a new summary when we're done\.\n\nMy follow-up: $/.test(fbox.textContent),fbox.textContent);
     const site0=w.__data.settings.site.url;delete w.__data.settings.site.url;w.__emit("settings");await sleep(200);q("#resCopy").click();await sleep(300);
-    check("research: without the wall's URL the prompt names the record only",/on my Vinyl Wall \(record r4\)\./.test(q("#resAsk").textContent),q("#resAsk").textContent);
+    check("research: without the wall's URL the prompt names the record only",/\(record r4\)\nUse the/.test(q("#resAsk").textContent)&&!/Wall:/.test(q("#resAsk").textContent),q("#resAsk").textContent);
     clipOk=false;q("#resCopy").click();await sleep(300);
     check("research: a blocked clipboard shows the prompt selected instead",!q("#resAsk").hidden&&q("#resStatus").textContent==="Selected: copy it with your device's copy command"&&q("#resAsk").contains(w.getSelection().anchorNode),q("#resStatus").textContent);
     clipOk=true;w.__data.settings.site.url=site0;w.__emit("settings");await sleep(200);

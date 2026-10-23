@@ -344,7 +344,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .links.slim{gap:6px;margin-top:12px}
 .absum{margin:16px 0 22px}
 /* a wanted or ordered record's next step, above the tabs: comfortable touch targets, wrapping to full width on phones */
-.resask .actions{margin-top:12px} .resask+.research{margin-top:16px}
+.resask .actions{margin-top:12px} .resask+.research{margin-top:16px} .resst{margin:0} .askline.prose{word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .resq{margin:12px 0 0}.resq b{display:block;font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:6px}
 .tabs .tabn{font:500 11px/1 var(--mono);color:var(--ink-2);margin-left:4px}
 #tp-notes>.log{margin-top:18px} .notetop{margin-top:20px}
@@ -759,7 +759,8 @@ function researchHTML(r){
       ${srcs(e.sources)}
       <div class="resacts editonly"><button class="linkbtn" type="button" data-respin="${esc(key)}">${e.pinned?"Unpin":"Pin"}</button>
         ${r.status!=="ordered"?`<button class="linkbtn" type="button" data-resfollow="${esc(key)}">Follow up in chat</button>`:""}
-        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button></div>
+        <button class="linkbtn" type="button" data-resdel="${esc(key)}">Remove this research</button><span class="hint resst" role="status"></span></div>
+      <p class="mono askline prose" hidden></p>
     </div></details>`}).join("")}</div>`;
 }
 
@@ -1264,8 +1265,9 @@ function openSheet(id,keepScroll){
       const log=researchEntries(r).map((e,i)=>{const {pinned,...rest}=e;return (e.id||String(i))===k&&!pinned?{...rest,pinned:true}:rest});
       write(r.id,{researchLog:log,research:null},true)}));
     s.querySelectorAll("[data-resfollow]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resfollow;
-      const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k);if(e)copyResPrompt(resPrompt(r,e),"Copied. Paste it into your Claude chat to pick up where this left off.")}));
-    const rc=$("#resCopy");if(rc)rc.addEventListener("click",()=>copyResPrompt(resPrompt(r),"Copied. Paste it into your Claude chat and add your question. Saved research shows up here."));
+      const e=researchEntries(r).find((x,i)=>(x.id||String(i))===k);const box=b.closest(".resbody").querySelector(".askline.prose");
+      if(e)copyResPrompt(resPrompt(r,e),"Copied. Paste it into Claude to pick up from here.",b.parentNode.querySelector(".resst"),box)}));
+    const rc=$("#resCopy");if(rc)rc.addEventListener("click",()=>copyResPrompt(resPrompt(r),"Copied. Paste it into Claude and add your question.",$("#resStatus"),$("#resAsk")));
     s.querySelectorAll("[data-resdel]").forEach(b=>b.addEventListener("click",()=>{const k=b.dataset.resdel;
       const rest=researchEntries(r).filter((e,i)=>(e.id||String(i))!==k);
       write(r.id,{researchLog:rest,research:null},true)}));
@@ -1389,15 +1391,18 @@ async function uploadCover(r,file){
 /* Research happens in the person's Claude chat beside the wall (#31): it can search the web, and the vinyl-wall skill saves
    a summary of the session to researchLog, which the live listener shows here. The page only hands over a prompt that names
    the record (and the wall, once settings know its URL). */
-function resPrompt(r,e){const url=/^https:\/\//.test(settings.url||"")?settings.url:"",where=url?`${url}, record ${r.id}`:`record ${r.id}`;
-  return e?`Pick up my research on "${r.title}" by ${r.artist} (Vinyl Wall ${where}) from the ${shortDate(e.at)||e.at} entry, "${(e.headline||firstSentence(e.summary)).replace(/[.!?]$/,"")}". Use the vinyl-wall skill and save a new summary when we're done. My follow-up: `
-    :`Research my record "${r.title}" by ${r.artist} on my Vinyl Wall (${where}). Use the vinyl-wall skill and save a summary to the record when we're done. My question: `}
+function resPrompt(r,e){const url=/^https:\/\//.test(settings.url||"")?settings.url:"";
+  return [e?`Follow up on my research from ${shortDate(e.at)||e.at}: "${(e.headline||firstSentence(e.summary)).replace(/[.!?]$/,"")}"`:"Research a record on my Vinyl Wall",
+    `Record: "${r.title}" by ${r.artist} (record ${r.id})`,...(url?[`Wall: ${url}`]:[]),
+    `Use the vinyl-wall skill, and save ${e?"a new summary":"a summary to the record"} when we're done.`,"",e?"My follow-up: ":"My question: "].join("\n")}
 function resAskHTML(r){
   return `<div class="resask editonly"><p class="hint" style="margin-top:0">Research this record in your Claude chat. It can search the web, and with the Vinyl Wall skill it saves what it finds here.</p>
-    <div class="actions"><button class="btn small${researchEntries(r).length?"":" primary"}" type="button" id="resCopy">Copy for Claude</button></div>
-    <p class="hint" id="resStatus" role="status"></p><p class="mono askline" id="resAsk" hidden></p></div>`}
-// when the clipboard is blocked, the prompt shows selected to copy by hand, as in Settings
-async function copyResPrompt(t,done){const st=$("#resStatus"),box=$("#resAsk");if(!st||!box)return;box.hidden=true;box.textContent=t;
+    <div class="actions"><button class="btn small${researchEntries(r).length?"":" primary"}" type="button" id="resCopy">Copy for Claude</button><span class="hint resst" id="resStatus" role="status"></span></div>
+    <p class="mono askline prose" id="resAsk" hidden></p></div>`}
+// the status shows beside the control that was tapped, one at a time; when the clipboard is blocked, the prompt shows
+// selected to copy by hand, as in Settings
+async function copyResPrompt(t,done,st,box){if(!st||!box)return;
+  $("#sheet").querySelectorAll(".resst").forEach(x=>x.textContent="");$("#sheet").querySelectorAll(".askline.prose").forEach(x=>x.hidden=true);box.textContent=t;
   try{await navigator.clipboard.writeText(t);st.textContent=done}
   catch(e){box.hidden=false;const rg=document.createRange();rg.selectNodeContents(box);const sel=getSelection();sel.removeAllRanges();sel.addRange(rg);st.textContent="Selected: copy it with your device's copy command"}}
 
