@@ -22,8 +22,12 @@ import re
 here = os.path.dirname(os.path.abspath(__file__))
 src = open(os.path.join(here, "..", "app", "tools", "discogs_sync.py")).read()
 page = open(os.path.join(here, "..", "app", "vinyl-wall.html")).read()
+# the React page keeps the list in its source (web/src/model/discogs.ts); the plain-JS page had it inline
+react = os.path.join(here, "..", "web", "src", "model", "discogs.ts")
+if 'name="vinyl-wall-version"' in page and os.path.exists(react):
+    page = open(react).read()
 hows = set(re.findall(r'return [^\n]*?, "([^"]+)"\s*$', src, re.M))
-auto = set(json.loads(re.search(r"const AUTO_MATCH=(\[[^\]]*\]);", page).group(1)))
+auto = set(json.loads(re.search(r"AUTO_MATCH\s*=\s*(\[[^\]]*\])", page).group(1)))
 check("match: the wall's AUTO_MATCH lists every value the matcher writes", hows and hows <= auto, sorted(hows - auto) or hows)
 
 # --- import: an album's other wantlist pressings become its copies

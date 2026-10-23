@@ -5,13 +5,16 @@
     "dev": "vite",
     "build": "vite build",
     "typecheck": "tsc",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:bundle": "BUNDLE=1 vite build",
+    "cdn:lock": "node scripts/cdn-lock.mjs",
+    "check:cdn": "node scripts/check-cdn.mjs"
   },
   "type": "module",
   "dependencies": {
-    "@appica/ui-react": "^1.3.0",
-    "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "@appica/ui-react": "1.3.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
@@ -22,6 +25,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "happy-dom": "^21.0.4",
+    "puppeteer-core": "^25.16.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^7.0.2",
     "vite": "^8.3.5",

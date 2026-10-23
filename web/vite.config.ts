@@ -2,6 +2,15 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
 import { readFileSync } from 'node:fs'
+import lock from './cdn-lock.json' with { type: 'json' }
+
+const VERSION = readFileSync(resolve(import.meta.dirname, '../VERSION'), 'utf8').trim()
+const define = { __APP_VERSION__: JSON.stringify(VERSION) }
+// release.yml and dev/build_web.py read the version here: a minifier can rename the constant, never this
+const versionMeta = () => ({
+  name: 'version-meta',
+  transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'vinyl-wall-version', content: VERSION }, injectTo: 'head-prepend' as const }],
+})
 import { resolve } from 'node:path'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { getThemeScript } from '@appica/ui-react/providers/theme-provider'
@@ -22,11 +31,33 @@ const backgrounds = () => ({
       const name = (req.url || '').replace(/^\//, '').split('?')[0]
       if (!/^[a-z0-9-]+\.jpg$/.test(name)) return next()
       res.setHeader('Content-Type', 'image/jpeg')
-      res.end(readFileSync(resolve(__dirname, '../app/backgrounds', name)))
+      res.end(readFileSync(resolve(import.meta.dirname, '../app/backgrounds', name)))
     })
   },
 })
 
-export default defineConfig({
-  plugins: [react(), tailwindcss(), themeScript(), backgrounds(), viteSingleFile()],
+// React and appica load from jsdelivr at the versions in cdn-lock.json (one of each library, via the import map), so the
+// page holds only the app's own code and stays readable for SETUP, which has Claude read it before publishing it.
+// BUNDLE=1 builds the fallback instead: one self-contained file with everything inlined (about 4x the size).
+const entries = lock.entries as Record<string, string>
+const cdn = () => ({
+  name: 'cdn-import-map',
+  transformIndexHtml: () => [
+    { tag: 'script', attrs: { type: 'importmap' }, children: JSON.stringify(lock.importMap), injectTo: 'head-prepend' as const },
+  ],
 })
+const external = (id: string) => {
+  if (!/^(react|react-dom|@appica\/ui-react)(\/|$)/.test(id)) return false
+  if (!entries[id]) throw new Error(`${id} isn't in cdn-lock.json: run npm run cdn:lock`)
+  return true
+}
+
+export default defineConfig(({ command }) =>
+  process.env.BUNDLE || command === 'serve'
+    ? { define, plugins: [react(), tailwindcss(), themeScript(), versionMeta(), backgrounds(), viteSingleFile()] }
+    : {
+        define,
+        plugins: [react(), tailwindcss(), themeScript(), versionMeta(), cdn(), viteSingleFile()],
+        build: { minify: false, rollupOptions: { external, output: { paths: (id: string) => entries[id] } } },
+      },
+)

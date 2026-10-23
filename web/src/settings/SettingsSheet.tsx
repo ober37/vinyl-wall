@@ -113,7 +113,7 @@ function DiscogsSection() {
           >
             Check again
           </Button>
-          <Button size="sm" variant="destructive" onClick={() => setConfirm(true)}>
+          <Button size="sm" variant="outline" onClick={() => setConfirm(true)}>
             Remove token
           </Button>
         </div>
@@ -126,6 +126,9 @@ function DiscogsSection() {
               value={token}
               onChange={(e) => setToken(e.target.value)}
               autoComplete="off"
+              autoCapitalize="off"
+              spellCheck={false}
+              placeholder="Paste your token"
               className="min-w-0 flex-1 font-mono"
             />
             <Button size="sm" variant="outline" onClick={() => setShow(!show)}>
@@ -134,8 +137,19 @@ function DiscogsSection() {
             <Button size="sm" onClick={save}>
               Save token
             </Button>
+            {replacing && (
+              <Button size="sm" variant="ghost" onClick={() => setReplacing(false)}>
+                Cancel
+              </Button>
+            )}
           </div>
-          <FieldDescription>Create one at discogs.com/settings/developers → Generate new token.</FieldDescription>
+          <FieldDescription>
+            Create one at{' '}
+            <a href="https://www.discogs.com/settings/developers" target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
+              discogs.com/settings/developers
+            </a>{' '}
+            → Generate new token.
+          </FieldDescription>
         </Field>
       )}
       {status && (
@@ -155,7 +169,7 @@ function DiscogsSection() {
 }
 
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { settings, canEdit, hasMcp, fireTask } = useRuntime()
+  const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime()
   const update = useUpdateAvailable()
   const [copyNote, setCopyNote] = useState('')
   const ask = useRef<HTMLSpanElement>(null)
@@ -173,7 +187,12 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
           <DrawerTitle>Settings</DrawerTitle>
           <DrawerDescription>Your Discogs connection and updates</DrawerDescription>
         </DrawerHeader>
-        <DrawerBody className="flex flex-col gap-8">
+        <DrawerBody className="flex flex-col gap-8 *:shrink-0">
+          {(error || notice) && (
+            <Alert variant={error ? 'error' : 'info'} dismissible onOpenChange={(o) => !o && clearError()}>
+              <AlertTitle>{error || notice}</AlertTitle>
+            </Alert>
+          )}
           {update && (
             <Alert variant="warning">
               <AlertTitle>An update is available</AlertTitle>
@@ -187,7 +206,6 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                     size="sm"
                     variant="outline"
                     value={updateAsk(settings)}
-                    label="Copy"
                     copiedLabel="Copied"
                     onCopyError={() => {
                       const sel = getSelection()
@@ -199,7 +217,9 @@ export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () =>
                       }
                       setCopyNote("Selected: copy it with your device's copy command")
                     }}
-                  />
+                  >
+                    Copy
+                  </CopyButton>
                   {copyNote && <span className="text-xs">{copyNote}</span>}
                 </span>
               </AlertDescription>

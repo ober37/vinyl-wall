@@ -16,6 +16,10 @@ async function runtime(): Promise<Window['claude'] | undefined> {
   if (q.has('bg')) seed.docs['settings/site'].bg = { kind: 'preset', preset: q.get('bg') }
   if (q.has('dim')) seed.docs['settings/site'].dim = +q.get('dim')!
   if (q.has('hang')) seed.docs['settings/site'].hang = q.get('hang')
+  // ?update=1.0.1 offers an update; ?dz=ok|error|pending shows a saved Discogs token in that state
+  if (q.has('update')) Object.assign(seed.docs['settings/site'], { taskId: 'dev', update: { latest: q.get('update'), checkedMs: Date.now() } })
+  if (q.has('dz'))
+    seed.docs['settings/site'].discogs = { username: 'ober37', hasToken: true, last4: 'wxyz', savedAt: '2026-10-23', checkedAt: '2026-10-23', status: q.get('dz'), verifiedUser: 'ober37', msg: q.get('dz') === 'error' ? 'Discogs says this token is invalid.' : '' }
   return fakeClaude(seed, { canWrite: !q.has('ro') }).claude
 }
 

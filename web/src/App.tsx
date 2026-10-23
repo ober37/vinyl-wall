@@ -74,7 +74,7 @@ export function App() {
                       <GearIcon />
                     </Button>
                     {update && (
-                      <span aria-hidden="true" className="bg-brass ring-ink absolute end-0.5 top-0.5 size-2 rounded-full ring-2" />
+                      <span aria-hidden="true" className="bg-brass absolute end-0.5 top-0.5 size-2 rounded-full ring-2 ring-(--shade)" />
                     )}
                   </span>
                 )}
