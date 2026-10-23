@@ -5,7 +5,7 @@ description: Add or update records on the person's Vinyl Wall (a published artif
 
 # Adding records to a Vinyl Wall
 
-Skill version 2.
+Skill version 3.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -32,6 +32,13 @@ When the person names the shop they bought or ordered a record from (`shop`) but
 
 - **Several matches:** ask which shop they mean only when the matches have different websites (the same name in two towns). A chain with several stores and one website (Amoeba: amoeba.com) needs no question.
 - **Not sure:** if you can't find the website with confidence, save `shop` only, leave `shopUrl` out, and say so; they can add it in Edit.
+
+## Grades
+
+When you add a record they own, or move one to `"own"` because it arrived, set `mediaGrade` (vinyl) and `sleeveGrade` (sleeve). Use one of `M`, `NM`, `VG+`, `VG`, `G+`, `G`, `F` or `P`.
+
+- **Clearly new:** the photos show it sealed, or they say it's new, sealed or just bought. Set both to `"M"` without asking, and say so in your reply.
+- **Used, or you can't tell:** ask for the vinyl and sleeve grades before writing them, or let them skip. Never assume Mint for a used record.
 
 ## When you're done
 
