@@ -6,7 +6,7 @@ import { expect, it } from 'vitest'
 
 const dist = join(__dirname, '../node_modules/@appica/ui-react/dist/components')
 const files = (dir: string): string[] =>
-  readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)]))
+  readdirSync(dir, { withFileTypes: true }).flatMap((e): string[] => (e.isDirectory() ? files(join(dir, e.name)) : [join(dir, e.name)]))
 
 it('scans every appica component the app needs', () => {
   const listed = /components\/\{([^}]+)\}/.exec(readFileSync(join(__dirname, 'index.css'), 'utf8'))![1].split(',')
