@@ -4,7 +4,7 @@ A record wall for your vinyl collection, built to run in [Claude](https://claude
 
 Your records hang on a rack with their real album covers. Keep a wishlist of the ones you're hunting, track orders on the way, write notes and a listening log for each album, and log wear on your turntable, cartridge and stylus. Optionally, keep it all in sync with your Discogs collection and wantlist.
 
-**0.9.0 is the 1.0 beta.** Everything planned for 1.0 is in. Try it and [tell us what works and what doesn't](https://github.com/ober37/vinyl-wall/issues/new/choose) before 1.0.
+**0.9.4 is the latest 1.0 beta.** Everything planned for 1.0 is in. Try it and [tell us what works and what doesn't](https://github.com/ober37/vinyl-wall/issues/new/choose) before 1.0.
 
 ![Vinyl Wall in dark mode](docs/screenshots/wall-dark.png)
 
@@ -12,11 +12,11 @@ Your records hang on a rack with their real album covers. Keep a wishlist of the
 
 Paste this into a new Claude conversation:
 
-> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.3/SETUP.md
+> Set up a Vinyl Wall for me by following the instructions at https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.4/SETUP.md
 
 Claude publishes the wall as your own private page, creates the background task that finds covers and syncs Discogs, and walks you through the rest. It takes a few minutes. Your records, notes and settings belong to your account only; nothing is shared with this project. If you share your wall, people can see everything on it, prices, orders and notes included, but only you and people you make Editors can change it.
 
-**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.3/SETUP.md"*, with the newest version number.)
+**Updating.** When a new version is out, a dot appears on the wall's Settings button and Settings says an update is available. Settings shows a sentence to send Claude, with a Copy button; paste it into a chat and Claude updates the wall. Your records and settings stay as they are. (Walls set up before in-app updates existed need one manual update: ask Claude *"Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v0.9.4/SETUP.md"*, with the newest version number.)
 
 ### What your Claude setup needs
 

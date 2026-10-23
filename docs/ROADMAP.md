@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.9.4, the third 1.0 beta: the record sheet redesign with About (#27, #32) and stylus wear by hours left (#28), faster lookups (#30) with a dot on records being looked up (#42), covers and album info in the library file (#35, #37), the copies you want (#33), what you paid and where at Ordered it / Got it (#45), research in your Claude chat (#31) with + Want for a researched pressing (#52), and a chat skill for adding records that fills in the shop's website and grades (#46, #47).
 Done in v0.9.3, the second 1.0 beta: listening insights and earned badges (#6), pinned research (#7), a listening log you can scan (#24), and four ways to hang the records (#9).
 Done in v0.9.0, the 1.0 beta: search the wall (#15).
 Done in v0.6.1: a simpler "Add equipment" flow: pick the type, then only its fields (#8).
@@ -22,7 +23,7 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-The [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) shipped its first round in v0.9.0, the 1.0 beta, and four small, page-only additions in v0.9.3, a second beta. Still to come: the record sheet redesign with About (#27, with the stylus wear fix #28), a rethink of research (#31) and a progress bar for background lookups (#30). The next beta waits for #28 and #31; 1.0.0 follows once beta feedback is in.
+Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, four small, page-only additions in v0.9.3, and the record sheet with About, the copies you want and research in your Claude chat in v0.9.4, the third beta. 1.0.0 follows once beta feedback is in.
 
 ### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
