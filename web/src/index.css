@@ -1,0 +1,4 @@
+@import 'tailwindcss';
+@import '@appica/ui-react/styles.css';
+
+@source '../node_modules/@appica/ui-react/dist';
