@@ -72,7 +72,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { records, canEdit, error, clearError, mutate, remove } = useRuntime()
+  const { records, canEdit, error, notice, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -105,7 +105,17 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
 
   const close = () => {
     flush()
+    flushSync()
     onClose()
+  }
+  // edit mode's manual lookup: mark the record and start the task
+  const enrich = () => {
+    if (!r) return
+    update(r.id, { needsEnrich: true }).then((ok) => {
+      if (!ok) return
+      flash('Looking up ' + r.title + '… the cover usually appears within a few minutes.')
+      fireTask()
+    })
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
@@ -154,10 +164,15 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
             </DrawerHeader>
             <DrawerBody>
               <Boundary key={r.id} title="Couldn't show this record" onClose={close}>
-                {error && (
-                  <Alert variant="error" className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
-                    <AlertTitle>{error}</AlertTitle>
+                {(error || notice) && (
+                  <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
+                    <AlertTitle>{error || notice}</AlertTitle>
                   </Alert>
+                )}
+                {editing && (
+                  <Button size="sm" variant="outline" className="mb-6" disabled={!!r.needsEnrich} onClick={enrich}>
+                    {r.needsEnrich ? 'Looking it up…' : 'Find cover & details'}
+                  </Button>
                 )}
                 {editing && form ? (
                   <EditForm

@@ -114,12 +114,14 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, onOpen, tools }: {
+export function Wall({ records, title, hang, onOpen, tools, below }: {
   records: Rec[]
   title: string
   hang: string
   onOpen: (id: string) => void
   tools?: React.ReactNode
+  // a line under the counts (records being looked up)
+  below?: React.ReactNode
 }) {
   const [filter, setFilter] = useWallFilter()
   const [searching, setSearching] = useState(false)
@@ -186,6 +188,7 @@ export function Wall({ records, title, hang, onOpen, tools }: {
               ))}
             </ToggleGroup>
           )}
+          {below}
           {searching && (
             <div role="search" id="wall-search" className="mt-3 flex max-w-md items-center gap-2">
               <Input

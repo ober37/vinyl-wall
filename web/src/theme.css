@@ -157,6 +157,16 @@
   --color-brass: var(--brass);
 }
 
+/* the brass dot of a background lookup under way */
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+@theme inline {
+  --animate-pulse-dot: pulse-dot 1.4s ease-in-out infinite;
+}
+
 body {
   background-color: var(--wall);
   color: var(--ink);
