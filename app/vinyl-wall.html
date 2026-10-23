@@ -2078,6 +2078,65 @@ function Tracks({ r }) {
 		]
 	})] });
 }
+function Summary({ r }) {
+	const [open, setOpen] = useState(false);
+	if (r.aboutBlocked) return null;
+	const ab = r.about || {};
+	if (!ab.summary) return aboutPending(r) ? /* @__PURE__ */ jsxs("p", {
+		role: "status",
+		className: "text-foreground-muted flex items-center gap-2 text-xs",
+		children: [/* @__PURE__ */ jsx("span", {
+			"aria-hidden": "true",
+			className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
+		}), "Looking up the album. This can take a minute or two."]
+	}) : r.aboutAt ? /* @__PURE__ */ jsx("p", {
+		className: "text-foreground-muted text-xs",
+		children: "Wikipedia has nothing on this album."
+	}) : null;
+	const txt = String(ab.summary).trim();
+	const k = txt.search(/\n\s*\n/);
+	const lede = k < 0 ? txt : txt.slice(0, k).trim();
+	const rest = k < 0 ? "" : txt.slice(k).trim();
+	const long = rest ? true : txt.length > 220;
+	const wiki = okUrl(ab.wiki);
+	const via = typeof ab.via === "string" ? ab.via : "";
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-1",
+		children: [rest ? /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("p", {
+			className: "text-foreground text-sm text-pretty",
+			children: lede
+		}), open && /* @__PURE__ */ jsx("p", {
+			className: "text-foreground mt-2 text-sm whitespace-pre-line text-pretty",
+			children: rest
+		})] }) : /* @__PURE__ */ jsx("p", {
+			className: `text-foreground text-sm text-pretty ${long && !open ? "line-clamp-3" : ""}`,
+			children: txt
+		}), /* @__PURE__ */ jsxs("div", {
+			className: "flex flex-wrap items-baseline gap-3",
+			children: [long && /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "ghost",
+				className: "-ms-3",
+				"aria-expanded": open,
+				onClick: () => setOpen(!open),
+				children: open ? "Less" : "More"
+			}), /* @__PURE__ */ jsxs("span", {
+				className: "text-foreground-muted text-xs",
+				children: ["Summary by Claude", wiki && /* @__PURE__ */ jsxs(Fragment, { children: [
+					" · ",
+					via ? "from " : "",
+					/* @__PURE__ */ jsxs("a", {
+						href: wiki,
+						target: "_blank",
+						rel: "noopener",
+						className: "text-primary whitespace-nowrap hover:underline",
+						children: [via ? via + " on " : "", "Wikipedia ↗"]
+					})
+				] })]
+			})]
+		})]
+	});
+}
 function ViewBody({ r, msg, onMoved, onAddWhy }) {
 	const { canEdit } = useRuntime();
 	const k = kindOf(r);
@@ -2088,7 +2147,6 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 	const about = info.length > 0 || copy.length > 0 || hasTracks;
 	const notesN = noteCount(r);
 	const notes = canEdit || notesN > 0;
-	const summary = !r.aboutBlocked && r.about?.summary ? String(r.about.summary) : "";
 	const tabs = [
 		...own ? ["listening"] : [],
 		...notes ? ["notes"] : [],
@@ -2098,10 +2156,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-5",
 		children: [
-			summary && /* @__PURE__ */ jsx("p", {
-				className: "text-foreground line-clamp-6 text-sm whitespace-pre-line",
-				children: summary
-			}),
+			/* @__PURE__ */ jsx(Summary, { r }, r.id),
 			r.why ? /* @__PURE__ */ jsx("blockquote", {
 				className: "border-primary text-foreground-intense border-s-2 ps-4 text-base italic",
 				children: r.why
@@ -3562,6 +3617,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-inline-start: calc(var(--spacing) * -1.5);
   }
 
+  .-ms-3 {
+    margin-inline-start: calc(var(--spacing) * -3);
+  }
+
   .ms-1 {
     margin-inline-start: var(--spacing);
   }
@@ -3630,8 +3689,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-bottom: calc(var(--spacing) * 8);
   }
 
-  .line-clamp-6 {
-    -webkit-line-clamp: 6;
+  .line-clamp-3 {
+    -webkit-line-clamp: 3;
     -webkit-box-orient: vertical;
     display: -webkit-box;
     overflow: hidden;
@@ -4068,6 +4127,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .place-items-center {
     place-items: center;
+  }
+
+  .items-baseline {
+    align-items: baseline;
   }
 
   .items-center {
@@ -4922,6 +4985,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .text-balance {
     text-wrap: balance;
+  }
+
+  .text-pretty {
+    text-wrap: pretty;
   }
 
   .break-words {

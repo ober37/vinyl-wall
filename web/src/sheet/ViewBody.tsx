@@ -2,7 +2,8 @@ import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@appica/ui-react/tabs'
-import { gradeText, keyInfo, kindOf, playDate, pressingText, recordTracks, runParts, shopHref, type Rec } from '../model/record'
+import { gradeText, keyInfo, kindOf, okUrl, playDate, pressingText, recordTracks, runParts, shopHref, type Rec } from '../model/record'
+import { aboutPending } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
@@ -86,6 +87,62 @@ function Tracks({ r }: { r: Rec }) {
   )
 }
 
+// The album summary at the top of the sheet, as production shows it: a short lede with More for the rest (after the first
+// blank line), or one older block clamped to 3 lines; its source beside More. While it's being looked up, or when
+// Wikipedia had nothing, a line says so in its place.
+function Summary({ r }: { r: Rec }) {
+  const [open, setOpen] = useState(false)
+  if (r.aboutBlocked) return null
+  const ab = r.about || {}
+  if (!ab.summary)
+    return aboutPending(r) ? (
+      <p role="status" className="text-foreground-muted flex items-center gap-2 text-xs">
+        <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
+        Looking up the album. This can take a minute or two.
+      </p>
+    ) : r.aboutAt ? (
+      <p className="text-foreground-muted text-xs">Wikipedia has nothing on this album.</p>
+    ) : null
+  const txt = String(ab.summary).trim()
+  const k = txt.search(/\n\s*\n/)
+  const lede = k < 0 ? txt : txt.slice(0, k).trim()
+  const rest = k < 0 ? '' : txt.slice(k).trim()
+  const long = rest ? true : txt.length > 220
+  const wiki = okUrl(ab.wiki)
+  const via = typeof ab.via === 'string' ? ab.via : ''
+  return (
+    <div className="flex flex-col gap-1">
+      {rest ? (
+        <>
+          <p className="text-foreground text-sm text-pretty">{lede}</p>
+          {open && <p className="text-foreground mt-2 text-sm whitespace-pre-line text-pretty">{rest}</p>}
+        </>
+      ) : (
+        <p className={`text-foreground text-sm text-pretty ${long && !open ? 'line-clamp-3' : ''}`}>{txt}</p>
+      )}
+      <div className="flex flex-wrap items-baseline gap-3">
+        {long && (
+          <Button size="sm" variant="ghost" className="-ms-3" aria-expanded={open} onClick={() => setOpen(!open)}>
+            {open ? 'Less' : 'More'}
+          </Button>
+        )}
+        <span className="text-foreground-muted text-xs">
+          Summary by Claude
+          {wiki && (
+            <>
+              {' · '}
+              {via ? 'from ' : ''}
+              <a href={wiki} target="_blank" rel="noopener" className="text-primary whitespace-nowrap hover:underline">
+                {via ? via + ' on ' : ''}Wikipedia ↗
+              </a>
+            </>
+          )}
+        </span>
+      </div>
+    </div>
+  )
+}
+
 export function ViewBody({ r, msg, onMoved, onAddWhy }: {
   r: Rec
   msg: string
@@ -101,7 +158,6 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
   const about = info.length > 0 || copy.length > 0 || hasTracks
   const notesN = noteCount(r)
   const notes = canEdit || notesN > 0
-  const summary = !r.aboutBlocked && r.about?.summary ? String(r.about.summary) : ''
   const tabs = [...(own ? ['listening'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
   const titled = (name: string, node: React.ReactNode) =>
@@ -115,7 +171,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
     )
   return (
     <div className="flex flex-col gap-5">
-      {summary && <p className="text-foreground line-clamp-6 text-sm whitespace-pre-line">{summary}</p>}
+      <Summary key={r.id} r={r} />
       {r.why ? (
         <blockquote className="border-primary text-foreground-intense border-s-2 ps-4 text-base italic">{r.why}</blockquote>
       ) : (
