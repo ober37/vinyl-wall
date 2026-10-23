@@ -78,14 +78,16 @@ f.onload=async()=>{
     nb.click();await sleep(300);q("#nText").value="Cleaned it with the new brush.";q("#nSave").click();await sleep(400);
     check("notes: edit a note in place",w.__data.records.r1.notes.some(n=>n.t==="Cleaned it with the new brush.")&&!q("#nText"));
     // notes: http(s) addresses become links, nothing else does, and Edit still shows the text as stored
-    const lt="New brush from https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc.\nAlso (https://example.org/care), not javascript:alert(1)\nSee HTTPS://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album).";
+    const lt="New brush from https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc.\nAlso (https://shop.example.com/x). Not javascript:alert(1)\nSee https://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album) and HTTPS://example.org/care";
     [...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("new brush")).click();await sleep(300);
     q("#nText").value=lt;q("#nSave").click();await sleep(400);
-    const la=[...d.querySelectorAll("#notesLog li")].find(x=>x.textContent.includes("New brush"))?.querySelectorAll("p a")||[];
-    check("notes: links in a note (a bracket the address opens stays in it; HTTPS in capitals too)",la.length===3&&la[2].getAttribute("href")==="HTTPS://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album)"&&la[0].getAttribute("href")==="https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc"&&
-      la[0].textContent==="shop.example.com/products/…"&&la[0].rel==="noopener"&&la[0].target==="_blank"&&la[1].getAttribute("href")==="https://example.org/care"&&la[1].textContent==="example.org/care",
-      [...la].map(a=>a.getAttribute("href")+" "+a.textContent).join("|"));
-    check("notes: a javascript: address stays text",!d.querySelector('#notesLog a[href^="javascript"]')&&/not javascript:alert\(1\)/.test(d.querySelector("#notesLog").textContent));
+    const la=[...d.querySelectorAll("#notesLog li")].find(x=>x.textContent.includes("New brush"))?.querySelectorAll("p a")||[],lh=[...la].map(a=>a.getAttribute("href")+" "+a.textContent).join("|");
+    check("notes: links in a note",la.length===4&&la[0].getAttribute("href")==="https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc"&&
+      la[0].textContent==="shop.example.com/products/…"&&la[0].rel==="noopener"&&la[0].target==="_blank",lh);
+    check("notes: an outer bracket and full stop stay outside the link",la[1]?.getAttribute("href")==="https://shop.example.com/x"&&la[1].nextSibling?.textContent.startsWith(")."),lh);
+    check("notes: a bracket the address opens stays in it",la[2]?.getAttribute("href")==="https://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album)",lh);
+    check("notes: HTTPS in capitals is a link",la[3]?.getAttribute("href")==="HTTPS://example.org/care"&&la[3].textContent==="example.org/care",lh);
+    check("notes: a javascript: address stays text",!d.querySelector('#notesLog a[href^="javascript"]')&&/Not javascript:alert\(1\)/.test(d.querySelector("#notesLog").textContent));
     [...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("New brush")).click();await sleep(300);
     check("notes: Edit shows the note as stored",q("#nText")?.value===lt&&w.__data.records.r1.notes.some(n=>n.t===lt));
     q("#nCancel").click();await sleep(300);
