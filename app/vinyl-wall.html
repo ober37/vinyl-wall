@@ -348,7 +348,7 @@ h2{font-family:var(--display);font-weight:600;text-transform:uppercase;letter-sp
 .resask .actions{margin-top:12px} .resask+.research{margin-top:16px} .resst{margin:0} .askline.prose{word-break:normal;overflow-wrap:anywhere;white-space:pre-wrap}
 .resq{margin:12px 0 0}.resq b{display:block;font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.1em;color:var(--ink-2);margin-bottom:6px}
 .tabs .tabn{font:500 11px/1 var(--mono);color:var(--ink-2);margin-left:4px}
-#tp-notes>.log{margin-top:18px} .notetop{margin-top:20px}
+#tp-notes>.log{margin-top:18px} .notetop{margin-top:20px} #noteFs .notetop{margin-top:0}
 /* Listening: stats, the Log a play card (choices are neutral; only Log play is filled), the play journal */
 .stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin:20px 0 0}
 .stats div{display:flex;flex-direction:column;gap:5px;min-width:0} .stats .sk{font:500 10.5px/1 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--ink-2)}
@@ -588,6 +588,13 @@ fieldset.gsec>p.hint{margin-bottom:12px}
 (function(){
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+/* note text with its http(s) addresses as links: everything else is escaped, trailing punctuation stays outside the link,
+   and a long address shows as its host plus a shortened path */
+const shortUrl=u=>{try{const x=new URL(u),rest=x.pathname.replace(/\/$/,"")+x.search,seg=x.pathname.split("/")[1];
+  return x.host.replace(/^www\./,"")+(rest.length>24?"/"+(seg&&seg.length<=24?seg+"/…":"…"):rest)}catch{return u}};
+const linkify=s=>String(s??"").split(/(https?:\/\/[^\s<>"']+)/).map((p,i)=>{if(!(i%2))return esc(p);
+  const [,u,tail]=p.match(/^(.*?)([.,;:!?)\]]*)$/);
+  return `<a href="${esc(u)}" title="${esc(u)}" target="_blank" rel="noopener">${esc(shortUrl(u))}</a>${esc(tail)}`}).join("");
 let db=null,assets=null,mcp=null,downloads=null,canEdit=false;
 let lastFire=0,fireTimer=null,syncTimer=null,syncDirty=false;
 const SYNCED=new Set(["title","artist","status","pressing","matrix","shop","acquired","paid","why","mediaGrade","sleeveGrade","priority","budget","copyName","moreCopies","orderDate","orderStatus","eta","discogsId","deleted"]);
@@ -1064,7 +1071,7 @@ function playHistoryHTML(r){
           `<div class="actions"><button class="btn small primary" type="button" id="jSave">Save</button><button class="linkbtn" type="button" id="jSkip">${ed.fresh?"Skip":"Cancel"}</button>
             ${ed.fresh?`<button class="linkbtn" type="button" id="jUndo">Undo</button>`:`<button class="linkbtn jdel" type="button" id="jDel">Delete this play</button>`}</div>`}</div></li>`}
       const has=th||vb;
-      return `<li class="play${has?" journal":""}">${icon}<div class="pb"><span class="pm">${meta}</span>${vb?`<span class="pmood">${VIBES[vb-1]}</span>`:""}${th?`<p class="pt">${esc(th)}</p>`:""}</div>
+      return `<li class="play${has?" journal":""}">${icon}<div class="pb"><span class="pm">${meta}</span>${vb?`<span class="pmood">${VIBES[vb-1]}</span>`:""}${th?`<p class="pt">${linkify(th)}</p>`:""}</div>
         <button class="linkbtn editonly" type="button" data-thoughts="${i}">${has?"Edit":"+ Thoughts"}</button></li>`}).join("")}).join("")}
 // the Notes tab: written notes, newest first; editors tap Edit to change or delete one in place
 function notesHTML(r){const ed=noteOpen.get(r.id);
@@ -1073,7 +1080,7 @@ function notesHTML(r){const ed=noteOpen.get(r.id);
     if(ed&&ed.i===i) return `<li class="nedit">${date}<div><textarea id="nText" aria-label="Note">${esc(ed.text??n.t)}</textarea>
       ${ed.confirm?`<div class="actions jconfirm"><span class="hint" style="margin:0">Delete this note?</span><button class="btn small danger" type="button" id="nDelYes">Delete</button><button class="btn small" type="button" id="nDelNo">Keep it</button></div>`:
       `<div class="actions"><button class="btn small primary" type="button" id="nSave">Save</button><button class="linkbtn" type="button" id="nCancel">Cancel</button><button class="linkbtn jdel" type="button" id="nDel">Delete</button></div>`}</div><span></span></li>`;
-    return `<li>${date}<p>${esc(String(n.t??""))}</p><button class="linkbtn editonly" type="button" data-nedit="${i}">Edit</button></li>`}).join("")}
+    return `<li>${date}<p>${linkify(n.t)}</p><button class="linkbtn editonly" type="button" data-nedit="${i}">Edit</button></li>`}).join("")}
 function openSheet(id,keepScroll){
   const isNew=id===null;
   const r=isNew?(newDraft||{status:"",priority:2,notes:[]}):records.find(x=>x.id===id); if(!r) return;
@@ -1125,11 +1132,14 @@ function openSheet(id,keepScroll){
     const tabs=["task",...(res?["research"]:[]),...(notesN?["notes"]:[]),...(album||copy||tracks||artist?["about"]:[])],tab=tabs.includes(sheetTab)?sheetTab:"task";
     const tabBtn=(k,label)=>`<button type="button" role="tab" id="tab-${k}" data-tab="${k}" aria-controls="tp-${k}" aria-selected="${tab===k}" tabindex="${tab===k?0:-1}">${label}</button>`;
     const panel=(k,html)=>`<div class="viewonly" id="tp-${k}"${tabs.length>1?` role="tabpanel" aria-labelledby="tab-${k}"`:""}${tab===k?"":" hidden"}>${html}</div>`;
+    /* the note box: its own Notes section on wanted and owned records, so it doesn't read as part of the copy card above;
+       an ordered record keeps it on the Order tab, by the order it's about */
+    const noteFs=()=>`<fieldset class="editonly" id="noteFs"><legend>Notes</legend><div class="notetop">${noteForm}</div></fieldset>`;
     const noteForm=`<form class="addlog editonly" id="logForm"><textarea id="f-note" class="grow" rows="2" aria-label="Note" placeholder="${ord?"Shipping update, a note from the seller…":wish?"A store you checked, a price you saw…":"Add a note about this record…"}"></textarea><button class="btn small" type="submit">Add note</button></form>`;
     return `${tabs.length>1?`<div class="tabs viewonly" role="tablist" aria-label="Record">${tabBtn("task",wish?"Research":ord?"Order":"Listening")}${res?tabBtn("research","Research"):""}${notesN?tabBtn("notes",`Notes <span class="tabn">${notesN}</span>`):""}${tabs.includes("about")?tabBtn("about","About"):""}</div>`:""}
   ${panel("task",`
   ${wish&&wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}
-  ${own||ord&&res?"":`<div class="notetop">${noteForm}</div>`}
+  ${wish?noteFs():ord?`<div class="notetop">${noteForm}</div>`:""}
   ${ord?`<div class="ordentrywrap">${orderEntryHTML(r)}</div>`:""}
   ${wish?`<fieldset class="viewonly" id="resFs"><legend>Research</legend>
     ${resAskHTML(r)}
@@ -1141,7 +1151,7 @@ function openSheet(id,keepScroll){
     <div class="links">${linkSet(r)}</div>
   </fieldset>`:""}`)}
   ${notesN?panel("notes",`<ul class="log" id="notesLog">${notesHTML(r)}</ul>`):""}
-  ${res?panel("research",`${wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}<div class="notetop">${noteForm}</div>
+  ${res?panel("research",`${wantCopyHTML(r)?`<fieldset class="viewonly" id="wantFs"><legend>${copiesLegend(r)}</legend>${wantCopyHTML(r)}</fieldset>`:""}${own?noteFs():""}
   <fieldset class="viewonly" id="resFs"><legend>Research</legend>
     ${resAskHTML(r)}
     ${researchEntries(r).length?`<div class="research" id="research">${researchHTML(r)}</div>`:""}
@@ -1737,7 +1747,7 @@ function openGearItem(id,keepScroll){
     <span class="saved" id="saved"></span>
   </fieldset>
   <fieldset><legend>Log</legend>
-    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${esc(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li class="nolog"><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
+    <ul class="log">${notes.slice().reverse().map((n,i)=>`<li><time>${esc(n.d)}</time><p>${linkify(n.t)}</p><button class="x editonly" type="button" data-gdel="${notes.length-1-i}" aria-label="Delete note">×</button></li>`).join("")||`<li class="nolog"><p class="hint" style="margin:0">Cleaning, adjustments, repairs, anything worth remembering.</p><span></span></li>`}</ul>
     <form class="addlog editonly" id="g-noteForm"><input id="g-note" placeholder="Set tracking force to 3.5 g…" autocomplete="off"><button class="btn small" type="submit">Log</button></form>
   </fieldset>
   ${g.tracks&&recent.length?`<fieldset><legend>Recent plays</legend><ul class="log">${recent.map(p=>`<li><time>${esc(p.d)}</time><p>${esc(p.title||"Manual entry")}</p><span class="hint" style="margin:0;font-family:var(--mono)">${esc(p.min)} min</span></li>`).join("")}</ul></fieldset>`:""}
