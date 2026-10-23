@@ -10,12 +10,12 @@ import {
   DrawerBody,
 } from '@appica/ui-react/drawer'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
-import { Thumbnail } from '@appica/ui-react/thumbnail'
 import { Boundary } from '../Boundary'
 import { patchFor, toForm, type Form } from '../model/edit'
-import { coverUrl, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
+import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { movePatch, wantedCopies } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
+import { Face } from '../wall/Face'
 import { EditForm } from './EditForm'
 import { ViewBody } from './ViewBody'
 
@@ -116,7 +116,15 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
         {r && (
           <>
             <DrawerHeader className="flex-row items-start gap-4">
-              <Thumbnail src={coverUrl(r) || undefined} alt={`${r.title} cover`} size={96} />
+              <Face
+                key={r.id}
+                title={r.title || ''}
+                artist={r.artist || ''}
+                hue={hueOf(r)}
+                cover={coverUrl(r)}
+                small
+                className="size-24 shrink-0 rounded-(--radius-2xs)"
+              />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <DrawerTitle className="break-words">{r.title || 'Untitled'}</DrawerTitle>
                 <DrawerDescription>{by}</DrawerDescription>

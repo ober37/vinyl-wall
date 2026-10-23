@@ -11,8 +11,14 @@ function merge(a: Record<string, unknown>, b: Record<string, unknown>) {
   return out
 }
 
-export function fakeClaude(seed: { records: Data }, opts: { canWrite?: boolean | null; failWrites?: boolean } = {}) {
+export function fakeClaude(
+  seed: { records: Data; docs?: Data },
+  opts: { canWrite?: boolean | null; failWrites?: boolean } = {},
+) {
   const records: Data = structuredClone(seed.records)
+  // single docs by path (settings/site)
+  const docs: Data = structuredClone(seed.docs || {})
+  const docListeners = new Set<() => void>()
   const calls: Call[] = []
   const listeners = new Set<() => void>()
   const snap = () => {
@@ -63,12 +69,32 @@ export function fakeClaude(seed: { records: Data }, opts: { canWrite?: boolean |
     if (!quiet) listeners.forEach((l) => l())
   }
   const canWrite = opts.canWrite === undefined ? true : opts.canWrite
-  const db = { collection, doc: () => { throw new Error('fake db: no docs') } }
+  const doc = (path: string) => ({
+    id: path.split('/').pop(),
+    path,
+    onSnapshot(next: (s: { id: string; exists: boolean; data: () => Record<string, unknown> | undefined }) => void) {
+      const fire = () =>
+        queueMicrotask(() => {
+          if (!docListeners.has(fire)) return
+          const d = docs[path]
+          next({ id: path, exists: !!d, data: () => (d ? structuredClone(d) : undefined) })
+        })
+      docListeners.add(fire)
+      fire()
+      return () => void docListeners.delete(fire)
+    },
+  })
+  // a settings change made elsewhere
+  const remoteDoc = (path: string, data: Record<string, unknown>) => {
+    docs[path] = merge(docs[path] || {}, data)
+    docListeners.forEach((l) => l())
+  }
+  const db = { collection, doc }
   const user = {
     can: async () => canWrite,
     canEdit: async () => !!canWrite,
     isOwner: async () => !!canWrite,
   }
   const claude = { use: async (name: string) => (name === 'db' ? db : name === 'user' ? user : null) }
-  return { claude: claude as unknown as Window['claude'], calls, remote, records }
+  return { claude: claude as unknown as Window['claude'], calls, remote, remoteDoc, records }
 }

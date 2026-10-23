@@ -1,4 +1,6 @@
 @import 'tailwindcss';
 @import '@appica/ui-react/styles.css';
+@import './theme.css';
+@import './wall/wall.css';
 
 @source '../node_modules/@appica/ui-react/dist';

@@ -2,6 +2,7 @@
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { withSync } from '../model/edit'
 import type { Rec } from '../model/record'
+import { siteOf, type Site } from '../model/site'
 
 type Db = ClaudeCapabilityMap['db']
 export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
@@ -9,6 +10,8 @@ export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
 type Runtime = {
   status: Status
   records: Rec[]
+  // the wall's settings, with defaults until (or unless) the doc loads
+  site: Site
   canEdit: boolean
   // one write at a time, so a record never has two in flight; resolves false when the write was refused
   update: (id: string, patch: Record<string, unknown>) => Promise<boolean>
@@ -32,6 +35,7 @@ export function useRuntime(): Runtime {
 export function RuntimeProvider({ claude, children }: { claude: Window['claude'] | undefined; children: ReactNode }) {
   const [status, setStatus] = useState<Status>(claude?.use ? 'loading' : 'no-runtime')
   const [records, setRecords] = useState<Rec[]>([])
+  const [site, setSite] = useState<Site>(() => siteOf(null))
   const [canEdit, setCanEdit] = useState(false)
   const [error, setError] = useState('')
   const db = useRef<Db | null>(null)
@@ -40,6 +44,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   useEffect(() => {
     if (!claude?.use) return
     let unsub: (() => void) | undefined
+    let unsubSite: (() => void) | undefined
     let live = true
     Promise.all([claude.use('db'), claude.use('user')]).then(async ([d, u]) => {
       if (!live) return
@@ -50,6 +55,11 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       const edit = w ?? (u ? (await u.canEdit().catch(() => false)) || (await u.isOwner().catch(() => false)) : false)
       if (!live) return
       setCanEdit(edit)
+      // a settings failure leaves the default look; only the records decide the page's status
+      unsubSite = d.doc('settings/site').onSnapshot(
+        (snap) => setSite(siteOf(snap.exists ? snap.data() : null)),
+        () => {},
+      )
       unsub = d.collection('records').onSnapshot(
         (snap) => {
           setRecords(snap.docs.map((x) => ({ ...x.data(), id: x.id }) as Rec).filter((r) => !r.deleted))
@@ -64,6 +74,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     return () => {
       live = false
       unsub?.()
+      unsubSite?.()
     }
   }, [claude])
 
@@ -96,6 +107,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     () => ({
       status,
       records,
+      site,
       canEdit,
       error,
       clearError: () => setError(''),
@@ -104,7 +116,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       remove: (id) =>
         queue(id, (r) => (r.discogsSync && (r.discogsSync as { rid?: unknown }).rid ? { deleted: true } : 'delete'), true),
     }),
-    [status, records, canEdit, error],
+    [status, records, site, canEdit, error],
   )
 
   return <Ctx value={value}>{children}</Ctx>

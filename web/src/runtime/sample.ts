@@ -7,6 +7,7 @@ const day = (n: number) => {
 }
 
 export const sample = () => ({
+  docs: { 'settings/site': {} } as Record<string, Record<string, unknown>>,
   records: {
     r1: {
       title: 'Kind of Blue', artist: 'Miles Davis', year: '1959', label: 'Columbia', status: 'own', runtime: 46,

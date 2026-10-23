@@ -220,3 +220,34 @@ export function keyInfo(r: Rec): [string, string][] {
   if (list(ab.genres)) f.push(['Genre', list(ab.genres)])
   return f
 }
+
+// Sleeves. The disc label and generated cover colours come from the title and artist, as in production: per-record data
+// (like a cover photo), not design tokens.
+const hash = (s: string) => {
+  let h = 0
+  for (const c of s) h = (h * 31 + c.charCodeAt(0)) | 0
+  return Math.abs(h)
+}
+export const hueOf = (r: Rec) => hash((r.title || '') + (r.artist || '')) % 360
+
+const OSTAT: Record<string, string> = { preorder: 'Pre-order', ordered: 'Ordered', shipped: 'Shipped', delayed: 'Delayed' }
+// the most the hunt would pay for any of its copies
+export function topBudget(r: Rec): string {
+  let best = ''
+  const copies = [r.budget, ...(Array.isArray(r.moreCopies) ? r.moreCopies.map((c) => (c as Record<string, unknown>)?.budget) : [])]
+  for (const b of copies) {
+    const n = parseFloat(String(b ?? ''))
+    if (!isNaN(n) && (best === '' || n > parseFloat(best))) best = String(b)
+  }
+  return best
+}
+export type Tag = { text: string; tone: 'ship' | 'want' | 'paper' | 'someday' }
+// the hang tag: an order's state and expected date, or a hunt's priority and budget; none on owned records
+export function tagOf(r: Rec): Tag | null {
+  const k = kindOf(r)
+  if (k === 'ordered') return { text: (OSTAT[String(r.orderStatus || 'ordered')] || 'Ordered') + (r.eta ? ' · ' + shortDate(r.eta) : ''), tone: 'ship' }
+  if (k !== 'wish') return null
+  const b = topBudget(r)
+  const p = r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2
+  return { text: ['Top want', 'Want', 'Someday'][p - 1] + (b ? ' · ≤$' + b : ''), tone: p === 1 ? 'want' : p === 3 ? 'someday' : 'paper' }
+}
