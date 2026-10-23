@@ -92,8 +92,9 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       db.current = d
       mcp.current = m
       setHasMcp(!!m)
-      // can("data.write") is the platform's answer; null means it said nothing, so fall back to production's check
-      const w = u ? await u.can('data.write').catch(() => null) : false
+      // can("data.write") is the platform's answer; null means it said nothing, so fall back to production's check.
+      // Walls installed earlier keep the runtime they were published with, which may not have can() at all.
+      const w = u ? (typeof u.can === 'function' ? await u.can('data.write').catch(() => null) : null) : false
       const edit = w ?? (u ? (await u.canEdit().catch(() => false)) || (await u.isOwner().catch(() => false)) : false)
       const id = u ? await u.id().catch(() => null) : null
       if (!alive) return

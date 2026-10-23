@@ -551,7 +551,7 @@ function RuntimeProvider({ claude, children }) {
 			db.current = d;
 			mcp.current = m;
 			setHasMcp(!!m);
-			const edit = (u ? await u.can("data.write").catch(() => null) : false) ?? (u ? await u.canEdit().catch(() => false) || await u.isOwner().catch(() => false) : false);
+			const edit = (u ? typeof u.can === "function" ? await u.can("data.write").catch(() => null) : null : false) ?? (u ? await u.canEdit().catch(() => false) || await u.isOwner().catch(() => false) : false);
 			const id = u ? await u.id().catch(() => null) : null;
 			if (!alive) return;
 			setCanEdit(edit);

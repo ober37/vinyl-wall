@@ -20,7 +20,8 @@ const split = (path: string) => {
 export function fakeClaude(
   // collections by path; `docs` puts single docs in by their full path (settings/site)
   seed: { records: Data; docs?: Data; collections?: Record<string, Data> },
-  opts: { canWrite?: boolean | null; failWrites?: boolean; userId?: string; mcp?: 'ok' | 'denied' | 'none' } = {},
+  // oldRuntime: a wall published on an earlier runtime, whose user capability has no can()
+  opts: { canWrite?: boolean | null; failWrites?: boolean; userId?: string; mcp?: 'ok' | 'denied' | 'none'; oldRuntime?: boolean } = {},
 ) {
   const store: Record<string, Data> = structuredClone({ ...(seed.collections || {}), records: seed.records })
   for (const [path, d] of Object.entries(structuredClone(seed.docs || {}))) {
@@ -99,12 +100,13 @@ export function fakeClaude(
   }
 
   const canWrite = opts.canWrite === undefined ? true : opts.canWrite
-  const user = {
+  const user: Record<string, unknown> = {
     can: async () => canWrite,
     canEdit: async () => !!canWrite,
     isOwner: async () => !!canWrite,
     id: async () => opts.userId ?? 'u_me',
   }
+  if (opts.oldRuntime) delete user.can
   const mcp = {
     async callTool(server: string, tool: string, input: Record<string, unknown>) {
       if (opts.mcp === 'denied') throw { code: 'not_granted', message: 'Not granted' }

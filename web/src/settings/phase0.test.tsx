@@ -98,6 +98,12 @@ describe('starting the background task', () => {
   })
 })
 
+it('works on a wall published on an older runtime (no user.can)', async () => {
+  const { user } = setup(undefined, { oldRuntime: true })
+  await openEdit(user, 'Blue Train')
+  expect(screen.getByRole('textbox', { name: 'Why' })).toBeTruthy()
+})
+
 describe('settings', () => {
   it('shows the update dot and the sentence to send when a newer release is out', async () => {
     const { user } = setup({ taskId: 't1', update: { latest: '1.0.1', checkedMs: Date.now() } })
