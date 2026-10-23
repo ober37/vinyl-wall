@@ -932,8 +932,10 @@ function topBudget(r){let best="";for(const c of wantCopies(r)){const n=parseFlo
 // it's the original's, since here it names the copy. An imported original label alone isn't a copy, so it shows only beside
 // a pressing, catalog or budget, or when it differs from the original (#33)
 // the record's own fields are a copy the person chose only when they filled them in: an album label the lookup found, or a
-// Discogs release the matcher picked (any discogsMatch but an import from their own Discogs), isn't one (#52)
-function firstCopyChosen(r){const c=wantCopies(r)[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",auto=!!r.discogsMatch&&r.discogsMatch!=="imported from Discogs";
+// Discogs release the sync's matcher picked, isn't one (#52). These are the matcher's own discogsMatch values (tools/discogs_sync.py,
+// kept in step by dev/test_discogs.py); any other value, like an import or a release someone confirmed in chat, was chosen
+const AUTO_MATCH=["master main release","vinyl: master main release","vinyl: earliest original pressing","vinyl: first matching release","catalog","catalog+pressing"];
+function firstCopyChosen(r){const c=wantCopies(r)[0],orig=!r.aboutBlocked&&r.about&&r.about.label||"",auto=AUTO_MATCH.includes(r.discogsMatch);
   return !!(c.name||c.pressing||c.catalog||c.budget||c.discogsId&&!auto||!(r.autoFilled||[]).includes("label")&&c.label&&c.label!==orig)}
 function stillCopies(r){const C=wantCopies(r);return (r.status==="wish"?C.map((c,i)=>[c,i]):C.slice(1).map((c,i)=>[c,i+1])).filter(([c,i])=>i?copyHas(c):firstCopyChosen(r))}
 const copiesLegend=r=>(stillCopies(r).length>1?"The copies you ":"The copy you ")+(r.status==="wish"?"want":"still want");
@@ -945,7 +947,7 @@ function wantCopyHTML(r){const L=stillCopies(r),kv=f=>f.length?`<dl class="kv">$
   // of the copy, or on its own only when the owner typed it (a looked-up label is the album's, not the copy's)
   // copies still wanted on an owned or ordered record keep the folded rows they had before the order (#33 retest)
   if(L.length===1&&r.status==="wish"){const [c,i]=L[0],typed=!(r.autoFilled||[]).includes("label"),orig=!r.aboutBlocked&&r.about&&r.about.label||"";
-    const lab=i>0||c.name||c.pressing||c.catalog||c.budget||typed&&c.label&&c.label!==orig?c.label:"";
+    const lab=i>0||c.name||c.pressing||c.catalog||c.budget||c.discogsId&&!AUTO_MATCH.includes(r.discogsMatch)||typed&&c.label&&c.label!==orig?c.label:"";
     const body=kv([...pressRow(c),...labRow(c,lab),...budRow(c)]);
     return body||c.name?`<div class="wcopy">${c.name?`<h4>${esc(c.name)}</h4>`:""}${body}</div>`:""}
   // several: folded rows like the research entries, the title on the row and the rest (budget too) inside
