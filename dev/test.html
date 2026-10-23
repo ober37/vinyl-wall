@@ -295,6 +295,8 @@ f.onload=async()=>{
     q("#pickNo").click();await sleep(300);
     check("copies: Cancel keeps the hunt",!q(".pickcopy")&&w.__data.records.rcp.status==="wish");
     q("#gotBtn").click();await sleep(400);q('[data-pickcopy="1"]').click();await sleep(500);
+    check("move details: after the copy pick, asks what was paid, with Bought from, before moving",!!q("#moveDet")&&!q("[data-pickcopy]")&&/Bought from/.test(q("#moveDet").textContent)&&w.__data.records.rcp.status==="wish");
+    q("#moveDet button[type=submit]").click();await sleep(500);
     const G=w.__data.records.rcp;
     check("copies: the picked copy becomes your copy, the others stay as still wanted",G.status==="own"&&G.copyName==="Third"&&G.pressing===""&&G.moreCopies.map(c=>c.name).join()==="Deluxe",JSON.stringify(G));
     q("#tab-research").click();await sleep(200);
@@ -410,6 +412,35 @@ f.onload=async()=>{
     q("#closeBtn").click();await sleep(300);await openRecord("Aja");
     check("shop website: a non-web address doesn't link",!fromDd()&&![...d.querySelectorAll("#sheet a")].some(x=>/javascript/i.test(x.getAttribute("href")||"")),fromDd()?.innerHTML);
     q("#closeBtn").click();await sleep(200);delete w.__data.records.r5.shopUrl;
+    // Ordered it / Got it ask what was paid and where first; Save moves the record, Cancel leaves it as it was (#45)
+    await openRecord("Pet Sounds");q("#ordBtn").click();await sleep(500);
+    const PS=()=>w.__data.records.r6,sts=()=>[...d.querySelectorAll("#sheet .viewpart .hint[role=status]")].map(x=>x.textContent).filter(t=>/Moved|Marked|Acquired|today/.test(t)).join(" | ");  // a move's status line, not the lookup's
+    check("move details: Ordered it asks Paid and From before moving",PS().status==="wish"&&!PS().notes.length&&!!q("#moveDet #m-paid")&&/^From/.test(q("#m-shop")?.parentElement.textContent)&&!q("#m-paid").placeholder,JSON.stringify(PS()));
+    check("move details: Paid has focus, ready to type",d.activeElement===q("#m-paid"));
+    PS().shopUrl="https://old.example";w.__emit("records");await sleep(300);
+    q("#m-paid").value="$32";q("#m-shop").value="Rough Trade";q("#moveDet button[type=submit]").click();await sleep(500);
+    check("move details: Save moves it, with paid and shop, without a typed $",PS().status==="ordered"&&PS().orderDate&&PS().paid==="32"&&PS().shop==="Rough Trade"&&PS().needsSync,JSON.stringify(PS()));
+    check("move details: a new shop drops the old one's website",PS().shopUrl==="",PS().shopUrl);
+    check("move details: what was entered is in the move's note",PS().notes.length===1&&PS().notes[0].t==="Ordered · $32 from Rough Trade",JSON.stringify(PS().notes));
+    check("move details: nothing under the buttons after Save",!q("#moveDet")&&!sts(),sts());
+    Object.assign(PS(),{status:"wish",paid:"",shop:"",shopUrl:"",orderStatus:"",orderDate:"",notes:[],needsSync:false});w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
+    q("#gotBtn").click();await sleep(500);
+    check("move details: Got it asks too, with Bought from",PS().status==="wish"&&/Bought from/.test(q("#moveDet")?.textContent||""));
+    q("#moveNo").click();await sleep(300);
+    check("move details: Cancel leaves it exactly as it was",!q("#moveDet")&&PS().status==="wish"&&!PS().acquired&&!PS().notes.length&&!PS().needsSync&&!sts(),JSON.stringify(PS())+" / "+sts());
+    q("#gotBtn").click();await sleep(500);q("#moveDet button[type=submit]").click();await sleep(500);
+    check("move details: Save with nothing entered still moves it",PS().status==="own"&&PS().acquired&&PS().notes.at(-1)?.t==="Found it. Moved to the wall."&&!sts(),JSON.stringify(PS()));
+    Object.assign(PS(),{status:"wish",acquired:"",notes:[]});w.__emit("records");await sleep(300);
+    q("#closeBtn").click();await sleep(200);await openRecord("Pet Sounds");
+    q("#gotBtn").click();await sleep(500);q("#modeBtn").click();await sleep(300);
+    check("move details: switching to Edit drops it, unmoved",!q("#moveDet")&&PS().status==="wish");
+    q("#modeBtn").click();await sleep(300);
+    check("move details: gone back in the view too",!q("#moveDet"));
+    q("#closeBtn").click();await sleep(200);
+    await openRecord("Aja");
+    check("move details: none on an ordered record's sheet",!q("#moveDet"));
+    q("#closeBtn").click();await sleep(200);
     w.__data.records.r1.shopUrl="https://www.example.com/shop";w.__emit("records");await sleep(300);
     await openRecord("Kind of Blue");
     const bd=[...d.querySelectorAll("#sheet .kv dt")].find(x=>x.textContent==="Bought")?.nextElementSibling;
