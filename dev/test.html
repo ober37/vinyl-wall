@@ -77,11 +77,25 @@ f.onload=async()=>{
     const nb=[...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("Cleaned it"));
     nb.click();await sleep(300);q("#nText").value="Cleaned it with the new brush.";q("#nSave").click();await sleep(400);
     check("notes: edit a note in place",w.__data.records.r1.notes.some(n=>n.t==="Cleaned it with the new brush.")&&!q("#nText"));
+    // notes: http(s) addresses become links, nothing else does, and Edit still shows the text as stored
+    const lt="New brush from https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc.\nAlso (https://shop.example.com/x). Not javascript:alert(1)\nSee https://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album) and HTTPS://example.org/care";
     [...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("new brush")).click();await sleep(300);
+    q("#nText").value=lt;q("#nSave").click();await sleep(400);
+    const la=[...d.querySelectorAll("#notesLog li")].find(x=>x.textContent.includes("New brush"))?.querySelectorAll("p a")||[],lh=[...la].map(a=>a.getAttribute("href")+" "+a.textContent).join("|");
+    check("notes: links in a note",la.length===4&&la[0].getAttribute("href")==="https://shop.example.com/products/carbon-fibre-record-brush-deluxe?ref=abc"&&
+      la[0].textContent==="shop.example.com/products/…"&&la[0].rel==="noopener"&&la[0].target==="_blank",lh);
+    check("notes: an outer bracket and full stop stay outside the link",la[1]?.getAttribute("href")==="https://shop.example.com/x"&&la[1].nextSibling?.textContent.startsWith(")."),lh);
+    check("notes: a bracket the address opens stays in it",la[2]?.getAttribute("href")==="https://en.wikipedia.org/wiki/Ten_(Pearl_Jam_album)",lh);
+    check("notes: HTTPS in capitals is a link",la[3]?.getAttribute("href")==="HTTPS://example.org/care"&&la[3].textContent==="example.org/care",lh);
+    check("notes: a javascript: address stays text",!d.querySelector('#notesLog a[href^="javascript"]')&&/Not javascript:alert\(1\)/.test(d.querySelector("#notesLog").textContent));
+    [...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("New brush")).click();await sleep(300);
+    check("notes: Edit shows the note as stored",q("#nText")?.value===lt&&w.__data.records.r1.notes.some(n=>n.t===lt));
+    q("#nCancel").click();await sleep(300);
+    [...d.querySelectorAll("#notesLog [data-nedit]")].find(x=>x.closest("li").textContent.includes("New brush")).click();await sleep(300);
     q("#nDel").click();await sleep(200);
     check("notes: Delete asks first",/Delete this note\?/.test(q("#notesLog .jconfirm")?.textContent||""));
     q("#nDelYes").click();await sleep(400);
-    check("notes: the note is gone",!w.__data.records.r1.notes.some(n=>/new brush|Cleaned it/.test(n.t))&&w.__data.records.r1.notes.length===4);
+    check("notes: the note is gone",!w.__data.records.r1.notes.some(n=>/New brush|Cleaned it/.test(n.t))&&w.__data.records.r1.notes.length===4);
     check("edit mode: no separate log list",(q("#modeBtn").click(),await sleep(300),!d.querySelector(".editpart .log")));
     q("#modeBtn").click();await sleep(300);q("#tab-task").click();await sleep(100);
     check("log: play count unchanged",stat().startsWith("Plays 3|"),stat());
@@ -131,7 +145,7 @@ f.onload=async()=>{
     q("#closeBtn").click();await sleep(200);
     await openRecord("Rumours");
     const rows=()=>d.querySelectorAll("#logFs .plist li.play").length;
-    check("notes: on an owned record the note box tops the Research tab, as on wanted ones",!q("#tab-notes")&&!!q("#tp-research > .notetop #logForm")&&!q("#tp-task #logForm"));
+    check("notes: on an owned record the note box tops the Research tab, as on wanted ones",!q("#tab-notes")&&!!q("#tp-research > #noteFs .notetop #logForm")&&!q("#tp-task #logForm"));
     const months=()=>[...d.querySelectorAll("#logFs .mbtn")];
     const shut=months().filter(b=>b.getAttribute("aria-expanded")==="false");
     check("log: no plays this month, so the latest month opens and older ones fold",months().length>2&&months()[0].getAttribute("aria-expanded")==="true"&&shut.length===months().length-1&&/· \d+ plays? · [\d.]+ h/.test(shut[0].textContent)&&!q("#logMore"),months().map(b=>b.textContent).join(" | "));
@@ -309,7 +323,8 @@ f.onload=async()=>{
     // ordered with a copy still wanted: Order | Research | Notes | About, and back to Want brings every copy back
     Object.assign(w.__data.records.rcp,{status:"ordered",moreCopies:[{name:"Later",pressing:"",label:"",catalog:"",budget:"70",discogsId:""}]});w.__emit("records");await sleep(300);
     await openRecord("Copies Test");
-    check("copies: an ordered record gets a Research tab for the copies it still wants",tabNames().startsWith("Order*,Research")&&!!q("#tp-research #wantFs details")&&d.querySelectorAll("#f-note").length===1&&!!q("#tp-research #f-note")&&!q("#tp-task #f-note"),tabNames());
+    check("copies: an ordered record gets a Research tab for the copies it still wants",tabNames().startsWith("Order*,Research")&&!!q("#tp-research #wantFs details"),tabNames());
+    check("notes: an ordered record keeps its shipping-update box on the Order tab",d.querySelectorAll("#f-note").length===1&&!!q("#tp-task > .notetop #f-note")&&!q("#tp-research #f-note")&&!q("#noteFs"));
     q("#modeBtn").click();await sleep(300);q('input[name="fst"][value="wish"]').click();await sleep(500);
     check("copies: back to Want, the record's copy first and the others after",w.__data.records.rcp.status==="wish"&&w.__data.records.rcp.copyName==="Third"&&w.__data.records.rcp.moreCopies[0].name==="Later",JSON.stringify(w.__data.records.rcp));
     q("#modeBtn").click();await sleep(300);
@@ -320,7 +335,7 @@ f.onload=async()=>{
     // research: a chat in the sheet, saved as a summary entry; pins survive new sessions
     await openRecord("Abbey Road");
     const order=[...d.querySelectorAll("#tp-task > fieldset > legend")].map(x=>x.textContent).join();
-    check("research: the copies you want, the note box, then Research and Search elsewhere",order==="The copies you want,Research,Search elsewhere"&&!!q("#tp-task > .notetop #logForm")&&!q("#tab-notes"),order);
+    check("research: the copies you want, the note box under its own Notes heading, then Research and Search elsewhere",order==="The copies you want,Notes,Research,Search elsewhere"&&!!q("#tp-task > #noteFs .notetop #logForm")&&!q("#tab-notes"),order);
     // #33: the copy's pressing, label · catalog and budget sit in the card, not above the tabs or in About
     check("wanted: the copies you want show pressing, label · catalog, budget",/UK first\s*Pressing.*UK first pressing.*Label.*Apple · PCS 7088.*Budget.*Up to \$150/.test(q("#wantFs").textContent)&&!q(".viewpart > .kv")&&!/PCS 7088/.test(q("#tp-about").textContent),q("#wantFs").textContent);
     q("#f-note").value="Saw one at the local shop for $45";q("#logForm").dispatchEvent(new Event("submit",{cancelable:true}));await sleep(500);
