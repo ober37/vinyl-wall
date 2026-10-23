@@ -117,6 +117,21 @@ describe('plays', () => {
     await waitFor(() => expect(notes(fake, 'r3')).toHaveLength(0))
   })
 
+  it('a second play the same day opens only its own journal', async () => {
+    const { fake, user } = setup()
+    await open(user, 'Blue Train')
+    await user.click(btn('Log play'))
+    await user.click(await screen.findByRole('button', { name: 'Skip' }))
+    expect(screen.queryByRole('textbox', { name: 'Your thoughts' })).toBeNull()
+    await user.click(btn('Log play'))
+    await waitFor(() => expect(notes(fake, 'r3')).toHaveLength(2))
+    await screen.findByRole('button', { name: 'Undo' })
+    expect(screen.getAllByRole('textbox', { name: 'Your thoughts' })).toHaveLength(1)
+    await user.click(btn('Undo'))
+    await waitFor(() => expect(notes(fake, 'r3')).toHaveLength(1))
+    expect(screen.queryByRole('textbox', { name: 'Your thoughts' })).toBeNull()
+  })
+
   it('logs a side and saves thoughts on it', async () => {
     const { fake, user } = setup()
     await open(user, 'Blue Train')

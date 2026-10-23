@@ -24,7 +24,7 @@ export function NotesTab({ r }: { r: Rec }) {
   const [edit, setEdit] = useState<{ ref: NoteRef; text: string } | null>(null)
   const [confirm, setConfirm] = useState(false)
   const notes = writtenNotes(r, isPlay)
-  const same = (a: NoteRef, b: NoteRef) => a.d === b.d && a.t === b.t
+  const same = (a: NoteRef, b: NoteRef) => a.i === b.i && a.d === b.d && a.t === b.t
 
   const add = () => {
     const t = draft.trim()

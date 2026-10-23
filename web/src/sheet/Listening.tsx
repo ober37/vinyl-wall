@@ -161,7 +161,8 @@ export function Listening({ r }: { r: Rec }) {
   const months = playMonths(r)
   const cur = today().slice(0, 7)
   const [open, setOpen] = useState<string[]>(() => [months.some((m) => m.month === cur) ? cur : months[0]?.month].filter(Boolean))
-  const isOpen = (p: Play) => !!journal && journal.ref.d === p.ref.d && journal.ref.t === p.ref.t
+  // by position too: two whole-album plays on one day have the same date and text
+  const isOpen = (p: Play) => !!journal && journal.ref.i === p.ref.i && journal.ref.d === p.ref.d && journal.ref.t === p.ref.t
   const openJournal = (j: Journal) => {
     setJournal(j)
     const m = j.ref.d?.slice(0, 7) ?? ''
