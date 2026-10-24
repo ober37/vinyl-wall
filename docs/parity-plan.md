@@ -32,7 +32,7 @@ and is now going to full parity with the plain-JS page (v0.9.4). **1.0 on `main`
 | — | Slice 2: status moves, play log and journal, notes, remove, error boundaries | Done (copy picker and gear minutes deferred) |
 | — | Rack slice: re-theme, barnwood rack, sleeves, hang tags, photo background, filter and search | Done (other hanging styles and pattern backgrounds deferred) |
 | 0 | Integration: runtime capabilities, background task, Settings (update notice, Discogs token), release plumbing, CDN build | Done: S1–S5 here, P1–P5 on the personal account (#60). Go. SETUP gaps it found: #61 |
-| 1 | Add a record, automatic lookup, cover upload | Built: Add a record, lookup dots, cover upload/replace, Not this artist, auto-filled marks; theme follows the system. Welcome card stays in phase 5. Awaiting test on the PR |
+| 1 | Add a record, automatic lookup, cover upload | Built: Add a record, lookup dots, cover upload/replace, Not this artist, auto-filled marks; theme follows the system. Welcome card stays in phase 5. Done: tested on the PR, with the album-info re-lookup fix (5550d1e). Remove a cover: #62 |
 | 2 | The hunt: priority, copies and the copy picker, budget, search links, Research tab | |
 | 3 | Orders, listening stats and badges | |
 | 4 | Equipment: gear, setups, play minutes on gear, stylus meter | |
