@@ -31,8 +31,8 @@ and is now going to full parity with the plain-JS page (v0.9.4). **1.0 on `main`
 | — | Slice 1: wall grid, record sheet view and autosaving edit | Done |
 | — | Slice 2: status moves, play log and journal, notes, remove, error boundaries | Done (copy picker and gear minutes deferred) |
 | — | Rack slice: re-theme, barnwood rack, sleeves, hang tags, photo background, filter and search | Done (other hanging styles and pattern backgrounds deferred) |
-| 0 | Integration: runtime capabilities, background task, Settings (update notice, Discogs token), release plumbing, CDN build | Done here (S1–S5); P1–P5 on the personal account via the draft PR |
-| 1 | Add a record, automatic lookup, cover upload | Next |
+| 0 | Integration: runtime capabilities, background task, Settings (update notice, Discogs token), release plumbing, CDN build | Done: S1–S5 here, P1–P5 on the personal account (#60). Go. SETUP gaps it found: #61 |
+| 1 | Add a record, automatic lookup, cover upload | In design |
 | 2 | The hunt: priority, copies and the copy picker, budget, search links, Research tab | |
 | 3 | Orders, listening stats and badges | |
 | 4 | Equipment: gear, setups, play minutes on gear, stylus meter | |
