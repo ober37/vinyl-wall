@@ -11,10 +11,11 @@ import {
 } from '@appica/ui-react/drawer'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
-import { patchFor, toForm, type Form } from '../model/edit'
+import { patchFor, toForm, type Form, type TextKey } from '../model/edit'
 import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
-import { movePatch, wantedCopies } from '../model/status'
+import { pickable } from '../model/copies'
+import { movePatch } from '../model/status'
 import { lookingUpNotice } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
@@ -57,7 +58,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
     update(r.id, patch).then((ok) => setSaved(ok ? 'Saved' : "Couldn't save"))
   }
 
-  const set = (k: keyof Form, v: string) => {
+  const set = (k: TextKey, v: string) => {
     setForm((f) => (f ? { ...f, [k]: v } : f))
     setSaved('Editing…')
     clearTimeout(timer.current)
@@ -201,7 +202,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     set={set}
                     title={r.title || 'this record'}
                     focusWhy={focusWhy}
-                    onStatus={k === 'wish' && wantedCopies(r) > 1 ? null : moveTo}
+                    onStatus={k === 'wish' && pickable(r).length > 1 ? null : moveTo}
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
                     looking={!!r.needsEnrich}

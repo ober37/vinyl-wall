@@ -6,12 +6,12 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
 import { Textarea } from '@appica/ui-react/textarea'
-import type { Form } from '../model/edit'
+import type { Form, TextKey } from '../model/edit'
 import { GRADES, shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
 import { Segmented } from './Segmented'
 
-type Key = keyof Form
+type Key = TextKey
 type Props = {
   form: Form
   kind: Kind

@@ -3,11 +3,14 @@ import { stored, type Form } from './edit'
 import type { Kind, Rec } from './record'
 import { RELOOK_ABOUT } from './task'
 
-// the doc a new record is set with: what was typed, its status, an empty log, when it was added and priority 2 (every
-// kind gets one); a cover uploaded first goes in with it. Missing a cover, year or label means the task looks it up.
+// the doc a new record is set with: what was typed, its status, an empty log, when it was added and its priority (2 unless
+// a hunt chose one; every kind gets one); a cover uploaded first goes in with it. Missing a cover, year or label means the task looks it up.
 // No needsSync: a new record has no discogsSync yet, which is what the task's sync looks for.
 export function newDoc(form: Form, kind: Kind, coverId: string | null, now = Date.now()): Record<string, unknown> {
-  const d: Record<string, unknown> = { ...stored(form), status: kind, notes: [], added: now, priority: 2 }
+  const d: Record<string, unknown> = { priority: 2, ...stored(form), status: kind, notes: [], added: now }
+  // a new record has no Discogs release yet, and only a hunt shows its (empty) list of other copies
+  delete d.discogsId
+  if (kind !== 'wish') delete d.moreCopies
   if (kind === 'ordered') d.orderStatus = 'ordered'
   if (coverId) d.coverAsset = coverId
   if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true

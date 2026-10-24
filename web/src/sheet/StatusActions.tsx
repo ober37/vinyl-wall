@@ -4,7 +4,8 @@ import { Field, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
-import { movePatch, wantedCopies } from '../model/status'
+import { pickable } from '../model/copies'
+import { movePatch } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 
 // View mode's status buttons: Ordered it / Got it on the hunt (asking what was paid first), It arrived on an order
@@ -15,7 +16,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
   const [shop, setShop] = useState('')
   const [busy, setBusy] = useState(false)
   const k = kindOf(r)
-  if (k === 'own' || (k === 'wish' && wantedCopies(r) > 1)) return null
+  if (k === 'own' || (k === 'wish' && pickable(r).length > 1)) return null
 
   const move = async (to: 'ordered' | 'own', det?: { paid: string; shop: string }) => {
     setBusy(true)

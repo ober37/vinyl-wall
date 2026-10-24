@@ -10,6 +10,8 @@ import { shownList } from './model/filter'
 import { writtenNotes } from './model/notes'
 import { isPlay, keyInfo, playMonths, tagOf, type Rec } from './model/record'
 import { siteOf } from './model/site'
+import { copiesLegend, pickable, stillCopies } from './model/copies'
+import { researchEntries } from './model/research'
 import { movePatch } from './model/status'
 import { pendingParts } from './model/task'
 import { fakeClaude } from './runtime/fake'
@@ -35,7 +37,11 @@ describe.each(files)('%s', (file: string) => {
       keyInfo(r)
       tagOf(r)
       writtenNotes(r, isPlay)
-      for (const to of ['own', 'ordered', 'wish'] as const) movePatch(r, to)
+      for (const to of ['own', 'ordered', 'wish'] as const)
+        for (let ci = 0; ci < Math.max(1, pickable(r).length); ci++) movePatch(r, to, undefined, ci)
+      stillCopies(r)
+      copiesLegend(r)
+      researchEntries(r)
     }
   })
 
@@ -56,7 +62,8 @@ describe.each(files)('%s', (file: string) => {
       const sheet = await screen.findByRole('dialog')
       for (const tab of within(sheet).queryAllByRole('tab')) await user.click(tab)
       await user.click(within(sheet).getAllByRole('button', { name: 'Edit' })[0])
-      expect(within(sheet).queryByRole('alert'), r.id).toBeNull()
+      // a crash shows the boundary's alert (a record waiting on its lookup has an info alert of its own)
+      expect(within(sheet).queryByText("Couldn't show this record"), r.id).toBeNull()
       await user.click(within(sheet).getByRole('button', { name: 'Done' }))
       await user.keyboard('{Escape}')
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())

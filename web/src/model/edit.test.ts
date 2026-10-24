@@ -66,8 +66,22 @@ describe('patchFor', () => {
     for (const k of ['notes', 'about', 'moreCopies', 'status', 'discogsId', 'matrix']) expect(p).not.toHaveProperty(k)
   })
 
-  it("gives a wanted record's form no copy fields", () => {
-    const wish: Rec = { id: 'w', title: 'A', status: 'wish', label: 'Apple', pressing: 'UK first' }
-    expect(Object.keys(toForm(wish)).sort()).toEqual(['artist', 'runtime', 'title', 'why', 'year'])
+  it("gives a wanted record's form its copies and priority, stored in production's shapes", () => {
+    const wish: Rec = { id: 'w', title: 'A', status: 'wish', label: 'Apple', pressing: 'UK first', discogsId: '12', priority: 1 }
+    const f = toForm(wish)
+    expect(f).toMatchObject({ label: 'Apple', pressing: 'UK first', copyName: '', budget: '', discogsId: 12, priority: '1', moreCopies: [] })
+    expect(patchFor(wish, f, { ...f })).toEqual({})
+    expect(patchFor(wish, f, { ...f, priority: '3' })).toEqual({ priority: 3 })
+    expect(withSync(patchFor(wish, f, { ...f, label: 'EMI' }))).toEqual({ label: 'EMI' })
+    expect(withSync(patchFor(wish, f, { ...f, budget: ' 40 ' }))).toEqual({ budget: '40', needsSync: true })
+    const more = [{ name: 'x ', pressing: '', label: '', catalog: '', budget: '', discogsId: '' as const }]
+    expect(patchFor(wish, f, { ...f, moreCopies: more })).toEqual({ moreCopies: [{ ...more[0], name: 'x' }] })
+  })
+
+  it("gives an owned record's form only the copies it still wants", () => {
+    const f = toForm({ ...owned, moreCopies: [{ name: 'UK', discogsId: 5 }, null] })
+    expect(f.moreCopies).toEqual([{ name: 'UK', pressing: '', label: '', catalog: '', budget: '', discogsId: 5 }])
+    expect(f).not.toHaveProperty('priority')
+    expect(f).not.toHaveProperty('copyName')
   })
 })

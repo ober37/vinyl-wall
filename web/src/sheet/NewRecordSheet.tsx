@@ -8,7 +8,7 @@ import { Form as FormRoot } from '@appica/ui-react/form'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { dupeOf, newDoc } from '../model/create'
-import { toForm, type Form } from '../model/edit'
+import { toForm, type Form, type TextKey } from '../model/edit'
 import type { Kind } from '../model/record'
 import { useRuntime } from '../runtime/runtime'
 import { CoverButton } from './CoverButton'
@@ -54,7 +54,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
-  const set = (k: keyof Form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const set = (k: TextKey, v: string) => setForm((f) => ({ ...f, [k]: v }))
   // a kind has its own fields; what's typed in the shared ones stays
   const choose = (k: Kind) => {
     setKind(k)
