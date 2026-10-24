@@ -151,7 +151,7 @@ export function ResearchTab({ r, onEditCopy }: { r: Rec; onEditCopy: (ci: number
     const src = sourceList(e.sources)
     return (
       <AccordionItem key={key} value={key}>
-        <AccordionTrigger>
+        <AccordionTrigger className="text-foreground text-sm font-medium">
           <span className="flex min-w-0 items-baseline gap-3">
             <time className="text-foreground-muted shrink-0 font-mono text-xs font-normal">{(e.at && shortDate(e.at)) || e.at || ''}</time>
             <span className="min-w-0">
@@ -209,7 +209,7 @@ export function ResearchTab({ r, onEditCopy }: { r: Rec; onEditCopy: (ci: number
                     Follow up in chat
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" onClick={() => setDel(key)}>
+                <Button size="sm" variant="ghost" className="text-error-emphasis ms-auto" onClick={() => setDel(key)}>
                   Remove this research
                 </Button>
                 {copied?.key === key && <CopyStatus c={copied} />}
@@ -223,10 +223,11 @@ export function ResearchTab({ r, onEditCopy }: { r: Rec; onEditCopy: (ci: number
 
   return (
     <div className="flex flex-col gap-6">
-      {!wish && <CopiesView r={r} />}
+      {!wish && <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />}
       {(canEdit || items.length > 0) && (
         <Fieldset>
-          <FieldsetLegend>Research</FieldsetLegend>
+          {/* the tab says Research; a heading only when the copies still wanted sit above it */}
+          {!wish && still && <FieldsetLegend>Research</FieldsetLegend>}
           {canEdit && (
             <div className="flex flex-col gap-3">
               <p className="text-foreground-muted text-sm">
@@ -235,7 +236,7 @@ export function ResearchTab({ r, onEditCopy }: { r: Rec; onEditCopy: (ci: number
               <div className="flex flex-wrap items-center gap-3">
                 <Button
                   size="sm"
-                  variant={items.length ? 'outline' : 'primary'}
+                  variant={items.length || wish ? 'outline' : 'primary'}
                   onClick={() => copy('new', resPrompt(r, settings.url), 'Copied. Paste it into Claude and add your question.')}
                 >
                   Copy for Claude

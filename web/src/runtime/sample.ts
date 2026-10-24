@@ -39,6 +39,19 @@ export const sample = () => ({
     r7: {
       title: 'Abbey Road', artist: 'The Beatles', year: '1969', status: 'wish', priority: 1, copyName: 'UK first', pressing: 'UK first pressing', budget: '150',
       moreCopies: [{ name: 'Half-speed reissue', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '40' }], notes: [], added: 4,
+      researchLog: [
+        {
+          id: 'k3m9q2x7aa', at: '2026-10-12', question: 'Is a UK first worth $150, or is the half-speed as good?',
+          headline: 'A clean UK first is worth it; the half-speed is the value pick',
+          summary: 'Early UK pressings have the warmest mastering, but most copies are worn. The 2019 half-speed is quiet and close in sound for far less.',
+          pressings: ['UK first pressing: the original Apple mastering', '2019 half-speed: quiet vinyl, close to the original', 'Japan Odeon: very quiet, a little bright'],
+          check: ['"Her Majesty" missing from the sleeve list on early copies', 'Misaligned Apple logo on side 2'],
+          where: ['Discogs sellers in the UK', 'Local shops with a Beatles section'],
+          price: 'Clean UK firsts sell for $120–$200; the half-speed is about $40.',
+          sources: [{ title: 'Discogs: Abbey Road master', url: 'https://www.discogs.com/master/24047' }],
+          pinned: true,
+        },
+      ],
     },
   } as Record<string, Record<string, unknown>>,
 })

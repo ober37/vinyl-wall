@@ -119,7 +119,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
     const titled = wish ? all.length > 1 : true
     if (!titled && !canRemove(i)) return <div key={i}>{fields}</div>
     return (
-      <div key={i} className={`flex flex-col gap-3 ${i === (wish ? 0 : 1) ? '' : 'border-border-subtle border-t pt-4'}`}>
+      <div key={i} className="border-border-subtle flex flex-col gap-3 border-t pt-4">
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-foreground-intense min-w-0 truncate text-sm font-medium">{copyTitle(c, i)}</h4>
           {canRemove(i) && (

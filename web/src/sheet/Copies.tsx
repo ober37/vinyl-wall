@@ -16,7 +16,7 @@ const budgetRow = (c: Copy): Row[] => (c.budget ? [['Budget', 'Up to $' + c.budg
 // The copies a record hunts, as production's wantCopyHTML shows them: one copy on a hunt is an open card (name, pressing,
 // label, budget); several, or the copies an owned or ordered record still wants, are folded rows under each copy's title.
 // Nothing when there are none.
-export function CopiesView({ r }: { r: Rec }) {
+export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number) => void }) {
   const L = stillCopies(r)
   if (!L.length) return null
   let body: React.ReactNode
@@ -35,18 +35,29 @@ export function CopiesView({ r }: { r: Rec }) {
       <Accordion variant="flush" multiple>
         {L.map(([c, i]) => {
           const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...budgetRow(c)]
-          const t = copyTitle(c, i)
-          return rows.length ? (
+          return (
             <AccordionItem key={i} value={String(i)}>
-              <AccordionTrigger>{t}</AccordionTrigger>
+              <AccordionTrigger className="text-foreground text-sm font-medium">
+                <span className="flex w-full items-baseline justify-between gap-3">
+                  <span className="min-w-0">{copyTitle(c, i)}</span>
+                  {c.budget && <span className="text-foreground-muted shrink-0 font-normal">Up to ${c.budget}</span>}
+                </span>
+              </AccordionTrigger>
               <AccordionContent>
-                <Facts rows={rows} />
+                {rows.length ? (
+                  <Facts rows={rows} />
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground-muted text-sm">No pressing or budget yet</span>
+                    {onEditCopy && (
+                      <Button size="sm" variant="ghost" onClick={() => onEditCopy(i)}>
+                        Edit
+                      </Button>
+                    )}
+                  </div>
+                )}
               </AccordionContent>
             </AccordionItem>
-          ) : (
-            <div key={i} className="border-border text-foreground border-b py-3 text-sm font-medium">
-              {t}
-            </div>
           )
         })}
       </Accordion>
@@ -78,7 +89,7 @@ export function CopyPicker({ r, to, onPick, onCancel }: { r: Rec; to: 'own' | 'o
           </Button>
         ))}
       </div>
-      <Button variant="ghost" size="sm" className="self-start" onClick={onCancel}>
+      <Button variant="ghost" size="sm" className="-ms-3 self-start" onClick={onCancel}>
         Cancel
       </Button>
     </div>

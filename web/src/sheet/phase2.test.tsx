@@ -136,9 +136,9 @@ describe('the hunt in view mode', () => {
     const { user } = setup()
     await open(user, 'Abbey Road')
     const g = screen.getByRole('group', { name: 'The copies you want' })
-    expect(within(g).getByRole('button', { name: 'UK first' })).toBeTruthy()
-    await user.click(within(g).getByRole('button', { name: 'Half-speed reissue' }))
-    expect(within(g).getByText('Up to $40')).toBeTruthy()
+    expect(within(g).getByRole('button', { name: 'UK first Up to $150' })).toBeTruthy()
+    await user.click(within(g).getByRole('button', { name: /^Half-speed reissue/ }))
+    expect(within(g).getByText('2019 half-speed')).toBeTruthy()
     expect(screen.getByText('Top want', { selector: '[data-slot=badge]' })).toBeTruthy()
   })
 

@@ -174,7 +174,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }: {
           </Button>
         )
       )}
-      {k === 'wish' && <CopiesView r={r} />}
+      {k === 'wish' && <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />}
       {canEdit && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
       {msg && (
         <p role="status" className="text-foreground-muted text-sm">
