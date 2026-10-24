@@ -230,13 +230,15 @@ const hash = (s: string) => {
 }
 export const hueOf = (r: Rec) => hash((r.title || '') + (r.artist || '')) % 360
 
-const OSTAT: Record<string, string> = { preorder: 'Pre-order', ordered: 'Ordered', shipped: 'Shipped', delayed: 'Delayed' }
+export const OSTAT: Record<string, string> = { preorder: 'Pre-order', ordered: 'Ordered', shipped: 'Shipped', delayed: 'Delayed' }
+// an order's state as one of OSTAT's; anything else stored there (an old "delivered") reads as Ordered
+export const orderStatusOf = (r: Rec) => (Object.hasOwn(OSTAT, String(r.orderStatus)) ? String(r.orderStatus) : 'ordered')
 export type Tag = { text: string; tone: 'ship' | 'want' | 'paper' | 'someday' }
 // the hang tag: an order's state and expected date, or a hunt's priority (no budget, by the owner's choice); none on owned
 // records
 export function tagOf(r: Rec): Tag | null {
   const k = kindOf(r)
-  if (k === 'ordered') return { text: (OSTAT[String(r.orderStatus || 'ordered')] || 'Ordered') + (r.eta ? ' · ' + shortDate(r.eta) : ''), tone: 'ship' }
+  if (k === 'ordered') return { text: OSTAT[orderStatusOf(r)] + (r.eta ? ' · ' + shortDate(r.eta) : ''), tone: 'ship' }
   if (k !== 'wish') return null
   const p = r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2
   return { text: ['Top want', 'Want', 'Someday'][p - 1], tone: p === 1 ? 'want' : p === 3 ? 'someday' : 'paper' }

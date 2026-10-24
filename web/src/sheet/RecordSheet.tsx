@@ -23,6 +23,7 @@ import { CoverButton } from './CoverButton'
 import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
 import type { WantMsg } from './ResearchTab'
+import { Badges } from './Badges'
 import { ViewBody } from './ViewBody'
 
 const SAVE_DELAY = 700
@@ -190,6 +191,8 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     </span>
                   )}
                 </div>
+                {/* what it's earned, owned records in view only, on a row of its own so phones don't crowd the one above */}
+                {k === 'own' && !editing && <Badges r={r} records={records} />}
                 {/* waiting on the background task: the record's one lookup line, gone when the task fills it in */}
                 {lookupStatus(r) && (
                   <p role="status" className="text-foreground-muted mt-1 flex items-center gap-2 text-xs">

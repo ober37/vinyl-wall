@@ -7,6 +7,7 @@ import { aboutPending } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
+import { OrderCard } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
 import { hasResearch, ResearchTab, type WantMsg } from './ResearchTab'
@@ -148,7 +149,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
   const notesN = noteCount(r)
   const notes = canEdit || notesN > 0
   const research = hasResearch(r, canEdit)
-  const tabs = [...(own ? ['listening'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
+  const tabs = [...(own ? ['listening'] : []), ...(k === 'ordered' ? ['order'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
   const titled = (name: string, node: React.ReactNode) =>
     tabs.length === 1 ? (
@@ -183,6 +184,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
           {tabs.length > 1 && (
             <TabsList variant="line" size="sm">
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
+              {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
               {research && <TabsTrigger value="research">Research</TabsTrigger>}
               {notes && (
                 <TabsTrigger value="notes">
@@ -195,6 +197,11 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
           {own && (
             <TabsContent value="listening" className="pt-4">
               {titled('Listening', <Listening r={r} />)}
+            </TabsContent>
+          )}
+          {k === 'ordered' && (
+            <TabsContent value="order" className="pt-4">
+              {titled('Order', <OrderCard r={r} />)}
             </TabsContent>
           )}
           {research && (

@@ -36,6 +36,15 @@
   --bracket-2: #151515;
   --gleam: #fff; /* highlights in the wood */
   --cover-ink: #fff; /* type on a generated cover */
+  /* earned badges' metals (both themes, as production): a highlight and a rim each */
+  --metal-gold-hi: #f6dc96;
+  --metal-gold-lo: #b8862f;
+  --metal-silver-hi: #f2f4f5;
+  --metal-silver-lo: #8e979e;
+  --metal-bronze-hi: #ebb680;
+  --metal-bronze-lo: #9a5b2a;
+  --metal-hot-hi: #f5ad88;
+  --metal-hot-lo: #b6452c;
 }
 
 .dark {

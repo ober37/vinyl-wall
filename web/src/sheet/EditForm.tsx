@@ -7,7 +7,7 @@ import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
 import { Textarea } from '@appica/ui-react/textarea'
 import type { Form, TextKey } from '../model/edit'
-import { GRADES, shopHref, type Kind } from '../model/record'
+import { GRADES, OSTAT, shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
 import { CopiesEdit } from './CopiesEdit'
 import { Segmented } from './Segmented'
@@ -92,11 +92,108 @@ function Grade({ k, label, form, set }: { k: Key; label: string; form: Form; set
   )
 }
 
+function Paid({ form, set, placeholder }: { form: Form; set: Props['set']; placeholder?: string }) {
+  return (
+    <Field>
+      <FieldLabel>Paid</FieldLabel>
+      <Input
+        value={form.paid ?? ''}
+        onChange={(e) => set('paid', e.target.value)}
+        inputMode="decimal"
+        placeholder={placeholder}
+        startSlot={<span aria-hidden="true">$</span>}
+        className="font-mono placeholder:font-sans"
+      />
+    </Field>
+  )
+}
+
+function ShopUrl({ form, set, placeholder }: { form: Form; set: Props['set']; placeholder: string }) {
+  const bad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
+  return (
+    <Field className="sm:col-span-2" invalid={bad}>
+      <FieldLabel>Shop website</FieldLabel>
+      <Input
+        value={form.shopUrl ?? ''}
+        onChange={(e) => set('shopUrl', e.target.value)}
+        type="url"
+        autoCapitalize="off"
+        autoComplete="off"
+        placeholder={placeholder}
+      />
+      {bad && <FieldDescription>Not a web address, so it won't link</FieldDescription>}
+    </Field>
+  )
+}
+
+function DateIn({ k, label, form, set }: { k: Key; label: string; form: Form; set: Props['set'] }) {
+  return (
+    <Field>
+      <FieldLabel>{label}</FieldLabel>
+      <DateField value={toDate(form[k])} onValueChange={(d) => set(k, fromDate(d))} />
+    </Field>
+  )
+}
+
+const ORDER_STATES = Object.entries(OSTAT)
+// an ordered record's order, the fields updated most first: where it's at, where it's from, what it cost, how to track it
+function OrderFields(p: { form: Form; set: Props['set'] }) {
+  const { form, set } = p
+  return (
+    <Fieldset>
+      <FieldsetLegend>The order</FieldsetLegend>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <Field>
+          <FieldLabel>Order status</FieldLabel>
+          <Select
+            value={form.orderStatus || 'ordered'}
+            onValueChange={(v) => set('orderStatus', String(v))}
+            items={ORDER_STATES.map(([value, label]) => ({ value, label }))}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {ORDER_STATES.map(([v, l]) => (
+                <SelectItem key={v} value={v}>
+                  {l}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+        <DateIn k="eta" label="Expected" {...p} />
+        <Text k="shop" label="From" placeholder="e.g. the band's webstore, a Discogs seller" wide {...p} />
+        <ShopUrl placeholder="e.g. https://yourband.bandcamp.com" {...p} />
+        <Paid placeholder="incl. shipping" {...p} />
+        <DateIn k="orderDate" label="Ordered on" {...p} />
+        <Text k="orderNum" label="Order #" mono {...p} />
+        <Text k="carrier" label="Carrier" placeholder="USPS, UPS, FedEx, DHL" {...p} />
+        <Field className="sm:col-span-2">
+          <FieldLabel>Tracking #</FieldLabel>
+          <Input
+            value={form.tracking ?? ''}
+            onChange={(e) => set('tracking', e.target.value)}
+            autoCapitalize="characters"
+            autoComplete="off"
+            className="font-mono"
+          />
+        </Field>
+        {form.orderNotes !== undefined && (
+          <Field className="sm:col-span-2">
+            <FieldLabel>Order notes</FieldLabel>
+            <Textarea rows={2} value={form.orderNotes} onChange={(e) => set('orderNotes', e.target.value)} />
+          </Field>
+        )}
+      </div>
+    </Fieldset>
+  )
+}
+
 export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy }: Props) {
   const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
   const [confirm, setConfirm] = useState(false)
-  const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
   return (
     <div className="flex flex-col gap-8">
       {onStatus && !isNew && (
@@ -156,6 +253,7 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
         </Fieldset>
       )}
       {!own && <CopiesEdit form={form} kind={kind} change={change} isNew={isNew} auto={autoFilled} focusCopy={focusCopy} />}
+      {kind === 'ordered' && <OrderFields {...p} />}
 
       {own && (
         <Fieldset>
@@ -170,33 +268,10 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
                 placeholder="e.g. 2015 Analogue Productions 45rpm reissue"
               />
             </Field>
-            <Field>
-              <FieldLabel>Bought on</FieldLabel>
-              <DateField value={toDate(form.acquired)} onValueChange={(d) => set('acquired', fromDate(d))} />
-            </Field>
-            <Field>
-              <FieldLabel>Paid</FieldLabel>
-              <Input
-                value={form.paid ?? ''}
-                onChange={(e) => set('paid', e.target.value)}
-                inputMode="decimal"
-                startSlot={<span aria-hidden="true">$</span>}
-                className="font-mono"
-              />
-            </Field>
+            <DateIn k="acquired" label="Bought on" {...p} />
+            <Paid {...p} />
             <Text k="shop" label="Bought from" placeholder="e.g. a local record shop" wide {...p} />
-            <Field className="sm:col-span-2" invalid={shopUrlBad}>
-              <FieldLabel>Shop website</FieldLabel>
-              <Input
-                value={form.shopUrl ?? ''}
-                onChange={(e) => set('shopUrl', e.target.value)}
-                type="url"
-                autoCapitalize="off"
-                autoComplete="off"
-                placeholder="e.g. https://www.roughtrade.com"
-              />
-              {shopUrlBad && <FieldDescription>Not a web address, so it won't link</FieldDescription>}
-            </Field>
+            <ShopUrl placeholder="e.g. https://www.roughtrade.com" {...p} />
             <Grade k="mediaGrade" label="Vinyl" {...p} />
             <Grade k="sleeveGrade" label="Sleeve" {...p} />
           </div>

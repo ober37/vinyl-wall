@@ -11,7 +11,7 @@ export function newDoc(form: Form, kind: Kind, coverId: string | null, now = Dat
   // a new record has no Discogs release yet, and only a hunt shows its (empty) list of other copies
   delete d.discogsId
   if (kind !== 'wish') delete d.moreCopies
-  if (kind === 'ordered') d.orderStatus = 'ordered'
+  if (kind === 'ordered' && !d.orderStatus) d.orderStatus = 'ordered'
   if (coverId) d.coverAsset = coverId
   if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true
   return d

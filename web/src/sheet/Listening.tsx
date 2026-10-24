@@ -10,7 +10,8 @@ import { Slider } from '@appica/ui-react/slider'
 import { Textarea } from '@appica/ui-react/textarea'
 import { deleteNote, notesOf, type NoteRef } from '../model/notes'
 import { collapsePick, playNote, recordSides, saveJournal, sideOf, VIBES, type PlayKind } from '../model/plays'
-import { fmtH, playMonths, recordTracks, today, type Play, type Rec } from '../model/record'
+import { fmtH, playDate, playMonths, recordTracks, today, type Play, type Rec } from '../model/record'
+import { playStats } from '../model/stats'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
 import { Linkify } from './Linkify'
@@ -155,6 +156,28 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
   )
 }
 
+// the record's plays at a glance, once it has any: two by two on phones, one row of four from sm up
+function StatsRow({ r }: { r: Rec }) {
+  const S = playStats(r)
+  if (!S.count) return null
+  const cells: [string, string | number][] = [
+    ['Plays', S.count],
+    ['Hours', fmtH(S.min / 60)],
+    ['This month', S.month],
+    ['Last', S.last ? playDate(S.last) : ''],
+  ]
+  return (
+    <dl className="grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-4">
+      {cells.map(([k, v]) => (
+        <div key={k} className="flex min-w-0 flex-col gap-1">
+          <dt className="text-foreground-muted font-mono text-[0.6875rem] tracking-wider uppercase">{k}</dt>
+          <dd className="text-foreground-intense text-lg leading-tight font-semibold break-words tabular-nums">{v}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 export function Listening({ r }: { r: Rec }) {
   const { canEdit } = useRuntime()
   const [journal, setJournal] = useState<Journal | null>(null)
@@ -171,6 +194,7 @@ export function Listening({ r }: { r: Rec }) {
 
   return (
     <div className="flex flex-col gap-6">
+      <StatsRow r={r} />
       {canEdit && <LogCard r={r} onLogged={openJournal} />}
       {!months.length ? (
         <p className="text-foreground-muted text-sm">No plays logged yet.</p>

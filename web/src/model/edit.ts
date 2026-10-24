@@ -1,7 +1,7 @@
 // The edit form's fields and the patch they write. Mirrors collect()/schedule()/write() in app/vinyl-wall.html:
 // only fields the form owns, only when they changed, in production's stored shapes.
 import { wantCopies, type Copy } from './copies'
-import { kindOf, pressingText, shopHref, type Rec } from './record'
+import { kindOf, orderStatusOf, pressingText, shopHref, type Rec } from './record'
 import { RELOOK_ABOUT } from './task'
 
 export type Form = {
@@ -10,7 +10,7 @@ export type Form = {
   why: string
   year: string
   runtime: string
-  // owned records only
+  // owned records (paid, shop and shopUrl on ordered ones too)
   label?: string
   catalog?: string
   pressing?: string
@@ -26,6 +26,14 @@ export type Form = {
   discogsId?: number | ''
   // wanted records: 1 Top, 2 Want, 3 Someday
   priority?: string
+  // ordered records: the order (paid, shop and shopUrl above too); orderNotes only when an older record has some
+  orderStatus?: string
+  orderDate?: string
+  eta?: string
+  orderNum?: string
+  carrier?: string
+  tracking?: string
+  orderNotes?: string
   // every kind: the copies after the first (on owned and ordered records, the ones still wanted)
   moreCopies?: Copy[]
 }
@@ -48,6 +56,20 @@ export function toForm(r: Rec): Form {
   f.moreCopies = more
   if (k !== 'own')
     Object.assign(f, { label: c0.label, catalog: c0.catalog, pressing: c0.pressing, copyName: c0.name, budget: c0.budget, discogsId: c0.discogsId })
+  if (k === 'ordered') {
+    Object.assign(f, {
+      paid: s(r.paid),
+      shop: s(r.shop),
+      shopUrl: s(r.shopUrl),
+      orderStatus: orderStatusOf(r),
+      orderDate: s(r.orderDate),
+      eta: s(r.eta),
+      orderNum: s(r.orderNum),
+      carrier: s(r.carrier),
+      tracking: s(r.tracking),
+    })
+    if (r.orderNotes) f.orderNotes = s(r.orderNotes)
+  }
   if (k === 'wish') f.priority = String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2)
   if (k === 'own')
     Object.assign(f, {
@@ -68,7 +90,7 @@ export function toForm(r: Rec): Form {
 // priority a number
 export function stored(f: Form): Record<string, unknown> {
   const o: Record<string, unknown> = {}
-  for (const [k, v] of Object.entries(f)) if (typeof v === 'string') o[k] = k === 'why' ? v : v.trim()
+  for (const [k, v] of Object.entries(f)) if (typeof v === 'string') o[k] = k === 'why' || k === 'orderNotes' ? v : v.trim()
   if (f.discogsId !== undefined) o.discogsId = f.discogsId
   if (f.priority !== undefined) o.priority = +f.priority || 2
   if (f.moreCopies)
