@@ -1408,7 +1408,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 		if (i === 0) {
 			const [next, ...rest] = more;
 			change({
-				...asFlat(next),
+				...asFlat(next ?? emptyCopy()),
 				moreCopies: rest
 			}, true);
 		} else change({ moreCopies: more.filter((_, j) => j !== i - 1) }, true);
@@ -1418,7 +1418,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 		if (copyHas(c) || c.discogsId) setConfirm(i);
 		else remove(i);
 	};
-	const canRemove = (i) => !isNew && (i > 0 || wish) && (!wish || all.length > 1);
+	const canRemove = (i) => !isNew && (i > 0 || wish && (all.length > 1 || copyHas(all[0]) || !!all[0].discogsId));
 	const block = (c, i, ph) => {
 		const fields = /* @__PURE__ */ jsx(CopyFields, {
 			c,

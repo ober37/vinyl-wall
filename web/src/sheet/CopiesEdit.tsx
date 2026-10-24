@@ -67,7 +67,8 @@ const asFlat = (c: Copy): Partial<Form> => Object.fromEntries(Object.entries(c).
 
 // Edit mode's copies, as production's edit form has them. A hunt's copies are one group, the first in the record's own
 // fields; an ordered record's first copy is the one ordered; owned and ordered records list the copies still wanted
-// after, only while there are any. A hunt keeps at least one copy; a new record shows only the first.
+// after, only while there are any. Removing a hunt's only copy clears it back to a blank one; a new record shows only the
+// first.
 export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
   form: Form
   kind: Kind
@@ -95,7 +96,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
     setAdded(null)
     if (i === 0) {
       const [next, ...rest] = more
-      change({ ...asFlat(next), moreCopies: rest }, true)
+      change({ ...asFlat(next ?? emptyCopy()), moreCopies: rest }, true)
     } else change({ moreCopies: more.filter((_, j) => j !== i - 1) }, true)
   }
   const ask = (i: number) => {
@@ -104,7 +105,8 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
     else remove(i)
   }
 
-  const canRemove = (i: number) => !isNew && (i > 0 || wish) && (!wish || all.length > 1)
+  // a hunt's lone copy can be removed once it has something in it
+  const canRemove = (i: number) => !isNew && (i > 0 || (wish && (all.length > 1 || copyHas(all[0]) || !!all[0].discogsId)))
   const block = (c: Copy, i: number, ph: Ph) => {
     const fields = (
       <CopyFields

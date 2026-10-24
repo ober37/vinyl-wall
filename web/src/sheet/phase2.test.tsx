@@ -60,7 +60,7 @@ describe('edit mode: priority and copies', () => {
     await open(user, 'Pet Sounds')
     await user.click(btn('Edit'))
     expect(screen.getByRole('group', { name: 'The copy you want' })).toBeTruthy()
-    // a lone copy can't be removed
+    // a lone empty copy has nothing to remove
     expect(screen.queryByRole('button', { name: 'Remove this copy' })).toBeNull()
     await user.click(btn('+ Add another copy'))
     await waitFor(() => expect(updates(fake, 'r6').at(-1)?.moreCopies).toHaveLength(1))
@@ -82,6 +82,17 @@ describe('edit mode: priority and copies', () => {
       }),
     )
     expect(screen.getByRole('group', { name: 'The copy you want' })).toBeTruthy()
+  })
+
+  it("removing a hunt's only copy clears it back to a blank one", async () => {
+    const { fake, user } = setup({}, { r8: { title: 'Toxicity', artist: 'System of a Down', status: 'wish', pressing: '2018 reissue', discogsId: 5, notes: [], added: 8 } })
+    await open(user, 'Toxicity')
+    await user.click(btn('Edit'))
+    await user.click(within(legend('The copy you want')).getByRole('button', { name: 'Remove this copy' }))
+    await user.click(await screen.findByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ pressing: '', discogsId: '', needsSync: true }))
+    expect(within(legend('The copy you want')).getByRole('textbox', { name: 'Pressing' })).toHaveProperty('value', '')
+    expect(screen.queryByRole('button', { name: 'Remove this copy' })).toBeNull()
   })
 
   it('shows an owned record the copies it still wants, and lets them all go', async () => {
