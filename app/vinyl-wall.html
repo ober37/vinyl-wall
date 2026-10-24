@@ -304,15 +304,6 @@ var OSTAT = {
 	shipped: "Shipped",
 	delayed: "Delayed"
 };
-function topBudget(r) {
-	let best = "";
-	const copies = [r.budget, ...Array.isArray(r.moreCopies) ? r.moreCopies.map((c) => c?.budget) : []];
-	for (const b of copies) {
-		const n = parseFloat(String(b ?? ""));
-		if (!isNaN(n) && (best === "" || n > parseFloat(best))) best = String(b);
-	}
-	return best;
-}
 function tagOf(r) {
 	const k = kindOf(r);
 	if (k === "ordered") return {
@@ -320,14 +311,13 @@ function tagOf(r) {
 		tone: "ship"
 	};
 	if (k !== "wish") return null;
-	const b = topBudget(r);
 	const p = r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2;
 	return {
 		text: [
 			"Top want",
 			"Want",
 			"Someday"
-		][p - 1] + (b ? " · ≤$" + b : ""),
+		][p - 1],
 		tone: p === 1 ? "want" : p === 3 ? "someday" : "paper"
 	};
 }

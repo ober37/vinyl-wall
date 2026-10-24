@@ -35,7 +35,7 @@ describe('hang tags', () => {
   it('shows an order and a hunt, not an owned record', () => {
     expect(tagOf(recs[0])).toBeNull()
     expect(tagOf(recs[1])).toEqual({ text: 'Shipped · ' + new Date('2026-10-24T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }), tone: 'ship' })
-    expect(tagOf(recs[2])).toEqual({ text: 'Top want · ≤$60', tone: 'want' })
+    expect(tagOf(recs[2])).toEqual({ text: 'Top want', tone: 'want' })
     expect(tagOf(recs[3])).toEqual({ text: 'Want', tone: 'paper' })
     expect(tagOf(recs[4])).toEqual({ text: 'Someday', tone: 'someday' })
   })
