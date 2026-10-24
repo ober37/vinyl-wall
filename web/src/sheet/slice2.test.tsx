@@ -95,14 +95,6 @@ describe('status', () => {
     expect(fake.records.r3).toMatchObject({ orderStatus: 'ordered', orderDate: today(), needsSync: true })
     expect(notes(fake, 'r3').at(-1)).toEqual({ d: today(), t: 'Ordered.' })
   })
-
-  it("doesn't offer a move on a hunt with two copies (the copy picker isn't built)", async () => {
-    const { user } = setup()
-    await open(user, 'Abbey Road')
-    expect(screen.queryByRole('button', { name: 'Got it' })).toBeNull()
-    await user.click(btn('Edit'))
-    expect(screen.queryByRole('group', { name: 'Status' })).toBeNull()
-  })
 })
 
 describe('plays', () => {

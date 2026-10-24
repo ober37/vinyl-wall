@@ -36,7 +36,7 @@ afterEach(() => localStorage.clear())
 describe.each([
   ['I own it', 'own', 'Owned'],
   ['On order', 'ordered', 'Ordered'],
-  ['I want it', 'wish', 'Wanted'],
+  ['I want it', 'wish', 'Want'],
 ])('adding a record: %s', (choice, status, badge) => {
   it('hangs it, starts the lookup and opens it', async () => {
     const { fake, user } = setup()

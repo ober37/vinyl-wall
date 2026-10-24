@@ -20,10 +20,13 @@ import { lookingUpNotice } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { CoverButton } from './CoverButton'
+import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
 import { ViewBody } from './ViewBody'
 
 const SAVE_DELAY = 700
+// a hunt's badge says how much it's wanted
+const PRIORITY = ['Top want', 'Want', 'Someday']
 
 // Edit mode autosaves like production: a short pause after typing writes what changed; Done or closing writes at once.
 function useAutosave(r: Rec | undefined, editing: boolean) {
@@ -98,22 +101,27 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
   const [msg, setMsg] = useState('')
+  // a hunt with several copies asks which one first; the status stays as it is until one is picked
+  const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
   const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
 
   useEffect(() => {
     setEditing(false)
+    setPick(null)
     setMsg('')
     clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
   // edit mode's status control moves without asking what was paid, as production's does
-  const moveTo = (to: Kind) => {
+  const moveTo = (to: Kind, ci?: number) => {
     if (!r) return
     flush()
+    if (to !== 'wish' && ci === undefined && kindOf(r) === 'wish' && pickable(r).length > 1) return setPick(to)
+    setPick(null)
     let m = ''
     mutate(r.id, (latest) => {
-      const x = movePatch(latest, to)
+      const x = movePatch(latest, to, undefined, ci)
       m = x?.msg || ''
       return x?.patch ?? null
     }).then((ok) => ok && setSaved(m))
@@ -157,7 +165,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                 <DrawerDescription>{by}</DrawerDescription>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Badge size="sm" variant={k === 'own' ? 'success' : k === 'ordered' ? 'info' : 'secondary'}>
-                    {KIND_LABEL[k]}
+                    {k === 'wish' ? PRIORITY[r.priority == 1 ? 0 : r.priority == 3 ? 2 : 1] : KIND_LABEL[k]}
                   </Badge>
                   {canEdit && (
                     <Button
@@ -212,6 +220,11 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     )}
                   </div>
                 )}
+                {editing && pick && (
+                  <div className="mb-6">
+                    <CopyPicker r={r} to={pick} onPick={(ci) => moveTo(pick, ci)} onCancel={() => setPick(null)} />
+                  </div>
+                )}
                 {editing && form ? (
                   <EditForm
                     form={form}
@@ -220,7 +233,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     change={change}
                     title={r.title || 'this record'}
                     focusWhy={focusWhy}
-                    onStatus={k === 'wish' && pickable(r).length > 1 ? null : moveTo}
+                    onStatus={(to) => moveTo(to)}
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
                     looking={!!r.needsEnrich}

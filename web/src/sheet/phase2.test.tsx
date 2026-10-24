@@ -130,3 +130,66 @@ describe('a new hunt', () => {
     expect(fake.calls.find((c) => c.op === 'set')?.data).not.toHaveProperty('discogsId')
   })
 })
+
+describe('the hunt in view mode', () => {
+  it('shows the copies under the why, and the priority on the badge', async () => {
+    const { user } = setup()
+    await open(user, 'Abbey Road')
+    const g = screen.getByRole('group', { name: 'The copies you want' })
+    expect(within(g).getByRole('button', { name: 'UK first' })).toBeTruthy()
+    await user.click(within(g).getByRole('button', { name: 'Half-speed reissue' }))
+    expect(within(g).getByText('Up to $40')).toBeTruthy()
+    expect(screen.getByText('Top want', { selector: '[data-slot=badge]' })).toBeTruthy()
+  })
+
+  it('shows a lone copy as a card, and nothing for a looked-up label alone', async () => {
+    const { user } = setup({}, {
+      r8: { title: 'Revolver', artist: 'The Beatles', status: 'wish', label: 'Parlophone', catalog: 'PMC 7009', budget: '80', notes: [], added: 8 },
+      r9: { title: 'Help!', artist: 'The Beatles', status: 'wish', label: 'Parlophone', autoFilled: ['label'], notes: [], added: 9 },
+    })
+    await open(user, 'Revolver')
+    const g = screen.getByRole('group', { name: 'The copy you want' })
+    expect(within(g).getByText('Parlophone')).toBeTruthy()
+    expect(within(g).getByText('Up to $80')).toBeTruthy()
+    await user.keyboard('{Escape}')
+    await open(user, 'Help!')
+    expect(screen.queryByRole('group', { name: /The copy/ })).toBeNull()
+  })
+
+  it('Got it on a hunt with two copies asks which, then what was paid', async () => {
+    const { fake, user } = setup()
+    await open(user, 'Abbey Road')
+    await user.click(btn('Got it'))
+    expect(screen.getByText(/Which copy did you get\?/)).toBeTruthy()
+    await user.click(btn(/Got: Half-speed reissue/))
+    await user.type(screen.getByRole('textbox', { name: 'Paid' }), '38')
+    await user.click(btn('Save'))
+    await waitFor(() =>
+      expect(updates(fake, 'r7').at(-1)).toMatchObject({
+        status: 'own', copyName: 'Half-speed reissue', pressing: '2019 half-speed', label: 'Apple', budget: '40', paid: '38',
+        moreCopies: [{ name: 'UK first', pressing: 'UK first pressing', label: '', catalog: '', budget: '150', discogsId: '' }],
+      }),
+    )
+  })
+
+  it('Cancel on the picker moves nothing', async () => {
+    const { fake, user } = setup()
+    await open(user, 'Abbey Road')
+    await user.click(btn('Ordered it'))
+    expect(btn(/Ordered: UK first/)).toBeTruthy()
+    await user.click(btn('Cancel'))
+    expect(btn('Ordered it')).toBeTruthy()
+    expect(updates(fake, 'r7')).toEqual([])
+  })
+
+  it("edit mode's status asks which copy, keeping the status until one is picked", async () => {
+    const { fake, user } = setup()
+    await open(user, 'Abbey Road')
+    await user.click(btn('Edit'))
+    await user.click(btn('Ordered'))
+    expect(screen.getByRole('button', { name: 'Wanted', pressed: true })).toBeTruthy()
+    await user.click(btn(/Ordered: UK first/))
+    await waitFor(() => expect(updates(fake, 'r7').at(-1)).toMatchObject({ status: 'ordered', copyName: 'UK first', budget: '150' }))
+    expect(screen.queryByText(/What did you pay/)).toBeNull()
+  })
+})

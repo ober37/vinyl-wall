@@ -7,20 +7,9 @@ import { aboutPending } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
+import { CopiesView } from './Copies'
+import { Facts } from './Facts'
 import { StatusActions } from './StatusActions'
-
-function Facts({ rows }: { rows: [string, React.ReactNode][] }) {
-  return (
-    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm">
-      {rows.map(([k, v]) => (
-        <div key={k} className="contents">
-          <dt className="text-foreground-muted">{k}</dt>
-          <dd className="text-foreground min-w-0 break-words">{v}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
 function copyFacts(r: Rec): [string, React.ReactNode][] {
@@ -181,6 +170,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
           </Button>
         )
       )}
+      {k === 'wish' && <CopiesView r={r} />}
       {canEdit && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
       {msg && (
         <p role="status" className="text-foreground-muted text-sm">

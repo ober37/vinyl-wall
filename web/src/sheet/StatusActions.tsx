@@ -7,22 +7,26 @@ import { kindOf, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
+import { CopyPicker } from './Copies'
 
-// View mode's status buttons: Ordered it / Got it on the hunt (asking what was paid first), It arrived on an order
+// View mode's status buttons: Ordered it / Got it on the hunt (asking which copy when it hunts several, then what was
+// paid), It arrived on an order
 export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) => void }) {
   const { mutate } = useRuntime()
+  const [pick, setPick] = useState<'ordered' | 'own' | null>(null)
   const [ask, setAsk] = useState<'ordered' | 'own' | null>(null)
+  const [ci, setCi] = useState(0)
   const [paid, setPaid] = useState('')
   const [shop, setShop] = useState('')
   const [busy, setBusy] = useState(false)
   const k = kindOf(r)
-  if (k === 'own' || (k === 'wish' && pickable(r).length > 1)) return null
+  if (k === 'own') return null
 
   const move = async (to: 'ordered' | 'own', det?: { paid: string; shop: string }) => {
     setBusy(true)
     let msg = ''
     const ok = await mutate(r.id, (latest) => {
-      const m = movePatch(latest, to, det)
+      const m = movePatch(latest, to, det, ci)
       msg = m?.msg || ''
       return m?.patch ?? null
     })
@@ -30,11 +34,30 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     setAsk(null)
     if (ok) onMoved(msg)
   }
-  const start = (to: 'ordered' | 'own') => {
+  const askPaid = (to: 'ordered' | 'own') => {
+    setPick(null)
     setPaid(String(r.paid || ''))
     setShop(String(r.shop || ''))
     setAsk(to)
   }
+  const start = (to: 'ordered' | 'own') => {
+    setCi(0)
+    if (pickable(r).length > 1) setPick(to)
+    else askPaid(to)
+  }
+
+  if (pick)
+    return (
+      <CopyPicker
+        r={r}
+        to={pick}
+        onPick={(i) => {
+          setCi(i)
+          askPaid(pick)
+        }}
+        onCancel={() => setPick(null)}
+      />
+    )
 
   if (ask)
     return (
