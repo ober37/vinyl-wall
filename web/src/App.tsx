@@ -25,9 +25,7 @@ const MESSAGE = {
 }
 
 export function App() {
-  const { status, records, site, error, notice, noticeFor, clearError, canEdit } = useRuntime()
-  // a notice about one record shows on its sheet; the wall has its own "Looking up N records…" line
-  const wallNotice = noticeFor ? '' : notice
+  const { status, records, site, error, notice: wallNotice, clearError, canEdit } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [adding, setAdding] = useState(false)

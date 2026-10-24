@@ -8,7 +8,6 @@ import { Form as FormRoot } from '@appica/ui-react/form'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { dupeOf, newDoc } from '../model/create'
-import { lookingUpNotice } from '../model/task'
 import { toForm, type Form } from '../model/edit'
 import type { Kind } from '../model/record'
 import { useRuntime } from '../runtime/runtime'
@@ -25,7 +24,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
   onClose: () => void
   onCreated: (id: string) => void
 }) {
-  const { records, newId, create, fireTask, flash, error, clearError } = useRuntime()
+  const { records, newId, create, fireTask, error, clearError } = useRuntime()
   const [kind, setKind] = useState<Kind | ''>('')
   const [form, setForm] = useState<Form>(() => blank(''))
   const [cover, setCover] = useState<string | null>(null)
@@ -76,10 +75,8 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
     busy.current = false
     setHanging(false)
     if (!ok) return
-    if (doc.needsEnrich) {
-      flash(lookingUpNotice(doc.title), id.current)
-      fireTask()
-    }
+    // the new record's sheet says it's being looked up, from the record itself
+    if (doc.needsEnrich) fireTask()
     onCreated(id.current)
   }
 

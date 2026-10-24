@@ -75,7 +75,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { records, artists, canEdit, error, notice, noticeFor, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
+  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -114,11 +114,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   // edit mode's manual lookup: mark the record and start the task
   const enrich = () => {
     if (!r) return
-    update(r.id, { needsEnrich: true }).then((ok) => {
-      if (!ok) return
-      flash(lookingUpNotice(r.title), r.id)
-      fireTask()
-    })
+    update(r.id, { needsEnrich: true }).then((ok) => ok && fireTask())
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
@@ -167,9 +163,16 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
             </DrawerHeader>
             <DrawerBody>
               <Boundary key={r.id} title="Couldn't show this record" onClose={close}>
-                {(error || (notice && (!noticeFor || noticeFor === r.id))) && (
+                {(error || notice) && (
                   <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
                     <AlertTitle>{error || notice}</AlertTitle>
+                  </Alert>
+                )}
+                {/* waiting on the background task for its cover and details: said by the record itself, so every
+                    waiting record says it, and it goes when the task is done */}
+                {!!r.needsEnrich && (
+                  <Alert variant="info" className="mb-4">
+                    <AlertTitle>{lookingUpNotice(r.title)}</AlertTitle>
                   </Alert>
                 )}
                 {editing && (

@@ -517,8 +517,6 @@ function RuntimeProvider({ claude, children }) {
 	const [hasMcp, setHasMcp] = useState(false);
 	const [error, setError] = useState("");
 	const [notice, setNotice] = useState("");
-	const [noticeFor, setNoticeFor] = useState(null);
-	const noticeSeenLooking = useRef(false);
 	const db = useRef(null);
 	const mcp = useRef(null);
 	const assets = useRef(null);
@@ -623,14 +621,10 @@ function RuntimeProvider({ claude, children }) {
 		settingsWriting.current = next;
 		return next;
 	};
-	const say = (msg) => {
-		setNotice(msg);
-		setNoticeFor(null);
-	};
 	const fireTask = () => {
 		const t = task.current;
 		const { settings: s, records: recs } = live.current;
-		if (!mcp.current) return say("Background updates aren't available in this view. Ask Claude in chat to sync.");
+		if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.");
 		if (runActive(s)) {
 			t.afterRun = true;
 			return;
@@ -644,7 +638,7 @@ function RuntimeProvider({ claude, children }) {
 		t.lastFire = Date.now();
 		if (!s.taskId) {
 			t.lastFire = 0;
-			return say("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
+			return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
 		}
 		saveSettings({ run: { startedMs: Date.now() } });
 		mcp.current.callTool("Claude Code Remote", "fire_trigger", {
@@ -653,7 +647,7 @@ function RuntimeProvider({ claude, children }) {
 		}, { cache: false }).catch((e) => {
 			t.lastFire = 0;
 			saveSettings({ run: { startedMs: 0 } });
-			say(e.code === "not_granted" || e.code === "permission_denied" ? "Background updates need permission to start Claude tasks. Allow it for this page and try again." : "Couldn't start the background update: " + msgOf(e));
+			setNotice(e.code === "not_granted" || e.code === "permission_denied" ? "Background updates need permission to start Claude tasks. Allow it for this page and try again." : "Couldn't start the background update: " + msgOf(e));
 		});
 	};
 	useEffect(() => {
@@ -666,15 +660,6 @@ function RuntimeProvider({ claude, children }) {
 			}
 		}
 	}, [settings]);
-	useEffect(() => {
-		if (!noticeFor) return;
-		const r = records.find((x) => x.id === noticeFor);
-		if (r?.needsEnrich) noticeSeenLooking.current = true;
-		else if (r && noticeSeenLooking.current) {
-			setNotice("");
-			setNoticeFor(null);
-		}
-	}, [records, noticeFor]);
 	useEffect(() => {
 		if (status !== "ready" || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return;
 		if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return;
@@ -790,18 +775,9 @@ function RuntimeProvider({ claude, children }) {
 		hasAssets,
 		error,
 		notice,
-		noticeFor,
-		flash: (msg, recordId) => {
-			noticeSeenLooking.current = false;
-			setNotice(msg);
-			setNoticeFor(recordId ?? null);
-		},
 		clearError: (errorOnly) => {
 			setError("");
-			if (!errorOnly) {
-				setNotice("");
-				setNoticeFor(null);
-			}
+			if (!errorOnly) setNotice("");
 		},
 		update: (id, patch) => queue(id, () => patch),
 		mutate: (id, fn) => queue(id, fn, true),
@@ -835,8 +811,7 @@ function RuntimeProvider({ claude, children }) {
 		hasMcp,
 		hasAssets,
 		error,
-		notice,
-		noticeFor
+		notice
 	]);
 	return /* @__PURE__ */ jsx(Ctx, {
 		value,
@@ -1067,8 +1042,7 @@ function DiscogsSection() {
 	] });
 }
 function SettingsSheet({ open, onClose }) {
-	const { settings, canEdit, hasMcp, fireTask, error, notice: anyNotice, noticeFor, clearError } = useRuntime();
-	const notice = noticeFor ? "" : anyNotice;
+	const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime();
 	const update = useUpdateAvailable();
 	const [copyNote, setCopyNote] = useState("");
 	const ask = useRef(null);
@@ -1446,7 +1420,7 @@ var blank = (kind) => toForm({
 	status: kind || "own"
 });
 function NewRecordSheet({ open, onClose, onCreated }) {
-	const { records, newId, create, fireTask, flash, error, clearError } = useRuntime();
+	const { records, newId, create, fireTask, error, clearError } = useRuntime();
 	const [kind, setKind] = useState("");
 	const [form, setForm] = useState(() => blank(""));
 	const [cover, setCover] = useState(null);
@@ -1494,10 +1468,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		busy.current = false;
 		setHanging(false);
 		if (!ok) return;
-		if (doc.needsEnrich) {
-			flash(lookingUpNotice(doc.title), id.current);
-			fireTask();
-		}
+		if (doc.needsEnrich) fireTask();
 		onCreated(id.current);
 	};
 	return /* @__PURE__ */ jsx(Drawer, {
@@ -2626,7 +2597,7 @@ function useAutosave(r, editing) {
 	};
 }
 function RecordSheet({ id, onClose }) {
-	const { records, artists, canEdit, error, notice, noticeFor, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime();
+	const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime();
 	const r = records.find((x) => x.id === id);
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
@@ -2659,11 +2630,7 @@ function RecordSheet({ id, onClose }) {
 	};
 	const enrich = () => {
 		if (!r) return;
-		update(r.id, { needsEnrich: true }).then((ok) => {
-			if (!ok) return;
-			flash(lookingUpNotice(r.title), r.id);
-			fireTask();
-		});
+		update(r.id, { needsEnrich: true }).then((ok) => ok && fireTask());
 	};
 	const k = r ? kindOf(r) : "own";
 	const by = r ? [
@@ -2724,12 +2691,17 @@ function RecordSheet({ id, onClose }) {
 				title: "Couldn't show this record",
 				onClose: close,
 				children: [
-					(error || notice && (!noticeFor || noticeFor === r.id)) && /* @__PURE__ */ jsx(Alert, {
+					(error || notice) && /* @__PURE__ */ jsx(Alert, {
 						variant: error ? "error" : "info",
 						className: "mb-4",
 						dismissible: true,
 						onOpenChange: (o) => !o && clearError(),
 						children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
+					}),
+					!!r.needsEnrich && /* @__PURE__ */ jsx(Alert, {
+						variant: "info",
+						className: "mb-4",
+						children: /* @__PURE__ */ jsx(AlertTitle, { children: lookingUpNotice(r.title) })
 					}),
 					editing && /* @__PURE__ */ jsxs("div", {
 						className: "mb-6 flex flex-wrap items-center gap-2",
@@ -3116,8 +3088,7 @@ var MESSAGE = {
 	ready: ""
 };
 function App() {
-	const { status, records, site, error, notice, noticeFor, clearError, canEdit } = useRuntime();
-	const wallNotice = noticeFor ? "" : notice;
+	const { status, records, site, error, notice: wallNotice, clearError, canEdit } = useRuntime();
 	const [openId, setOpenId] = useState(null);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [adding, setAdding] = useState(false);

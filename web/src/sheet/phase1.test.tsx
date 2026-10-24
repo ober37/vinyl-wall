@@ -211,27 +211,33 @@ describe('edit mode', () => {
 })
 
 describe('the "Looking up" notice', () => {
-  it("shows on that record's sheet only, and goes when its lookup finishes", async () => {
+  it('shows on every record waiting on its lookup, and goes when the task fills it in', async () => {
     const { fake, user } = setup()
-    await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
-    await user.click(await screen.findByRole('button', { name: 'Edit' }))
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
-    const text = 'Looking up Blue Train… the cover usually appears within a few minutes.'
-    expect(await screen.findByText(text)).toBeTruthy()
-    // another record's sheet doesn't show it, nor does the wall
+    const text = (t: string) => `Looking up ${t}… the cover usually appears within a few minutes.`
+    for (const [open, title] of [[/Open Blue Train/, 'Blue Train'], [/Open Aja/, 'Aja']] as const) {
+      await user.click(await screen.findByRole('button', { name: open }))
+      await user.click(await screen.findByRole('button', { name: 'Edit' }))
+      await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+      expect(await screen.findByText(text(title))).toBeTruthy()
+      await user.keyboard('{Escape}')
+      await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    }
+    // not on the wall, and not on a record that isn't waiting
+    expect(screen.queryByText(/the cover usually appears/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: /Open Pet Sounds/ }))
+    await screen.findByRole('heading', { name: 'Pet Sounds' })
+    expect(screen.queryByText(/the cover usually appears/)).toBeNull()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    expect(screen.queryByText(text)).toBeNull()
-    await user.click(screen.getByRole('button', { name: /Open Aja/ }))
-    await screen.findByRole('heading', { name: 'Aja' })
-    expect(screen.queryByText(text)).toBeNull()
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    // back on its record until the task fills it in
+    // both earlier ones still say it, until the task fills each in
     await user.click(screen.getByRole('button', { name: /Open Blue Train/ }))
-    expect(await screen.findByText(text)).toBeTruthy()
+    expect(await screen.findByText(text('Blue Train'))).toBeTruthy()
     await act(async () => fake.remote('r3', { needsEnrich: false, coverAsset: 'new' }))
-    await waitFor(() => expect(screen.queryByText(text)).toBeNull())
+    await waitFor(() => expect(screen.queryByText(text('Blue Train'))).toBeNull())
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    await user.click(screen.getByRole('button', { name: /Open Aja/ }))
+    expect(await screen.findByText(text('Aja'))).toBeTruthy()
   })
 
   it("doesn't put four dots after a title ending in a period", async () => {
