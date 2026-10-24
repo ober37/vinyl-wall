@@ -331,6 +331,43 @@ function tagOf(r) {
 		tone: p === 1 ? "want" : p === 3 ? "someday" : "paper"
 	};
 }
+// src/model/task.ts
+var aboutPending = (r) => !r.aboutBlocked && (!r.aboutAt || !r.aboutV && !!r.about && r.about.source !== "claude" || Number(r.aboutV || 0) < 3 && !r.about?.summary);
+var RELOOK_ABOUT = {
+	aboutAt: "",
+	aboutV: 0
+};
+var lookingUp = (r) => !r.example && !r.deleted && (!!r.needsEnrich || aboutPending(r));
+function pendingParts(records, s, fresh, now = Date.now()) {
+	const dz = s.discogs || {};
+	const live = records.filter((r) => !r.deleted && !r.example);
+	const w = [];
+	if (dz.hasToken && (!dz.status || dz.status === "pending")) w.push("verify the Discogs connection (Part B)");
+	if (dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
+	const look = live.filter((r) => r.needsEnrich || !fresh && (!r.coverAsset || !r.runtime) || aboutPending(r)).length;
+	if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? "s" : ""}`);
+	const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length;
+	if (now - (s.update?.checkedMs || 0) > 864e5) w.push("check for a newer release (Part E)");
+	if (sync && dz.status === "ok") w.push(`sync ${sync} record${sync > 1 ? "s" : ""} to Discogs (Part C)`);
+	return w;
+}
+function pendingWork(records, s) {
+	const w = pendingParts(records, s, false);
+	return "Started from the wall. Waiting now: " + (w.length ? w.join("; ") + ". Run only these parts, in the usual order." : "nothing specific; run every part and do whatever is pending.");
+}
+var lookingUpNotice = (title) => "Looking up " + String(title || "this record").replace(/\.+$/, "") + "… the cover usually appears within a few minutes.";
+var runActive = (s, now = Date.now()) => now - (s.run?.startedMs || 0) < 36e5;
+var PLAIN = /^\d+\.\d+\.\d+$/;
+function newer(a, b) {
+	const x = String(a || "").replace(/^v/, "");
+	const y = String(b || "").replace(/^v/, "");
+	if (!PLAIN.test(x)) return false;
+	const X = x.split(".").map(Number);
+	const Y = y.split(".").map(Number);
+	for (let i = 0; i < 3; i++) if ((X[i] || 0) !== (Y[i] || 0)) return (X[i] || 0) > (Y[i] || 0);
+	return false;
+}
+var updateAsk = (s) => `Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v${s.update?.latest}/SETUP.md`;
 // src/model/edit.ts
 var SYNCED = /* @__PURE__ */ new Set([
 	"title",
@@ -397,6 +434,10 @@ function patchFor(r, baseline, form) {
 	const keys = Object.keys(patch);
 	if (!keys.length) return patch;
 	if (Array.isArray(r.autoFilled) && keys.some((k) => r.autoFilled.includes(k))) patch.autoFilled = r.autoFilled.filter((k) => !(k in patch));
+	if (("title" in patch || "artist" in patch) && !r.aboutBlocked && (r.aboutAt || r.artistRef || r.about)) Object.assign(patch, RELOOK_ABOUT, {
+		artistRef: "",
+		about: null
+	});
 	return patch;
 }
 var PHOTOS = {
@@ -463,39 +504,6 @@ function siteOf(doc) {
 		hang: HANGS.includes(String(s.hang)) ? String(s.hang) : "barn"
 	};
 }
-// src/model/task.ts
-var aboutPending = (r) => !r.aboutBlocked && (!r.aboutAt || !r.aboutV && !!r.about && r.about.source !== "claude" || Number(r.aboutV || 0) < 3 && !r.about?.summary);
-var lookingUp = (r) => !r.example && !r.deleted && (!!r.needsEnrich || aboutPending(r));
-function pendingParts(records, s, fresh, now = Date.now()) {
-	const dz = s.discogs || {};
-	const live = records.filter((r) => !r.deleted && !r.example);
-	const w = [];
-	if (dz.hasToken && (!dz.status || dz.status === "pending")) w.push("verify the Discogs connection (Part B)");
-	if (dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-	const look = live.filter((r) => r.needsEnrich || !fresh && (!r.coverAsset || !r.runtime) || aboutPending(r)).length;
-	if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? "s" : ""}`);
-	const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length;
-	if (now - (s.update?.checkedMs || 0) > 864e5) w.push("check for a newer release (Part E)");
-	if (sync && dz.status === "ok") w.push(`sync ${sync} record${sync > 1 ? "s" : ""} to Discogs (Part C)`);
-	return w;
-}
-function pendingWork(records, s) {
-	const w = pendingParts(records, s, false);
-	return "Started from the wall. Waiting now: " + (w.length ? w.join("; ") + ". Run only these parts, in the usual order." : "nothing specific; run every part and do whatever is pending.");
-}
-var lookingUpNotice = (title) => "Looking up " + String(title || "this record").replace(/\.+$/, "") + "… the cover usually appears within a few minutes.";
-var runActive = (s, now = Date.now()) => now - (s.run?.startedMs || 0) < 36e5;
-var PLAIN = /^\d+\.\d+\.\d+$/;
-function newer(a, b) {
-	const x = String(a || "").replace(/^v/, "");
-	const y = String(b || "").replace(/^v/, "");
-	if (!PLAIN.test(x)) return false;
-	const X = x.split(".").map(Number);
-	const Y = y.split(".").map(Number);
-	for (let i = 0; i < 3; i++) if ((X[i] || 0) !== (Y[i] || 0)) return (X[i] || 0) > (Y[i] || 0);
-	return false;
-}
-var updateAsk = (s) => `Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v${s.update?.latest}/SETUP.md`;
 // src/runtime/runtime.tsx
 var Ctx = createContext(null);
 function useRuntime() {
@@ -1138,6 +1146,10 @@ var NOT_ARTIST = {
 	artistRef: "",
 	about: null,
 	aboutBlocked: true
+};
+var enrichPatch = (r) => r.aboutBlocked ? { needsEnrich: true } : {
+	needsEnrich: true,
+	...RELOOK_ABOUT
 };
 var hasArtistInfo = (r, artistIds) => !r.aboutBlocked && (!!r.artistRef && artistIds.has(String(r.artistRef)) || !!r.about?.summary);
 // src/model/image.ts
@@ -2630,7 +2642,7 @@ function RecordSheet({ id, onClose }) {
 	};
 	const enrich = () => {
 		if (!r) return;
-		update(r.id, { needsEnrich: true }).then((ok) => ok && fireTask());
+		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask());
 	};
 	const k = r ? kindOf(r) : "own";
 	const by = r ? [

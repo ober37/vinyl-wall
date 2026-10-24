@@ -1,6 +1,7 @@
 // A new record, as createRecord in app/vinyl-wall.html writes it, and the cover and artist fixes edit mode makes.
 import { stored, type Form } from './edit'
 import type { Kind, Rec } from './record'
+import { RELOOK_ABOUT } from './task'
 
 // the doc a new record is set with: what was typed, its status, an empty log, when it was added and priority 2 (every
 // kind gets one); a cover uploaded first goes in with it. Missing a cover, year or label means the task looks it up.
@@ -28,5 +29,7 @@ export const coverPatch = (r: Rec, id: string) => ({
 
 // "Not this artist": drop the artist and album info the lookup matched, and don't look it up again
 export const NOT_ARTIST = { artistRef: '', about: null, aboutBlocked: true }
+// "Find cover & details" looks the album info up again too, unless it's been turned off with Not this artist
+export const enrichPatch = (r: Rec) => (r.aboutBlocked ? { needsEnrich: true } : { needsEnrich: true, ...RELOOK_ABOUT })
 export const hasArtistInfo = (r: Rec, artistIds: Set<string>) =>
   !r.aboutBlocked && ((!!r.artistRef && artistIds.has(String(r.artistRef))) || !!r.about?.summary)

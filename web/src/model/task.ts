@@ -15,6 +15,8 @@ export const aboutPending = (r: Rec) =>
   (!r.aboutAt ||
     (!r.aboutV && !!r.about && r.about.source !== 'claude') ||
     (Number(r.aboutV || 0) < 3 && !r.about?.summary))
+// look the album info up again: an empty aboutAt and aboutV read as never looked up, here and in lookup.py (#60)
+export const RELOOK_ABOUT = { aboutAt: '', aboutV: 0 }
 // waiting for the task: a cover or details (needsEnrich) or album info
 export const lookingUp = (r: Rec) => !r.example && !r.deleted && (!!r.needsEnrich || aboutPending(r))
 

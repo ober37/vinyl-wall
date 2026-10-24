@@ -50,6 +50,8 @@ done = {"title": "x", "aboutAt": "2026-10-01", "aboutV": 2, "about": {"summary":
 check("redo: a summary from an older run stays", not L.needs_f(done))
 check("redo: an older run with no summary goes once more", L.needs_f({**done, "about": {}}))
 check("redo: a redo that found nothing is done", not L.needs_f({**done, "about": {}, "aboutV": 3}))
+check("redo: the page's reset (Find cover & details, a new title) looks it up again",
+      L.needs_f({**done, "about": {}, "aboutV": 0, "aboutAt": ""}))
 snak = lambda v: {"rank": "normal", "mainsnak": {"datavalue": {"value": {"id": v}}}}
 singer = {"claims": {"P31": [snak("Q5")], "P106": [snak("Q488205")]}}
 check("artist: a singer-songwriter with no music ids counts", L.is_artist(singer))

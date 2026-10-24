@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { coverPatch, dupeOf, hasArtistInfo, newDoc, NOT_ARTIST } from './create'
+import { coverPatch, dupeOf, enrichPatch, hasArtistInfo, newDoc, NOT_ARTIST } from './create'
 import { toForm } from './edit'
 import { shrinkImage, type ImageApi } from './image'
 
@@ -36,6 +36,11 @@ describe('covers and artists', () => {
     expect(hasArtistInfo({ id: 'r', artistRef: 'mb-2' }, ids)).toBe(false)
     expect(hasArtistInfo({ id: 'r', artistRef: 'mb-1', aboutBlocked: true }, ids)).toBe(false)
     expect(NOT_ARTIST).toEqual({ artistRef: '', about: null, aboutBlocked: true })
+  })
+  it('Find cover & details looks the album info up again, unless Not this artist turned it off', () => {
+    const r = { id: 'r', aboutAt: '2026-10-01', aboutV: 3 }
+    expect(enrichPatch(r)).toEqual({ needsEnrich: true, aboutAt: '', aboutV: 0 })
+    expect(enrichPatch({ ...r, aboutBlocked: true })).toEqual({ needsEnrich: true })
   })
 })
 

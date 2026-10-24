@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { patchFor, toForm, withSync } from './edit'
 import type { Rec } from './record'
+import { aboutPending } from './task'
 
 const owned: Rec = {
   id: 'r1', title: 'Kind of Blue', artist: 'Miles Davis', status: 'own', year: '1959', runtime: 46, label: 'Columbia',
@@ -23,8 +24,20 @@ describe('patchFor', () => {
   it('writes only changed fields', () => {
     const f = toForm(owned)
     expect(patchFor(owned, f, { ...f, title: 'Kind of Blue ' })).toEqual({})
-    expect(patchFor(owned, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
+    expect(patchFor({ ...owned, about: undefined }, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
     expect(patchFor(owned, f, { ...f, catalog: 'CS 8163' })).toEqual({ catalog: 'CS 8163' })
+  })
+
+  it('a new title or artist looks the album info up again', () => {
+    const r = { ...owned, aboutAt: '2026-10-01', aboutV: 3, artistRef: 'mb-1', about: {} }
+    const f = toForm(r)
+    const reset = { aboutAt: '', aboutV: 0, artistRef: '', about: null }
+    expect(patchFor(r, f, { ...f, title: 'Kind of Blue (Legacy)' })).toEqual({ title: 'Kind of Blue (Legacy)', ...reset })
+    expect(patchFor(r, f, { ...f, artist: 'Miles Davis Sextet' })).toEqual({ artist: 'Miles Davis Sextet', ...reset })
+    expect(aboutPending({ ...r, aboutAt: '', aboutV: 0, about: undefined })).toBe(true)
+    expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
+    // Not this artist stays off
+    expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, title: 'x' })).toEqual({ title: 'x' })
   })
 
   it('flags Discogs sync only for synced fields', () => {
@@ -48,7 +61,8 @@ describe('patchFor', () => {
 
   it('never writes fields the form does not own', () => {
     const f = toForm(owned)
-    const p = patchFor(owned, f, { ...f, title: 'a', artist: 'b', why: 'c', shop: 'd', mediaGrade: 'NM' })
+    // (a new title or artist also resets the album info: tested above)
+    const p = patchFor({ ...owned, aboutBlocked: true }, f, { ...f, title: 'a', artist: 'b', why: 'c', shop: 'd', mediaGrade: 'NM' })
     for (const k of ['notes', 'about', 'moreCopies', 'status', 'discogsId', 'matrix']) expect(p).not.toHaveProperty(k)
   })
 

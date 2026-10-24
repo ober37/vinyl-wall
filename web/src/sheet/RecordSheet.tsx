@@ -12,7 +12,7 @@ import {
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, toForm, type Form } from '../model/edit'
-import { coverPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
+import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { movePatch, wantedCopies } from '../model/status'
 import { lookingUpNotice } from '../model/task'
@@ -114,7 +114,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   // edit mode's manual lookup: mark the record and start the task
   const enrich = () => {
     if (!r) return
-    update(r.id, { needsEnrich: true }).then((ok) => ok && fireTask())
+    update(r.id, enrichPatch(r)).then((ok) => ok && fireTask())
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
