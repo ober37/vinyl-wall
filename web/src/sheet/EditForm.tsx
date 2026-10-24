@@ -9,6 +9,7 @@ import { Textarea } from '@appica/ui-react/textarea'
 import type { Form, TextKey } from '../model/edit'
 import { GRADES, shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
+import { CopiesEdit } from './CopiesEdit'
 import { Segmented } from './Segmented'
 
 type Key = TextKey
@@ -16,6 +17,8 @@ type Props = {
   form: Form
   kind: Kind
   set: (k: Key, v: string) => void
+  // several fields at once (a copy added or removed), saved now when asked
+  change: (p: Partial<Form>, now?: boolean) => void
   title: string
   focusWhy: boolean
   // null when the status can't be changed here (a hunt with more than one copy)
@@ -26,6 +29,8 @@ type Props = {
   // fields the lookup filled in (marked "auto-filled" until typed over), and whether a lookup is under way
   autoFilled?: string[]
   looking?: boolean
+  // a copy to put the cursor in (one added from Research)
+  focusCopy?: number | null
 }
 
 // "YYYY-MM-DD" <-> a local Date at noon, so a timezone never moves the day
@@ -88,10 +93,9 @@ function Grade({ k, label, form, set }: { k: Key; label: string; form: Form; set
   )
 }
 
-export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking }: Props) {
+export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking, focusCopy }: Props) {
   const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
-  const wish = kind !== 'own'
   const [confirm, setConfirm] = useState(false)
   const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
   return (
@@ -136,6 +140,23 @@ export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove,
           }
         />
       </Fieldset>
+
+      {kind === 'wish' && (
+        <Fieldset>
+          <FieldsetLegend>Priority</FieldsetLegend>
+          <Segmented
+            label="Priority"
+            value={form.priority ?? '2'}
+            onChange={(v) => set('priority', v)}
+            options={[
+              ['1', 'Top'],
+              ['2', 'Want'],
+              ['3', 'Someday'],
+            ]}
+          />
+        </Fieldset>
+      )}
+      {!own && <CopiesEdit form={form} kind={kind} change={change} isNew={isNew} auto={autoFilled} focusCopy={focusCopy} />}
 
       {own && (
         <Fieldset>
@@ -182,6 +203,7 @@ export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove,
           </div>
         </Fieldset>
       )}
+      {own && !isNew && <CopiesEdit form={form} kind={kind} change={change} auto={autoFilled} />}
 
       <Fieldset>
         <FieldsetLegend>About the album</FieldsetLegend>
@@ -191,9 +213,6 @@ export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove,
           {own && <Text k="label" label="Label" placeholder="e.g. Columbia" {...p} />}
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>
-        {wish && !isNew && (
-          <p className="text-foreground-muted text-sm">Copies, budget and priority aren't in this prototype yet.</p>
-        )}
       </Fieldset>
 
       {!isNew && (

@@ -11,7 +11,7 @@ import {
 } from '@appica/ui-react/drawer'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
-import { patchFor, toForm, type Form, type TextKey } from '../model/edit'
+import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
 import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
@@ -48,6 +48,16 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, r?.id, kind])
 
+  // a change made elsewhere (a copy added from Research or in chat) shows in the form when nothing typed is waiting
+  useEffect(() => {
+    if (!editing || !r || !baseline.current || latest.current.form !== baseline.current) return
+    const f = toForm(r)
+    // compared as stored, so a pause after a trailing space doesn't trim what's being typed
+    if (JSON.stringify(stored(f)) === JSON.stringify(stored(baseline.current))) return
+    baseline.current = f
+    setForm(f)
+  }, [editing, r])
+
   const flush = () => {
     clearTimeout(timer.current)
     const { r, form } = latest.current
@@ -58,12 +68,19 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
     update(r.id, patch).then((ok) => setSaved(ok ? 'Saved' : "Couldn't save"))
   }
 
-  const set = (k: TextKey, v: string) => {
-    setForm((f) => (f ? { ...f, [k]: v } : f))
-    setSaved('Editing…')
+  // typing saves after a pause; adding or removing a copy saves at once
+  const change = (p: Partial<Form>, now = false) => {
+    const f = latest.current.form
+    if (!f) return
+    const next = { ...f, ...p }
+    latest.current.form = next
+    setForm(next)
     clearTimeout(timer.current)
+    if (now) return flush()
+    setSaved('Editing…')
     timer.current = setTimeout(flush, SAVE_DELAY)
   }
+  const set = (k: TextKey, v: string) => change({ [k]: v })
 
   // drop what hasn't been written yet (the record is about to go)
   const cancel = () => {
@@ -72,7 +89,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
   }
 
   useEffect(() => () => clearTimeout(timer.current), [])
-  return { form, set, saved, setSaved, flush, cancel }
+  return { form, set, change, saved, setSaved, flush, cancel }
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
@@ -81,7 +98,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
   const [msg, setMsg] = useState('')
-  const { form, set, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
+  const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
 
   useEffect(() => {
     setEditing(false)
@@ -200,6 +217,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     form={form}
                     kind={k}
                     set={set}
+                    change={change}
                     title={r.title || 'this record'}
                     focusWhy={focusWhy}
                     onStatus={k === 'wish' && pickable(r).length > 1 ? null : moveTo}

@@ -55,6 +55,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
   }, [open])
 
   const set = (k: TextKey, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const change = (p: Partial<Form>) => setForm((f) => ({ ...f, ...p }))
   // a kind has its own fields; what's typed in the shared ones stays
   const choose = (k: Kind) => {
     setKind(k)
@@ -160,7 +161,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
             <CollapsibleContent className="flex flex-col gap-6 pt-4">
               {kind ? (
                 <>
-                  <EditForm form={form} kind={kind} set={set} title={form.title} focusWhy={false} onStatus={null} onRemove={() => {}} isNew />
+                  <EditForm form={form} kind={kind} set={set} change={change} title={form.title} focusWhy={false} onStatus={null} onRemove={() => {}} isNew />
                   <div className="flex flex-wrap items-center gap-3">
                     <CoverButton
                       hasCover={!!cover}
