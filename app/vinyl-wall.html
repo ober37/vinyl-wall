@@ -426,7 +426,10 @@ function pendingWork(records, s) {
 	const w = pendingParts(records, s, false);
 	return "Started from the wall. Waiting now: " + (w.length ? w.join("; ") + ". Run only these parts, in the usual order." : "nothing specific; run every part and do whatever is pending.");
 }
-var lookingUpNotice = (title) => "Looking up " + String(title || "this record").replace(/\.+$/, "") + "… the cover usually appears within a few minutes.";
+function lookupStatus(r) {
+	if (r.needsEnrich) return r.coverAsset ? "Looking up details…" : "Looking up the cover and details…";
+	return aboutPending(r) ? "Looking up the album…" : "";
+}
 var runActive = (s, now = Date.now()) => now - (s.run?.startedMs || 0) < 36e5;
 var PLAIN = /^\d+\.\d+\.\d+$/;
 function newer(a, b) {
@@ -1435,7 +1438,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 				}), canRemove(i) && /* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					variant: "ghost",
-					className: "-me-3 shrink-0",
+					className: "text-error-emphasis -me-3 ms-auto shrink-0",
 					onClick: () => ask(i),
 					children: "Remove this copy"
 				})]
@@ -1526,7 +1529,7 @@ function Grade({ k, label, form, set }) {
 		}, v || NONE)) })]
 	})] });
 }
-function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking, focusCopy }) {
+function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy }) {
 	const p = {
 		form,
 		set,
@@ -1667,7 +1670,7 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 					/* @__PURE__ */ jsx(Text, {
 						k: "runtime",
 						label: "Runtime (min)",
-						placeholder: looking ? "Looking it up…" : "e.g. 46",
+						placeholder: "e.g. 46",
 						mono: true,
 						numeric: true,
 						...p
@@ -2783,7 +2786,7 @@ var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
 	className: "text-foreground flex list-disc flex-col gap-1 ps-5 text-sm",
 	children: items.map((x, i) => /* @__PURE__ */ jsx("li", { children: x }, i))
 });
-function ResearchTab({ r, onEditCopy }) {
+function ResearchTab({ r, onEditCopy, want, setWant }) {
 	const { canEdit, settings, mutate } = useRuntime();
 	const k = kindOf(r);
 	const wish = k === "wish";
@@ -2791,9 +2794,8 @@ function ResearchTab({ r, onEditCopy }) {
 		e,
 		key: entryKey(e, i)
 	})).sort((a, b) => +!!b.e.pinned - +!!a.e.pinned);
-	const [open, setOpen] = useState(() => items.filter((x) => x.e.pinned).map((x) => x.key));
+	const [open, setOpen] = useState(() => [...items.filter((x) => x.e.pinned).map((x) => x.key), ...want ? [want.key] : []]);
 	const [del, setDel] = useState(null);
-	const [want, setWant] = useState(null);
 	const { copied, copy } = useCopy();
 	const still = stillCopies(r).length > 0;
 	const pin = (key, pinned) => {
@@ -3189,14 +3191,7 @@ function Summary({ r }) {
 	const [open, setOpen] = useState(false);
 	if (r.aboutBlocked) return null;
 	const ab = r.about || {};
-	if (!ab.summary) return aboutPending(r) ? /* @__PURE__ */ jsxs("p", {
-		role: "status",
-		className: "text-foreground-muted flex items-center gap-2 text-xs",
-		children: [/* @__PURE__ */ jsx("span", {
-			"aria-hidden": "true",
-			className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
-		}), "Looking up the album. This can take a minute or two."]
-	}) : r.aboutAt ? /* @__PURE__ */ jsx("p", {
+	if (!ab.summary) return aboutPending(r) ? null : r.aboutAt ? /* @__PURE__ */ jsx("p", {
 		className: "text-foreground-muted text-xs",
 		children: "Wikipedia has nothing on this album."
 	}) : null;
@@ -3244,7 +3239,7 @@ function Summary({ r }) {
 		})]
 	});
 }
-function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }) {
+function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 	const { canEdit } = useRuntime();
 	const k = kindOf(r);
 	const own = k === "own";
@@ -3326,7 +3321,9 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }) {
 						className: "pt-4",
 						children: /* @__PURE__ */ jsx(ResearchTab, {
 							r,
-							onEditCopy
+							onEditCopy,
+							want,
+							setWant
 						})
 					}),
 					notes && /* @__PURE__ */ jsx(TabsContent, {
@@ -3434,12 +3431,14 @@ function RecordSheet({ id, onClose }) {
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
 	const [focusCopy, setFocusCopy] = useState(null);
+	const [want, setWant] = useState(null);
 	const [msg, setMsg] = useState("");
 	const [pick, setPick] = useState(null);
 	const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit);
 	useEffect(() => {
 		setEditing(false);
 		setPick(null);
+		setWant(null);
 		setMsg("");
 		clearError(true);
 	}, [id]);
@@ -3522,6 +3521,14 @@ function RecordSheet({ id, onClose }) {
 									children: saved
 								})
 							]
+						}),
+						lookupStatus(r) && /* @__PURE__ */ jsxs("p", {
+							role: "status",
+							className: "text-foreground-muted mt-1 flex items-center gap-2 text-xs",
+							children: [/* @__PURE__ */ jsx("span", {
+								"aria-hidden": "true",
+								className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
+							}), lookupStatus(r)]
 						})
 					]
 				})]
@@ -3535,11 +3542,6 @@ function RecordSheet({ id, onClose }) {
 						dismissible: true,
 						onOpenChange: (o) => !o && clearError(),
 						children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
-					}),
-					!!r.needsEnrich && /* @__PURE__ */ jsx(Alert, {
-						variant: "info",
-						className: "mb-4",
-						children: /* @__PURE__ */ jsx(AlertTitle, { children: lookingUpNotice(r.title) })
 					}),
 					editing && /* @__PURE__ */ jsxs("div", {
 						className: "mb-6 flex flex-wrap items-center gap-2",
@@ -3556,7 +3558,7 @@ function RecordSheet({ id, onClose }) {
 								variant: "outline",
 								disabled: !!r.needsEnrich,
 								onClick: enrich,
-								children: r.needsEnrich ? "Looking it up…" : "Find cover & details"
+								children: "Find cover & details"
 							}),
 							hasArtistInfo(r, new Set(artists.map((a) => a.id))) && /* @__PURE__ */ jsx(Button, {
 								size: "sm",
@@ -3585,7 +3587,6 @@ function RecordSheet({ id, onClose }) {
 						onStatus: (to) => moveTo(to),
 						onRemove: removeIt,
 						autoFilled: Array.isArray(r.autoFilled) ? r.autoFilled : [],
-						looking: !!r.needsEnrich,
 						focusCopy
 					}) : /* @__PURE__ */ jsx(ViewBody, {
 						r,
@@ -3595,6 +3596,8 @@ function RecordSheet({ id, onClose }) {
 							setFocusWhy(true);
 							setEditing(true);
 						},
+						want,
+						setWant,
 						onEditCopy: (ci) => {
 							setFocusCopy(ci);
 							setEditing(true);
