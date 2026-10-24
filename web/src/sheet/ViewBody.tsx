@@ -9,7 +9,7 @@ import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
-import { hasResearch, ResearchTab } from './ResearchTab'
+import { hasResearch, ResearchTab, type WantMsg } from './ResearchTab'
 import { StatusActions } from './StatusActions'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
@@ -78,19 +78,14 @@ function Tracks({ r }: { r: Rec }) {
 }
 
 // The album summary at the top of the sheet, as production shows it: a short lede with More for the rest (after the first
-// blank line), or one older block clamped to 3 lines; its source beside More. While it's being looked up, or when
-// Wikipedia had nothing, a line says so in its place.
+// blank line), or one older block clamped to 3 lines; its source beside More. When Wikipedia had nothing, a line says so
+// in its place (while it's being looked up, the header's lookup line says so).
 function Summary({ r }: { r: Rec }) {
   const [open, setOpen] = useState(false)
   if (r.aboutBlocked) return null
   const ab = r.about || {}
   if (!ab.summary)
-    return aboutPending(r) ? (
-      <p role="status" className="text-foreground-muted flex items-center gap-2 text-xs">
-        <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-        Looking up the album. This can take a minute or two.
-      </p>
-    ) : r.aboutAt ? (
+    return aboutPending(r) ? null : r.aboutAt ? (
       <p className="text-foreground-muted text-xs">Wikipedia has nothing on this album.</p>
     ) : null
   const txt = String(ab.summary).trim()
@@ -133,13 +128,15 @@ function Summary({ r }: { r: Rec }) {
   )
 }
 
-export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }: {
+export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }: {
   r: Rec
   msg: string
   onMoved: (msg: string) => void
   onAddWhy: () => void
   // + Want's Edit: edit mode, in that copy
   onEditCopy: (ci: number) => void
+  want: WantMsg | null
+  setWant: (w: WantMsg | null) => void
 }) {
   const { canEdit } = useRuntime()
   const k = kindOf(r)
@@ -202,7 +199,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }: {
           )}
           {research && (
             <TabsContent value="research" className="pt-4">
-              <ResearchTab r={r} onEditCopy={onEditCopy} />
+              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} />
             </TabsContent>
           )}
           {notes && (

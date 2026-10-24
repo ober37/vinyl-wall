@@ -252,6 +252,18 @@ describe('the Research tab', () => {
     expect(document.activeElement).toBe(names[1])
   })
 
+  it("keeps + Want's Undo through Edit and back", async () => {
+    const { fake, user } = setup({}, researched)
+    await open(user, 'Revolver')
+    await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
+    await user.click(btn('+ Want'))
+    await screen.findByText(/Added “Japan Odeon”/)
+    await user.click(screen.getAllByRole('button', { name: 'Edit' }).at(-1)!)
+    await user.click(btn('Done'))
+    await user.click(await screen.findByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ moreCopies: [], needsSync: true }))
+  })
+
   it('pins one entry at a time, and removes one after asking', async () => {
     const { fake, user } = setup({}, researched)
     await open(user, 'Revolver')

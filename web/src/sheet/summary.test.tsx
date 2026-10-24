@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { App } from '../App'
@@ -47,7 +47,8 @@ describe('album summary (parity with 0.9.4)', () => {
 
   it('says when the album is being looked up, or Wikipedia had nothing', async () => {
     await openWith(undefined, { aboutAt: undefined })
-    expect(screen.getByText('Looking up the album. This can take a minute or two.')).toBeTruthy()
+    // said once, by the header's lookup line
+    expect(within(screen.getByRole('dialog')).getAllByText(/^Looking up/).map((x) => x.textContent)).toEqual(['Looking up the album…'])
   })
 
   it('says when Wikipedia had nothing', async () => {

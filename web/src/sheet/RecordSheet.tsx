@@ -16,12 +16,13 @@ import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/cre
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
-import { lookingUpNotice } from '../model/task'
+import { lookupStatus } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { CoverButton } from './CoverButton'
 import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
+import type { WantMsg } from './ResearchTab'
 import { ViewBody } from './ViewBody'
 
 const SAVE_DELAY = 700
@@ -101,6 +102,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
   const [focusCopy, setFocusCopy] = useState<number | null>(null)
+  const [want, setWant] = useState<WantMsg | null>(null)
   const [msg, setMsg] = useState('')
   // a hunt with several copies asks which one first; the status stays as it is until one is picked
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
@@ -109,6 +111,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   useEffect(() => {
     setEditing(false)
     setPick(null)
+    setWant(null)
     setMsg('')
     clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -187,6 +190,13 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     </span>
                   )}
                 </div>
+                {/* waiting on the background task: the record's one lookup line, gone when the task fills it in */}
+                {lookupStatus(r) && (
+                  <p role="status" className="text-foreground-muted mt-1 flex items-center gap-2 text-xs">
+                    <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
+                    {lookupStatus(r)}
+                  </p>
+                )}
               </div>
             </DrawerHeader>
             <DrawerBody>
@@ -194,13 +204,6 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                 {(error || notice) && (
                   <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
                     <AlertTitle>{error || notice}</AlertTitle>
-                  </Alert>
-                )}
-                {/* waiting on the background task for its cover and details: said by the record itself, so every
-                    waiting record says it, and it goes when the task is done */}
-                {!!r.needsEnrich && (
-                  <Alert variant="info" className="mb-4">
-                    <AlertTitle>{lookingUpNotice(r.title)}</AlertTitle>
                   </Alert>
                 )}
                 {editing && (
@@ -213,7 +216,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                       }}
                     />
                     <Button size="sm" variant="outline" disabled={!!r.needsEnrich} onClick={enrich}>
-                      {r.needsEnrich ? 'Looking it up…' : 'Find cover & details'}
+                      Find cover & details
                     </Button>
                     {hasArtistInfo(r, new Set(artists.map((a) => a.id))) && (
                       <Button size="sm" variant="outline" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
@@ -238,7 +241,6 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     onStatus={(to) => moveTo(to)}
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
-                    looking={!!r.needsEnrich}
                     focusCopy={focusCopy}
                   />
                 ) : (
@@ -250,6 +252,8 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                       setFocusWhy(true)
                       setEditing(true)
                     }}
+                    want={want}
+                    setWant={setWant}
                     onEditCopy={(ci) => {
                       setFocusCopy(ci)
                       setEditing(true)

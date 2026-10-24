@@ -40,8 +40,8 @@ describe('starting the background task', () => {
       data: { trigger_id: 't1', text: expect.stringContaining('look up covers, details and album info (Part L) for 1 record') },
     })
     expect((fake.store.settings.site.run as { startedMs: number }).startedMs).toBeGreaterThan(0)
-    expect(await screen.findByText(/Looking up Blue Train… the cover usually appears/)).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Looking it up…' })).toHaveProperty('disabled', true)
+    expect(await screen.findByText(/^Looking up (the cover and )?details…$/)).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Find cover & details' })).toHaveProperty('disabled', true)
   })
 
   it('waits for a run under way instead of starting a second', async () => {

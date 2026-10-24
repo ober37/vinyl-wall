@@ -51,7 +51,7 @@ describe.each([
     expect(fires(fake)[0].data!.text).toContain('look up covers, details and album info (Part L) for 1 record')
     expect(await screen.findByRole('heading', { name: 'Rumours' })).toBeTruthy()
     expect(screen.getByText(badge, { selector: '[data-slot=badge]' })).toBeTruthy()
-    expect(screen.getByText('Looking up Rumours… the cover usually appears within a few minutes.')).toBeTruthy()
+    expect(screen.getByText('Looking up the cover and details…')).toBeTruthy()
     // the wall sits behind the open sheet, out of the accessibility tree until it closes
     expect(screen.getByRole('button', { name: /^Open Rumours by Fleetwood Mac.*, looking up details$/, hidden: true })).toBeTruthy()
   })
@@ -132,7 +132,8 @@ describe('the new-record sheet', () => {
     expect(sets(fake)[0].data).toMatchObject({ coverAsset: expect.stringMatching(/^a_/), year: '1977', label: 'Warner Bros.' })
     expect(sets(fake)[0].data).not.toHaveProperty('needsEnrich')
     // no cover lookup asked for (album info still gets looked up on its own, as in production)
-    expect(screen.queryByText(/Looking up Rumours… the cover/)).toBeNull()
+    expect(await screen.findByText('Looking up the album…')).toBeTruthy()
+    expect(screen.queryByText('Looking up the cover and details…')).toBeNull()
   })
 
   it("doesn't carry an abandoned cover into the next record", async () => {
@@ -210,41 +211,29 @@ describe('edit mode', () => {
   })
 })
 
-describe('the "Looking up" notice', () => {
-  it('shows on every record waiting on its lookup, and goes when the task fills it in', async () => {
+describe('the lookup line', () => {
+  it('shows once on every record waiting on its lookup, and goes when the task fills it in', async () => {
     const { fake, user } = setup()
-    const text = (t: string) => `Looking up ${t}… the cover usually appears within a few minutes.`
     for (const [open, title] of [[/Open Blue Train/, 'Blue Train'], [/Open Aja/, 'Aja']] as const) {
       await user.click(await screen.findByRole('button', { name: open }))
+      await screen.findByRole('heading', { name: title })
       await user.click(await screen.findByRole('button', { name: 'Edit' }))
       await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
-      expect(await screen.findByText(text(title))).toBeTruthy()
+      expect(await within(screen.getByRole('dialog')).findAllByText(/^Looking up/)).toHaveLength(1)
+      expect(screen.getByRole('button', { name: 'Find cover & details' })).toHaveProperty('disabled', true)
       await user.keyboard('{Escape}')
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     }
-    // not on the wall, and not on a record that isn't waiting
-    expect(screen.queryByText(/the cover usually appears/)).toBeNull()
+    // not on a record that isn't waiting
     await user.click(screen.getByRole('button', { name: /Open Pet Sounds/ }))
     await screen.findByRole('heading', { name: 'Pet Sounds' })
-    expect(screen.queryByText(/the cover usually appears/)).toBeNull()
+    expect(within(screen.getByRole('dialog')).queryByText(/^Looking up/)).toBeNull()
     await user.keyboard('{Escape}')
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    // both earlier ones still say it, until the task fills each in
+    // the earlier one still says it, until the task fills it in
     await user.click(screen.getByRole('button', { name: /Open Blue Train/ }))
-    expect(await screen.findByText(text('Blue Train'))).toBeTruthy()
-    await act(async () => fake.remote('r3', { needsEnrich: false, coverAsset: 'new' }))
-    await waitFor(() => expect(screen.queryByText(text('Blue Train'))).toBeNull())
-    await user.keyboard('{Escape}')
-    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
-    await user.click(screen.getByRole('button', { name: /Open Aja/ }))
-    expect(await screen.findByText(text('Aja'))).toBeTruthy()
-  })
-
-  it("doesn't put four dots after a title ending in a period", async () => {
-    const { user } = setup()
-    const sheet = await startAdding(user, 'Hits Inc.', 'Someone')
-    await user.click(within(sheet).getByRole('button', { name: 'I own it' }))
-    await user.click(within(sheet).getByRole('button', { name: 'Hang it' }))
-    expect(await screen.findByText('Looking up Hits Inc… the cover usually appears within a few minutes.')).toBeTruthy()
+    expect(await within(await screen.findByRole('dialog')).findByText(/^Looking up/)).toBeTruthy()
+    await act(async () => fake.remote('r3', { needsEnrich: false, coverAsset: 'new', aboutAt: '2026-10-24', aboutV: 3, about: { summary: 'S.' } }))
+    await waitFor(() => expect(within(screen.getByRole('dialog')).queryByText(/^Looking up/)).toBeNull())
   })
 })

@@ -69,22 +69,28 @@ const Bullets = ({ items }: { items: React.ReactNode[] }) => (
   </ul>
 )
 
-// What a hunt's + Want added, with Edit and Undo, until the sheet closes or the next one is added
-type WantMsg = { key: string; undo: Wanted }
+// What a hunt's + Want added, with Edit and Undo, until the sheet closes or the next one is added: held by the sheet, so
+// Edit, another tab or a remote change doesn't lose the Undo
+export type WantMsg = { key: string; undo: Wanted }
 
 // The Research tab, as production's: on owned and ordered records the copies still wanted first; then the research log
 // from Claude chats (pinned first and open) with Copy for Claude to start one; then Search elsewhere, on a hunt or while
 // copies are still wanted. A reader sees what's there without the buttons.
-export function ResearchTab({ r, onEditCopy }: { r: Rec; onEditCopy: (ci: number) => void }) {
+export function ResearchTab({ r, onEditCopy, want, setWant }: {
+  r: Rec
+  onEditCopy: (ci: number) => void
+  want: WantMsg | null
+  setWant: (w: WantMsg | null) => void
+}) {
   const { canEdit, settings, mutate } = useRuntime()
   const k = kindOf(r)
   const wish = k === 'wish'
   const items = researchEntries(r)
     .map((e, i) => ({ e, key: entryKey(e, i) }))
     .sort((a, b) => +!!b.e.pinned - +!!a.e.pinned)
-  const [open, setOpen] = useState<string[]>(() => items.filter((x) => x.e.pinned).map((x) => x.key))
+  // pinned entries open, and the one just added from, so its Undo shows on coming back from edit mode
+  const [open, setOpen] = useState<string[]>(() => [...items.filter((x) => x.e.pinned).map((x) => x.key), ...(want ? [want.key] : [])])
   const [del, setDel] = useState<string | null>(null)
-  const [want, setWant] = useState<WantMsg | null>(null)
   const { copied, copy } = useCopy()
   const still = stillCopies(r).length > 0
 

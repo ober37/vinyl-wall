@@ -28,7 +28,6 @@ type Props = {
   isNew?: boolean
   // fields the lookup filled in (marked "auto-filled" until typed over), and whether a lookup is under way
   autoFilled?: string[]
-  looking?: boolean
   // a copy to put the cursor in (one added from Research)
   focusCopy?: number | null
 }
@@ -93,7 +92,7 @@ function Grade({ k, label, form, set }: { k: Key; label: string; form: Form; set
   )
 }
 
-export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking, focusCopy }: Props) {
+export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy }: Props) {
   const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
   const [confirm, setConfirm] = useState(false)
@@ -209,7 +208,7 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
         <FieldsetLegend>About the album</FieldsetLegend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Text k="year" label="Year" placeholder="e.g. 1959" mono numeric {...p} />
-          <Text k="runtime" label="Runtime (min)" placeholder={looking ? 'Looking it up…' : 'e.g. 46'} mono numeric {...p} />
+          <Text k="runtime" label="Runtime (min)" placeholder="e.g. 46" mono numeric {...p} />
           {own && <Text k="label" label="Label" placeholder="e.g. Columbia" {...p} />}
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>

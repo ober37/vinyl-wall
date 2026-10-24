@@ -42,8 +42,11 @@ export function pendingWork(records: Rec[], s: Settings): string {
   )
 }
 // what a manual lookup says while it runs (a title ending in "." doesn't get four dots)
-export const lookingUpNotice = (title: unknown) =>
-  'Looking up ' + String(title || 'this record').replace(/\.+$/, '') + '… the cover usually appears within a few minutes.'
+// the one line a record's sheet shows while the task looks it up: the cover and details, details again, or the album info
+export function lookupStatus(r: Rec): string {
+  if (r.needsEnrich) return r.coverAsset ? 'Looking up details…' : 'Looking up the cover and details…'
+  return aboutPending(r) ? 'Looking up the album…' : ''
+}
 
 // one run at a time: starting marks settings.run, the task clears it; a mark older than an hour is a run that died
 export const runActive = (s: Settings, now = Date.now()) => now - (s.run?.startedMs || 0) < 60 * 60000

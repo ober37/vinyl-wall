@@ -123,7 +123,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
         <div className="flex items-center justify-between gap-2">
           <h4 className="text-foreground-intense min-w-0 truncate text-sm font-medium">{copyTitle(c, i)}</h4>
           {canRemove(i) && (
-            <Button size="sm" variant="ghost" className="-me-3 shrink-0" onClick={() => ask(i)}>
+            <Button size="sm" variant="ghost" className="text-error-emphasis -me-3 ms-auto shrink-0" onClick={() => ask(i)}>
               Remove this copy
             </Button>
           )}
