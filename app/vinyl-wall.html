@@ -304,10 +304,11 @@ var OSTAT = {
 	shipped: "Shipped",
 	delayed: "Delayed"
 };
+var orderStatusOf = (r) => Object.hasOwn(OSTAT, String(r.orderStatus)) ? String(r.orderStatus) : "ordered";
 function tagOf(r) {
 	const k = kindOf(r);
 	if (k === "ordered") return {
-		text: (OSTAT[String(r.orderStatus || "ordered")] || "Ordered") + (r.eta ? " · " + shortDate(r.eta) : ""),
+		text: OSTAT[orderStatusOf(r)] + (r.eta ? " · " + shortDate(r.eta) : ""),
 		tone: "ship"
 	};
 	if (k !== "wish") return null;
@@ -489,6 +490,20 @@ function toForm(r) {
 		budget: c0.budget,
 		discogsId: c0.discogsId
 	});
+	if (k === "ordered") {
+		Object.assign(f, {
+			paid: s(r.paid),
+			shop: s(r.shop),
+			shopUrl: s(r.shopUrl),
+			orderStatus: orderStatusOf(r),
+			orderDate: s(r.orderDate),
+			eta: s(r.eta),
+			orderNum: s(r.orderNum),
+			carrier: s(r.carrier),
+			tracking: s(r.tracking)
+		});
+		if (r.orderNotes) f.orderNotes = s(r.orderNotes);
+	}
 	if (k === "wish") f.priority = String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2);
 	if (k === "own") Object.assign(f, {
 		label: s(r.label),
@@ -505,7 +520,7 @@ function toForm(r) {
 }
 function stored(f) {
 	const o = {};
-	for (const [k, v] of Object.entries(f)) if (typeof v === "string") o[k] = k === "why" ? v : v.trim();
+	for (const [k, v] of Object.entries(f)) if (typeof v === "string") o[k] = k === "why" || k === "orderNotes" ? v : v.trim();
 	if (f.discogsId !== void 0) o.discogsId = f.discogsId;
 	if (f.priority !== void 0) o.priority = +f.priority || 2;
 	if (f.moreCopies) o.moreCopies = f.moreCopies.map((c) => ({
@@ -1226,7 +1241,7 @@ function newDoc(form, kind, coverId, now = Date.now()) {
 	};
 	delete d.discogsId;
 	if (kind !== "wish") delete d.moreCopies;
-	if (kind === "ordered") d.orderStatus = "ordered";
+	if (kind === "ordered" && !d.orderStatus) d.orderStatus = "ordered";
 	if (coverId) d.coverAsset = coverId;
 	if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true;
 	return d;
@@ -1529,6 +1544,120 @@ function Grade({ k, label, form, set }) {
 		}, v || NONE)) })]
 	})] });
 }
+function Paid({ form, set, placeholder }) {
+	return /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Paid" }), /* @__PURE__ */ jsx(Input, {
+		value: form.paid ?? "",
+		onChange: (e) => set("paid", e.target.value),
+		inputMode: "decimal",
+		placeholder,
+		startSlot: /* @__PURE__ */ jsx("span", {
+			"aria-hidden": "true",
+			children: "$"
+		}),
+		className: "font-mono placeholder:font-sans"
+	})] });
+}
+function ShopUrl({ form, set, placeholder }) {
+	const bad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl);
+	return /* @__PURE__ */ jsxs(Field, {
+		className: "sm:col-span-2",
+		invalid: bad,
+		children: [
+			/* @__PURE__ */ jsx(FieldLabel, { children: "Shop website" }),
+			/* @__PURE__ */ jsx(Input, {
+				value: form.shopUrl ?? "",
+				onChange: (e) => set("shopUrl", e.target.value),
+				type: "url",
+				autoCapitalize: "off",
+				autoComplete: "off",
+				placeholder
+			}),
+			bad && /* @__PURE__ */ jsx(FieldDescription, { children: "Not a web address, so it won't link" })
+		]
+	});
+}
+function DateIn({ k, label, form, set }) {
+	return /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: label }), /* @__PURE__ */ jsx(DateField, {
+		value: toDate$1(form[k]),
+		onValueChange: (d) => set(k, fromDate$1(d))
+	})] });
+}
+var ORDER_STATES = Object.entries(OSTAT);
+function OrderFields(p) {
+	const { form, set } = p;
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "The order" }), /* @__PURE__ */ jsxs("div", {
+		className: "grid gap-4 sm:grid-cols-2",
+		children: [
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Order status" }), /* @__PURE__ */ jsxs(Select, {
+				value: form.orderStatus || "ordered",
+				onValueChange: (v) => set("orderStatus", String(v)),
+				items: ORDER_STATES.map(([value, label]) => ({
+					value,
+					label
+				})),
+				children: [/* @__PURE__ */ jsx(SelectTrigger, { children: /* @__PURE__ */ jsx(SelectValue, {}) }), /* @__PURE__ */ jsx(SelectContent, { children: ORDER_STATES.map(([v, l]) => /* @__PURE__ */ jsx(SelectItem, {
+					value: v,
+					children: l
+				}, v)) })]
+			})] }),
+			/* @__PURE__ */ jsx(DateIn, {
+				k: "eta",
+				label: "Expected",
+				...p
+			}),
+			/* @__PURE__ */ jsx(Text, {
+				k: "shop",
+				label: "From",
+				placeholder: "e.g. the band's webstore, a Discogs seller",
+				wide: true,
+				...p
+			}),
+			/* @__PURE__ */ jsx(ShopUrl, {
+				placeholder: "e.g. https://yourband.bandcamp.com",
+				...p
+			}),
+			/* @__PURE__ */ jsx(Paid, {
+				placeholder: "incl. shipping",
+				...p
+			}),
+			/* @__PURE__ */ jsx(DateIn, {
+				k: "orderDate",
+				label: "Ordered on",
+				...p
+			}),
+			/* @__PURE__ */ jsx(Text, {
+				k: "orderNum",
+				label: "Order #",
+				mono: true,
+				...p
+			}),
+			/* @__PURE__ */ jsx(Text, {
+				k: "carrier",
+				label: "Carrier",
+				placeholder: "USPS, UPS, FedEx, DHL",
+				...p
+			}),
+			/* @__PURE__ */ jsxs(Field, {
+				className: "sm:col-span-2",
+				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Tracking #" }), /* @__PURE__ */ jsx(Input, {
+					value: form.tracking ?? "",
+					onChange: (e) => set("tracking", e.target.value),
+					autoCapitalize: "characters",
+					autoComplete: "off",
+					className: "font-mono"
+				})]
+			}),
+			form.orderNotes !== void 0 && /* @__PURE__ */ jsxs(Field, {
+				className: "sm:col-span-2",
+				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Order notes" }), /* @__PURE__ */ jsx(Textarea, {
+					rows: 2,
+					value: form.orderNotes,
+					onChange: (e) => set("orderNotes", e.target.value)
+				})]
+			})
+		]
+	})] });
+}
 function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy }) {
 	const p = {
 		form,
@@ -1537,7 +1666,6 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 	};
 	const own = kind === "own";
 	const [confirm, setConfirm] = useState(false);
-	const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl);
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-8",
 		children: [
@@ -1589,6 +1717,7 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 				auto: autoFilled,
 				focusCopy
 			}),
+			kind === "ordered" && /* @__PURE__ */ jsx(OrderFields, { ...p }),
 			own && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your copy" }), /* @__PURE__ */ jsxs("div", {
 				className: "grid gap-4 sm:grid-cols-2",
 				children: [
@@ -1601,20 +1730,12 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 							placeholder: "e.g. 2015 Analogue Productions 45rpm reissue"
 						})]
 					}),
-					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Bought on" }), /* @__PURE__ */ jsx(DateField, {
-						value: toDate$1(form.acquired),
-						onValueChange: (d) => set("acquired", fromDate$1(d))
-					})] }),
-					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Paid" }), /* @__PURE__ */ jsx(Input, {
-						value: form.paid ?? "",
-						onChange: (e) => set("paid", e.target.value),
-						inputMode: "decimal",
-						startSlot: /* @__PURE__ */ jsx("span", {
-							"aria-hidden": "true",
-							children: "$"
-						}),
-						className: "font-mono"
-					})] }),
+					/* @__PURE__ */ jsx(DateIn, {
+						k: "acquired",
+						label: "Bought on",
+						...p
+					}),
+					/* @__PURE__ */ jsx(Paid, { ...p }),
 					/* @__PURE__ */ jsx(Text, {
 						k: "shop",
 						label: "Bought from",
@@ -1622,21 +1743,9 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 						wide: true,
 						...p
 					}),
-					/* @__PURE__ */ jsxs(Field, {
-						className: "sm:col-span-2",
-						invalid: shopUrlBad,
-						children: [
-							/* @__PURE__ */ jsx(FieldLabel, { children: "Shop website" }),
-							/* @__PURE__ */ jsx(Input, {
-								value: form.shopUrl ?? "",
-								onChange: (e) => set("shopUrl", e.target.value),
-								type: "url",
-								autoCapitalize: "off",
-								autoComplete: "off",
-								placeholder: "e.g. https://www.roughtrade.com"
-							}),
-							shopUrlBad && /* @__PURE__ */ jsx(FieldDescription, { children: "Not a web address, so it won't link" })
-						]
+					/* @__PURE__ */ jsx(ShopUrl, {
+						placeholder: "e.g. https://www.roughtrade.com",
+						...p
 					}),
 					/* @__PURE__ */ jsx(Grade, {
 						k: "mediaGrade",
@@ -2128,6 +2237,118 @@ function CopyPicker({ r, to, onPick, onCancel }) {
 		]
 	});
 }
+// src/model/stats.ts
+var MIN = /\(~(\d+) min\)/;
+function playStats(r, day = today()) {
+	const mo = day.slice(0, 7);
+	const s = {
+		count: 0,
+		min: 0,
+		month: 0,
+		mmin: 0,
+		last: ""
+	};
+	for (const n of Array.isArray(r.notes) ? r.notes : []) {
+		if (!n || typeof n !== "object" || !isPlay(n)) continue;
+		const d = String(n.d ?? "");
+		const t = +(MIN.exec(String(n.t))?.[1] ?? 0);
+		s.count++;
+		s.min += t;
+		if (d.startsWith(mo)) {
+			s.month++;
+			s.mmin += t;
+		}
+		if (d > s.last) s.last = d;
+	}
+	return s;
+}
+var byPlays = (n, t) => (a, b) => b[n] - a[n] || b[t] - a[t] || b.last.localeCompare(a.last);
+var cache = null;
+function rankedPlays(records, day = today()) {
+	if (cache && cache.recs === records && cache.day === day) return cache.list;
+	const list = records.filter((r) => !r.deleted && kindOf(r) === "own").map((r) => ({
+		r,
+		...playStats(r, day)
+	})).filter((x) => x.count).sort(byPlays("count", "min"));
+	cache = {
+		recs: records,
+		day,
+		list
+	};
+	return list;
+}
+function leader(L, n) {
+	return L[0] && L[0][n] >= 2 && !(L[1] && L[1][n] === L[0][n]) ? L[0].r.id : null;
+}
+function badgesOf(r, records, day = today()) {
+	const P = rankedPlays(records, day);
+	const S = P.find((x) => x.r.id === r.id);
+	if (!S) return [];
+	const out = [];
+	if (leader(P, "count") === r.id) out.push({
+		metal: "gold",
+		icon: "trophy",
+		name: "Most played ever"
+	});
+	if (leader(P.filter((x) => x.month).sort(byPlays("month", "mmin")), "month") === r.id) out.push({
+		metal: "hot",
+		icon: "flame",
+		name: "Top this month"
+	});
+	const h = S.min / 60;
+	const tier = h >= 100 ? ["gold", "100+"] : h >= 50 ? ["silver", "50+"] : h >= 10 ? ["bronze", "10+"] : null;
+	if (tier) out.push({
+		metal: tier[0],
+		icon: "disc",
+		name: tier[1] + " hours"
+	});
+	return out;
+}
+// src/sheet/Badges.tsx
+var ICON = {
+	trophy: /* @__PURE__ */ jsx("path", { d: "M8 4h8v4a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 12v4M8 20h8M10 16h4v4h-4z" }),
+	flame: /* @__PURE__ */ jsx("path", { d: "M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3-1-3 0-5.5 0-8z" }),
+	disc: /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("circle", {
+		cx: "12",
+		cy: "12",
+		r: "8"
+	}), /* @__PURE__ */ jsx("circle", {
+		cx: "12",
+		cy: "12",
+		r: "2.5"
+	})] })
+};
+var METAL = {
+	gold: "[--m1:var(--metal-gold-hi)] [--m2:var(--metal-gold-lo)]",
+	silver: "[--m1:var(--metal-silver-hi)] [--m2:var(--metal-silver-lo)]",
+	bronze: "[--m1:var(--metal-bronze-hi)] [--m2:var(--metal-bronze-lo)]",
+	hot: "[--m1:var(--metal-hot-hi)] [--m2:var(--metal-hot-lo)]"
+};
+function Badges({ r, records }) {
+	const B = badgesOf(r, records);
+	if (!B.length) return null;
+	return /* @__PURE__ */ jsx("ul", {
+		"aria-label": "Badges",
+		className: "mt-1 flex flex-wrap gap-1.5",
+		children: B.map((b) => /* @__PURE__ */ jsxs("li", {
+			className: `${METAL[b.metal]} text-foreground-intense inline-flex h-7 items-center gap-1.5 rounded-full border border-(--m2) bg-[color-mix(in_oklch,var(--m1)_16%,transparent)] py-0.5 ps-0.5 pe-2.5 font-mono text-[0.6875rem] leading-none tracking-wider whitespace-nowrap uppercase`,
+			children: [/* @__PURE__ */ jsx("span", {
+				className: "grid size-5.5 place-items-center rounded-full bg-[radial-gradient(circle_at_35%_30%,var(--m1),var(--m2)_75%)] shadow-[inset_0_0_0_1.5px_color-mix(in_oklch,var(--gleam)_40%,transparent)]",
+				children: /* @__PURE__ */ jsx("svg", {
+					viewBox: "0 0 24 24",
+					fill: "none",
+					stroke: "currentColor",
+					strokeWidth: "2",
+					strokeLinecap: "round",
+					strokeLinejoin: "round",
+					"aria-hidden": "true",
+					className: "text-paper-ink size-3.5",
+					children: ICON[b.icon]
+				})
+			}), b.name]
+		}, b.name))
+	});
+}
 // src/model/plays.ts
 var sideOf = (pos) => (/^([A-Z])/.exec(String(pos || "")) || [])[1] || "";
 var trackSecs = (dur) => {
@@ -2417,6 +2638,29 @@ function JournalEditor({ r, p, j, onDone }) {
 		]
 	});
 }
+function StatsRow({ r }) {
+	const S = playStats(r);
+	if (!S.count) return null;
+	const cells = [
+		["Plays", S.count],
+		["Hours", fmtH(S.min / 60)],
+		["This month", S.month],
+		["Last", S.last ? playDate(S.last) : ""]
+	];
+	return /* @__PURE__ */ jsx("dl", {
+		className: "grid grid-cols-2 gap-x-2 gap-y-4 sm:grid-cols-4",
+		children: cells.map(([k, v]) => /* @__PURE__ */ jsxs("div", {
+			className: "flex min-w-0 flex-col gap-1",
+			children: [/* @__PURE__ */ jsx("dt", {
+				className: "text-foreground-muted font-mono text-[0.6875rem] tracking-wider uppercase",
+				children: k
+			}), /* @__PURE__ */ jsx("dd", {
+				className: "text-foreground-intense text-lg leading-tight font-semibold break-words tabular-nums",
+				children: v
+			})]
+		}, k))
+	});
+}
 function Listening({ r }) {
 	const { canEdit } = useRuntime();
 	const [journal, setJournal] = useState(null);
@@ -2431,77 +2675,81 @@ function Listening({ r }) {
 	};
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-6",
-		children: [canEdit && /* @__PURE__ */ jsx(LogCard, {
-			r,
-			onLogged: openJournal
-		}), !months.length ? /* @__PURE__ */ jsx("p", {
-			className: "text-foreground-muted text-sm",
-			children: "No plays logged yet."
-		}) : /* @__PURE__ */ jsx(Accordion, {
-			variant: "flush",
-			multiple: true,
-			value: open,
-			onValueChange: (v) => setOpen(v),
-			children: months.map((m) => /* @__PURE__ */ jsxs(AccordionItem, {
-				value: m.month,
-				children: [/* @__PURE__ */ jsx(AccordionTrigger, { children: /* @__PURE__ */ jsxs("span", {
-					className: "flex w-full items-center justify-between gap-2",
-					children: [/* @__PURE__ */ jsx("span", { children: m.name }), /* @__PURE__ */ jsxs("span", {
-						className: "text-foreground-muted text-sm font-normal whitespace-nowrap",
-						children: [
-							m.plays.length,
-							" play",
-							m.plays.length > 1 ? "s" : "",
-							" · ",
-							fmtH(m.min / 60),
-							" h"
-						]
-					})]
-				}) }), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsx("ul", {
-					className: "divide-border flex flex-col divide-y",
-					children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
-						className: "py-2 text-sm",
-						children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
-							r,
-							p,
-							j: journal,
-							onDone: () => setJournal(null)
-						}, p.key) : /* @__PURE__ */ jsxs("div", {
-							className: "flex items-start justify-between gap-2",
-							children: [/* @__PURE__ */ jsxs("div", {
-								className: "min-w-0",
-								children: [
-									/* @__PURE__ */ jsx("div", {
-										className: "text-foreground",
-										children: [
-											p.date,
-											p.what,
-											p.setup
-										].filter(Boolean).join(" · ")
+		children: [
+			/* @__PURE__ */ jsx(StatsRow, { r }),
+			canEdit && /* @__PURE__ */ jsx(LogCard, {
+				r,
+				onLogged: openJournal
+			}),
+			!months.length ? /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "No plays logged yet."
+			}) : /* @__PURE__ */ jsx(Accordion, {
+				variant: "flush",
+				multiple: true,
+				value: open,
+				onValueChange: (v) => setOpen(v),
+				children: months.map((m) => /* @__PURE__ */ jsxs(AccordionItem, {
+					value: m.month,
+					children: [/* @__PURE__ */ jsx(AccordionTrigger, { children: /* @__PURE__ */ jsxs("span", {
+						className: "flex w-full items-center justify-between gap-2",
+						children: [/* @__PURE__ */ jsx("span", { children: m.name }), /* @__PURE__ */ jsxs("span", {
+							className: "text-foreground-muted text-sm font-normal whitespace-nowrap",
+							children: [
+								m.plays.length,
+								" play",
+								m.plays.length > 1 ? "s" : "",
+								" · ",
+								fmtH(m.min / 60),
+								" h"
+							]
+						})]
+					}) }), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsx("ul", {
+						className: "divide-border flex flex-col divide-y",
+						children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
+							className: "py-2 text-sm",
+							children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
+								r,
+								p,
+								j: journal,
+								onDone: () => setJournal(null)
+							}, p.key) : /* @__PURE__ */ jsxs("div", {
+								className: "flex items-start justify-between gap-2",
+								children: [/* @__PURE__ */ jsxs("div", {
+									className: "min-w-0",
+									children: [
+										/* @__PURE__ */ jsx("div", {
+											className: "text-foreground",
+											children: [
+												p.date,
+												p.what,
+												p.setup
+											].filter(Boolean).join(" · ")
+										}),
+										p.vibe > 0 && /* @__PURE__ */ jsx("div", {
+											className: "text-foreground-muted",
+											children: VIBES[p.vibe - 1]
+										}),
+										p.thoughts && /* @__PURE__ */ jsx("p", {
+											className: "text-foreground-muted mt-1 break-words whitespace-pre-line",
+											children: /* @__PURE__ */ jsx(Linkify, { text: p.thoughts })
+										})
+									]
+								}), canEdit && /* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "outline",
+									onClick: () => openJournal({
+										ref: p.ref,
+										fresh: false
 									}),
-									p.vibe > 0 && /* @__PURE__ */ jsx("div", {
-										className: "text-foreground-muted",
-										children: VIBES[p.vibe - 1]
-									}),
-									p.thoughts && /* @__PURE__ */ jsx("p", {
-										className: "text-foreground-muted mt-1 break-words whitespace-pre-line",
-										children: /* @__PURE__ */ jsx(Linkify, { text: p.thoughts })
-									})
-								]
-							}), canEdit && /* @__PURE__ */ jsx(Button, {
-								size: "sm",
-								variant: "outline",
-								onClick: () => openJournal({
-									ref: p.ref,
-									fresh: false
-								}),
-								children: p.thoughts || p.vibe ? "Edit" : "+ Thoughts"
-							})]
-						})
-					}, p.key))
-				}) })]
-			}, m.month))
-		})]
+									children: p.thoughts || p.vibe ? "Edit" : "+ Thoughts"
+								})]
+							})
+						}, p.key))
+					}) })]
+				}, m.month))
+			})
+		]
 	});
 }
 // src/sheet/NotesTab.tsx
@@ -2626,6 +2874,99 @@ function NotesTab({ r }) {
 				yes: "Delete",
 				onYes: drop,
 				onClose: () => setConfirm(false)
+			})
+		]
+	});
+}
+// src/model/orders.ts
+function trackUrl(carrier, n) {
+	const num = String(n || "").trim();
+	if (!num) return "";
+	if (/^https?:\/\//i.test(num)) try {
+		const u = new URL(num);
+		if (/^https?:$/.test(u.protocol)) return u.href;
+	} catch {}
+	const q = encodeURIComponent(num);
+	const c = String(carrier || "").toLowerCase();
+	if (c.includes("usps")) return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + q;
+	if (c.includes("ups")) return "https://www.ups.com/track?tracknum=" + q;
+	if (c.includes("fedex")) return "https://www.fedex.com/fedextrack/?trknbr=" + q;
+	if (c.includes("dhl")) return "https://www.dhl.com/us-en/home/tracking.html?tracking-id=" + q;
+	return "https://www.google.com/search?q=" + encodeURIComponent((c ? c + " " : "") + "tracking " + num);
+}
+function discogsLinks(r) {
+	const q = encodeURIComponent(`${r.artist} ${r.title}`);
+	const ord = kindOf(r) === "ordered";
+	const id = r.discogsId ? encodeURIComponent(String(r.discogsId)) : "";
+	const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`;
+	return [
+		id ? [ord ? "The edition you ordered" : "Your pressing", `https://www.discogs.com/release/${id}`] : [ord ? "Find the edition" : "Find your pressing", search],
+		id ? ["What it sells for", `https://www.discogs.com/sell/history/${id}`] : ["Past sales (Popsike)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+		["Other pressings", search]
+	].filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i);
+}
+// src/sheet/OrderCard.tsx
+var link$1 = "text-primary underline-offset-2 hover:underline";
+function Shop({ r }) {
+	const href = shopHref(r.shopUrl);
+	if (!href) return /* @__PURE__ */ jsx(Fragment, { children: r.shop });
+	return /* @__PURE__ */ jsxs("a", {
+		href,
+		target: "_blank",
+		rel: "noopener",
+		className: link$1,
+		children: [r.shop || new URL(href).hostname.replace(/^www\./, ""), " ↗"]
+	});
+}
+function OrderCard({ r }) {
+	const c = wantCopies(r)[0];
+	const first = c.pressing.split("\n")[0].trim();
+	const title = c.name || first || "Your order";
+	const track = trackUrl(r.carrier, r.tracking);
+	const rows = [["Status", /* @__PURE__ */ jsxs(Fragment, { children: [
+		OSTAT[orderStatusOf(r)],
+		r.eta ? ", expected " + playDate(r.eta) : "",
+		track && /* @__PURE__ */ jsxs(Fragment, { children: [" · ", /* @__PURE__ */ jsx("a", {
+			href: track,
+			target: "_blank",
+			rel: "noopener",
+			className: `${link$1} whitespace-nowrap`,
+			children: "Track ↗"
+		})] })
+	] })]];
+	if (c.pressing && first !== title) rows.push(["Pressing", /* @__PURE__ */ jsx("span", {
+		className: "whitespace-pre-line",
+		children: c.pressing
+	})]);
+	if (c.label || c.catalog) rows.push(["Label", /* @__PURE__ */ jsxs(Fragment, { children: [c.label, c.catalog && /* @__PURE__ */ jsxs("span", {
+		className: "text-foreground-muted",
+		children: [c.label ? " · " : "", c.catalog]
+	})] })]);
+	if (r.shop || shopHref(r.shopUrl)) rows.push(["From", /* @__PURE__ */ jsx(Shop, { r })]);
+	if (r.paid) rows.push(["Paid", "$" + r.paid]);
+	else if (c.budget) rows.push(["Budget", "Up to $" + c.budget]);
+	if (r.orderDate) rows.push(["Ordered", playDate(String(r.orderDate))]);
+	if (r.orderNotes) rows.push(["Order notes", /* @__PURE__ */ jsx("span", {
+		className: "whitespace-pre-line",
+		children: String(r.orderNotes)
+	})]);
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-3",
+		children: [
+			/* @__PURE__ */ jsx("h4", {
+				className: "text-foreground-intense text-sm font-medium",
+				children: title
+			}),
+			/* @__PURE__ */ jsx(Facts, { rows }),
+			/* @__PURE__ */ jsx("ul", {
+				className: "mt-1 flex flex-col gap-2 text-sm",
+				children: discogsLinks(r).map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
+					href: u,
+					target: "_blank",
+					rel: "noopener",
+					className: link$1,
+					children: [t, " ↗"]
+				}) }, u))
 			})
 		]
 	});
@@ -3252,6 +3593,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 	const research = hasResearch(r, canEdit);
 	const tabs = [
 		...own ? ["listening"] : [],
+		...k === "ordered" ? ["order"] : [],
 		...research ? ["research"] : [],
 		...notes ? ["notes"] : [],
 		...about ? ["about"] : []
@@ -3294,6 +3636,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 								value: "listening",
 								children: "Listening"
 							}),
+							k === "ordered" && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "order",
+								children: "Order"
+							}),
 							research && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "research",
 								children: "Research"
@@ -3315,6 +3661,11 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 						value: "listening",
 						className: "pt-4",
 						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
+					}),
+					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
+						value: "order",
+						className: "pt-4",
+						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, { r }))
 					}),
 					research && /* @__PURE__ */ jsx(TabsContent, {
 						value: "research",
@@ -3521,6 +3872,10 @@ function RecordSheet({ id, onClose }) {
 									children: saved
 								})
 							]
+						}),
+						k === "own" && !editing && /* @__PURE__ */ jsx(Badges, {
+							r,
+							records
 						}),
 						lookupStatus(r) && /* @__PURE__ */ jsxs("p", {
 							role: "status",
@@ -4056,6 +4411,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       --tw-leading: initial;
       --tw-font-weight: initial;
       --tw-tracking: initial;
+      --tw-ordinal: initial;
+      --tw-slashed-zero: initial;
+      --tw-numeric-figure: initial;
+      --tw-numeric-spacing: initial;
+      --tw-numeric-fraction: initial;
       --tw-shadow: 0 0 #0000;
       --tw-shadow-color: initial;
       --tw-shadow-alpha: 100%;
@@ -5007,6 +5367,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: calc(var(--spacing) * 3);
   }
 
+  .size-3\.5 {
+    width: calc(var(--spacing) * 3.5);
+    height: calc(var(--spacing) * 3.5);
+  }
+
   .size-4 {
     width: calc(var(--spacing) * 4);
     height: calc(var(--spacing) * 4);
@@ -5020,6 +5385,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .size-5 {
     width: calc(var(--spacing) * 5);
     height: calc(var(--spacing) * 5);
+  }
+
+  .size-5\.5 {
+    width: calc(var(--spacing) * 5.5);
+    height: calc(var(--spacing) * 5.5);
   }
 
   .size-8 {
@@ -5359,6 +5729,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     grid-template-columns: auto 1fr auto;
   }
 
+  .grid-cols-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .grid-cols-\[2\.5rem_1fr_auto\] {
     grid-template-columns: 2.5rem 1fr auto;
   }
@@ -5491,6 +5865,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     column-gap: var(--spacing);
   }
 
+  .gap-x-2 {
+    column-gap: calc(var(--spacing) * 2);
+  }
+
   .gap-x-3 {
     column-gap: calc(var(--spacing) * 3);
   }
@@ -5525,6 +5903,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .gap-y-3 {
     row-gap: calc(var(--spacing) * 3);
+  }
+
+  .gap-y-4 {
+    row-gap: calc(var(--spacing) * 4);
   }
 
   :where(.divide-y > :not(:last-child)) {
@@ -5677,6 +6059,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     border-style: dashed;
   }
 
+  .border-\(--m2\) {
+    border-color: var(--m2);
+  }
+
   .border-border {
     border-color: var(--border);
   }
@@ -5736,6 +6122,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   @supports (color: color-mix(in lab, red, red)) {
     .border-white\/15 {
       border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
+    }
+  }
+
+  .bg-\[color-mix\(in_oklch\,var\(--m1\)_16\%\,transparent\)\] {
+    background-color: var(--m1);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-\[color-mix\(in_oklch\,var\(--m1\)_16\%\,transparent\)\] {
+      background-color: color-mix(in oklch,var(--m1) 16%,transparent);
     }
   }
 
@@ -5939,6 +6335,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
+  .bg-\[radial-gradient\(circle_at_35\%_30\%\,var\(--m1\)\,var\(--m2\)_75\%\)\] {
+    background-image: radial-gradient(circle at 35% 30%,var(--m1),var(--m2) 75%);
+  }
+
   .stroke-2 {
     stroke-width: 2px;
   }
@@ -6055,6 +6455,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     padding-block: calc(var(--spacing) * 7);
   }
 
+  .ps-0\.5 {
+    padding-inline-start: calc(var(--spacing) * .5);
+  }
+
   .ps-3\.5 {
     padding-inline-start: calc(var(--spacing) * 3.5);
   }
@@ -6073,6 +6477,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .pe-2 {
     padding-inline-end: calc(var(--spacing) * 2);
+  }
+
+  .pe-2\.5 {
+    padding-inline-end: calc(var(--spacing) * 2.5);
   }
 
   .pe-4\! {
@@ -6439,6 +6847,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     font-style: italic;
   }
 
+  .tabular-nums {
+    --tw-numeric-spacing: tabular-nums;
+    font-variant-numeric: var(--tw-ordinal, ) var(--tw-slashed-zero, ) var(--tw-numeric-figure, ) var(--tw-numeric-spacing, ) var(--tw-numeric-fraction, );
+  }
+
   .underline-offset-2 {
     text-underline-offset: 2px;
   }
@@ -6485,6 +6898,20 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .shadow-\[24px_0_32px_-12px_var\(--shadow-color\)\] {
     --tw-shadow: 24px 0 32px -12px var(--tw-shadow-color, var(--shadow-color));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
+    --tw-shadow: inset 0 0 0 1.5px var(--tw-shadow-color, var(--gleam));
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
+      --tw-shadow: inset 0 0 0 1.5px var(--tw-shadow-color, color-mix(in oklch,var(--gleam) 40%,transparent));
+    }
+  }
+
+  .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
@@ -6776,6 +7203,38 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --indent-transition: calc(1 - clamp(0, calc(var(--drawer-swipe-progress) * 100000), 1));
   }
 
+  .\[--m1\:var\(--metal-bronze-hi\)\] {
+    --m1: var(--metal-bronze-hi);
+  }
+
+  .\[--m1\:var\(--metal-gold-hi\)\] {
+    --m1: var(--metal-gold-hi);
+  }
+
+  .\[--m1\:var\(--metal-hot-hi\)\] {
+    --m1: var(--metal-hot-hi);
+  }
+
+  .\[--m1\:var\(--metal-silver-hi\)\] {
+    --m1: var(--metal-silver-hi);
+  }
+
+  .\[--m2\:var\(--metal-bronze-lo\)\] {
+    --m2: var(--metal-bronze-lo);
+  }
+
+  .\[--m2\:var\(--metal-gold-lo\)\] {
+    --m2: var(--metal-gold-lo);
+  }
+
+  .\[--m2\:var\(--metal-hot-lo\)\] {
+    --m2: var(--metal-hot-lo);
+  }
+
+  .\[--m2\:var\(--metal-silver-lo\)\] {
+    --m2: var(--metal-silver-lo);
+  }
+
   .\[--pattern-color\:var\(--color-border-intense\)\] {
     --pattern-color: var(--color-border-intense);
   }
@@ -7035,6 +7494,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .peer-not-placeholder-shown\:opacity-100:is(:where(.peer):not(:placeholder-shown) ~ *) {
     opacity: 1;
+  }
+
+  .placeholder\:font-sans::placeholder {
+    font-family: var(--font-sans);
   }
 
   .placeholder\:text-foreground-subtle::placeholder {
@@ -8729,6 +9192,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .sm\:grid-cols-4 {
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
     .sm\:flex-row {
       flex-direction: row;
     }
@@ -9542,6 +10009,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --bracket-2: #151515;
   --gleam: #fff;
   --cover-ink: #fff;
+  --metal-gold-hi: #f6dc96;
+  --metal-gold-lo: #b8862f;
+  --metal-silver-hi: #f2f4f5;
+  --metal-silver-lo: #8e979e;
+  --metal-bronze-hi: #ebb680;
+  --metal-bronze-lo: #9a5b2a;
+  --metal-hot-hi: #f5ad88;
+  --metal-hot-lo: #b6452c;
 }
 
 .dark {
@@ -10051,6 +10526,31 @@ body {
 }
 
 @property --tw-tracking {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-ordinal {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-slashed-zero {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-figure {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-spacing {
+  syntax: "*";
+  inherits: false
+}
+
+@property --tw-numeric-fraction {
   syntax: "*";
   inherits: false
 }
