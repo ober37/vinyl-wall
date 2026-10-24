@@ -193,3 +193,103 @@ describe('the hunt in view mode', () => {
     expect(screen.queryByText(/What did you pay/)).toBeNull()
   })
 })
+
+const researched = {
+  r8: {
+    title: 'Revolver', artist: 'The Beatles', status: 'wish', copyName: 'UK mono', pressing: 'UK mono first', budget: '300', notes: [], added: 8,
+    researchLog: [
+      {
+        id: 'a1', at: '2026-10-01', question: 'Which pressing?', headline: 'Mono is the one to get.', summary: 'Mono first pressings sound best.',
+        pressings: ['UK mono first: the original', 'Japan Odeon: quiet vinyl'], check: ['Matrix XEX 605-1'], price: 'About $300.',
+        sources: [{ title: 'Discogs', url: 'https://www.discogs.com/x' }, { title: 'Bad', url: 'javascript:alert(1)' }],
+      },
+      { id: 'b2', at: '2026-09-01', summary: 'Older look. Second sentence.', pinned: true },
+    ],
+  },
+  r9: { title: 'Help!', artist: 'The Beatles', status: 'own', notes: [], added: 9 },
+}
+
+describe('the Research tab', () => {
+  it('opens first on a hunt, pinned entry first and open, with sources that link', async () => {
+    const { user } = setup({}, researched)
+    await open(user, 'Revolver')
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Research', 'Notes'])
+    const rows = screen.getAllByRole('button', { name: /Mono is the one|Older look/ })
+    expect(rows.map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
+    expect(rows[0].textContent).toMatch(/Pinned/)
+    await user.click(rows[1])
+    expect(screen.getByText('Which pressing?')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Discogs ↗' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Bad ↗' })).toBeNull()
+    expect(screen.getByRole('link', { name: 'eBay ↗' }).getAttribute('href')).toContain('The%20Beatles%20Revolver%20vinyl%20LP')
+  })
+
+  it('+ Want adds a pressing as a copy, says so with Undo, and marks one already wanted', async () => {
+    const { fake, user } = setup({}, researched)
+    await open(user, 'Revolver')
+    await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
+    expect(screen.getByText('✓ Added')).toBeTruthy()
+    await user.click(btn('+ Want'))
+    await waitFor(() =>
+      expect(updates(fake, 'r8').at(-1)).toEqual({
+        moreCopies: [{ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '' }], needsSync: true,
+      }),
+    )
+    expect(screen.getByText(/Added “Japan Odeon”/)).toBeTruthy()
+    await user.click(btn('Undo'))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ moreCopies: [], needsSync: true }))
+  })
+
+  it("+ Want's Edit opens edit mode in that copy", async () => {
+    const { user } = setup({}, researched)
+    await open(user, 'Revolver')
+    await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
+    await user.click(btn('+ Want'))
+    // the header's Edit, then the one beside what was added
+    await screen.findByText(/Added “Japan Odeon”/)
+    await user.click(screen.getAllByRole('button', { name: 'Edit' }).at(-1)!)
+    const names = within(screen.getByRole('group', { name: 'The copies you want' })).getAllByRole('textbox', { name: 'Name' })
+    expect(document.activeElement).toBe(names[1])
+  })
+
+  it('pins one entry at a time, and removes one after asking', async () => {
+    const { fake, user } = setup({}, researched)
+    await open(user, 'Revolver')
+    await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
+    await user.click(btn('Pin'))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)?.research).toBeNull())
+    const log = updates(fake, 'r8').at(-1)!.researchLog as { id: string; pinned?: boolean }[]
+    expect(log.map((e) => [e.id, !!e.pinned])).toEqual([['a1', true], ['b2', false]])
+    await user.click(screen.getAllByRole('button', { name: 'Remove this research' })[0])
+    await user.click(await screen.findByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect((updates(fake, 'r8').at(-1)!.researchLog as { id: string }[]).map((e) => e.id)).toEqual(['b2']))
+  })
+
+  it('Copy for Claude hands over a prompt naming the record', async () => {
+    const { user } = setup({}, researched)
+    await open(user, 'Revolver')
+    await user.click(btn('Copy for Claude'))
+    expect(await navigator.clipboard.readText()).toContain('Record: "Revolver" by The Beatles (record r8)')
+    expect(screen.getByText('Copied. Paste it into Claude and add your question.')).toBeTruthy()
+  })
+
+  it('shows a reader the research and links, without the buttons', async () => {
+    const { user } = setup({ canWrite: false }, researched)
+    await open(user, 'Revolver')
+    await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
+    for (const name of ['Copy for Claude', '+ Want', 'Pin', 'Unpin', 'Remove this research', 'Follow up in chat'])
+      expect(screen.queryByRole('button', { name })).toBeNull()
+    expect(screen.getByRole('link', { name: 'Discogs marketplace ↗' })).toBeTruthy()
+  })
+
+  it('keeps shopping links off an owned record unless it still wants a copy', async () => {
+    const { user } = setup({}, researched)
+    await open(user, 'Help!')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
+    expect(btn('Copy for Claude')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'eBay ↗' })).toBeNull()
+    await user.keyboard('{Escape}')
+    await open(user, 'Aja')
+    expect(screen.queryByRole('tab', { name: 'Research' })).toBeNull()
+  })
+})

@@ -9,6 +9,7 @@ import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
+import { hasResearch, ResearchTab } from './ResearchTab'
 import { StatusActions } from './StatusActions'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
@@ -132,11 +133,13 @@ function Summary({ r }: { r: Rec }) {
   )
 }
 
-export function ViewBody({ r, msg, onMoved, onAddWhy }: {
+export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }: {
   r: Rec
   msg: string
   onMoved: (msg: string) => void
   onAddWhy: () => void
+  // + Want's Edit: edit mode, in that copy
+  onEditCopy: (ci: number) => void
 }) {
   const { canEdit } = useRuntime()
   const k = kindOf(r)
@@ -147,7 +150,8 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
   const about = info.length > 0 || copy.length > 0 || hasTracks
   const notesN = noteCount(r)
   const notes = canEdit || notesN > 0
-  const tabs = [...(own ? ['listening'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
+  const research = hasResearch(r, canEdit)
+  const tabs = [...(own ? ['listening'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
   const titled = (name: string, node: React.ReactNode) =>
     tabs.length === 1 ? (
@@ -182,6 +186,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
           {tabs.length > 1 && (
             <TabsList variant="line" size="sm">
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
+              {research && <TabsTrigger value="research">Research</TabsTrigger>}
               {notes && (
                 <TabsTrigger value="notes">
                   Notes{notesN > 0 && <span className="text-foreground-muted ms-1">{notesN}</span>}
@@ -193,6 +198,11 @@ export function ViewBody({ r, msg, onMoved, onAddWhy }: {
           {own && (
             <TabsContent value="listening" className="pt-4">
               {titled('Listening', <Listening r={r} />)}
+            </TabsContent>
+          )}
+          {research && (
+            <TabsContent value="research" className="pt-4">
+              <ResearchTab r={r} onEditCopy={onEditCopy} />
             </TabsContent>
           )}
           {notes && (

@@ -154,6 +154,7 @@ describe('notes', () => {
     const { fake, user } = setup()
     await open(user, 'Pet Sounds')
     fake.remote('r6', { notes: [{ d: '2026-01-01', t: 'From my phone' }] }, true)
+    await user.click(screen.getByRole('tab', { name: /Notes/ }))
     await user.type(screen.getByRole('textbox', { name: 'Note' }), 'Checked Amoeba')
     await user.click(btn('Add note'))
     await waitFor(() => expect(notes(fake, 'r6').map((n) => n.t)).toEqual(['From my phone', 'Checked Amoeba']))

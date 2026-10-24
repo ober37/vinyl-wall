@@ -100,6 +100,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
+  const [focusCopy, setFocusCopy] = useState<number | null>(null)
   const [msg, setMsg] = useState('')
   // a hunt with several copies asks which one first; the status stays as it is until one is picked
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
@@ -173,6 +174,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                       variant={editing ? 'primary' : 'outline'}
                       onClick={() => {
                         if (editing) flush()
+                        setFocusCopy(null)
                         setEditing(!editing)
                       }}
                     >
@@ -237,6 +239,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
                     looking={!!r.needsEnrich}
+                    focusCopy={focusCopy}
                   />
                 ) : (
                   <ViewBody
@@ -245,6 +248,10 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     onMoved={setMsg}
                     onAddWhy={() => {
                       setFocusWhy(true)
+                      setEditing(true)
+                    }}
+                    onEditCopy={(ci) => {
+                      setFocusCopy(ci)
                       setEditing(true)
                     }}
                   />
