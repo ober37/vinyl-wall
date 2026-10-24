@@ -483,6 +483,7 @@ function pendingWork(records, s) {
 	const w = pendingParts(records, s, false);
 	return "Started from the wall. Waiting now: " + (w.length ? w.join("; ") + ". Run only these parts, in the usual order." : "nothing specific; run every part and do whatever is pending.");
 }
+var lookingUpNotice = (title) => "Looking up " + String(title || "this record").replace(/\.+$/, "") + "… the cover usually appears within a few minutes.";
 var runActive = (s, now = Date.now()) => now - (s.run?.startedMs || 0) < 36e5;
 var PLAIN = /^\d+\.\d+\.\d+$/;
 function newer(a, b) {
@@ -516,6 +517,8 @@ function RuntimeProvider({ claude, children }) {
 	const [hasMcp, setHasMcp] = useState(false);
 	const [error, setError] = useState("");
 	const [notice, setNotice] = useState("");
+	const [noticeFor, setNoticeFor] = useState(null);
+	const noticeSeenLooking = useRef(false);
 	const db = useRef(null);
 	const mcp = useRef(null);
 	const assets = useRef(null);
@@ -620,10 +623,14 @@ function RuntimeProvider({ claude, children }) {
 		settingsWriting.current = next;
 		return next;
 	};
+	const say = (msg) => {
+		setNotice(msg);
+		setNoticeFor(null);
+	};
 	const fireTask = () => {
 		const t = task.current;
 		const { settings: s, records: recs } = live.current;
-		if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.");
+		if (!mcp.current) return say("Background updates aren't available in this view. Ask Claude in chat to sync.");
 		if (runActive(s)) {
 			t.afterRun = true;
 			return;
@@ -637,7 +644,7 @@ function RuntimeProvider({ claude, children }) {
 		t.lastFire = Date.now();
 		if (!s.taskId) {
 			t.lastFire = 0;
-			return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
+			return say("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
 		}
 		saveSettings({ run: { startedMs: Date.now() } });
 		mcp.current.callTool("Claude Code Remote", "fire_trigger", {
@@ -646,7 +653,7 @@ function RuntimeProvider({ claude, children }) {
 		}, { cache: false }).catch((e) => {
 			t.lastFire = 0;
 			saveSettings({ run: { startedMs: 0 } });
-			setNotice(e.code === "not_granted" || e.code === "permission_denied" ? "Background updates need permission to start Claude tasks. Allow it for this page and try again." : "Couldn't start the background update: " + msgOf(e));
+			say(e.code === "not_granted" || e.code === "permission_denied" ? "Background updates need permission to start Claude tasks. Allow it for this page and try again." : "Couldn't start the background update: " + msgOf(e));
 		});
 	};
 	useEffect(() => {
@@ -659,6 +666,15 @@ function RuntimeProvider({ claude, children }) {
 			}
 		}
 	}, [settings]);
+	useEffect(() => {
+		if (!noticeFor) return;
+		const r = records.find((x) => x.id === noticeFor);
+		if (r?.needsEnrich) noticeSeenLooking.current = true;
+		else if (r && noticeSeenLooking.current) {
+			setNotice("");
+			setNoticeFor(null);
+		}
+	}, [records, noticeFor]);
 	useEffect(() => {
 		if (status !== "ready" || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return;
 		if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return;
@@ -774,10 +790,18 @@ function RuntimeProvider({ claude, children }) {
 		hasAssets,
 		error,
 		notice,
-		flash: setNotice,
+		noticeFor,
+		flash: (msg, recordId) => {
+			noticeSeenLooking.current = false;
+			setNotice(msg);
+			setNoticeFor(recordId ?? null);
+		},
 		clearError: (errorOnly) => {
 			setError("");
-			if (!errorOnly) setNotice("");
+			if (!errorOnly) {
+				setNotice("");
+				setNoticeFor(null);
+			}
 		},
 		update: (id, patch) => queue(id, () => patch),
 		mutate: (id, fn) => queue(id, fn, true),
@@ -811,7 +835,8 @@ function RuntimeProvider({ claude, children }) {
 		hasMcp,
 		hasAssets,
 		error,
-		notice
+		notice,
+		noticeFor
 	]);
 	return /* @__PURE__ */ jsx(Ctx, {
 		value,
@@ -1042,7 +1067,8 @@ function DiscogsSection() {
 	] });
 }
 function SettingsSheet({ open, onClose }) {
-	const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime();
+	const { settings, canEdit, hasMcp, fireTask, error, notice: anyNotice, noticeFor, clearError } = useRuntime();
+	const notice = noticeFor ? "" : anyNotice;
 	const update = useUpdateAvailable();
 	const [copyNote, setCopyNote] = useState("");
 	const ask = useRef(null);
@@ -1429,6 +1455,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 	const [uploading, setUploading] = useState(false);
 	const [hanging, setHanging] = useState(false);
 	const busy = useRef(false);
+	const album = useRef(null);
 	const id = useRef(null);
 	useEffect(() => {
 		if (!open) return;
@@ -1468,7 +1495,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		setHanging(false);
 		if (!ok) return;
 		if (doc.needsEnrich) {
-			flash("Looking up " + doc.title + "… the cover usually appears within a few minutes.");
+			flash(lookingUpNotice(doc.title), id.current);
 			fireTask();
 		}
 		onCreated(id.current);
@@ -1477,6 +1504,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		side: "right",
 		open,
 		onOpenChange: (o) => !o && onClose(),
+		onOpenChangeComplete: (o) => o && album.current?.focus(),
 		children: /* @__PURE__ */ jsxs(DrawerContent, {
 			className: "w-full sm:max-w-xl",
 			children: [/* @__PURE__ */ jsx(DrawerHeader, { children: /* @__PURE__ */ jsx(DrawerTitle, { children: "Add a record" }) }), /* @__PURE__ */ jsxs(DrawerBody, {
@@ -1502,10 +1530,10 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 								tabIndex: -1
 							}),
 							/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Album" }), /* @__PURE__ */ jsx(Input, {
+								ref: album,
 								value: form.title,
 								onChange: (e) => set("title", e.target.value),
-								placeholder: "e.g. Kind of Blue",
-								autoFocus: true
+								placeholder: "e.g. Kind of Blue"
 							})] }),
 							/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Artist" }), /* @__PURE__ */ jsx(Input, {
 								value: form.artist,
@@ -2598,7 +2626,7 @@ function useAutosave(r, editing) {
 	};
 }
 function RecordSheet({ id, onClose }) {
-	const { records, artists, canEdit, error, notice, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime();
+	const { records, artists, canEdit, error, notice, noticeFor, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime();
 	const r = records.find((x) => x.id === id);
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
@@ -2633,7 +2661,7 @@ function RecordSheet({ id, onClose }) {
 		if (!r) return;
 		update(r.id, { needsEnrich: true }).then((ok) => {
 			if (!ok) return;
-			flash("Looking up " + r.title + "… the cover usually appears within a few minutes.");
+			flash(lookingUpNotice(r.title), r.id);
 			fireTask();
 		});
 	};
@@ -2696,7 +2724,7 @@ function RecordSheet({ id, onClose }) {
 				title: "Couldn't show this record",
 				onClose: close,
 				children: [
-					(error || notice) && /* @__PURE__ */ jsx(Alert, {
+					(error || notice && (!noticeFor || noticeFor === r.id)) && /* @__PURE__ */ jsx(Alert, {
 						variant: error ? "error" : "info",
 						className: "mb-4",
 						dismissible: true,
@@ -3088,7 +3116,8 @@ var MESSAGE = {
 	ready: ""
 };
 function App() {
-	const { status, records, site, error, notice, clearError, canEdit } = useRuntime();
+	const { status, records, site, error, notice, noticeFor, clearError, canEdit } = useRuntime();
+	const wallNotice = noticeFor ? "" : notice;
 	const [openId, setOpenId] = useState(null);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [adding, setAdding] = useState(false);
@@ -3103,12 +3132,12 @@ function App() {
 				className: "on-photo text-ink-2 mb-4 text-sm",
 				children: MESSAGE[status]
 			}),
-			(error || notice) && !openId && !settingsOpen && !adding && /* @__PURE__ */ jsx(Alert, {
+			(error || wallNotice) && !openId && !settingsOpen && !adding && /* @__PURE__ */ jsx(Alert, {
 				variant: error ? "error" : "info",
 				className: "mb-4",
 				dismissible: true,
 				onOpenChange: (o) => !o && clearError(),
-				children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
+				children: /* @__PURE__ */ jsx(AlertTitle, { children: error || wallNotice })
 			}),
 			status === "ready" && /* @__PURE__ */ jsx(Boundary, {
 				title: "Couldn't show the wall",

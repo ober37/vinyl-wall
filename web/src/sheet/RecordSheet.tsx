@@ -15,6 +15,7 @@ import { patchFor, toForm, type Form } from '../model/edit'
 import { coverPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { movePatch, wantedCopies } from '../model/status'
+import { lookingUpNotice } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { CoverButton } from './CoverButton'
@@ -74,7 +75,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { records, artists, canEdit, error, notice, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
+  const { records, artists, canEdit, error, notice, noticeFor, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -115,7 +116,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
     if (!r) return
     update(r.id, { needsEnrich: true }).then((ok) => {
       if (!ok) return
-      flash('Looking up ' + r.title + '… the cover usually appears within a few minutes.')
+      flash(lookingUpNotice(r.title), r.id)
       fireTask()
     })
   }
@@ -166,7 +167,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
             </DrawerHeader>
             <DrawerBody>
               <Boundary key={r.id} title="Couldn't show this record" onClose={close}>
-                {(error || notice) && (
+                {(error || (notice && (!noticeFor || noticeFor === r.id))) && (
                   <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
                     <AlertTitle>{error || notice}</AlertTitle>
                   </Alert>

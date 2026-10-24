@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
@@ -207,5 +207,38 @@ describe('edit mode', () => {
     // the sheet's own Edit comes first (play rows have Edit buttons too)
     await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
     expect(screen.getAllByText('auto-filled')).toHaveLength(2)
+  })
+})
+
+describe('the "Looking up" notice', () => {
+  it("shows on that record's sheet only, and goes when its lookup finishes", async () => {
+    const { fake, user } = setup()
+    await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    const text = 'Looking up Blue Train… the cover usually appears within a few minutes.'
+    expect(await screen.findByText(text)).toBeTruthy()
+    // another record's sheet doesn't show it, nor does the wall
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    expect(screen.queryByText(text)).toBeNull()
+    await user.click(screen.getByRole('button', { name: /Open Aja/ }))
+    await screen.findByRole('heading', { name: 'Aja' })
+    expect(screen.queryByText(text)).toBeNull()
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
+    // back on its record until the task fills it in
+    await user.click(screen.getByRole('button', { name: /Open Blue Train/ }))
+    expect(await screen.findByText(text)).toBeTruthy()
+    await act(async () => fake.remote('r3', { needsEnrich: false, coverAsset: 'new' }))
+    await waitFor(() => expect(screen.queryByText(text)).toBeNull())
+  })
+
+  it("doesn't put four dots after a title ending in a period", async () => {
+    const { user } = setup()
+    const sheet = await startAdding(user, 'Hits Inc.', 'Someone')
+    await user.click(within(sheet).getByRole('button', { name: 'I own it' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Hang it' }))
+    expect(await screen.findByText('Looking up Hits Inc… the cover usually appears within a few minutes.')).toBeTruthy()
   })
 })

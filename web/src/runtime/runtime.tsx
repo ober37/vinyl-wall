@@ -49,10 +49,12 @@ type Runtime = {
   fireTask: () => void
   // a sheet closing starts the task now if its edits are waiting to sync, instead of 20 seconds later
   flushSync: () => void
-  // the last thing that went wrong, or a short notice (production's flash)
+  // the last thing that went wrong, or a short notice (production's flash). A notice about one record (its lookup) has
+  // that record's id and shows only on its sheet; it clears once that lookup has finished.
   error: string
   notice: string
-  flash: (msg: string) => void
+  noticeFor: string | null
+  flash: (msg: string, recordId?: string) => void
   // clears the error and the notice; errorOnly keeps a notice (opening another record keeps "Looking up …")
   clearError: (errorOnly?: boolean) => void
 }
@@ -80,6 +82,9 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   const [hasMcp, setHasMcp] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
+  const [noticeFor, setNoticeFor] = useState<string | null>(null)
+  // the record the notice is about has been seen waiting on its lookup (so its finishing can clear the notice)
+  const noticeSeenLooking = useRef(false)
   const db = useRef<Db | null>(null)
   const mcp = useRef<Mcp | null>(null)
   const assets = useRef<Assets | null>(null)
@@ -170,12 +175,18 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     return next
   }
 
+  // a notice about the page, not one record
+  const say = (msg: string) => {
+    setNotice(msg)
+    setNoticeFor(null)
+  }
+
   // ported from production's fireTask: one run at a time (settings.run marks it; the task clears it), a start asked for
   // meanwhile waits for that run to end, and starts are at least a minute apart
   const fireTask = () => {
     const t = task.current
     const { settings: s, records: recs } = live.current
-    if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.")
+    if (!mcp.current) return say("Background updates aren't available in this view. Ask Claude in chat to sync.")
     if (runActive(s)) {
       t.afterRun = true
       return
@@ -190,7 +201,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // each install stores the id of its own background task in settings (written during setup)
     if (!s.taskId) {
       t.lastFire = 0
-      return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
+      return say("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
     }
     saveSettings({ run: { startedMs: Date.now() } })
     mcp.current
@@ -198,7 +209,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       .catch((e: { code?: string; message?: string }) => {
         t.lastFire = 0
         saveSettings({ run: { startedMs: 0 } })
-        setNotice(
+        say(
           e.code === 'not_granted' || e.code === 'permission_denied'
             ? 'Background updates need permission to start Claude tasks. Allow it for this page and try again.'
             : "Couldn't start the background update: " + msgOf(e),
@@ -218,6 +229,17 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings])
+
+  // a record's "Looking up …" notice goes once its lookup has started (needsEnrich seen) and finished
+  useEffect(() => {
+    if (!noticeFor) return
+    const r = records.find((x) => x.id === noticeFor)
+    if (r?.needsEnrich) noticeSeenLooking.current = true
+    else if (r && noticeSeenLooking.current) {
+      setNotice('')
+      setNoticeFor(null)
+    }
+  }, [records, noticeFor])
 
   // records waiting for album info start the task on their own, at most every 30 minutes across reloads
   useEffect(() => {
@@ -342,10 +364,18 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       hasAssets,
       error,
       notice,
-      flash: setNotice,
+      noticeFor,
+      flash: (msg, recordId) => {
+        noticeSeenLooking.current = false
+        setNotice(msg)
+        setNoticeFor(recordId ?? null)
+      },
       clearError: (errorOnly) => {
         setError('')
-        if (!errorOnly) setNotice('')
+        if (!errorOnly) {
+          setNotice('')
+          setNoticeFor(null)
+        }
       },
       update: (id, patch) => queue(id, () => patch),
       mutate: (id, fn) => queue(id, fn, true),
@@ -367,7 +397,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       flushSync,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, error, notice],
+    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, error, notice, noticeFor],
   )
 
   return <Ctx value={value}>{children}</Ctx>

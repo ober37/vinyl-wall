@@ -39,6 +39,10 @@ export function pendingWork(records: Rec[], s: Settings): string {
     (w.length ? w.join('; ') + '. Run only these parts, in the usual order.' : 'nothing specific; run every part and do whatever is pending.')
   )
 }
+// what a manual lookup says while it runs (a title ending in "." doesn't get four dots)
+export const lookingUpNotice = (title: unknown) =>
+  'Looking up ' + String(title || 'this record').replace(/\.+$/, '') + '… the cover usually appears within a few minutes.'
+
 // one run at a time: starting marks settings.run, the task clears it; a mark older than an hour is a run that died
 export const runActive = (s: Settings, now = Date.now()) => now - (s.run?.startedMs || 0) < 60 * 60000
 

@@ -169,7 +169,8 @@ function DiscogsSection() {
 }
 
 export function SettingsSheet({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime()
+  const { settings, canEdit, hasMcp, fireTask, error, notice: anyNotice, noticeFor, clearError } = useRuntime()
+  const notice = noticeFor ? '' : anyNotice
   const update = useUpdateAvailable()
   const [copyNote, setCopyNote] = useState('')
   const ask = useRef<HTMLSpanElement>(null)

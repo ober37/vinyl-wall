@@ -8,6 +8,7 @@ import { Form as FormRoot } from '@appica/ui-react/form'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { dupeOf, newDoc } from '../model/create'
+import { lookingUpNotice } from '../model/task'
 import { toForm, type Form } from '../model/edit'
 import type { Kind } from '../model/record'
 import { useRuntime } from '../runtime/runtime'
@@ -36,6 +37,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
   // set at once on the first click, so a quick second click can't hang it twice; the id is minted once per draft, so a
   // retry after a failed write reuses it
   const busy = useRef(false)
+  const album = useRef<HTMLInputElement>(null)
   const id = useRef<string | null>(null)
 
   // a fresh draft each time the sheet opens (production drops it on close, cover included)
@@ -75,14 +77,21 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
     setHanging(false)
     if (!ok) return
     if (doc.needsEnrich) {
-      flash('Looking up ' + doc.title + '… the cover usually appears within a few minutes.')
+      flash(lookingUpNotice(doc.title), id.current)
       fireTask()
     }
     onCreated(id.current)
   }
 
   return (
-    <Drawer side="right" open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer
+      side="right"
+      open={open}
+      onOpenChange={(o) => !o && onClose()}
+      // focus Album once the sheet has finished sliding in: iOS scrolls a field focused mid-slide "into view" and leaves
+      // the still-moving sheet off the left edge (#60)
+      onOpenChangeComplete={(o) => o && album.current?.focus()}
+    >
       <DrawerContent className="w-full sm:max-w-xl">
         <DrawerHeader>
           <DrawerTitle>Add a record</DrawerTitle>
@@ -104,7 +113,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
             <button type="submit" hidden aria-hidden="true" tabIndex={-1} />
             <Field>
               <FieldLabel>Album</FieldLabel>
-              <Input value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Kind of Blue" autoFocus />
+              <Input ref={album} value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Kind of Blue" />
             </Field>
             <Field>
               <FieldLabel>Artist</FieldLabel>

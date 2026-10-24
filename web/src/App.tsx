@@ -25,7 +25,9 @@ const MESSAGE = {
 }
 
 export function App() {
-  const { status, records, site, error, notice, clearError, canEdit } = useRuntime()
+  const { status, records, site, error, notice, noticeFor, clearError, canEdit } = useRuntime()
+  // a notice about one record shows on its sheet; the wall has its own "Looking up N records…" line
+  const wallNotice = noticeFor ? '' : notice
   const [openId, setOpenId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [adding, setAdding] = useState(false)
@@ -40,9 +42,9 @@ export function App() {
           {MESSAGE[status]}
         </p>
       )}
-      {(error || notice) && !openId && !settingsOpen && !adding && (
+      {(error || wallNotice) && !openId && !settingsOpen && !adding && (
         <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
-          <AlertTitle>{error || notice}</AlertTitle>
+          <AlertTitle>{error || wallNotice}</AlertTitle>
         </Alert>
       )}
       {status === 'ready' && (
