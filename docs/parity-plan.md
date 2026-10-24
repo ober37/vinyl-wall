@@ -41,7 +41,8 @@ and is now going to full parity with the plain-JS page (v0.9.4). **1.0 on `main`
 | 7 | Parity audit: port the smoke test scenarios, design checklist, cut over | |
 
 Each phase: the software lead and UX designer agree a design, the owner approves it, it's built with tests, the UX
-review signs off the screenshots, then it's published to the test page.
+review signs off the screenshots, `/code-review` and `/simplify` run on the phase's diff (findings fixed or noted in the
+PR comment), then it's published to the test page. From phase 4 on.
 
 ## Phase 0 checks
 
@@ -65,6 +66,8 @@ On the personal account (has Claude Code Remote), from the draft PR's checklist:
 
 ## Testing and gotchas
 
+- CI (`.github/workflows/test.yml`) runs `dev/test.sh` on every push. `check:cdn` also fails over its budgets (page size,
+  longest line outside the import map, first-visit files, time until the wall shows; `BUDGET` in `web/scripts/check-cdn.mjs`).
 - `dev/test.sh` runs everything: production's Python and smoke tests (against `main`'s page where the branch started),
   the React suite (`tsc`, Vitest), and `check:cdn` (needs the network).
 - Real-runtime testing goes through a PR on the personal account, with SETUP pointed at the branch and a new wall.

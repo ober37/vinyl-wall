@@ -2,14 +2,25 @@
 // uses it: filters the wall with a chip, opens a record, picks Side in Log a play, adds a record with an uploaded cover. Fails on any page error or on a control
 // that doesn't work (a Toggle that never finds its group is what loading appica as separate CDN files did, #60).
 // The page loads React and appica from jsdelivr through its import map, so this needs the network. It also reports how
-// many files a first visit fetches and how long until the wall shows. Needs Chrome; set CHROME to its path if it isn't
-// in the usual macOS place.
+// many files a first visit fetches and how long until the wall shows, and fails when those, the page's size or its
+// longest line (SETUP has Claude read the page) go over BUDGET. Needs Chrome; set CHROME to its path if it isn't in the
+// usual macOS place.
 import { createServer } from 'node:http'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import puppeteer from 'puppeteer-core'
 
 const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
+
+// headroom over today's numbers (319 KB, 1,104 characters, 886 files, 1.3 s); the time is loose because CI machines vary.
+// The import map is one long line of URLs, so it's left out of the line check.
+const BUDGET = { kb: 400, line: 1500, files: 1000, seconds: 10 }
+const fail = []
+const kb = Math.round(html.length / 1024)
+const line = Math.max(...html.toString().split('\n').filter((l) => !l.includes('type="importmap"')).map((l) => l.length))
+console.log(`page: ${kb} KB, longest line ${line} characters`)
+if (kb > BUDGET.kb) fail.push(`page is ${kb} KB, over the ${BUDGET.kb} KB budget`)
+if (line > BUDGET.line) fail.push(`a line is ${line} characters, over the ${BUDGET.line} budget`)
 const server = createServer((req, res) => {
   if (req.url === '/' || req.url === '/index.html') return res.writeHead(200, { 'Content-Type': 'text/html' }).end(html)
   // the background photos are published beside the page, as SETUP.md does
@@ -62,7 +73,6 @@ const browser = await puppeteer.launch({
   executablePath: process.env.CHROME || '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
   headless: 'new',
 })
-const fail = []
 try {
   const page = await browser.newPage()
   page.on('pageerror', (e) => fail.push('page error: ' + e.message))
@@ -75,7 +85,10 @@ try {
   await page.evaluateOnNewDocument(stub)
   await page.goto(`http://127.0.0.1:${port}/`, { waitUntil: 'networkidle0', timeout: 60000 })
   await page.waitForSelector('[data-testid=sleeve]', { timeout: 15000 })
-  console.log(`first visit: ${cdnFiles} files from jsdelivr, wall shown after ${((Date.now() - t0) / 1000).toFixed(1)} s`)
+  const secs = (Date.now() - t0) / 1000
+  console.log(`first visit: ${cdnFiles} files from jsdelivr, wall shown after ${secs.toFixed(1)} s`)
+  if (cdnFiles > BUDGET.files) fail.push(`a first visit fetches ${cdnFiles} files, over the ${BUDGET.files} budget`)
+  if (secs > BUDGET.seconds) fail.push(`the wall showed after ${secs.toFixed(1)} s, over the ${BUDGET.seconds} s budget`)
   const sleeves = () => page.$$eval('[data-testid=sleeve]', (b) => b.length)
   const click = async (xpath) => {
     const [el] = await page.$$('xpath/' + xpath)
