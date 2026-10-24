@@ -3,7 +3,7 @@
 // Any collection path works (records, gear, data/users/<id>, ...); a doc path is its collection plus an id.
 
 type Data = Record<string, Record<string, unknown>>
-export type Call = { path: string; op: 'update' | 'set' | 'delete' | 'fire'; data?: Record<string, unknown> }
+export type Call = { path: string; op: 'update' | 'set' | 'delete' | 'fire' | 'upload'; data?: Record<string, unknown> }
 
 const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
 function merge(a: Record<string, unknown>, b: Record<string, unknown>) {
@@ -21,7 +21,16 @@ export function fakeClaude(
   // collections by path; `docs` puts single docs in by their full path (settings/site)
   seed: { records: Data; docs?: Data; collections?: Record<string, Data> },
   // oldRuntime: a wall published on an earlier runtime, whose user capability has no can()
-  opts: { canWrite?: boolean | null; failWrites?: boolean; userId?: string; mcp?: 'ok' | 'denied' | 'none'; oldRuntime?: boolean } = {},
+  // failCreate: the first set() of a new record fails (then succeeds); assets: uploads work, fail, or aren't there
+  opts: {
+    canWrite?: boolean | null
+    failWrites?: boolean
+    userId?: string
+    mcp?: 'ok' | 'denied' | 'none'
+    oldRuntime?: boolean
+    failCreate?: boolean
+    assets?: 'ok' | 'fail' | 'none'
+  } = {},
 ) {
   const store: Record<string, Data> = structuredClone({ ...(seed.collections || {}), records: seed.records })
   for (const [path, d] of Object.entries(structuredClone(seed.docs || {}))) {
@@ -29,6 +38,8 @@ export function fakeClaude(
     ;(store[c] ||= {})[id] = d
   }
   const calls: Call[] = []
+  let createFailed = false
+  let seq = 0
   const listeners = new Set<() => void>()
   const fireAll = () => listeners.forEach((l) => l())
   const deny = () => {
@@ -47,6 +58,10 @@ export function fakeClaude(
     },
     async set(data: Record<string, unknown>) {
       deny()
+      if (opts.failCreate && c === 'records' && !createFailed) {
+        createFailed = true
+        throw { code: 'unavailable', message: 'Try again' }
+      }
       calls.push({ path: `${c}/${id}`, op: 'set', data })
       ;(store[c] ||= {})[id] = structuredClone(data)
       fireAll()
@@ -73,7 +88,7 @@ export function fakeClaude(
   })
   const collection = (c: string) => ({
     path: c,
-    doc: (id: string) => docRef(c, id),
+    doc: (id?: string) => docRef(c, id ?? `n_${++seq}`),
     onSnapshot(next: (s: unknown) => void) {
       const fire = () =>
         queueMicrotask(() => {
@@ -114,7 +129,14 @@ export function fakeClaude(
       return { payload: {} }
     },
   }
-  const caps: Record<string, unknown> = { db, user, mcp: opts.mcp === 'none' ? null : mcp }
+  const assets = {
+    async upload(blob: Blob) {
+      if (opts.assets === 'fail') throw { code: 'too_large', message: 'Too large' }
+      calls.push({ path: 'assets', op: 'upload', data: { size: blob.size } })
+      return { id: `a_${++seq}`, url: `/_blob/a_${seq}`, sizeBytes: blob.size, contentType: blob.type }
+    },
+  }
+  const caps: Record<string, unknown> = { db, user, mcp: opts.mcp === 'none' ? null : mcp, assets: opts.assets === 'none' ? null : assets }
   const claude = { use: async (name: string) => caps[name] ?? null }
   return { claude: claude as unknown as Window['claude'], calls, remote, remoteDoc, records: store.records, store }
 }

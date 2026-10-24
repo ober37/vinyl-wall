@@ -21,6 +21,11 @@ type Props = {
   // null when the status can't be changed here (a hunt with more than one copy)
   onStatus: ((to: Kind) => void) | null
   onRemove: () => void
+  // the new-record sheet's "Add details now": no status, album, artist or Remove (the sheet has its own)
+  isNew?: boolean
+  // fields the lookup filled in (marked "auto-filled" until typed over), and whether a lookup is under way
+  autoFilled?: string[]
+  looking?: boolean
 }
 
 // "YYYY-MM-DD" <-> a local Date at noon, so a timezone never moves the day
@@ -31,7 +36,7 @@ const fromDate = (d: Date | null) =>
 // Base UI's Select needs a non-empty value for "Not graded"
 const NONE = '-'
 
-function Text({ k, label, form, set, placeholder, mono, wide, numeric }: {
+function Text({ k, label, form, set, placeholder, mono, wide, numeric, auto }: {
   k: Key
   label: string
   form: Form
@@ -40,10 +45,14 @@ function Text({ k, label, form, set, placeholder, mono, wide, numeric }: {
   mono?: boolean
   wide?: boolean
   numeric?: boolean
+  auto?: string[]
 }) {
   return (
     <Field className={wide ? 'sm:col-span-2' : undefined}>
-      <FieldLabel>{label}</FieldLabel>
+      <FieldLabel>
+        {label}
+        {auto?.includes(k) && <span className="text-primary ms-1.5 font-mono text-[0.625rem] tracking-wider uppercase">auto-filled</span>}
+      </FieldLabel>
       <Input
         value={form[k] ?? ''}
         onChange={(e) => set(k, e.target.value)}
@@ -79,15 +88,15 @@ function Grade({ k, label, form, set }: { k: Key; label: string; form: Form; set
   )
 }
 
-export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove }: Props) {
-  const p = { form, set }
+export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking }: Props) {
+  const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
   const wish = kind !== 'own'
   const [confirm, setConfirm] = useState(false)
   const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
   return (
     <div className="flex flex-col gap-8">
-      {onStatus && (
+      {onStatus && !isNew && (
         <Fieldset>
           <FieldsetLegend>Status</FieldsetLegend>
           <Segmented
@@ -102,13 +111,15 @@ export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove 
           />
         </Fieldset>
       )}
-      <Fieldset>
-        <FieldsetLegend>The record</FieldsetLegend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Text k="title" label="Album" {...p} />
-          <Text k="artist" label="Artist" {...p} />
-        </div>
-      </Fieldset>
+      {!isNew && (
+        <Fieldset>
+          <FieldsetLegend>The record</FieldsetLegend>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Text k="title" label="Album" {...p} />
+            <Text k="artist" label="Artist" {...p} />
+          </div>
+        </Fieldset>
+      )}
 
       <Fieldset>
         <FieldsetLegend>{own ? "Why it's on the wall" : 'Why you want it'}</FieldsetLegend>
@@ -176,25 +187,29 @@ export function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove 
         <FieldsetLegend>About the album</FieldsetLegend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Text k="year" label="Year" placeholder="e.g. 1959" mono numeric {...p} />
-          <Text k="runtime" label="Runtime (min)" placeholder="e.g. 46" mono numeric {...p} />
+          <Text k="runtime" label="Runtime (min)" placeholder={looking ? 'Looking it up…' : 'e.g. 46'} mono numeric {...p} />
           {own && <Text k="label" label="Label" placeholder="e.g. Columbia" {...p} />}
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>
-        {wish && (
+        {wish && !isNew && (
           <p className="text-foreground-muted text-sm">Copies, budget and priority aren't in this prototype yet.</p>
         )}
       </Fieldset>
 
-      <Button variant="outline" size="sm" className="self-start" onClick={() => setConfirm(true)}>
-        Remove from the wall…
-      </Button>
-      <Confirm
-        open={confirm}
-        title={`Remove ${title} and its notes for good?`}
-        yes="Remove"
-        onYes={onRemove}
-        onClose={() => setConfirm(false)}
-      />
+      {!isNew && (
+        <>
+          <Button variant="outline" size="sm" className="self-start" onClick={() => setConfirm(true)}>
+            Remove from the wall…
+          </Button>
+          <Confirm
+            open={confirm}
+            title={`Remove ${title} and its notes for good?`}
+            yes="Remove"
+            onYes={onRemove}
+            onClose={() => setConfirm(false)}
+          />
+        </>
+      )}
     </div>
   )
 }

@@ -25,7 +25,7 @@ describe('the wall', () => {
     await screen.findAllByTestId('sleeve')
     expect(sleeves()).toEqual(['r1', 'r3', 'r5', 'r7', 'r6'])
     expect(screen.getByRole('button', { name: /^Open Aja by Steely Dan, Shipped, / })).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Open Abbey Road by The Beatles, Top want, ≤$150' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Open Abbey Road by The Beatles, Top want, ≤$150, looking up details' })).toBeTruthy()
     expect(screen.getByRole('list', { name: 'Records' }).getAttribute('data-hang')).toBe('barn')
   })
 

@@ -1,5 +1,5 @@
 // Loads the built page (dist/index.html) in Chrome the way claude.ai would serve it, with a tiny stand-in runtime, and
-// uses it: filters the wall with a chip, opens a record, picks Side in Log a play. Fails on any page error or on a control
+// uses it: filters the wall with a chip, opens a record, picks Side in Log a play, adds a record with an uploaded cover. Fails on any page error or on a control
 // that doesn't work (a Toggle that never finds its group is what loading appica as separate CDN files did, #60).
 // The page loads React and appica from jsdelivr through its import map, so this needs the network. It also reports how
 // many files a first visit fetches and how long until the wall shows. Needs Chrome; set CHROME to its path if it isn't
@@ -15,6 +15,9 @@ const server = createServer((req, res) => {
   // the background photos are published beside the page, as SETUP.md does
   const bg = /^\/backgrounds\/([a-z0-9-]+\.jpg)$/.exec(req.url || '')
   if (bg) return res.writeHead(200, { 'Content-Type': 'image/jpeg' }).end(readFileSync(join(import.meta.dirname, '../../app/backgrounds', bg[1])))
+  // stored images (covers): claude.ai serves them at /_blob/<id>; any photo will do here
+  if (req.url?.startsWith('/_blob/'))
+    return res.writeHead(200, { 'Content-Type': 'image/jpeg' }).end(readFileSync(join(import.meta.dirname, '../../app/backgrounds/record-shop.jpg')))
   res.writeHead(req.url === '/favicon.ico' ? 204 : 404).end()
 })
 await new Promise((ok) => server.listen(0, '127.0.0.1', ok))
@@ -28,17 +31,31 @@ const stub = () => {
     r2: { title: 'Aja', artist: 'Steely Dan', status: 'ordered', notes: [], added: 2 },
     r3: { title: 'Pet Sounds', artist: 'The Beach Boys', status: 'wish', notes: [], added: 3 },
   }
+  const listeners = []
+  const emit = (n) => {
+    const docs = Object.entries(recs).map(([id, r]) => snap(id, r))
+    setTimeout(() => n({ docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: {} }))
+  }
+  let seq = 0
   const coll = (name) => ({
-    doc: (id) => ({ onSnapshot: (n) => (setTimeout(() => n(snap(id, null))), () => {}) }),
+    doc: (id = 'n' + ++seq) => ({
+      id,
+      onSnapshot: (n) => (setTimeout(() => n(snap(id, null))), () => {}),
+      set: async (d) => {
+        if (name === 'records') (recs[id] = d), listeners.forEach(emit)
+      },
+    }),
     onSnapshot: (n) => {
-      const docs = name === 'records' ? Object.entries(recs).map(([id, r]) => snap(id, r)) : []
-      setTimeout(() => n({ docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: {} }))
+      if (name !== 'records') return (setTimeout(() => n({ docs: [], size: 0, empty: true, docChanges: () => [], metadata: {} })), () => {})
+      listeners.push(n)
+      emit(n)
       return () => {}
     },
   })
+  const assets = { upload: async (b) => ({ id: 'a' + ++seq, url: '', sizeBytes: b.size, contentType: b.type }) }
   const db = { collection: coll, doc: () => ({ onSnapshot: (n) => (setTimeout(() => n(snap('site', null))), () => {}) }) }
   const user = { can: async () => true, canEdit: async () => true, isOwner: async () => true, id: async () => 'u_check' }
-  window.claude = { use: async (k) => ({ db, user })[k] ?? null }
+  window.claude = { use: async (k) => ({ db, user, assets })[k] ?? null }
 }
 
 const browser = await puppeteer.launch({
@@ -77,6 +94,26 @@ try {
   await new Promise((r) => setTimeout(r, 800)) // the sheet slides in; click once it's still
   await click(`.//button[normalize-space()="Side"]`)
   if (!(await page.$('xpath/.//button[normalize-space()="Side A"]'))) fail.push('Log a play: choosing Side did nothing')
+  // add a record with a cover uploaded first: it hangs and its sheet opens
+  await page.keyboard.press('Escape')
+  await new Promise((r) => setTimeout(r, 800))
+  await click(`.//button[normalize-space()="Add a record"]`)
+  await new Promise((r) => setTimeout(r, 800))
+  await page.type('xpath/.//label[normalize-space()="Album"]/following::input[1]', 'Rumours')
+  await page.type('xpath/.//label[normalize-space()="Artist"]/following::input[1]', 'Fleetwood Mac')
+  await click(`.//button[normalize-space()="I own it"]`)
+  await click(`.//button[normalize-space()="Add details now"]`)
+  const file = await page.$('input[type=file][aria-label="Upload cover"]')
+  if (!file) fail.push('Add a record: no cover upload')
+  else {
+    await file.uploadFile(join(import.meta.dirname, '../../app/backgrounds/record-shop.jpg'))
+    await new Promise((r) => setTimeout(r, 1500))
+    if (!(await page.$(`xpath/.//*[contains(text(), "Cover ready")]`))) fail.push("Add a record: the cover didn't upload")
+  }
+  await click(`.//button[normalize-space()="Hang it"]`)
+  await new Promise((r) => setTimeout(r, 800))
+  if (!(await page.$('xpath/.//h2[normalize-space()="Rumours"] | .//*[@data-slot="drawer-title" and normalize-space()="Rumours"]')))
+    fail.push("Add a record: Hang it didn't open the new record")
 } catch (e) {
   fail.push(String(e.message || e))
 } finally {
@@ -87,4 +124,4 @@ if (fail.length) {
   console.error('FAIL\n' + fail.join('\n'))
   process.exit(1)
 }
-console.log('PASS the built page filters the wall, opens a record and takes a Log a play choice')
+console.log('PASS the built page filters the wall, opens a record, takes a Log a play choice and adds a record with a cover')

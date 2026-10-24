@@ -8,6 +8,7 @@ import { aboutPending, pendingParts, pendingWork, runActive, type Settings } fro
 
 type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
+type Assets = ClaudeCapabilityMap['assets']
 type Doc = Record<string, unknown> & { id: string }
 export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
 
@@ -25,6 +26,8 @@ type Runtime = {
   // this viewer's id (their private data lives under data/users/<id>), and what this view can do
   myId: string | null
   hasMcp: boolean
+  // uploads (Editors only; null for everyone else)
+  hasAssets: boolean
   // one write at a time, so a record never has two in flight; resolves false when the write was refused
   update: (id: string, patch: Record<string, unknown>) => Promise<boolean>
   // a write computed from the record as the database has it right now (for the notes array, which is replaced whole);
@@ -32,6 +35,11 @@ type Runtime = {
   mutate: (id: string, fn: (latest: Rec) => Record<string, unknown> | null) => Promise<boolean>
   // a record synced to Discogs is marked deleted so the background task can take it off Discogs; others go for good
   remove: (id: string) => Promise<boolean>
+  // a new record: mint its id once (a retry after a failed write reuses it), then set it; resolves false on failure
+  newId: () => string
+  create: (id: string, doc: Record<string, unknown>) => Promise<boolean>
+  // store an image (already shrunk) and resolve its asset id; rejects with a message to show
+  upload: (file: Blob) => Promise<string>
   // only the changed fields are written, so a save never undoes what the background task wrote meanwhile
   saveSettings: (patch: Settings) => Promise<boolean>
   // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
@@ -45,7 +53,8 @@ type Runtime = {
   error: string
   notice: string
   flash: (msg: string) => void
-  clearError: () => void
+  // clears the error and the notice; errorOnly keeps a notice (opening another record keeps "Looking up …")
+  clearError: (errorOnly?: boolean) => void
 }
 
 const Ctx = createContext<Runtime | null>(null)
@@ -73,6 +82,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   const [notice, setNotice] = useState('')
   const db = useRef<Db | null>(null)
   const mcp = useRef<Mcp | null>(null)
+  const assets = useRef<Assets | null>(null)
+  const [hasAssets, setHasAssets] = useState(false)
   const writing = useRef<Promise<unknown>>(Promise.resolve())
   const settingsWriting = useRef<Promise<unknown>>(Promise.resolve())
   const settingsExist = useRef(false)
@@ -86,12 +97,14 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     const unsubs: (() => void)[] = []
     let alive = true
     const use = <K extends keyof ClaudeCapabilityMap & string>(k: K) => claude.use(k).catch(() => null)
-    Promise.all([use('db'), use('user'), use('mcp')]).then(async ([d, u, m]) => {
+    Promise.all([use('db'), use('user'), use('mcp'), use('assets')]).then(async ([d, u, m, a]) => {
       if (!alive) return
       if (!d) return setStatus('no-db')
       db.current = d
       mcp.current = m
       setHasMcp(!!m)
+      assets.current = a
+      setHasAssets(!!a)
       // can("data.write") is the platform's answer; null means it said nothing, so fall back to production's check.
       // Walls installed earlier keep the runtime they were published with, which may not have can() at all.
       const w = u ? (typeof u.can === 'function' ? await u.can('data.write').catch(() => null) : null) : false
@@ -277,6 +290,41 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     return next
   }
 
+  // a new record goes straight in with set(), as production's createRecord does (no needsSync: the task syncs records that
+  // have no discogsSync yet), in the same queue as every other write
+  const create = (id: string, doc: Record<string, unknown>) => {
+    const next = writing.current.then(async () => {
+      try {
+        await db.current!.collection('records').doc(id).set(doc)
+        // the task's start message counts records now, before the snapshot brings this one back
+        if (!live.current.records.some((r) => r.id === id)) live.current.records = [...live.current.records, { ...doc, id } as Rec]
+        setError('')
+        return true
+      } catch (e) {
+        setError("Couldn't add it: " + msgOf(e))
+        return false
+      }
+    })
+    writing.current = next
+    return next
+  }
+  const upload = async (file: Blob) => {
+    if (!assets.current) throw new Error("Cover uploads aren't available in this view.")
+    const tryIt = () => assets.current!.upload(file)
+    try {
+      return (await tryIt().catch((e: { code?: string }) => (e?.code === 'store_unavailable' ? tryIt() : Promise.reject(e)))).id
+    } catch (e) {
+      const code = (e as { code?: string })?.code
+      throw new Error(
+        code === 'too_large'
+          ? 'That image is too big to store. Try a smaller one.'
+          : code === 'not_granted' || code === 'capability_removed'
+            ? "Cover uploads aren't available in this view."
+            : msgOf(e),
+      )
+    }
+  }
+
   const secret = () => (myId && db.current ? db.current.collection('data/users/' + myId).doc('discogs') : null)
 
   const value = useMemo<Runtime>(
@@ -291,17 +339,21 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       canEdit,
       myId,
       hasMcp,
+      hasAssets,
       error,
       notice,
       flash: setNotice,
-      clearError: () => {
+      clearError: (errorOnly) => {
         setError('')
-        setNotice('')
+        if (!errorOnly) setNotice('')
       },
       update: (id, patch) => queue(id, () => patch),
       mutate: (id, fn) => queue(id, fn, true),
       remove: (id) =>
         queue(id, (r) => (r.discogsSync && (r.discogsSync as { rid?: unknown }).rid ? { deleted: true } : 'delete'), true),
+      newId: () => db.current!.collection('records').doc().id,
+      create,
+      upload,
       saveSettings,
       saveToken: async (token) => {
         const ref = secret()
@@ -315,7 +367,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       flushSync,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, error, notice],
+    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, error, notice],
   )
 
   return <Ctx value={value}>{children}</Ctx>

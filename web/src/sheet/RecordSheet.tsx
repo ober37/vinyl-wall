@@ -12,10 +12,12 @@ import {
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, toForm, type Form } from '../model/edit'
+import { coverPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { movePatch, wantedCopies } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
+import { CoverButton } from './CoverButton'
 import { EditForm } from './EditForm'
 import { ViewBody } from './ViewBody'
 
@@ -72,7 +74,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 }
 
 export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const { records, canEdit, error, notice, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
+  const { records, artists, canEdit, error, notice, flash, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -82,7 +84,7 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
   useEffect(() => {
     setEditing(false)
     setMsg('')
-    clearError()
+    clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
 
@@ -170,9 +172,23 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                   </Alert>
                 )}
                 {editing && (
-                  <Button size="sm" variant="outline" className="mb-6" disabled={!!r.needsEnrich} onClick={enrich}>
-                    {r.needsEnrich ? 'Looking it up…' : 'Find cover & details'}
-                  </Button>
+                  <div className="mb-6 flex flex-wrap items-center gap-2">
+                    <CoverButton
+                      hasCover={!!r.coverAsset}
+                      onStatus={setSaved}
+                      onUploaded={async (a) => {
+                        if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
+                      }}
+                    />
+                    <Button size="sm" variant="outline" disabled={!!r.needsEnrich} onClick={enrich}>
+                      {r.needsEnrich ? 'Looking it up…' : 'Find cover & details'}
+                    </Button>
+                    {hasArtistInfo(r, new Set(artists.map((a) => a.id))) && (
+                      <Button size="sm" variant="outline" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
+                        Not this artist
+                      </Button>
+                    )}
+                  </div>
                 )}
                 {editing && form ? (
                   <EditForm
@@ -183,6 +199,8 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
                     focusWhy={focusWhy}
                     onStatus={k === 'wish' && wantedCopies(r) > 1 ? null : moveTo}
                     onRemove={removeIt}
+                    autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
+                    looking={!!r.needsEnrich}
                   />
                 ) : (
                   <ViewBody

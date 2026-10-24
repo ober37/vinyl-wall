@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
-import { useTheme } from '@appica/ui-react/hooks/use-theme'
 import { Boundary } from './Boundary'
 import { useRuntime } from './runtime/runtime'
 import { lookingUp } from './model/task'
 import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
+import { NewRecordSheet } from './sheet/NewRecordSheet'
 import { RecordSheet } from './sheet/RecordSheet'
 import { Wall, WallBackground } from './wall/Wall'
 
@@ -25,10 +25,10 @@ const MESSAGE = {
 }
 
 export function App() {
-  const { resolvedTheme, setTheme } = useTheme()
   const { status, records, site, error, notice, clearError, canEdit } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [adding, setAdding] = useState(false)
   const update = useUpdateAvailable()
   const looking = records.filter(lookingUp).length
 
@@ -40,7 +40,7 @@ export function App() {
           {MESSAGE[status]}
         </p>
       )}
-      {(error || notice) && !openId && !settingsOpen && (
+      {(error || notice) && !openId && !settingsOpen && !adding && (
         <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
           <AlertTitle>{error || notice}</AlertTitle>
         </Alert>
@@ -52,6 +52,7 @@ export function App() {
             title={site.title}
             hang={site.hang}
             onOpen={setOpenId}
+            onAdd={canEdit ? () => setAdding(true) : undefined}
             below={
               looking > 0 && (
                 <p role="status" className="on-photo text-ink-2 mt-1.5 flex items-center gap-1.5 font-mono text-xs">
@@ -78,9 +79,6 @@ export function App() {
                     )}
                   </span>
                 )}
-                <Button variant="outline" size="sm" onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}>
-                  {resolvedTheme === 'dark' ? 'Light' : 'Dark'}
-                </Button>
               </>
             }
           />
@@ -88,6 +86,15 @@ export function App() {
       )}
       <RecordSheet id={openId} onClose={() => setOpenId(null)} />
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <NewRecordSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        // the new record opens in view, in place of the new-record sheet
+        onCreated={(id) => {
+          setAdding(false)
+          setOpenId(id)
+        }}
+      />
     </main>
   )
 }

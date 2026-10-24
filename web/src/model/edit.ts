@@ -49,7 +49,7 @@ export function toForm(r: Rec): Form {
 }
 
 // the form as stored values: trimmed, runtime a number or "", paid without its "$", the shop's address made linkable
-function stored(f: Form): Record<string, unknown> {
+export function stored(f: Form): Record<string, unknown> {
   const o: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(f)) if (v !== undefined) o[k] = k === 'why' ? v : v.trim()
   const n = parseInt(f.runtime, 10)

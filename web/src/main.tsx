@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import { ThemeProvider } from '@appica/ui-react/providers/theme-provider'
 import { App } from './App'
 import { RuntimeProvider } from './runtime/runtime'
+import { THEME_KEY } from './theme-key'
 import './index.css'
 
 // outside claude.ai, `npm run dev` runs on the fake runtime with sample records
@@ -26,7 +27,7 @@ async function runtime(): Promise<Window['claude'] | undefined> {
 runtime().then((claude) =>
   createRoot(document.getElementById('root')!).render(
     <StrictMode>
-      <ThemeProvider>
+      <ThemeProvider storageKey={THEME_KEY}>
         <RuntimeProvider claude={claude}>
           <App />
         </RuntimeProvider>

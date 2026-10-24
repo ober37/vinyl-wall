@@ -14,12 +14,13 @@ const versionMeta = () => ({
 import { resolve } from 'node:path'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { getThemeScript } from '@appica/ui-react/providers/theme-provider'
+import { THEME_KEY } from './src/theme-key'
 
 // ThemeProvider's own script only runs when server-rendered; this page is
 // client-only, so put it in <head> to set the theme class before first paint.
 const themeScript = () => ({
   name: 'appica-theme-script',
-  transformIndexHtml: () => [{ tag: 'script', children: getThemeScript(), injectTo: 'head-prepend' as const }],
+  transformIndexHtml: () => [{ tag: 'script', children: getThemeScript({ storageKey: THEME_KEY }), injectTo: 'head-prepend' as const }],
 })
 
 // The background photos are published beside the page (SETUP.md's files), never inlined; in dev, serve them from app/
