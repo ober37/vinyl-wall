@@ -59,8 +59,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@appica/ui-react/textarea";
 import { Toggle } from "@appica/ui-react/toggle";
 import { ToggleGroup } from "@appica/ui-react/toggle-group";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@appica/ui-react/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@appica/ui-react/accordion";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@appica/ui-react/tabs";
 import { Checkbox } from "@appica/ui-react/checkbox";
 import { CheckboxGroup } from "@appica/ui-react/checkbox-group";
 import { Slider } from "@appica/ui-react/slider";
@@ -331,6 +331,87 @@ function tagOf(r) {
 		tone: p === 1 ? "want" : p === 3 ? "someday" : "paper"
 	};
 }
+// src/model/copies.ts
+var COPY_KEYS = [
+	"name",
+	"pressing",
+	"label",
+	"catalog",
+	"budget"
+];
+var s$1 = (v) => typeof v === "string" || typeof v === "number" ? String(v) : "";
+var did = (v) => {
+	const n = parseInt(String(v), 10);
+	return n > 0 ? n : "";
+};
+var emptyCopy = () => ({
+	name: "",
+	pressing: "",
+	label: "",
+	catalog: "",
+	budget: "",
+	discogsId: ""
+});
+function wantCopies(r) {
+	const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c) => !!c && typeof c === "object");
+	return [{
+		name: s$1(r.copyName),
+		pressing: pressingText(r),
+		label: s$1(r.label),
+		catalog: s$1(r.catalog),
+		budget: s$1(r.budget),
+		discogsId: did(r.discogsId)
+	}, ...more.map((c) => ({
+		name: s$1(c.name),
+		pressing: s$1(c.pressing),
+		label: s$1(c.label),
+		catalog: s$1(c.catalog),
+		budget: s$1(c.budget),
+		discogsId: did(c.discogsId)
+	}))];
+}
+var copyTitle = (c, i) => c.name || c.pressing.split("\n")[0].trim() || (c.discogsId ? "Discogs release " + c.discogsId : "Copy " + (i + 1));
+var copyHas = (c) => COPY_KEYS.some((k) => c[k]);
+var AUTO_MATCH = [
+	"master main release",
+	"vinyl: master main release",
+	"vinyl: earliest original pressing",
+	"vinyl: first matching release",
+	"catalog",
+	"catalog+pressing"
+];
+var origLabel = (r) => !r.aboutBlocked && r.about?.label || "";
+function firstCopyChosen(r) {
+	const c = wantCopies(r)[0];
+	const auto = AUTO_MATCH.includes(String(r.discogsMatch));
+	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
+	return !!(c.name || c.pressing || c.catalog || c.budget || c.discogsId && !auto || typed && c.label && c.label !== origLabel(r));
+}
+function stillCopies(r) {
+	const C = wantCopies(r);
+	return (kindOf(r) === "wish" ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])).filter(([c, i]) => i ? copyHas(c) : firstCopyChosen(r));
+}
+var copiesLegend = (r) => (stillCopies(r).length > 1 ? "The copies you " : "The copy you ") + (kindOf(r) === "wish" ? "want" : "still want");
+function copyLabelShown(r, c, i) {
+	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
+	return i > 0 || !!(c.name || c.pressing || c.catalog || c.budget) || !!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch)) || typed && !!c.label && c.label !== origLabel(r);
+}
+var pickable = (r) => kindOf(r) === "wish" ? wantCopies(r).filter(copyHas) : [];
+function pickPatch(r, ci) {
+	const C = pickable(r);
+	if (C.length < 2) return {};
+	const k = Math.max(0, Math.min(C.length - 1, ci | 0));
+	const c = C[k];
+	return {
+		copyName: c.name,
+		pressing: c.pressing,
+		label: c.label,
+		catalog: c.catalog,
+		budget: c.budget,
+		discogsId: c.discogsId || "",
+		moreCopies: C.filter((_, j) => j !== k)
+	};
+}
 // src/model/task.ts
 var aboutPending = (r) => !r.aboutBlocked && (!r.aboutAt || !r.aboutV && !!r.about && r.about.source !== "claude" || Number(r.aboutV || 0) < 3 && !r.about?.summary);
 var RELOOK_ABOUT = {
@@ -404,7 +485,19 @@ function toForm(r) {
 		year: s(r.year),
 		runtime: s(r.runtime)
 	};
-	if (kindOf(r) === "own") Object.assign(f, {
+	const k = kindOf(r);
+	const [c0, ...more] = wantCopies(r);
+	f.moreCopies = more;
+	if (k !== "own") Object.assign(f, {
+		label: c0.label,
+		catalog: c0.catalog,
+		pressing: c0.pressing,
+		copyName: c0.name,
+		budget: c0.budget,
+		discogsId: c0.discogsId
+	});
+	if (k === "wish") f.priority = String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2);
+	if (k === "own") Object.assign(f, {
 		label: s(r.label),
 		catalog: s(r.catalog),
 		pressing: pressingText(r),
@@ -419,7 +512,17 @@ function toForm(r) {
 }
 function stored(f) {
 	const o = {};
-	for (const [k, v] of Object.entries(f)) if (v !== void 0) o[k] = k === "why" ? v : v.trim();
+	for (const [k, v] of Object.entries(f)) if (typeof v === "string") o[k] = k === "why" ? v : v.trim();
+	if (f.discogsId !== void 0) o.discogsId = f.discogsId;
+	if (f.priority !== void 0) o.priority = +f.priority || 2;
+	if (f.moreCopies) o.moreCopies = f.moreCopies.map((c) => ({
+		name: c.name.trim(),
+		pressing: c.pressing.trim(),
+		label: c.label.trim(),
+		catalog: c.catalog.trim(),
+		budget: c.budget.trim(),
+		discogsId: c.discogsId
+	}));
 	const n = parseInt(f.runtime, 10);
 	o.runtime = isNaN(n) ? "" : n;
 	if (f.paid !== void 0) o.paid = f.paid.trim().replace(/^\$\s*/, "");
@@ -1122,12 +1225,14 @@ function SettingsSheet({ open, onClose }) {
 // src/model/create.ts
 function newDoc(form, kind, coverId, now = Date.now()) {
 	const d = {
+		priority: 2,
 		...stored(form),
 		status: kind,
 		notes: [],
-		added: now,
-		priority: 2
+		added: now
 	};
+	delete d.discogsId;
+	if (kind !== "wish") delete d.moreCopies;
 	if (kind === "ordered") d.orderStatus = "ordered";
 	if (coverId) d.coverAsset = coverId;
 	if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true;
@@ -1214,6 +1319,172 @@ function CoverButton({ hasCover, onUploaded, onStatus, disabled }) {
 		}
 	})] });
 }
+// src/sheet/CopiesEdit.tsx
+var FIRST = {
+	name: "e.g. MoFi one-step",
+	pressing: "e.g. 2015 Mobile Fidelity UD1S, or any original 6-eye",
+	label: "e.g. Columbia",
+	catalog: "e.g. CS 8163"
+};
+var ORDERED = {
+	...FIRST,
+	pressing: "e.g. 2024 indie-store colored vinyl"
+};
+var MORE = {
+	name: "e.g. UK first",
+	pressing: "e.g. 1969 UK Apple first pressing",
+	label: "e.g. Apple",
+	catalog: "e.g. PCS 7088"
+};
+var AutoMark = () => /* @__PURE__ */ jsx("span", {
+	className: "text-primary ms-1.5 font-mono text-[0.625rem] tracking-wider uppercase",
+	children: "auto-filled"
+});
+function CopyFields({ c, ph, on, auto, focus }) {
+	const text = (k, label, mono = false) => /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsxs(FieldLabel, { children: [label, k === "label" && auto?.includes("label") && /* @__PURE__ */ jsx(AutoMark, {})] }), /* @__PURE__ */ jsx(Input, {
+		value: c[k],
+		onChange: (e) => on(k, e.target.value),
+		placeholder: ph[k],
+		className: mono ? "font-mono" : void 0,
+		autoFocus: k === "name" && focus
+	})] });
+	return /* @__PURE__ */ jsxs("div", {
+		className: "grid gap-4 sm:grid-cols-2",
+		children: [
+			text("name", "Name"),
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Budget" }), /* @__PURE__ */ jsx(Input, {
+				value: c.budget,
+				onChange: (e) => on("budget", e.target.value),
+				inputMode: "decimal",
+				placeholder: "60",
+				startSlot: /* @__PURE__ */ jsx("span", {
+					"aria-hidden": "true",
+					children: "$"
+				}),
+				className: "font-mono"
+			})] }),
+			/* @__PURE__ */ jsxs(Field, {
+				className: "sm:col-span-2",
+				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Pressing" }), /* @__PURE__ */ jsx(Textarea, {
+					rows: 2,
+					value: c.pressing,
+					onChange: (e) => on("pressing", e.target.value),
+					placeholder: ph.pressing
+				})]
+			}),
+			text("label", "Label"),
+			text("catalog", "Catalog no.", true)
+		]
+	});
+}
+var FLAT = {
+	name: "copyName",
+	pressing: "pressing",
+	label: "label",
+	catalog: "catalog",
+	budget: "budget",
+	discogsId: "discogsId"
+};
+var firstOf = (f) => ({
+	name: f.copyName ?? "",
+	pressing: f.pressing ?? "",
+	label: f.label ?? "",
+	catalog: f.catalog ?? "",
+	budget: f.budget ?? "",
+	discogsId: f.discogsId ?? ""
+});
+var asFlat = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k], v]));
+function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
+	const [added, setAdded] = useState(null);
+	const [confirm, setConfirm] = useState(null);
+	const more = form.moreCopies ?? [];
+	const wish = kind === "wish";
+	const all = isNew ? [firstOf(form)] : [firstOf(form), ...more];
+	const focus = added ?? focusCopy ?? null;
+	const setFirst = (k, v) => change({ [FLAT[k]]: v });
+	const setMore = (i, k, v) => change({ moreCopies: more.map((c, j) => j === i - 1 ? {
+		...c,
+		[k]: v
+	} : c) });
+	const add = () => {
+		setAdded(more.length + 1);
+		change({ moreCopies: [...more, emptyCopy()] }, true);
+	};
+	const remove = (i) => {
+		setAdded(null);
+		if (i === 0) {
+			const [next, ...rest] = more;
+			change({
+				...asFlat(next),
+				moreCopies: rest
+			}, true);
+		} else change({ moreCopies: more.filter((_, j) => j !== i - 1) }, true);
+	};
+	const ask = (i) => {
+		const c = all[i];
+		if (copyHas(c) || c.discogsId) setConfirm(i);
+		else remove(i);
+	};
+	const canRemove = (i) => !isNew && (i > 0 || wish) && (!wish || all.length > 1);
+	const block = (c, i, ph) => {
+		const fields = /* @__PURE__ */ jsx(CopyFields, {
+			c,
+			ph,
+			on: (k, v) => i === 0 ? setFirst(k, v) : setMore(i, k, v),
+			auto: i === 0 ? auto : void 0,
+			focus: focus === i
+		});
+		if (!(wish ? all.length > 1 : true) && !canRemove(i)) return /* @__PURE__ */ jsx("div", { children: fields }, i);
+		return /* @__PURE__ */ jsxs("div", {
+			className: "border-border-subtle flex flex-col gap-3 border-t pt-4",
+			children: [/* @__PURE__ */ jsxs("div", {
+				className: "flex items-center justify-between gap-2",
+				children: [/* @__PURE__ */ jsx("h4", {
+					className: "text-foreground-intense min-w-0 truncate text-sm font-medium",
+					children: copyTitle(c, i)
+				}), canRemove(i) && /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					className: "-me-3 shrink-0",
+					onClick: () => ask(i),
+					children: "Remove this copy"
+				})]
+			}), fields]
+		}, i);
+	};
+	const addBtn = !isNew && /* @__PURE__ */ jsx(Button, {
+		size: "sm",
+		variant: "outline",
+		className: "self-start",
+		onClick: add,
+		children: "+ Add another copy"
+	});
+	const plural = (n, s) => (n > 1 ? "The copies you " : "The copy you ") + s;
+	return /* @__PURE__ */ jsxs(Fragment, { children: [
+		wish ? /* @__PURE__ */ jsxs(Fieldset, { children: [
+			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(all.length, "want") }),
+			all.map((c, i) => block(c, i, i ? MORE : FIRST)),
+			addBtn
+		] }) : kind === "ordered" && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "The copy you ordered" }), /* @__PURE__ */ jsx(CopyFields, {
+			c: firstOf(form),
+			ph: ORDERED,
+			on: setFirst,
+			auto
+		})] }),
+		!wish && !isNew && more.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [
+			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(more.length, "still want") }),
+			more.map((c, j) => block(c, j + 1, MORE)),
+			addBtn
+		] }),
+		/* @__PURE__ */ jsx(Confirm, {
+			open: confirm !== null,
+			title: confirm !== null ? `Remove ${copyTitle(all[confirm], confirm)} from the copies you want?` : "",
+			yes: "Remove",
+			onYes: () => confirm !== null && remove(confirm),
+			onClose: () => setConfirm(null)
+		})
+	] });
+}
 // src/sheet/Segmented.tsx
 function Segmented({ label, value, options, onChange }) {
 	return /* @__PURE__ */ jsx(ToggleGroup, {
@@ -1265,14 +1536,13 @@ function Grade({ k, label, form, set }) {
 		}, v || NONE)) })]
 	})] });
 }
-function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking }) {
+function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, looking, focusCopy }) {
 	const p = {
 		form,
 		set,
 		auto: autoFilled
 	};
 	const own = kind === "own";
-	const wish = kind !== "own";
 	const [confirm, setConfirm] = useState(false);
 	const shopUrlBad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl);
 	return /* @__PURE__ */ jsxs("div", {
@@ -1308,6 +1578,24 @@ function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove, isNew,
 				onChange: (e) => set("why", e.target.value),
 				placeholder: own ? "What makes this one special front to back: a favorite side, the track that hooked you, where you first heard it." : "What drew you to it: the track that hooked you, a show, who recommended it."
 			})] }),
+			kind === "wish" && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Priority" }), /* @__PURE__ */ jsx(Segmented, {
+				label: "Priority",
+				value: form.priority ?? "2",
+				onChange: (v) => set("priority", v),
+				options: [
+					["1", "Top"],
+					["2", "Want"],
+					["3", "Someday"]
+				]
+			})] }),
+			!own && /* @__PURE__ */ jsx(CopiesEdit, {
+				form,
+				kind,
+				change,
+				isNew,
+				auto: autoFilled,
+				focusCopy
+			}),
 			own && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your copy" }), /* @__PURE__ */ jsxs("div", {
 				className: "grid gap-4 sm:grid-cols-2",
 				children: [
@@ -1369,47 +1657,46 @@ function EditForm({ form, kind, set, title, focusWhy, onStatus, onRemove, isNew,
 					})
 				]
 			})] }),
-			/* @__PURE__ */ jsxs(Fieldset, { children: [
-				/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }),
-				/* @__PURE__ */ jsxs("div", {
-					className: "grid gap-4 sm:grid-cols-2",
-					children: [
-						/* @__PURE__ */ jsx(Text, {
-							k: "year",
-							label: "Year",
-							placeholder: "e.g. 1959",
-							mono: true,
-							numeric: true,
-							...p
-						}),
-						/* @__PURE__ */ jsx(Text, {
-							k: "runtime",
-							label: "Runtime (min)",
-							placeholder: looking ? "Looking it up…" : "e.g. 46",
-							mono: true,
-							numeric: true,
-							...p
-						}),
-						own && /* @__PURE__ */ jsx(Text, {
-							k: "label",
-							label: "Label",
-							placeholder: "e.g. Columbia",
-							...p
-						}),
-						own && /* @__PURE__ */ jsx(Text, {
-							k: "catalog",
-							label: "Catalog no.",
-							placeholder: "e.g. CS 8163",
-							mono: true,
-							...p
-						})
-					]
-				}),
-				wish && !isNew && /* @__PURE__ */ jsx("p", {
-					className: "text-foreground-muted text-sm",
-					children: "Copies, budget and priority aren't in this prototype yet."
-				})
-			] }),
+			own && !isNew && /* @__PURE__ */ jsx(CopiesEdit, {
+				form,
+				kind,
+				change,
+				auto: autoFilled
+			}),
+			/* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }), /* @__PURE__ */ jsxs("div", {
+				className: "grid gap-4 sm:grid-cols-2",
+				children: [
+					/* @__PURE__ */ jsx(Text, {
+						k: "year",
+						label: "Year",
+						placeholder: "e.g. 1959",
+						mono: true,
+						numeric: true,
+						...p
+					}),
+					/* @__PURE__ */ jsx(Text, {
+						k: "runtime",
+						label: "Runtime (min)",
+						placeholder: looking ? "Looking it up…" : "e.g. 46",
+						mono: true,
+						numeric: true,
+						...p
+					}),
+					own && /* @__PURE__ */ jsx(Text, {
+						k: "label",
+						label: "Label",
+						placeholder: "e.g. Columbia",
+						...p
+					}),
+					own && /* @__PURE__ */ jsx(Text, {
+						k: "catalog",
+						label: "Catalog no.",
+						placeholder: "e.g. CS 8163",
+						mono: true,
+						...p
+					})
+				]
+			})] }),
 			!isNew && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Button, {
 				variant: "outline",
 				size: "sm",
@@ -1458,6 +1745,10 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 	const set = (k, v) => setForm((f) => ({
 		...f,
 		[k]: v
+	}));
+	const change = (p) => setForm((f) => ({
+		...f,
+		...p
 	}));
 	const choose = (k) => {
 		setKind(k);
@@ -1571,6 +1862,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 							form,
 							kind,
 							set,
+							change,
 							title: form.title,
 							focusWhy: false,
 							onStatus: null,
@@ -1644,28 +1936,15 @@ function writtenNotes(r, isPlay) {
 	})).filter((x) => x.n && typeof x.n === "object" && !isPlay(x.n)).reverse();
 }
 // src/model/status.ts
-function wantedCopies(r) {
-	const s = (v) => typeof v === "string" || typeof v === "number" ? String(v) : "";
-	return ([
-		s(r.copyName),
-		pressingText(r),
-		s(r.label),
-		s(r.catalog),
-		s(r.budget)
-	].some(Boolean) ? 1 : 0) + (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c) => c && typeof c === "object" && [
-		"name",
-		"pressing",
-		"label",
-		"catalog",
-		"budget"
-	].some((k) => c[k])).length;
-}
-function movePatch(r, to, det) {
+function movePatch(r, to, det, ci) {
 	const from = kindOf(r);
 	if (to === from) return null;
 	const t = today();
 	const notes = notesOf(r);
-	const patch = { status: to };
+	const patch = {
+		status: to,
+		...from === "wish" ? pickPatch(r, ci ?? 0) : {}
+	};
 	const said = det ? [det.paid ? "$" + det.paid : "", det.shop ? "from " + det.shop : ""].filter(Boolean).join(" ") : "";
 	let msg = "Moved back to the hunt.";
 	if (to === "own") {
@@ -1727,6 +2006,133 @@ function Face({ title, artist, hue, cover, className = "", small }) {
 			className: "font-mono text-xs opacity-85",
 			children: artist
 		})]
+	});
+}
+// src/sheet/Facts.tsx
+function Facts({ rows }) {
+	return /* @__PURE__ */ jsx("dl", {
+		className: "grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm",
+		children: rows.map(([k, v]) => /* @__PURE__ */ jsxs("div", {
+			className: "contents",
+			children: [/* @__PURE__ */ jsx("dt", {
+				className: "text-foreground-muted",
+				children: k
+			}), /* @__PURE__ */ jsx("dd", {
+				className: "text-foreground min-w-0 break-words",
+				children: v
+			})]
+		}, k))
+	});
+}
+// src/sheet/Copies.tsx
+var pressRow = (c) => c.pressing ? [["Pressing", /* @__PURE__ */ jsx("span", {
+	className: "whitespace-pre-line",
+	children: c.pressing
+})]] : [];
+var labelRow = (c, label) => label || c.catalog ? [["Label", /* @__PURE__ */ jsxs(Fragment, { children: [label, c.catalog && /* @__PURE__ */ jsxs("span", {
+	className: "text-foreground-muted",
+	children: [label ? " · " : "", c.catalog]
+})] })]] : [];
+var budgetRow = (c) => c.budget ? [["Budget", "Up to $" + c.budget]] : [];
+function CopiesView({ r, onEditCopy }) {
+	const L = stillCopies(r);
+	if (!L.length) return null;
+	let body;
+	if (L.length === 1 && kindOf(r) === "wish") {
+		const [c, i] = L[0];
+		const rows = [
+			...pressRow(c),
+			...labelRow(c, copyLabelShown(r, c, i) ? c.label : ""),
+			...budgetRow(c)
+		];
+		if (!rows.length && !c.name) return null;
+		body = /* @__PURE__ */ jsxs("div", {
+			className: "flex flex-col gap-2",
+			children: [c.name && /* @__PURE__ */ jsx("h4", {
+				className: "text-foreground-intense text-sm font-medium",
+				children: c.name
+			}), rows.length > 0 && /* @__PURE__ */ jsx(Facts, { rows })]
+		});
+	} else body = /* @__PURE__ */ jsx(Accordion, {
+		variant: "flush",
+		multiple: true,
+		children: L.map(([c, i]) => {
+			const rows = [
+				...c.name ? pressRow(c) : [],
+				...labelRow(c, c.label),
+				...budgetRow(c)
+			];
+			return /* @__PURE__ */ jsxs(AccordionItem, {
+				value: String(i),
+				children: [/* @__PURE__ */ jsx(AccordionTrigger, {
+					className: "text-foreground text-sm font-medium",
+					children: /* @__PURE__ */ jsxs("span", {
+						className: "flex w-full items-baseline justify-between gap-3",
+						children: [/* @__PURE__ */ jsx("span", {
+							className: "min-w-0",
+							children: copyTitle(c, i)
+						}), c.budget && /* @__PURE__ */ jsxs("span", {
+							className: "text-foreground-muted shrink-0 font-normal",
+							children: ["Up to $", c.budget]
+						})]
+					})
+				}), /* @__PURE__ */ jsx(AccordionContent, { children: rows.length ? /* @__PURE__ */ jsx(Facts, { rows }) : /* @__PURE__ */ jsxs("div", {
+					className: "flex items-center gap-2",
+					children: [/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted text-sm",
+						children: "No pressing or budget yet"
+					}), onEditCopy && /* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "ghost",
+						onClick: () => onEditCopy(i),
+						children: "Edit"
+					})]
+				}) })]
+			}, i);
+		})
+	});
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: copiesLegend(r) }), body] });
+}
+function CopyPicker({ r, to, onPick, onCancel }) {
+	const got = to === "own";
+	return /* @__PURE__ */ jsxs("div", {
+		role: "group",
+		"aria-labelledby": "pickQ",
+		className: "flex flex-col gap-3",
+		children: [
+			/* @__PURE__ */ jsxs("p", {
+				id: "pickQ",
+				className: "text-foreground text-sm",
+				children: [
+					"Which copy ",
+					got ? "did you get" : "did you order",
+					"? The other copies stay on this record as copies you still want."
+				]
+			}),
+			/* @__PURE__ */ jsx("div", {
+				className: "flex flex-col gap-2",
+				children: pickable(r).map((c, i) => /* @__PURE__ */ jsxs(Button, {
+					variant: "outline",
+					className: "h-auto justify-between gap-3 py-2.5 text-start whitespace-normal",
+					onClick: () => onPick(i),
+					children: [/* @__PURE__ */ jsxs("span", { children: [
+						got ? "Got" : "Ordered",
+						": ",
+						copyTitle(c, i)
+					] }), c.budget && /* @__PURE__ */ jsxs("span", {
+						className: "text-foreground-muted shrink-0 font-normal",
+						children: ["Up to $", c.budget]
+					})]
+				}, i))
+			}),
+			/* @__PURE__ */ jsx(Button, {
+				variant: "ghost",
+				size: "sm",
+				className: "-ms-3 self-start",
+				onClick: onCancel,
+				children: "Cancel"
+			})
+		]
 	});
 }
 // src/model/plays.ts
@@ -2231,20 +2637,407 @@ function NotesTab({ r }) {
 		]
 	});
 }
+// src/model/research.ts
+function researchEntries(r) {
+	const log = Array.isArray(r.researchLog) ? r.researchLog : [];
+	return log.length ? log : r.research && typeof r.research === "object" ? [{
+		id: "legacy",
+		...r.research
+	}] : [];
+}
+var entryKey = (e, i) => e.id || String(i);
+function firstSentence(t) {
+	const x = String(t || "").trim();
+	const m = x.match(/^.+?[.!?](\s|$)/);
+	return (m ? m[0] : x).trim().slice(0, 140);
+}
+var strList = (a) => Array.isArray(a) ? a.filter((x) => x !== null && x !== void 0 && x !== "").map(String) : [];
+var sourceList = (a) => (Array.isArray(a) ? a : []).filter((x) => !!x && /^https?:\/\//i.test(String(x.url || ""))).map((x) => ({
+	title: String(x.title || x.url),
+	url: String(x.url)
+}));
+function pinPatch(r, key) {
+	return {
+		researchLog: researchEntries(r).map((e, i) => {
+			const { pinned, ...rest } = e;
+			return entryKey(e, i) === key && !pinned ? {
+				...rest,
+				pinned: true
+			} : rest;
+		}),
+		research: null
+	};
+}
+var removeResearchPatch = (r, key) => ({
+	researchLog: researchEntries(r).filter((e, i) => entryKey(e, i) !== key),
+	research: null
+});
+var pressOf = (t) => String(t || "").split(": ")[0].trim();
+function alreadyWanted(r, item) {
+	const low = (v) => String(v || "").trim().toLowerCase();
+	const a = low(pressOf(item));
+	return stillCopies(r).some(([c]) => {
+		const b = low(c.pressing);
+		const cat = low(c.catalog);
+		return !!b && (a === b || Math.min(a.length, b.length) >= 8 && (a.includes(b) || b.includes(a))) || cat.length >= 4 && low(item).includes(cat);
+	});
+}
+function wantPatch(r, p) {
+	const C = wantCopies(r);
+	const first = !firstCopyChosen(r);
+	const did = first && r.discogsId ? {
+		discogsId: r.discogsId,
+		discogsMatch: String(r.discogsMatch || "")
+	} : null;
+	return {
+		patch: first ? {
+			pressing: p,
+			...did ? {
+				discogsId: "",
+				discogsMatch: ""
+			} : {}
+		} : { moreCopies: [...C.slice(1), {
+			...emptyCopy(),
+			pressing: p
+		}] },
+		undo: {
+			ci: first ? 0 : C.length,
+			p,
+			did
+		}
+	};
+}
+function undoWantPatch(r, w) {
+	const C = wantCopies(r);
+	if (w.ci === 0 && C[0].pressing === w.p) return {
+		pressing: "",
+		...w.did || {}
+	};
+	if (w.ci && C[w.ci] && C[w.ci].pressing === w.p) return { moreCopies: C.slice(1).filter((_, j) => j !== w.ci - 1) };
+	return null;
+}
+function resPrompt(r, wallUrl, e) {
+	const url = /^https:\/\//.test(String(wallUrl || "")) ? String(wallUrl) : "";
+	return [
+		e ? `Follow up on my research from ${e.at && shortDate(e.at) || e.at}: "${(e.headline || firstSentence(e.summary)).replace(/[.!?]$/, "")}"` : "Research a record on my Vinyl Wall",
+		`Record: "${r.title}" by ${r.artist} (record ${r.id})`,
+		...url ? [`Wall: ${url}`] : [],
+		`Use the vinyl-wall skill, and save ${e ? "a new summary" : "a summary to the record"} when we're done.`,
+		"",
+		e ? "My follow-up: " : "My question: "
+	].join("\n");
+}
+function searchLinks(r) {
+	const q = encodeURIComponent(`${r.artist} ${r.title}`);
+	const qv = encodeURIComponent(`${r.artist} ${r.title} vinyl LP`);
+	return [
+		["Discogs releases", `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
+		["Discogs marketplace", `https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
+		["eBay", `https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
+		["MusicStack", `https://www.musicstack.com/search.cgi?find=${q}&t=0&media=LP`],
+		["Popsike (past sales)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+		["Record stores near me", "https://www.google.com/maps/search/record+store"]
+	];
+}
+// src/sheet/ResearchTab.tsx
+var link = "text-primary underline-offset-2 hover:underline";
+function useCopy() {
+	const [copied, setCopied] = useState(null);
+	const copy = async (key, text, done) => {
+		try {
+			await navigator.clipboard.writeText(text);
+			setCopied({
+				key,
+				msg: done
+			});
+		} catch {
+			setCopied({
+				key,
+				msg: "Selected: copy it with your device's copy command",
+				text
+			});
+		}
+	};
+	return {
+		copied,
+		copy
+	};
+}
+function CopyStatus({ c }) {
+	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("span", {
+		role: "status",
+		className: "text-foreground-muted text-xs",
+		children: c?.msg
+	}), c?.text && /* @__PURE__ */ jsx("p", {
+		ref: (el) => {
+			if (!el) return;
+			const rg = document.createRange();
+			rg.selectNodeContents(el);
+			getSelection()?.removeAllRanges();
+			getSelection()?.addRange(rg);
+		},
+		className: "bg-background-muted basis-full rounded-(--radius-2xs) p-3 font-mono text-xs whitespace-pre-wrap",
+		children: c.text
+	})] });
+}
+function Section({ title, children }) {
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-1",
+		children: [/* @__PURE__ */ jsx("h4", {
+			className: "text-foreground-intense text-xs font-medium tracking-wider uppercase",
+			children: title
+		}), children]
+	});
+}
+var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
+	className: "text-foreground flex list-disc flex-col gap-1 ps-5 text-sm",
+	children: items.map((x, i) => /* @__PURE__ */ jsx("li", { children: x }, i))
+});
+function ResearchTab({ r, onEditCopy }) {
+	const { canEdit, settings, mutate } = useRuntime();
+	const k = kindOf(r);
+	const wish = k === "wish";
+	const items = researchEntries(r).map((e, i) => ({
+		e,
+		key: entryKey(e, i)
+	})).sort((a, b) => +!!b.e.pinned - +!!a.e.pinned);
+	const [open, setOpen] = useState(() => items.filter((x) => x.e.pinned).map((x) => x.key));
+	const [del, setDel] = useState(null);
+	const [want, setWant] = useState(null);
+	const { copied, copy } = useCopy();
+	const still = stillCopies(r).length > 0;
+	const pin = (key, pinned) => {
+		if (!pinned) setOpen((o) => o.includes(key) ? o : [...o, key]);
+		mutate(r.id, (latest) => pinPatch(latest, key));
+	};
+	const addWant = (key, p) => {
+		let undo = null;
+		mutate(r.id, (latest) => {
+			const w = wantPatch(latest, p);
+			undo = w.undo;
+			return w.patch;
+		}).then((ok) => ok && undo && setWant({
+			key,
+			undo
+		}));
+	};
+	const undoWant = () => {
+		if (!want) return;
+		setWant(null);
+		mutate(r.id, (latest) => undoWantPatch(latest, want.undo));
+	};
+	const pressings = (e, key) => {
+		const L = strList(e.pressings);
+		if (!wish || !canEdit) return /* @__PURE__ */ jsx(Bullets, { items: L });
+		return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Bullets, { items: L.map((x) => {
+			const p = pressOf(x);
+			return /* @__PURE__ */ jsxs("span", {
+				className: "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1",
+				children: [/* @__PURE__ */ jsx("span", { children: x }), p && (alreadyWanted(r, x) ? /* @__PURE__ */ jsx("span", {
+					className: "text-foreground-muted text-xs whitespace-nowrap",
+					children: "✓ Added"
+				}) : /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "outline",
+					onClick: () => addWant(key, p),
+					children: "+ Want"
+				}))]
+			});
+		}) }), want?.key === key && /* @__PURE__ */ jsxs("p", {
+			role: "status",
+			className: "text-foreground-muted flex flex-wrap items-center gap-x-1 text-xs",
+			children: [
+				"Added “",
+				want.undo.p,
+				"” ·",
+				/* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					className: "px-1.5",
+					onClick: () => onEditCopy(want.undo.ci),
+					children: "Edit"
+				}),
+				"·",
+				/* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					className: "px-1.5",
+					onClick: undoWant,
+					children: "Undo"
+				})
+			]
+		})] });
+	};
+	const entry = ({ e, key }) => {
+		const sm = String(e.summary || "").trim();
+		const body = e.headline ? sm : sm.slice(firstSentence(sm).length).trim();
+		const src = sourceList(e.sources);
+		return /* @__PURE__ */ jsxs(AccordionItem, {
+			value: key,
+			children: [/* @__PURE__ */ jsx(AccordionTrigger, {
+				className: "text-foreground text-sm font-medium",
+				children: /* @__PURE__ */ jsxs("span", {
+					className: "flex min-w-0 items-baseline gap-3",
+					children: [/* @__PURE__ */ jsx("time", {
+						className: "text-foreground-muted shrink-0 font-mono text-xs font-normal",
+						children: e.at && shortDate(e.at) || e.at || ""
+					}), /* @__PURE__ */ jsxs("span", {
+						className: "min-w-0",
+						children: [e.pinned && /* @__PURE__ */ jsx(Badge, {
+							size: "sm",
+							variant: "secondary",
+							className: "me-2 align-middle",
+							children: "Pinned"
+						}), e.headline || firstSentence(e.summary) || "Research notes"]
+					})]
+				})
+			}), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-4 text-sm",
+				children: [
+					e.question && /* @__PURE__ */ jsx(Section, {
+						title: "You asked",
+						children: /* @__PURE__ */ jsx("p", {
+							className: "text-foreground",
+							children: e.question
+						})
+					}),
+					body && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground text-pretty",
+						children: body
+					}),
+					strList(e.pressings).length > 0 && /* @__PURE__ */ jsx(Section, {
+						title: "Pressings",
+						children: pressings(e, key)
+					}),
+					strList(e.check).length > 0 && /* @__PURE__ */ jsx(Section, {
+						title: "Check in a listing",
+						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.check) })
+					}),
+					strList(e.where).length > 0 && /* @__PURE__ */ jsx(Section, {
+						title: "Where to look",
+						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.where) })
+					}),
+					e.price && /* @__PURE__ */ jsx(Section, {
+						title: "Price",
+						children: /* @__PURE__ */ jsx("p", {
+							className: "text-foreground",
+							children: e.price
+						})
+					}),
+					src.length > 0 && /* @__PURE__ */ jsx(Section, {
+						title: "Sources",
+						children: /* @__PURE__ */ jsx(Bullets, { items: src.map((s) => /* @__PURE__ */ jsxs("a", {
+							href: s.url,
+							target: "_blank",
+							rel: "noopener",
+							className: link,
+							children: [s.title, " ↗"]
+						})) })
+					}),
+					canEdit && /* @__PURE__ */ jsxs("div", {
+						className: "-ms-3 flex flex-wrap items-center gap-1",
+						children: [
+							/* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								onClick: () => pin(key, !!e.pinned),
+								children: e.pinned ? "Unpin" : "Pin"
+							}),
+							k !== "ordered" && /* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								onClick: () => copy(key, resPrompt(r, settings.url, e), "Copied. Paste it into Claude to pick up from here."),
+								children: "Follow up in chat"
+							}),
+							/* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								className: "text-error-emphasis ms-auto",
+								onClick: () => setDel(key),
+								children: "Remove this research"
+							}),
+							copied?.key === key && /* @__PURE__ */ jsx(CopyStatus, { c: copied })
+						]
+					})
+				]
+			}) })]
+		}, key);
+	};
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-6",
+		children: [
+			!wish && /* @__PURE__ */ jsx(CopiesView, {
+				r,
+				onEditCopy: canEdit ? onEditCopy : void 0
+			}),
+			(canEdit || items.length > 0) && /* @__PURE__ */ jsxs(Fieldset, { children: [
+				!wish && still && /* @__PURE__ */ jsx(FieldsetLegend, { children: "Research" }),
+				canEdit && /* @__PURE__ */ jsxs("div", {
+					className: "flex flex-col gap-3",
+					children: [/* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Research this record in your Claude chat. It can search the web, and with the Vinyl Wall skill it saves what it finds here."
+					}), /* @__PURE__ */ jsxs("div", {
+						className: "flex flex-wrap items-center gap-3",
+						children: [/* @__PURE__ */ jsx(Button, {
+							size: "sm",
+							variant: items.length || wish ? "outline" : "primary",
+							onClick: () => copy("new", resPrompt(r, settings.url), "Copied. Paste it into Claude and add your question."),
+							children: "Copy for Claude"
+						}), copied?.key === "new" && /* @__PURE__ */ jsx(CopyStatus, { c: copied })]
+					})]
+				}),
+				items.length > 0 && /* @__PURE__ */ jsx(Accordion, {
+					variant: "flush",
+					multiple: true,
+					value: open,
+					onValueChange: (v) => setOpen(v),
+					children: items.map(entry)
+				})
+			] }),
+			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx("ul", {
+				className: "flex flex-col gap-2 text-sm",
+				children: searchLinks(r).map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
+					href: u,
+					target: "_blank",
+					rel: "noopener",
+					className: link,
+					children: [t, " ↗"]
+				}) }, t))
+			})] }),
+			/* @__PURE__ */ jsx(Confirm, {
+				open: del !== null,
+				title: "Remove this research for good?",
+				yes: "Remove",
+				onYes: () => {
+					const key = del;
+					mutate(r.id, (latest) => removeResearchPatch(latest, key));
+				},
+				onClose: () => setDel(null)
+			})
+		]
+	});
+}
+function hasResearch(r, canEdit) {
+	const k = kindOf(r);
+	return k === "wish" || k === "own" && (canEdit || researchEntries(r).length > 0) || k === "ordered" && stillCopies(r).length > 0;
+}
 // src/sheet/StatusActions.tsx
 function StatusActions({ r, onMoved }) {
 	const { mutate } = useRuntime();
+	const [pick, setPick] = useState(null);
 	const [ask, setAsk] = useState(null);
+	const [ci, setCi] = useState(0);
 	const [paid, setPaid] = useState("");
 	const [shop, setShop] = useState("");
 	const [busy, setBusy] = useState(false);
 	const k = kindOf(r);
-	if (k === "own" || k === "wish" && wantedCopies(r) > 1) return null;
+	if (k === "own") return null;
 	const move = async (to, det) => {
 		setBusy(true);
 		let msg = "";
 		const ok = await mutate(r.id, (latest) => {
-			const m = movePatch(latest, to, det);
+			const m = movePatch(latest, to, det, ci);
 			msg = m?.msg || "";
 			return m?.patch ?? null;
 		});
@@ -2252,11 +3045,26 @@ function StatusActions({ r, onMoved }) {
 		setAsk(null);
 		if (ok) onMoved(msg);
 	};
-	const start = (to) => {
+	const askPaid = (to) => {
+		setPick(null);
 		setPaid(String(r.paid || ""));
 		setShop(String(r.shop || ""));
 		setAsk(to);
 	};
+	const start = (to) => {
+		setCi(0);
+		if (pickable(r).length > 1) setPick(to);
+		else askPaid(to);
+	};
+	if (pick) return /* @__PURE__ */ jsx(CopyPicker, {
+		r,
+		to: pick,
+		onPick: (i) => {
+			setCi(i);
+			askPaid(pick);
+		},
+		onCancel: () => setPick(null)
+	});
 	if (ask) return /* @__PURE__ */ jsx("form", {
 		onSubmit: (e) => {
 			e.preventDefault();
@@ -2320,21 +3128,6 @@ function StatusActions({ r, onMoved }) {
 	});
 }
 // src/sheet/ViewBody.tsx
-function Facts({ rows }) {
-	return /* @__PURE__ */ jsx("dl", {
-		className: "grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm",
-		children: rows.map(([k, v]) => /* @__PURE__ */ jsxs("div", {
-			className: "contents",
-			children: [/* @__PURE__ */ jsx("dt", {
-				className: "text-foreground-muted",
-				children: k
-			}), /* @__PURE__ */ jsx("dd", {
-				className: "text-foreground min-w-0 break-words",
-				children: v
-			})]
-		}, k))
-	});
-}
 function copyFacts(r) {
 	if (kindOf(r) !== "own") return [];
 	const f = [];
@@ -2461,7 +3254,7 @@ function Summary({ r }) {
 		})]
 	});
 }
-function ViewBody({ r, msg, onMoved, onAddWhy }) {
+function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy }) {
 	const { canEdit } = useRuntime();
 	const k = kindOf(r);
 	const own = k === "own";
@@ -2471,8 +3264,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 	const about = info.length > 0 || copy.length > 0 || hasTracks;
 	const notesN = noteCount(r);
 	const notes = canEdit || notesN > 0;
+	const research = hasResearch(r, canEdit);
 	const tabs = [
 		...own ? ["listening"] : [],
+		...research ? ["research"] : [],
 		...notes ? ["notes"] : [],
 		...about ? ["about"] : []
 	];
@@ -2489,6 +3284,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 				className: "h-auto justify-start py-3 text-start whitespace-normal",
 				onClick: onAddWhy,
 				children: own ? "Why is this one on the wall? Add a few words…" : "Why do you want this one? Add a few words…"
+			}),
+			k === "wish" && /* @__PURE__ */ jsx(CopiesView, {
+				r,
+				onEditCopy: canEdit ? onEditCopy : void 0
 			}),
 			canEdit && /* @__PURE__ */ jsx(StatusActions, {
 				r,
@@ -2510,6 +3309,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 								value: "listening",
 								children: "Listening"
 							}),
+							research && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "research",
+								children: "Research"
+							}),
 							notes && /* @__PURE__ */ jsxs(TabsTrigger, {
 								value: "notes",
 								children: ["Notes", notesN > 0 && /* @__PURE__ */ jsx("span", {
@@ -2527,6 +3330,14 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 						value: "listening",
 						className: "pt-4",
 						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
+					}),
+					research && /* @__PURE__ */ jsx(TabsContent, {
+						value: "research",
+						className: "pt-4",
+						children: /* @__PURE__ */ jsx(ResearchTab, {
+							r,
+							onEditCopy
+						})
 					}),
 					notes && /* @__PURE__ */ jsx(TabsContent, {
 						value: "notes",
@@ -2549,6 +3360,11 @@ function ViewBody({ r, msg, onMoved, onAddWhy }) {
 }
 // src/sheet/RecordSheet.tsx
 var SAVE_DELAY = 700;
+var PRIORITY = [
+	"Top want",
+	"Want",
+	"Someday"
+];
 function useAutosave(r, editing) {
 	const { update } = useRuntime();
 	const [form, setForm] = useState(null);
@@ -2576,6 +3392,13 @@ function useAutosave(r, editing) {
 		r?.id,
 		kind
 	]);
+	useEffect(() => {
+		if (!editing || !r || !baseline.current || latest.current.form !== baseline.current) return;
+		const f = toForm(r);
+		if (JSON.stringify(stored(f)) === JSON.stringify(stored(baseline.current))) return;
+		baseline.current = f;
+		setForm(f);
+	}, [editing, r]);
 	const flush = () => {
 		clearTimeout(timer.current);
 		const { r, form } = latest.current;
@@ -2585,15 +3408,21 @@ function useAutosave(r, editing) {
 		baseline.current = form;
 		update(r.id, patch).then((ok) => setSaved(ok ? "Saved" : "Couldn't save"));
 	};
-	const set = (k, v) => {
-		setForm((f) => f ? {
+	const change = (p, now = false) => {
+		const f = latest.current.form;
+		if (!f) return;
+		const next = {
 			...f,
-			[k]: v
-		} : f);
-		setSaved("Editing…");
+			...p
+		};
+		latest.current.form = next;
+		setForm(next);
 		clearTimeout(timer.current);
+		if (now) return flush();
+		setSaved("Editing…");
 		timer.current = setTimeout(flush, SAVE_DELAY);
 	};
+	const set = (k, v) => change({ [k]: v });
 	const cancel = () => {
 		clearTimeout(timer.current);
 		baseline.current = latest.current.form;
@@ -2602,6 +3431,7 @@ function useAutosave(r, editing) {
 	return {
 		form,
 		set,
+		change,
 		saved,
 		setSaved,
 		flush,
@@ -2613,19 +3443,24 @@ function RecordSheet({ id, onClose }) {
 	const r = records.find((x) => x.id === id);
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
+	const [focusCopy, setFocusCopy] = useState(null);
 	const [msg, setMsg] = useState("");
-	const { form, set, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit);
+	const [pick, setPick] = useState(null);
+	const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit);
 	useEffect(() => {
 		setEditing(false);
+		setPick(null);
 		setMsg("");
 		clearError(true);
 	}, [id]);
-	const moveTo = (to) => {
+	const moveTo = (to, ci) => {
 		if (!r) return;
 		flush();
+		if (to !== "wish" && ci === void 0 && kindOf(r) === "wish" && pickable(r).length > 1) return setPick(to);
+		setPick(null);
 		let m = "";
 		mutate(r.id, (latest) => {
-			const x = movePatch(latest, to);
+			const x = movePatch(latest, to, void 0, ci);
 			m = x?.msg || "";
 			return x?.patch ?? null;
 		}).then((ok) => ok && setSaved(m));
@@ -2679,13 +3514,14 @@ function RecordSheet({ id, onClose }) {
 								/* @__PURE__ */ jsx(Badge, {
 									size: "sm",
 									variant: k === "own" ? "success" : k === "ordered" ? "info" : "secondary",
-									children: KIND_LABEL[k]
+									children: k === "wish" ? PRIORITY[r.priority == 1 ? 0 : r.priority == 3 ? 2 : 1] : KIND_LABEL[k]
 								}),
 								canEdit && /* @__PURE__ */ jsx(Button, {
 									size: "sm",
 									variant: editing ? "primary" : "outline",
 									onClick: () => {
 										if (editing) flush();
+										setFocusCopy(null);
 										setEditing(!editing);
 									},
 									children: editing ? "Done" : "Edit"
@@ -2740,22 +3576,37 @@ function RecordSheet({ id, onClose }) {
 							})
 						]
 					}),
+					editing && pick && /* @__PURE__ */ jsx("div", {
+						className: "mb-6",
+						children: /* @__PURE__ */ jsx(CopyPicker, {
+							r,
+							to: pick,
+							onPick: (ci) => moveTo(pick, ci),
+							onCancel: () => setPick(null)
+						})
+					}),
 					editing && form ? /* @__PURE__ */ jsx(EditForm, {
 						form,
 						kind: k,
 						set,
+						change,
 						title: r.title || "this record",
 						focusWhy,
-						onStatus: k === "wish" && wantedCopies(r) > 1 ? null : moveTo,
+						onStatus: (to) => moveTo(to),
 						onRemove: removeIt,
 						autoFilled: Array.isArray(r.autoFilled) ? r.autoFilled : [],
-						looking: !!r.needsEnrich
+						looking: !!r.needsEnrich,
+						focusCopy
 					}) : /* @__PURE__ */ jsx(ViewBody, {
 						r,
 						msg,
 						onMoved: setMsg,
 						onAddWhy: () => {
 							setFocusWhy(true);
+							setEditing(true);
+						},
+						onEditCopy: (ci) => {
+							setFocusCopy(ci);
 							setEditing(true);
 						}
 					})
@@ -4015,12 +4866,24 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-inline-start: calc(var(--spacing) * 3);
   }
 
+  .ms-auto {
+    margin-inline-start: auto;
+  }
+
   .-me-1 {
     margin-inline-end: calc(var(--spacing) * -1);
   }
 
+  .-me-3 {
+    margin-inline-end: calc(var(--spacing) * -3);
+  }
+
   .me-0\.5 {
     margin-inline-end: calc(var(--spacing) * .5);
+  }
+
+  .me-2 {
+    margin-inline-end: calc(var(--spacing) * 2);
   }
 
   .me-3 {
@@ -4495,6 +5358,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     resize: vertical;
   }
 
+  .list-disc {
+    list-style-type: disc;
+  }
+
   .\[grid-template-columns\:auto_1fr_auto\] {
     grid-template-columns: auto 1fr auto;
   }
@@ -4627,6 +5494,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-block-end: calc(var(--border-width) * calc(1 - var(--tw-space-y-reverse)));
   }
 
+  .gap-x-1 {
+    column-gap: var(--spacing);
+  }
+
+  .gap-x-3 {
+    column-gap: calc(var(--spacing) * 3);
+  }
+
   .gap-x-4 {
     column-gap: calc(var(--spacing) * 4);
   }
@@ -4645,6 +5520,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --tw-space-x-reverse: 0;
     margin-inline-start: calc(var(--border-width) * var(--tw-space-x-reverse));
     margin-inline-end: calc(var(--border-width) * calc(1 - var(--tw-space-x-reverse)));
+  }
+
+  .gap-y-1 {
+    row-gap: var(--spacing);
   }
 
   .gap-y-2 {
@@ -4793,6 +5672,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .border-s-2 {
     border-inline-start-style: var(--tw-border-style);
     border-inline-start-width: 2px;
+  }
+
+  .border-t {
+    border-top-style: var(--tw-border-style);
+    border-top-width: var(--border-width);
   }
 
   .border-dashed {
@@ -5190,6 +6074,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     padding-inline-start: calc(var(--spacing) * 4) !important;
   }
 
+  .ps-5 {
+    padding-inline-start: calc(var(--spacing) * 5);
+  }
+
   .pe-2 {
     padding-inline-end: calc(var(--spacing) * 2);
   }
@@ -5260,6 +6148,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .text-start {
     text-align: start;
+  }
+
+  .align-middle {
+    vertical-align: middle;
   }
 
   .font-display {
@@ -5424,6 +6316,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .whitespace-pre-line {
     white-space: pre-line;
+  }
+
+  .whitespace-pre-wrap {
+    white-space: pre-wrap;
   }
 
   .text-\(--cover-ink\) {
