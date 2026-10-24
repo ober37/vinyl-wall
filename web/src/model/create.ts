@@ -1,0 +1,35 @@
+// A new record, as createRecord in app/vinyl-wall.html writes it, and the cover and artist fixes edit mode makes.
+import { stored, type Form } from './edit'
+import type { Kind, Rec } from './record'
+import { RELOOK_ABOUT } from './task'
+
+// the doc a new record is set with: what was typed, its status, an empty log, when it was added and priority 2 (every
+// kind gets one); a cover uploaded first goes in with it. Missing a cover, year or label means the task looks it up.
+// No needsSync: a new record has no discogsSync yet, which is what the task's sync looks for.
+export function newDoc(form: Form, kind: Kind, coverId: string | null, now = Date.now()): Record<string, unknown> {
+  const d: Record<string, unknown> = { ...stored(form), status: kind, notes: [], added: now, priority: 2 }
+  if (kind === 'ordered') d.orderStatus = 'ordered'
+  if (coverId) d.coverAsset = coverId
+  if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true
+  return d
+}
+
+// the same album added in the last two minutes: a second "Hang it" opens that one instead of hanging it twice
+export function dupeOf(records: Rec[], doc: Record<string, unknown>, now = Date.now()): Rec | undefined {
+  const key = (doc.artist + '|' + doc.title).toLowerCase()
+  return records.find((r) => (r.artist + '|' + r.title).toLowerCase() === key && now - (r.added || 0) < 120000)
+}
+
+// an uploaded cover replaces the looked-up one and stops the lookup waiting for it
+export const coverPatch = (r: Rec, id: string) => ({
+  coverAsset: id,
+  needsEnrich: false,
+  autoFilled: (r.autoFilled || []).filter((k) => k !== 'coverAsset'),
+})
+
+// "Not this artist": drop the artist and album info the lookup matched, and don't look it up again
+export const NOT_ARTIST = { artistRef: '', about: null, aboutBlocked: true }
+// "Find cover & details" looks the album info up again too, unless it's been turned off with Not this artist
+export const enrichPatch = (r: Rec) => (r.aboutBlocked ? { needsEnrich: true } : { needsEnrich: true, ...RELOOK_ABOUT })
+export const hasArtistInfo = (r: Rec, artistIds: Set<string>) =>
+  !r.aboutBlocked && ((!!r.artistRef && artistIds.has(String(r.artistRef))) || !!r.about?.summary)

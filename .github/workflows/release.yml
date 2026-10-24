@@ -17,7 +17,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           v="v$(tr -d '[:space:]' < VERSION)"
-          pv="v$(sed -n 's/.*const APP_VERSION="\([0-9.]*\)".*/\1/p' app/vinyl-wall.html)"
+          # the React page stamps <meta name="vinyl-wall-version">; the plain-JS page had const APP_VERSION
+          pv="v$(sed -n 's/.*<meta name="vinyl-wall-version" content="\([0-9.]*\)".*/\1/p' app/vinyl-wall.html | head -1)"
+          [ "$pv" = "v" ] && pv="v$(sed -n 's/.*const APP_VERSION="\([0-9.]*\)".*/\1/p' app/vinyl-wall.html)"
           if [ "$pv" != "$v" ]; then echo "app/vinyl-wall.html APP_VERSION is $pv but VERSION is $v"; exit 1; fi
           if gh release view "$v" >/dev/null 2>&1; then echo "$v already released"; exit 0; fi
           gh release create "$v" --target "$GITHUB_SHA" --title "Vinyl Wall $v" \

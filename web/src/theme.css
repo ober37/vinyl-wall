@@ -1,0 +1,173 @@
+/* Vinyl Wall's theme: the one place colour values live (web/AGENTS.md: components use tokens only).
+   1. The wall's palette, from production (app/vinyl-wall.html :root), light and dark.
+   2. appica's role tokens derived from it, so every appica component speaks Vinyl Wall.
+   3. The rack's own tokens (wood, iron, vinyl, hang tags), which appica has no role for, exposed to Tailwind via @theme. */
+
+:root,
+.light {
+  --wall: #dde2dc;
+  --wall-2: #cfd6cf;
+  --ink: #1b2220;
+  --ink-2: #4b5753;
+  --line: #b9c3bc;
+  --sheet: #eef1ec;
+  --accent: #2c5c4f;
+  --accent-ink: #f2f5f1;
+  --brass: #a77a2c;
+  --paper: #f6f4ec;
+  --paper-ink: #2a2622;
+  --someday: #56708f;
+  --someday-ink: #f3f6fa;
+  --want: #9b3b2a;
+  --want-ink: #fff;
+  --shade: #141c19; /* shadows are this at an opacity */
+  --shade-alpha: 28%;
+  --vinyl: #111312;
+  --groove: #2a2d2b;
+  --plank: #5e5244;
+  --plank-2: #4a3f33;
+  --plank-3: #2f2820;
+  --nail: #1c1916;
+  --rust: #78401c;
+  --iron: #3b3936;
+  --iron-hi: #8a857e;
+  --iron-mid: #5a5651;
+  --bracket: #3b3b3b;
+  --bracket-2: #151515;
+  --gleam: #fff; /* highlights in the wood */
+  --cover-ink: #fff; /* type on a generated cover */
+}
+
+.dark {
+  --wall: #141a19;
+  --wall-2: #1b2321;
+  --ink: #e6ebe6;
+  --ink-2: #a3b0aa;
+  --line: #2f3a37;
+  --sheet: #1a2120;
+  --accent: #7fb8a4;
+  --accent-ink: #0f1614;
+  --brass: #c99c4a;
+  --paper: #e9e4d6;
+  --paper-ink: #2a2622;
+  --someday: #9db3cf;
+  --someday-ink: #141c26;
+  --want: #e08a74;
+  --want-ink: #1a0f0b;
+  --shade: #000;
+  --shade-alpha: 55%;
+  --vinyl: #050606;
+  --groove: #1d201f;
+}
+
+/* appica's roles, from the palette above */
+:root,
+.light,
+.dark {
+  --foreground-intense: var(--ink);
+  --foreground-emphasis: color-mix(in oklch, var(--ink) 85%, var(--ink-2));
+  --foreground-strong: color-mix(in oklch, var(--ink) 60%, var(--ink-2));
+  --foreground: color-mix(in oklch, var(--ink) 35%, var(--ink-2));
+  --foreground-muted: var(--ink-2);
+  --foreground-subtle: color-mix(in oklch, var(--ink-2) 60%, var(--wall));
+  --foreground-inverse: var(--sheet);
+
+  --background: var(--sheet);
+  --background-subtle: color-mix(in oklch, var(--sheet) 50%, var(--wall));
+  --background-muted: var(--wall);
+  --background-strong: var(--wall-2);
+  --background-inverse: var(--ink);
+
+  --border: var(--line);
+  --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
+  --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
+  --border-emphasis: var(--ink-2);
+  --border-intense: var(--ink);
+  --border-inverse: var(--ink);
+  --border-overlay: var(--line);
+
+  --primary: var(--accent);
+  --primary-foreground: var(--accent-ink);
+  --primary-subtle: color-mix(in oklch, var(--accent) 10%, var(--sheet));
+  --primary-soft: color-mix(in oklch, var(--accent) 20%, var(--sheet));
+  --primary-muted: color-mix(in oklch, var(--accent) 70%, var(--sheet));
+  --primary-strong: color-mix(in oklch, var(--accent) 80%, var(--ink));
+
+  --secondary: color-mix(in oklch, var(--someday) 35%, var(--sheet));
+  --secondary-foreground: var(--ink);
+  --secondary-subtle: color-mix(in oklch, var(--someday) 10%, transparent);
+  --secondary-soft: color-mix(in oklch, var(--someday) 20%, transparent);
+  --secondary-muted: color-mix(in oklch, var(--someday) 25%, var(--sheet));
+  --secondary-strong: color-mix(in oklch, var(--someday) 60%, var(--sheet));
+  --secondary-emphasis: var(--someday);
+  --secondary-intense: color-mix(in oklch, var(--someday) 80%, var(--ink));
+
+  --error: color-mix(in oklch, var(--want) 45%, var(--sheet));
+  --error-foreground: var(--ink);
+  --error-subtle: color-mix(in oklch, var(--want) 10%, transparent);
+  --error-soft: color-mix(in oklch, var(--want) 20%, transparent);
+  --error-muted: color-mix(in oklch, var(--want) 25%, var(--sheet));
+  --error-strong: color-mix(in oklch, var(--want) 70%, var(--sheet));
+  --error-emphasis: var(--want);
+  --error-intense: color-mix(in oklch, var(--want) 80%, var(--ink));
+
+  --warning: color-mix(in oklch, var(--brass) 45%, var(--sheet));
+  --warning-foreground: var(--ink);
+  --warning-subtle: color-mix(in oklch, var(--brass) 10%, transparent);
+  --warning-soft: color-mix(in oklch, var(--brass) 20%, transparent);
+  --warning-muted: color-mix(in oklch, var(--brass) 25%, var(--sheet));
+  --warning-strong: color-mix(in oklch, var(--brass) 70%, var(--sheet));
+  --warning-emphasis: var(--brass);
+  --warning-intense: color-mix(in oklch, var(--brass) 80%, var(--ink));
+
+  --success: color-mix(in oklch, var(--accent) 40%, var(--sheet));
+  --success-foreground: var(--ink);
+  --success-subtle: color-mix(in oklch, var(--accent) 10%, transparent);
+  --success-soft: color-mix(in oklch, var(--accent) 20%, transparent);
+  --success-muted: color-mix(in oklch, var(--accent) 25%, var(--sheet));
+  --success-strong: color-mix(in oklch, var(--accent) 60%, var(--sheet));
+  --success-emphasis: var(--accent);
+  --success-intense: color-mix(in oklch, var(--accent) 80%, var(--ink));
+
+  --focus-ring: var(--brass);
+  --focus-ring-input: color-mix(in oklch, var(--brass) 40%, transparent);
+  --focus-ring-primary: var(--brass);
+
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, Menlo, Consolas, monospace;
+
+  --shadow-tone: color-mix(in oklch, var(--shade) var(--shade-alpha), transparent);
+}
+
+/* the rack's tokens as Tailwind colours and the display face (bg-wall, text-paper-ink, font-display, ...) */
+@theme inline {
+  --font-display: 'Big Shoulders Display', 'Arial Narrow', Impact, sans-serif;
+  --color-wall: var(--wall);
+  --color-wall-2: var(--wall-2);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-paper: var(--paper);
+  --color-paper-ink: var(--paper-ink);
+  --color-ship: var(--accent);
+  --color-ship-ink: var(--accent-ink);
+  --color-someday: var(--someday);
+  --color-someday-ink: var(--someday-ink);
+  --color-want: var(--want);
+  --color-want-ink: var(--want-ink);
+  --color-brass: var(--brass);
+}
+
+/* the brass dot of a background lookup under way */
+@keyframes pulse-dot {
+  50% {
+    opacity: 0.35;
+  }
+}
+@theme inline {
+  --animate-pulse-dot: pulse-dot 1.4s ease-in-out infinite;
+}
+
+body {
+  background-color: var(--wall);
+  color: var(--ink);
+}

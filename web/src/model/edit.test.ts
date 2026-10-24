@@ -1,0 +1,73 @@
+import { describe, expect, it } from 'vitest'
+import { patchFor, toForm, withSync } from './edit'
+import type { Rec } from './record'
+import { aboutPending } from './task'
+
+const owned: Rec = {
+  id: 'r1', title: 'Kind of Blue', artist: 'Miles Davis', status: 'own', year: '1959', runtime: 46, label: 'Columbia',
+  pressing: '2015 reissue (Discogs r7140383)', discogsId: 7140383, paid: '48', autoFilled: ['year', 'label'],
+  notes: [{ d: '2026-01-01', t: 'x' }], about: { summary: 's' }, moreCopies: [],
+}
+
+describe('patchFor', () => {
+  it('writes nothing when nothing changed', () => {
+    const f = toForm(owned)
+    expect(patchFor(owned, f, { ...f })).toEqual({})
+  })
+
+  it("doesn't strip the Discogs note from an untouched pressing", () => {
+    const f = toForm(owned)
+    expect(f.pressing).toBe('2015 reissue')
+    expect(patchFor(owned, f, { ...f, why: 'hi' })).not.toHaveProperty('pressing')
+  })
+
+  it('writes only changed fields', () => {
+    const f = toForm(owned)
+    expect(patchFor(owned, f, { ...f, title: 'Kind of Blue ' })).toEqual({})
+    expect(patchFor({ ...owned, about: undefined }, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
+    expect(patchFor(owned, f, { ...f, catalog: 'CS 8163' })).toEqual({ catalog: 'CS 8163' })
+  })
+
+  it('a new title or artist looks the album info up again', () => {
+    const r = { ...owned, aboutAt: '2026-10-01', aboutV: 3, artistRef: 'mb-1', about: {} }
+    const f = toForm(r)
+    const reset = { aboutAt: '', aboutV: 0, artistRef: '', about: null }
+    expect(patchFor(r, f, { ...f, title: 'Kind of Blue (Legacy)' })).toEqual({ title: 'Kind of Blue (Legacy)', ...reset })
+    expect(patchFor(r, f, { ...f, artist: 'Miles Davis Sextet' })).toEqual({ artist: 'Miles Davis Sextet', ...reset })
+    expect(aboutPending({ ...r, aboutAt: '', aboutV: 0, about: undefined })).toBe(true)
+    expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
+    // Not this artist stays off
+    expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, title: 'x' })).toEqual({ title: 'x' })
+  })
+
+  it('flags Discogs sync only for synced fields', () => {
+    expect(withSync({ title: 'a' })).toEqual({ title: 'a', needsSync: true })
+    expect(withSync({ catalog: 'a', notes: [] })).toEqual({ catalog: 'a', notes: [] })
+  })
+
+  it('stores production shapes', () => {
+    const f = toForm(owned)
+    expect(patchFor(owned, f, { ...f, paid: '$ 52' }).paid).toBe('52')
+    expect(patchFor(owned, f, { ...f, runtime: '47 min' }).runtime).toBe(47)
+    expect(patchFor(owned, f, { ...f, runtime: '' }).runtime).toBe('')
+    expect(patchFor(owned, f, { ...f, shopUrl: 'roughtrade.com' }).shopUrl).toBe('https://roughtrade.com/')
+    expect(patchFor(owned, f, { ...f, shopUrl: 'not a url' }).shopUrl).toBe('not a url')
+  })
+
+  it('drops a typed field from autoFilled', () => {
+    const f = toForm(owned)
+    expect(patchFor(owned, f, { ...f, year: '1960' })).toEqual({ year: '1960', autoFilled: ['label'] })
+  })
+
+  it('never writes fields the form does not own', () => {
+    const f = toForm(owned)
+    // (a new title or artist also resets the album info: tested above)
+    const p = patchFor({ ...owned, aboutBlocked: true }, f, { ...f, title: 'a', artist: 'b', why: 'c', shop: 'd', mediaGrade: 'NM' })
+    for (const k of ['notes', 'about', 'moreCopies', 'status', 'discogsId', 'matrix']) expect(p).not.toHaveProperty(k)
+  })
+
+  it("gives a wanted record's form no copy fields", () => {
+    const wish: Rec = { id: 'w', title: 'A', status: 'wish', label: 'Apple', pressing: 'UK first' }
+    expect(Object.keys(toForm(wish)).sort()).toEqual(['artist', 'runtime', 'title', 'why', 'year'])
+  })
+})

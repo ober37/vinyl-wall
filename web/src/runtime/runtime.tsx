@@ -1,0 +1,373 @@
+// The claude.ai runtime as React state: boots the capabilities once, keeps the wall's data live, and is the only path
+// to writes and to starting the background task.
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { withSync } from '../model/edit'
+import type { Rec } from '../model/record'
+import { siteOf, type Site } from '../model/site'
+import { aboutPending, pendingParts, pendingWork, runActive, type Settings } from '../model/task'
+
+type Db = ClaudeCapabilityMap['db']
+type Mcp = ClaudeCapabilityMap['mcp']
+type Assets = ClaudeCapabilityMap['assets']
+type Doc = Record<string, unknown> & { id: string }
+export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
+
+type Runtime = {
+  status: Status
+  records: Rec[]
+  // the settings doc as stored, and what the wall draws from it (defaults until, or unless, it loads)
+  settings: Settings
+  site: Site
+  // read-only here until their slices: About the artist, Equipment
+  artists: Doc[]
+  gear: Doc[]
+  setups: Doc[]
+  canEdit: boolean
+  // this viewer's id (their private data lives under data/users/<id>), and what this view can do
+  myId: string | null
+  hasMcp: boolean
+  // uploads (Editors only; null for everyone else)
+  hasAssets: boolean
+  // one write at a time, so a record never has two in flight; resolves false when the write was refused
+  update: (id: string, patch: Record<string, unknown>) => Promise<boolean>
+  // a write computed from the record as the database has it right now (for the notes array, which is replaced whole);
+  // fn returns null to write nothing, or throws to report why it can't
+  mutate: (id: string, fn: (latest: Rec) => Record<string, unknown> | null) => Promise<boolean>
+  // a record synced to Discogs is marked deleted so the background task can take it off Discogs; others go for good
+  remove: (id: string) => Promise<boolean>
+  // a new record: mint its id once (a retry after a failed write reuses it), then set it; resolves false on failure
+  newId: () => string
+  create: (id: string, doc: Record<string, unknown>) => Promise<boolean>
+  // store an image (already shrunk) and resolve its asset id; rejects with a message to show
+  upload: (file: Blob) => Promise<string>
+  // only the changed fields are written, so a save never undoes what the background task wrote meanwhile
+  saveSettings: (patch: Settings) => Promise<boolean>
+  // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
+  saveToken: (token: string) => Promise<void>
+  removeToken: () => Promise<void>
+  // start the background task with what's waiting; at most once a minute, one run at a time
+  fireTask: () => void
+  // a sheet closing starts the task now if its edits are waiting to sync, instead of 20 seconds later
+  flushSync: () => void
+  // the last thing that went wrong, or a short notice about the page (production's flash): "Looking up …" isn't one, a
+  // record's sheet shows that from the record itself
+  error: string
+  notice: string
+  // clears the error and the notice; errorOnly keeps the notice (opening another record)
+  clearError: (errorOnly?: boolean) => void
+}
+
+const Ctx = createContext<Runtime | null>(null)
+
+export function useRuntime(): Runtime {
+  const rt = useContext(Ctx)
+  if (!rt) throw new Error('useRuntime outside RuntimeProvider')
+  return rt
+}
+
+const msgOf = (e: unknown) => (e as { message?: string; code?: string })?.message || (e as { code?: string })?.code || String(e)
+
+export function RuntimeProvider({ claude, children }: { claude: Window['claude'] | undefined; children: ReactNode }) {
+  const [status, setStatus] = useState<Status>(claude?.use ? 'loading' : 'no-runtime')
+  const [records, setRecords] = useState<Rec[]>([])
+  const [settings, setSettings] = useState<Settings>({})
+  const [settingsLoaded, setSettingsLoaded] = useState(false)
+  const [artists, setArtists] = useState<Doc[]>([])
+  const [gear, setGear] = useState<Doc[]>([])
+  const [setups, setSetups] = useState<Doc[]>([])
+  const [canEdit, setCanEdit] = useState(false)
+  const [myId, setMyId] = useState<string | null>(null)
+  const [hasMcp, setHasMcp] = useState(false)
+  const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
+  const db = useRef<Db | null>(null)
+  const mcp = useRef<Mcp | null>(null)
+  const assets = useRef<Assets | null>(null)
+  const [hasAssets, setHasAssets] = useState(false)
+  const writing = useRef<Promise<unknown>>(Promise.resolve())
+  const settingsWriting = useRef<Promise<unknown>>(Promise.resolve())
+  const settingsExist = useRef(false)
+  // the latest data, for the task logic (which runs outside renders)
+  const live = useRef({ records, settings, canEdit })
+  live.current = { records, settings, canEdit }
+  const task = useRef({ lastFire: 0, fireTimer: 0 as unknown as ReturnType<typeof setTimeout>, afterRun: false, syncDirty: false, syncTimer: 0 as unknown as ReturnType<typeof setTimeout> })
+
+  useEffect(() => {
+    if (!claude?.use) return
+    const unsubs: (() => void)[] = []
+    let alive = true
+    const use = <K extends keyof ClaudeCapabilityMap & string>(k: K) => claude.use(k).catch(() => null)
+    Promise.all([use('db'), use('user'), use('mcp'), use('assets')]).then(async ([d, u, m, a]) => {
+      if (!alive) return
+      if (!d) return setStatus('no-db')
+      db.current = d
+      mcp.current = m
+      setHasMcp(!!m)
+      assets.current = a
+      setHasAssets(!!a)
+      // can("data.write") is the platform's answer; null means it said nothing, so fall back to production's check.
+      // Walls installed earlier keep the runtime they were published with, which may not have can() at all.
+      const w = u ? (typeof u.can === 'function' ? await u.can('data.write').catch(() => null) : null) : false
+      const edit = w ?? (u ? (await u.canEdit().catch(() => false)) || (await u.isOwner().catch(() => false)) : false)
+      const id = u ? await u.id().catch(() => null) : null
+      if (!alive) return
+      setCanEdit(edit)
+      setMyId(id)
+      // a settings failure leaves the default look; only the records decide the page's status
+      unsubs.push(
+        d.doc('settings/site').onSnapshot(
+          (snap) => {
+            settingsExist.current = snap.exists
+            setSettings(snap.exists ? (snap.data() as Settings) : {})
+            setSettingsLoaded(true)
+          },
+          () => {},
+        ),
+      )
+      const docs = (path: string, set: (d: Doc[]) => void) =>
+        unsubs.push(d.collection(path).onSnapshot((snap) => set(snap.docs.map((x) => ({ ...x.data(), id: x.id }))), () => {}))
+      docs('artists', setArtists)
+      docs('gear', setGear)
+      docs('setups', setSetups)
+      unsubs.push(
+        d.collection('records').onSnapshot(
+          (snap) => {
+            setRecords(snap.docs.map((x) => ({ ...x.data(), id: x.id }) as Rec).filter((r) => !r.deleted))
+            setStatus('ready')
+          },
+          (e) => {
+            setError(e.message)
+            setStatus(e.code === 'revoked' ? 'revoked' : 'no-db')
+          },
+        ),
+      )
+    })
+    return () => {
+      alive = false
+      unsubs.forEach((u) => u())
+    }
+  }, [claude])
+
+  const saveSettings = (patch: Settings) => {
+    setSettings((s) => ({ ...s, ...patch }))
+    // a task started right after this save must already see it
+    live.current.settings = { ...live.current.settings, ...patch }
+    const next = settingsWriting.current.then(async () => {
+      try {
+        const ref = db.current!.doc('settings/site')
+        if (settingsExist.current) await ref.update(patch)
+        else {
+          await ref.set({ ...live.current.settings, ...patch })
+          settingsExist.current = true
+        }
+        return true
+      } catch (e) {
+        setError("Couldn't save settings: " + msgOf(e))
+        return false
+      }
+    })
+    settingsWriting.current = next
+    return next
+  }
+
+  // ported from production's fireTask: one run at a time (settings.run marks it; the task clears it), a start asked for
+  // meanwhile waits for that run to end, and starts are at least a minute apart
+  const fireTask = () => {
+    const t = task.current
+    const { settings: s, records: recs } = live.current
+    if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.")
+    if (runActive(s)) {
+      t.afterRun = true
+      return
+    }
+    const wait = t.lastFire + 60000 - Date.now()
+    if (wait > 0) {
+      clearTimeout(t.fireTimer)
+      t.fireTimer = setTimeout(fireTask, wait + 500)
+      return
+    }
+    t.lastFire = Date.now()
+    // each install stores the id of its own background task in settings (written during setup)
+    if (!s.taskId) {
+      t.lastFire = 0
+      return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
+    }
+    saveSettings({ run: { startedMs: Date.now() } })
+    mcp.current
+      .callTool('Claude Code Remote', 'fire_trigger', { trigger_id: s.taskId, text: pendingWork(recs, s) }, { cache: false })
+      .catch((e: { code?: string; message?: string }) => {
+        t.lastFire = 0
+        saveSettings({ run: { startedMs: 0 } })
+        setNotice(
+          e.code === 'not_granted' || e.code === 'permission_denied'
+            ? 'Background updates need permission to start Claude tasks. Allow it for this page and try again.'
+            : "Couldn't start the background update: " + msgOf(e),
+        )
+      })
+  }
+
+  // a run ending lets a start that waited for it go, if anything is still waiting
+  useEffect(() => {
+    const t = task.current
+    if (t.afterRun && !runActive(settings)) {
+      t.afterRun = false
+      if (pendingParts(records, settings, true).length) {
+        t.lastFire = 0
+        fireTask()
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [settings])
+
+  // records waiting for album info start the task on their own, at most every 30 minutes across reloads
+  useEffect(() => {
+    if (status !== 'ready' || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return
+    if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return
+    let t = 0
+    try {
+      t = +(localStorage.getItem('vw-lookup') || 0)
+    } catch {
+      // storage blocked: look up now
+    }
+    if (Date.now() - t < 30 * 60000) return
+    try {
+      localStorage.setItem('vw-lookup', String(Date.now()))
+    } catch {
+      // not remembered
+    }
+    fireTask()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status, settingsLoaded, canEdit, hasMcp, records, settings])
+
+  // an edit to a field Discogs keeps starts the task 20 seconds after the last such edit (or when the sheet closes)
+  const syncSoon = () => {
+    const t = task.current
+    t.syncDirty = true
+    clearTimeout(t.syncTimer)
+    t.syncTimer = setTimeout(() => {
+      if (t.syncDirty) {
+        t.syncDirty = false
+        fireTask()
+      }
+    }, 20000)
+  }
+  const flushSync = () => {
+    const t = task.current
+    if (!t.syncDirty) return
+    t.syncDirty = false
+    clearTimeout(t.syncTimer)
+    writing.current.then(fireTask)
+  }
+
+  // every write waits its turn; a fresh one reads the record first, so it builds on what's there now
+  const queue = (id: string, fn: (latest: Rec) => Record<string, unknown> | 'delete' | null, fresh = false) => {
+    const next = writing.current.then(async () => {
+      try {
+        const ref = db.current!.collection('records').doc(id)
+        let latest = {} as Rec
+        if (fresh) {
+          const snap = await ref.get()
+          if (!snap.exists) throw new Error('This record is gone.')
+          latest = { ...snap.data(), id } as Rec
+        }
+        const patch = fn(latest)
+        if (patch === 'delete') await ref.delete()
+        else if (patch) {
+          const data = withSync(patch)
+          await ref.update(data)
+          // the task's start message reads the records now, before the snapshot brings this write back
+          live.current.records = live.current.records.map((r) => (r.id === id ? { ...r, ...data } : r))
+          if (data.needsSync) syncSoon()
+        }
+        setError('')
+        return !!patch
+      } catch (e) {
+        setError("Couldn't save: " + msgOf(e))
+        return false
+      }
+    })
+    writing.current = next
+    return next
+  }
+
+  // a new record goes straight in with set(), as production's createRecord does (no needsSync: the task syncs records that
+  // have no discogsSync yet), in the same queue as every other write
+  const create = (id: string, doc: Record<string, unknown>) => {
+    const next = writing.current.then(async () => {
+      try {
+        await db.current!.collection('records').doc(id).set(doc)
+        // the task's start message counts records now, before the snapshot brings this one back
+        if (!live.current.records.some((r) => r.id === id)) live.current.records = [...live.current.records, { ...doc, id } as Rec]
+        setError('')
+        return true
+      } catch (e) {
+        setError("Couldn't add it: " + msgOf(e))
+        return false
+      }
+    })
+    writing.current = next
+    return next
+  }
+  const upload = async (file: Blob) => {
+    if (!assets.current) throw new Error("Cover uploads aren't available in this view.")
+    const tryIt = () => assets.current!.upload(file)
+    try {
+      return (await tryIt().catch((e: { code?: string }) => (e?.code === 'store_unavailable' ? tryIt() : Promise.reject(e)))).id
+    } catch (e) {
+      const code = (e as { code?: string })?.code
+      throw new Error(
+        code === 'too_large'
+          ? 'That image is too big to store. Try a smaller one.'
+          : code === 'not_granted' || code === 'capability_removed'
+            ? "Cover uploads aren't available in this view."
+            : msgOf(e),
+      )
+    }
+  }
+
+  const secret = () => (myId && db.current ? db.current.collection('data/users/' + myId).doc('discogs') : null)
+
+  const value = useMemo<Runtime>(
+    () => ({
+      status,
+      records,
+      settings,
+      site: siteOf(settings),
+      artists,
+      gear,
+      setups,
+      canEdit,
+      myId,
+      hasMcp,
+      hasAssets,
+      error,
+      notice,
+      clearError: (errorOnly) => {
+        setError('')
+        if (!errorOnly) setNotice('')
+      },
+      update: (id, patch) => queue(id, () => patch),
+      mutate: (id, fn) => queue(id, fn, true),
+      remove: (id) =>
+        queue(id, (r) => (r.discogsSync && (r.discogsSync as { rid?: unknown }).rid ? { deleted: true } : 'delete'), true),
+      newId: () => db.current!.collection('records').doc().id,
+      create,
+      upload,
+      saveSettings,
+      saveToken: async (token) => {
+        const ref = secret()
+        if (!ref) throw new Error('Sign in to claude.ai to save your token.')
+        await ref.set({ token, savedAt: new Date().toISOString() })
+      },
+      removeToken: async () => {
+        await secret()?.delete()
+      },
+      fireTask,
+      flushSync,
+    }),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, error, notice],
+  )
+
+  return <Ctx value={value}>{children}</Ctx>
+}
