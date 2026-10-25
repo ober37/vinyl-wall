@@ -55,6 +55,31 @@ describe('starting the background task', () => {
     await waitFor(() => expect(fires(fake)).toHaveLength(1))
   })
 
+  it('lets a run that has stopped checking in go after 20 minutes', async () => {
+    const { fake, user } = setup({ taskId: 't1', run: { startedMs: Date.now() - 30 * 60000, beatMs: Date.now() - 20 * 60000 + 300 }, update: { checkedMs: Date.now() } })
+    await openEdit(user, 'Blue Train')
+    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(fires(fake)).toHaveLength(0)
+    // no word from it since: the start that waited goes once its time is up, without a reload
+    await waitFor(() => expect(fires(fake)).toHaveLength(1), { timeout: 3000 })
+  })
+
+  it('follows a run that left records for the next, but not one that stopped before saying so', async () => {
+    const { fake } = setup()
+    // a run another tab started checks in with 12 records left, then ends: this page starts the next
+    await act(async () => fake.remoteDoc('settings/site', { run: { startedMs: Date.now(), beatMs: Date.now() }, lookupLeft: 12 }))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(fires(fake)).toHaveLength(0)
+    await act(async () => fake.remoteDoc('settings/site', { run: { startedMs: 0, beatMs: 0 } }))
+    await waitFor(() => expect(fires(fake)).toHaveLength(1))
+    expect(fake.store.settings.site.lookupLeft).toBe(0)
+    // that run ends without a word: no third
+    await act(async () => fake.remoteDoc('settings/site', { run: { startedMs: 0 } }))
+    await new Promise((r) => setTimeout(r, 50))
+    expect(fires(fake)).toHaveLength(1)
+  })
+
   it("says so when the page can't start tasks", async () => {
     const { user } = setup(undefined, { mcp: 'denied' })
     await openEdit(user, 'Blue Train')

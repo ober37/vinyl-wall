@@ -4,9 +4,12 @@ import type { Rec } from './record'
 
 export type Settings = Record<string, unknown> & {
   taskId?: string
-  run?: { startedMs?: number }
+  run?: { startedMs?: number; beatMs?: number }
   discogs?: Record<string, unknown>
   update?: { latest?: string; checkedMs?: number }
+  // records a run left for the next (lookups take 60 at a time, the sync stops after 10 minutes); the page starts it
+  lookupLeft?: number
+  syncLeft?: number
 }
 
 // not looked up yet, or looked up by an older version (below aboutV 3, an album with no summary gets one more try)
@@ -48,8 +51,10 @@ export function lookupStatus(r: Rec): string {
   return aboutPending(r) ? 'Looking up the album…' : ''
 }
 
-// one run at a time: starting marks settings.run, the task clears it; a mark older than an hour is a run that died
-export const runActive = (s: Settings, now = Date.now()) => now - (s.run?.startedMs || 0) < 60 * 60000
+// one run at a time: starting marks settings.run, the task checks in as it saves (beatMs) and clears it at the end;
+// 20 minutes without a word is a run that died, so it lets the next one start
+export const runEnds = (s: Settings) => Math.max(s.run?.startedMs || 0, s.run?.beatMs || 0) + 20 * 60000
+export const runActive = (s: Settings, now = Date.now()) => now < runEnds(s)
 
 const PLAIN = /^\d+\.\d+\.\d+$/
 export function newer(a: unknown, b: unknown): boolean {

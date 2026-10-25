@@ -6,7 +6,9 @@ versions.json maps doc_id -> current version (from the ArtifactData list output)
 exported files don't carry versions.
 <records_dir> holds one JSON file per record doc as written by ArtifactData list/out_dir
 (each file: {"id", "data", "version", ...} or the raw doc). Writes a list of DB writes
-to <out.json>: [{"op":"update"|"delete","doc_id","if_version","data"}].
+to <out.json>: [{"op":"update"|"delete","doc_id","if_version","data"}], then one update to settings/site that tells the
+page the run is still going and how many records wait for the next run: the sync stops starting records after
+BUDGET seconds, so a run with a lot to sync doesn't go quiet long enough for the page to take it for dead.
 
 Mapping:
   status own      -> Collection (Uncategorized), Media/Sleeve condition + Notes fields
@@ -26,6 +28,7 @@ UA = "VinylWall/1.0 +https://github.com/ober37/vinyl-wall"
 GRADE = {"M": "Mint (M)", "NM": "Near Mint (NM or M-)", "VG+": "Very Good Plus (VG+)", "VG": "Very Good (VG)",
          "G+": "Good Plus (G+)", "G": "Good (G)", "F": "Fair (F)", "P": "Poor (P)"}
 _last = [0.0]
+BUDGET = 600
 
 
 def call(method, path, params=None, body=None, ok404=False):
@@ -385,12 +388,16 @@ def main():
             with open(a) as fh:
                 versions = json.load(fh)
     do_all = "--all" in sys.argv
+    t0 = time.time()
     wants = wantlist()
-    writes, report = [], []
+    writes, report, left = [], [], 0
     for doc_id, ver, d in load(src, versions):
         if d.get("example"):
             continue
         if not (do_all or d.get("needsSync") or d.get("deleted") or not d.get("discogsSync")):
+            continue
+        if time.time() - t0 > BUDGET:
+            left += 1
             continue
         sync = dict(d.get("discogsSync") or {})
         try:
@@ -411,6 +418,10 @@ def main():
                            "data": {"discogsSync": {**sync, "state": "error", "at": now(),
                                                     "msg": str(e)[:300]}, "needsSync": {"__delete__": True}}})
             report.append(f"{d.get('title')}: ERROR {e}")
+    writes.append({"op": "update", "collection": "settings", "doc_id": "site",
+                   "data": {"run": {"beatMs": int(time.time() * 1000)}, "syncLeft": left}})
+    if left:
+        report.append(f"{left} more wait for the next run.")
     with open(dst, "w") as fh:
         json.dump(writes, fh, indent=1)
     print("\n".join(report) or "Nothing to sync.")

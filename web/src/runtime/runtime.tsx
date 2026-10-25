@@ -5,7 +5,7 @@ import { withSync } from '../model/edit'
 import type { Gear, Setup } from '../model/gear'
 import type { Rec } from '../model/record'
 import { siteOf, type Site } from '../model/site'
-import { aboutPending, pendingParts, pendingWork, runActive, type Settings } from '../model/task'
+import { aboutPending, pendingParts, pendingWork, runActive, runEnds, type Settings } from '../model/task'
 
 type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
@@ -246,7 +246,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       t.lastFire = 0
       return how?.asked && setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
     }
-    saveSettings({ run: { startedMs: Date.now() } })
+    // the run says what it leaves for the next as it goes, so one that stops before saving anything isn't followed
+    saveSettings({ run: { startedMs: Date.now() }, lookupLeft: 0, syncLeft: 0 })
     mcp.current
       .callTool('Claude Code Remote', 'fire_trigger', { trigger_id: s.taskId, text: pendingWork(recs, s) }, { cache: false })
       .catch((e: { code?: string; message?: string }) => {
@@ -260,18 +261,26 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       })
   }
 
-  // a run ending lets a start that waited for it go, if anything is still waiting
+  // a run ending (or going quiet too long) lets a start that waited for it go, if anything is still waiting, and a run
+  // that left records for the next (lookups take 60 at a time, the sync stops after 10 minutes) is followed by it
+  const [quiet, setQuiet] = useState(0)
   useEffect(() => {
     const t = task.current
-    if (t.afterRun && !runActive(settings)) {
+    if (runActive(settings)) {
+      const id = setTimeout(() => setQuiet((n) => n + 1), Math.min(runEnds(settings) - Date.now(), 20 * 60000) + 1000)
+      return () => clearTimeout(id)
+    }
+    if (t.afterRun) {
       t.afterRun = false
       if (pendingParts(records, settings, true).length) {
         t.lastFire = 0
         fireTask()
+        return
       }
     }
+    if (canEdit && (Number(settings.lookupLeft) > 0 || Number(settings.syncLeft) > 0)) fireTask()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [settings])
+  }, [settings, quiet])
 
   // records waiting for album info start the task on their own, at most every 30 minutes across reloads
   useEffect(() => {

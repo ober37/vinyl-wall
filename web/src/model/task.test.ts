@@ -28,9 +28,12 @@ describe('what the background task is started with', () => {
       'Started from the wall. Waiting now: nothing specific; run every part and do whatever is pending.',
     )
   })
-  it('treats a run mark older than an hour as a dead run', () => {
-    expect(runActive({ run: { startedMs: now - 59 * 60000 } }, now)).toBe(true)
-    expect(runActive({ run: { startedMs: now - 61 * 60000 } }, now)).toBe(false)
+  it('treats a run with no word for 20 minutes as a dead run', () => {
+    expect(runActive({ run: { startedMs: now - 19 * 60000 } }, now)).toBe(true)
+    expect(runActive({ run: { startedMs: now - 21 * 60000 } }, now)).toBe(false)
+    expect(runActive({ run: { startedMs: now - 50 * 60000, beatMs: now - 5 * 60000 } }, now)).toBe(true)
+    expect(runActive({ run: { startedMs: now - 50 * 60000, beatMs: now - 21 * 60000 } }, now)).toBe(false)
+    expect(runActive({}, now)).toBe(false)
   })
 })
 

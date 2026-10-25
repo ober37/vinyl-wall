@@ -48,7 +48,12 @@ with open(os.path.join(tmp, "wall", "x.json"), "w") as fh:
     json.dump({"id": "x", "data": {"title": "Old Album", "artist": "Someone", "status": "wish"}}, fh)
 sys.argv = ["x", os.path.join(tmp, "wall"), os.path.join(tmp, "out.json")]
 I.main()
-out = {w["doc_id"]: w["data"] for w in json.load(open(os.path.join(tmp, "out.json")))}
+writes = json.load(open(os.path.join(tmp, "out.json")))
+out = {w["doc_id"]: w["data"] for w in writes if w["collection"] == "records"}
+done = writes[-1]
+check("import: the last write marks the import done, so it lands with the records",
+      done["collection"] == "settings" and done["doc_id"] == "site" and done["data"]["discogs"]["importRequested"] == {"__delete__": True}
+      and done["data"]["discogs"]["importMsg"].startswith("Imported 2 records"), done)
 ab, ru = out.get("dg-1", {}), out.get("dg-10", {})
 check("import: two pressings of one wanted album make one record", set(out) == {"dg-1", "dg-10"}, sorted(out))
 check("import: the other pressing is a copy with its release id",
@@ -99,4 +104,21 @@ check("sync: the picked copy moves to the collection and off the wantlist",
 calls.clear()
 S.sync_one({**got, "deleted": True}, w, sync)
 check("sync: deleting the record takes its copies off the wantlist", ("DELETE", "/users/u/wants/1", None) in calls, calls)
+
+# --- sync: a run with a lot to sync stops starting records after its budget, and says how many wait
+for i in range(3):
+    with open(os.path.join(tmp, "wall", f"s{i}.json"), "w") as fh:
+        json.dump({"id": f"s{i}", "version": 1, "data": {"title": f"T{i}", "artist": "A", "status": "own"}}, fh)
+S.wantlist = lambda: set()
+S.sync_one = lambda d, wants, sync: {"discogsSync": {"state": "synced"}}
+S.BUDGET = -1
+sys.argv = ["x", os.path.join(tmp, "wall"), os.path.join(tmp, "sync.json")]
+S.main()
+sw = json.load(open(os.path.join(tmp, "sync.json")))
+check("sync: past its budget it leaves the rest for the next run and says how many",
+      [w["collection"] for w in sw] == ["settings"] and sw[-1]["data"]["syncLeft"] == 4 and sw[-1]["data"]["run"]["beatMs"] > 0, sw)
+S.BUDGET = 600
+S.main()
+sw = json.load(open(os.path.join(tmp, "sync.json")))
+check("sync: within it, every record syncs and nothing is left", len(sw) == 5 and sw[-1]["data"]["syncLeft"] == 0, sw)
 sys.exit(1 if fails else 0)

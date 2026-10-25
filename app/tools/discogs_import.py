@@ -5,7 +5,8 @@ Usage: DISCOGS_TOKEN=... DISCOGS_USER=... python3 -I discogs_import.py <records_
 
 <records_dir> holds the wall's record docs as written by ArtifactData list/out_dir (each file either
 {"id","data","version"} or the raw doc). Writes <out.json>: a list of DB writes
-[{"op":"set","collection":"records","doc_id","data"}] for NEW records only, and prints a one-line report.
+[{"op":"set","collection":"records","doc_id","data"}] for NEW records only, then one update to settings/site that marks
+the import done (so the records and that mark land together), and prints a one-line report.
 
 Rules:
   - Collection items become owned records; wantlist items become hunt records ("Want").
@@ -206,11 +207,15 @@ def main():
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_want += 1
         hunts[key] = rec
 
-    with open(dst, "w") as fh:
-        json.dump(writes, fh, indent=1)
     capped = " (stopped at 1000 items)" if len(coll) >= MAX_ITEMS or len(wants) >= MAX_ITEMS else ""
     more = (f"; {n_copies} more pressings became copies" if n_copies != 1 else "; 1 more pressing became a copy") if n_copies else ""
-    print(f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted){more}; {skipped} skipped as already on the wall{capped}.")
+    report = f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted){more}; {skipped} skipped as already on the wall{capped}."
+    DEL = {"__delete__": True}
+    writes.append({"op": "update", "collection": "settings", "doc_id": "site", "data": {"run": {"beatMs": int(time.time() * 1000)}, "discogs": {
+        "importRequested": DEL, "importRequestedAt": DEL, "importedAt": now(), "importMsg": report}}})
+    with open(dst, "w") as fh:
+        json.dump(writes, fh, indent=1)
+    print(report)
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 """Offline checks for app/tools/lookup.py's pure helpers. Run by dev/test.sh."""
-import os, sys
+import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "tools"))
 import lookup as L
@@ -86,4 +86,11 @@ L.fetch = lambda *a, **k: {"releases": [box, {"id": "lp", "media": [med("12\" Vi
 check("tracks: an all-vinyl release wins over a box set", L.mb_tracks("g")["tracksUrl"].endswith("/lp"))
 L.fetch = lambda *a, **k: {"releases": [{"id": "cd", "media": [med("CD", "1", "2")]}]}
 check("tracks: no vinyl, the earliest release's tracks", [t["pos"] for t in L.mb_tracks("g")["tracks"]] == ["1", "2"])
+import tempfile
+writes, add = L._writer(tempfile.mkdtemp(), 5)
+add("update", "records", "r1", {"x": 1}, 3)
+beat = json.load(open(writes[0]["file_path"]))
+check("batches: each tells the page the run is still going and what it leaves for the next", writes[0]["collection"] == "settings" and writes[0]["doc_id"] == "site"
+      and "if_version" not in writes[0] and beat["run"]["beatMs"] > 0 and beat["lookupLeft"] == 5 and writes[1]["doc_id"] == "r1",
+      (writes, beat))
 sys.exit(1 if fails else 0)
