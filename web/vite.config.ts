@@ -63,11 +63,20 @@ const noColorFallbacks = () => ({
     if (!id.endsWith('.css') || !supportsColorMix.test(code)) return
     for (let m; (m = supportsColorMix.exec(code)); ) {
       let depth = 1, end = m.index + m[0].length
-      for (; depth; end++) depth += code[end] === '{' ? 1 : code[end] === '}' ? -1 : 0
+      for (; depth && end < code.length; end++) depth += code[end] === '{' ? 1 : code[end] === '}' ? -1 : 0
+      if (depth) throw new Error(`${id}: unclosed @supports (color: color-mix(...)) block`)
       code = code.slice(0, m.index) + code.slice(m.index + m[0].length, end - 1) + code.slice(end)
     }
     const minified = transform({ filename: id, code: Buffer.from(code), minify: true, targets: modern }).code
-    return { code: transform({ filename: id, code: minified, targets: modern }).code.toString(), map: null }
+    // Lightning CSS keeps a plain colour in front of a color-mix() that uses var(), since it can't check the var(), and
+    // each pass adds its prefixes again: drop both here
+    const readable = transform({ filename: id, code: minified, targets: modern }).code.toString()
+    return {
+      code: readable
+        .replace(/^(\s+)([-\w]+): (?:(?!color-mix)[^;\n])*;\n(?=\1\2: [^;\n]*color-mix)/gm, '')
+        .replace(/^(\s+[-\w]+: [^\n]*;\n)(?=\1)/gm, ''),
+      map: null,
+    }
   },
 })
 const external = (id: string) => {

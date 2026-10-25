@@ -12,7 +12,7 @@ import puppeteer from 'puppeteer-core'
 
 const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
 
-// headroom over today's numbers (454 KB after phase 8 dropped the older-browser colour copies, 1,102 characters, 921
+// headroom over today's numbers (450 KB after phase 8 dropped the older-browser colour copies, 1,102 characters, 921
 // files, 1.3 s); the time is loose because CI machines vary.
 // The import map is one long line of URLs, so it's left out of the line check.
 const BUDGET = { kb: 465, line: 1500, files: 950, seconds: 10 }
@@ -23,7 +23,8 @@ console.log(`page: ${kb} KB, longest line ${line} characters`)
 if (kb > BUDGET.kb) fail.push(`page is ${kb} KB, over the ${BUDGET.kb} KB budget`)
 if (line > BUDGET.line) fail.push(`a line is ${line} characters, over the ${BUDGET.line} budget`)
 // vite.config.ts's noColorFallbacks keeps only the color-mix() copy of each colour
-if (html.includes('@supports (color: color-mix')) fail.push('the page still has older-browser colour copies')
+if (html.includes('@supports (color: color-mix') || /^(\s+)([-\w]+): (?:(?!color-mix)[^;\n])*;\n\1\2: [^;\n]*color-mix/m.test(html))
+  fail.push('the page still has older-browser colour copies')
 const server = createServer((req, res) => {
   if (req.url === '/' || req.url === '/index.html') return res.writeHead(200, { 'Content-Type': 'text/html' }).end(html)
   // the background photos are published beside the page, as SETUP.md does
