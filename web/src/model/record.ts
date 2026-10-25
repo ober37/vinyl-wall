@@ -171,11 +171,14 @@ export function playMonths(r: Rec): PlayMonth[] {
     // only Log play's own wording ("Played <kind>[ on <setup>] (~N min)[. comment]") reads compactly; a play typed by
     // hand shows as written
     const on = /^(?: on (.+))? $/.exec(m[2])
+    // the kind the pattern read: "the whole album", "one side" or "N tracks"
+    const whole = m[1] === 'the whole album'
+    const side = m[1] === 'one side'
     const what = !on
       ? t
-      : /^Played the whole album/.test(t)
+      : whole
       ? 'Whole album'
-      : /^Played one side/.test(t)
+      : side
         ? n.side
           ? 'Side ' + n.side
           : 'One side'
@@ -186,7 +189,7 @@ export function playMonths(r: Rec): PlayMonth[] {
       day: d,
       date: d ? playDate(d) : '',
       what,
-      icon: /^Played the whole album/.test(t) ? '●' : /^Played one side/.test(t) ? '◐' : '◔',
+      icon: whole ? '●' : side ? '◐' : '◔',
       setup: on?.[1] || '',
       min: +m[3] || 0,
       vibe: vibeOf(n),

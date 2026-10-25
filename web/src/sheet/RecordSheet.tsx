@@ -108,8 +108,12 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const [focusCopy, setFocusCopy] = useState<number | null>(null)
   const [want, setWant] = useState<WantMsg | null>(null)
   const [msg, setMsg] = useState('')
-  // the tab in view, kept through Edit and Done; a sheet opens on its task tab
-  const [tab, setTab] = useState('')
+  // the tab in view, with the record and status it was chosen on: kept through Edit and Done; a status move (It arrived
+  // lands on Listening) or another record opens on the task tab, and so does reopening the sheet
+  const [tabAt, setTabAt] = useState({ at: '', tab: '' })
+  const at = r ? r.id + ':' + kindOf(r) : ''
+  const tab = tabAt.at === at ? tabAt.tab : ''
+  const setTab = (t: string) => setTabAt({ at, tab: t })
   // a hunt with several copies asks which one first; the status stays as it is until one is picked
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
   const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
@@ -119,13 +123,10 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     setPick(null)
     setWant(null)
     setMsg('')
-    setTab('')
+    setTabAt({ at: '', tab: '' })
     clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
-  // a status move opens the record's new task tab (It arrived lands on Listening)
-  const kindNow = r ? kindOf(r) : undefined
-  useEffect(() => setTab(''), [kindNow])
 
   // edit mode's status control moves without asking what was paid, as production's does
   const moveTo = (to: Kind, ci?: number) => {

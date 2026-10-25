@@ -14,6 +14,7 @@ import { NotesTab, noteCount } from './NotesTab'
 import { OrderCard } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
+import { Chevron, LinkList, Source } from './Links'
 import { hasResearch, ResearchTab, type WantMsg } from './ResearchTab'
 import { StatusActions } from './StatusActions'
 
@@ -54,17 +55,7 @@ function copyFacts(r: Rec): [string, React.ReactNode][] {
             {runs.length > 1 ? runs.length + ' sides' : 'Show'}
             {r.catalog && <span className="text-foreground-muted"> · Cat. {r.catalog}</span>}
           </span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            aria-hidden="true"
-            className="size-3.5 shrink-0 transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none"
-          >
-            <path d="M6 9l6 6 6-6" />
-          </svg>
+          <Chevron className="size-3.5 shrink-0" />
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-1">
           {runs.map((x) => (
@@ -118,14 +109,7 @@ function Tracks({ r }: { r: Rec }) {
         </Button>
       )}
       <p className="text-foreground-muted text-xs">
-        From{' '}
-        {src ? (
-          <a href={src} target="_blank" rel="noopener" className={wikiLink}>
-            {srcName} ↗
-          </a>
-        ) : (
-          srcName
-        )}
+        From <Source name={srcName} href={src} />
       </p>
     </>
   )
@@ -142,7 +126,7 @@ function Blurb({ text, clampAt, credit }: { text: string; clampAt: number; credi
   const k = txt.search(/\n\s*\n/)
   const lede = k < 0 ? txt : txt.slice(0, k).trim()
   const rest = k < 0 ? '' : txt.slice(k).trim()
-  const long = rest ? true : txt.length > clampAt
+  const long = !!rest || txt.length > clampAt
   return (
     <div className="flex flex-col gap-1">
       {rest ? (
@@ -165,8 +149,6 @@ function Blurb({ text, clampAt, credit }: { text: string; clampAt: number; credi
   )
 }
 
-const wikiLink = 'text-primary whitespace-nowrap hover:underline'
-
 // the album summary at the top of every sheet
 function Summary({ r }: { r: Rec }) {
   if (r.aboutBlocked) return null
@@ -188,9 +170,7 @@ function Summary({ r }: { r: Rec }) {
             <>
               {' · '}
               {via ? 'from ' : ''}
-              <a href={wiki} target="_blank" rel="noopener" className={wikiLink}>
-                {via ? via + ' on ' : ''}Wikipedia ↗
-              </a>
+              <Source name={(via ? via + ' on ' : '') + 'Wikipedia'} href={wiki} />
             </>
           )}
         </>
@@ -210,22 +190,13 @@ function ArtistAbout({ A }: { A: Artist }) {
         {A.wiki && (
           <>
             {' · '}
-            <a href={A.wiki} target="_blank" rel="noopener" className={wikiLink}>
-              Wikipedia ↗
-            </a>
+            <Source name="Wikipedia" href={A.wiki} />
           </>
         )}
       </>
     ) : (
       <>
-        From{' '}
-        {A.wiki ? (
-          <a href={A.wiki} target="_blank" rel="noopener" className={wikiLink}>
-            {src} ↗
-          </a>
-        ) : (
-          src
-        )}
+        From <Source name={src} href={A.wiki} />
       </>
     )
   const shown = all ? A.links : A.links.slice(0, LINKS_SHOWN)
@@ -246,21 +217,6 @@ function ArtistAbout({ A }: { A: Artist }) {
         </div>
       )}
     </>
-  )
-}
-
-const link = 'text-primary underline-offset-2 hover:underline'
-function LinkList({ links }: { links: [string, string][] }) {
-  return (
-    <ul className="flex flex-col gap-2 text-sm">
-      {links.map(([t, u]) => (
-        <li key={t + u}>
-          <a href={u} target="_blank" rel="noopener" className={link}>
-            {t} ↗
-          </a>
-        </li>
-      ))}
-    </ul>
   )
 }
 
@@ -289,11 +245,10 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const notes = canEdit || notesN > 0
   const research = hasResearch(r, canEdit)
   const tabs = [...(own ? ['listening'] : []), ...(k === 'ordered' ? ['order'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
-  // the space under the tab bar, none without one
-  const pad = tabs.length > 1 ? 'pt-4' : ''
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
+  const lone = tabs.length === 1
   const titled = (name: string, node: React.ReactNode) =>
-    tabs.length === 1 ? (
+    lone ? (
       <Fieldset>
         <FieldsetLegend>{name}</FieldsetLegend>
         {node}
@@ -321,43 +276,48 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
         </p>
       )}
       {tabs.length > 0 && (
-        <Tabs key={"tabs" + r.id + k} value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
+        <Tabs value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
           {tabs.length > 1 && (
-            <TabsList variant="line" size="sm" activateOnFocus>
+            <TabsList variant="line" size="sm" activateOnFocus className="mb-4">
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
               {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
               {research && <TabsTrigger value="research">Research</TabsTrigger>}
               {notes && (
                 <TabsTrigger value="notes">
-                  Notes{notesN > 0 && ' '}
-                  {notesN > 0 && <span className="text-foreground-muted">{notesN}</span>}
+                  Notes
+                  {notesN > 0 && (
+                    <>
+                      {' '}
+                      <span className="text-foreground-muted">{notesN}</span>
+                    </>
+                  )}
                 </TabsTrigger>
               )}
               {about && <TabsTrigger value="about">About</TabsTrigger>}
             </TabsList>
           )}
           {own && (
-            <TabsContent value="listening" className={pad}>
+            <TabsContent value="listening">
               {titled('Listening', <Listening r={r} />)}
             </TabsContent>
           )}
           {k === 'ordered' && (
-            <TabsContent value="order" className={pad}>
+            <TabsContent value="order">
               {titled('Order', <OrderCard r={r} />)}
             </TabsContent>
           )}
           {research && (
-            <TabsContent value="research" className={pad}>
-              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} lone={tabs.length === 1} />
+            <TabsContent value="research">
+              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} lone={lone} />
             </TabsContent>
           )}
           {notes && (
-            <TabsContent value="notes" className={pad}>
+            <TabsContent value="notes">
               {titled('Notes', <NotesTab r={r} />)}
             </TabsContent>
           )}
           {about && (
-            <TabsContent value="about" className={`flex flex-col gap-8 ${pad}`}>
+            <TabsContent value="about" className="flex flex-col gap-8">
               {info.length > 0 && (
                 <Fieldset>
                   <FieldsetLegend>About the album</FieldsetLegend>

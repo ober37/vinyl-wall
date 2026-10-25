@@ -20,7 +20,10 @@ import { BackgroundSection, HangingSection, PageSection } from './LookSections'
 const day = (d: unknown) => {
   const s = String(d || '')
   const m = /^(\d{4}-\d\d-\d\d) (\d\d:\d\d) UTC$/.exec(s)
-  return m ? new Date(`${m[1]}T${m[2]}Z`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : longDate(s.slice(0, 10))
+  if (!m) return longDate(s.slice(0, 10))
+  const t = new Date(`${m[1]}T${m[2]}Z`)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return longDate(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`)
 }
 
 // an update is offered only on the owner's own wall with background updates set up (production's updateState)

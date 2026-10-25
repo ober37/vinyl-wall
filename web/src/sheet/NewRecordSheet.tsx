@@ -13,6 +13,7 @@ import type { Kind } from '../model/record'
 import { useRuntime } from '../runtime/runtime'
 import { CoverButton } from './CoverButton'
 import { EditForm } from './EditForm'
+import { Chevron } from './Links'
 import { Segmented } from './Segmented'
 
 const blank = (kind: Kind | ''): Form => toForm({ id: '', status: kind || 'own' })
@@ -153,17 +154,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
           <Collapsible open={details} onOpenChange={setDetails}>
             <CollapsibleTrigger className="group text-foreground-intense flex items-center gap-1.5 py-2 text-sm font-medium underline-offset-2 hover:underline">
               Add details now
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
-                className="size-4 transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none"
-              >
-                <path d="M6 9l6 6 6-6" />
-              </svg>
+              <Chevron />
             </CollapsibleTrigger>
             <CollapsibleContent className="flex flex-col gap-6 pt-4">
               {kind ? (

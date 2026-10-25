@@ -2,8 +2,7 @@ import { wantCopies } from '../model/copies'
 import { discogsLinks, trackUrl } from '../model/orders'
 import { OSTAT, orderStatusOf, playDate, shopHref, type Rec } from '../model/record'
 import { Facts } from './Facts'
-
-const link = 'text-primary underline-offset-2 hover:underline'
+import { link, LinkList } from './Links'
 
 // the shop by name, linked to its website when there is one
 function Shop({ r }: { r: Rec }) {
@@ -53,15 +52,9 @@ export function OrderCard({ r }: { r: Rec }) {
     <div className="flex flex-col gap-3">
       <h4 className="text-foreground-intense text-sm font-medium">{title}</h4>
       <Facts rows={rows} />
-      <ul className="mt-1 flex flex-col gap-2 text-sm">
-        {discogsLinks(r).map(([t, u]) => (
-          <li key={u}>
-            <a href={u} target="_blank" rel="noopener" className={link}>
-              {t} ↗
-            </a>
-          </li>
-        ))}
-      </ul>
+      <div className="mt-1">
+        <LinkList links={discogsLinks(r)} />
+      </div>
     </div>
   )
 }

@@ -161,9 +161,9 @@ try {
     await p.close()
     return px
   }
-  const bw = await railColour(null, 255)
+  // each draws in its own page, so the two run side by side
+  const [bw, ck] = await Promise.all([railColour(null, 255), railColour({ hang: 'cork' }, 263)])
   if (!(bw[0] < 100 && bw[0] > bw[2] && bw[0] - bw[2] < 40)) fail.push(`share picture: Barnwood's plank isn't drawn (${bw})`)
-  const ck = await railColour({ hang: 'cork' }, 263)
   if (!(ck[0] > 110 && ck[0] - ck[2] > 35)) fail.push(`share picture: Cork's strip isn't drawn (${ck})`)
 } catch (e) {
   fail.push(String(e.message || e))

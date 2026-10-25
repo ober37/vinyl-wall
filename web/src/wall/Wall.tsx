@@ -8,7 +8,6 @@ import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
 import type { Shown } from '../model/share'
 import { coverUrl, hueOf, tagOf, type Rec, type Tag } from '../model/record'
-import { busy } from '../model/task'
 import type { Background } from '../model/site'
 import { Face } from './Face'
 
@@ -136,14 +135,12 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, discogsOn = false, canEdit = false, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
+export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
   records: Rec[]
   title: string
   hang: string
-  // an edit waiting to go to Discogs shows as busy only while Discogs is connected
-  discogsOn?: boolean
-  // the busy dots are for editors, like the count; a viewer can't act on them
-  canEdit?: boolean
+  // a record waiting on the background task, shown with the busy dot
+  busy: (r: Rec) => boolean
   onOpen: (id: string) => void
   // editors only: opens the new-record sheet
   onAdd?: () => void
@@ -309,7 +306,7 @@ export function Wall({ records, title, hang, discogsOn = false, canEdit = false,
               hue={hueOf(r)}
               tagText={tagOf(r)?.text ?? ''}
               tagTone={tagOf(r)?.tone ?? 'paper'}
-              looking={canEdit && busy(r, discogsOn)}
+              looking={busy(r)}
               example={!!r.example}
               onOpen={onOpen}
             />

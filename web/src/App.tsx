@@ -6,6 +6,7 @@ import { ROUND, Tip } from './wall/Tip'
 import { EquipmentSheet } from './gear/EquipmentSheet'
 import { GearPill, gearPillShown } from './gear/GearPill'
 import { useRuntime } from './runtime/runtime'
+import type { Rec } from './model/record'
 import { busy } from './model/task'
 import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
 import { NewRecordSheet } from './sheet/NewRecordSheet'
@@ -55,8 +56,10 @@ export function App() {
   const [fromEquip, setFromEquip] = useState(false)
   const update = useUpdateAvailable()
   const discogsOn = settings.discogs?.status === 'ok'
-  const looking = records.filter((r) => busy(r, discogsOn)).length
-  const lookupNews = useLookupNews(canEdit ? looking : 0)
+  // busy (a lookup, or an edit waiting to go to Discogs while it's connected) for editors only: a viewer can't act on it
+  const isBusy = (r: Rec) => canEdit && busy(r, discogsOn)
+  const looking = records.filter(isBusy).length
+  const lookupNews = useLookupNews(looking)
 
   return (
     <main className={`mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === 'photo' ? 'photo-bg' : ''}`}>
@@ -80,14 +83,12 @@ export function App() {
             records={records}
             title={site.title}
             hang={site.hang}
-            discogsOn={discogsOn}
-            canEdit={canEdit}
+            busy={isBusy}
             onOpen={setOpenId}
             onAdd={canEdit ? () => setAdding(true) : undefined}
             // viewers too: the picture shows nothing they can't already see
             onShare={hasDownloads ? setSharing : undefined}
             below={
-              canEdit &&
               looking > 0 && (
                 // a count, not a filter: the chips' type, count first and padding, but no outline, so it doesn't read as one
                 <span className="text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono max-sm:px-0 text-[0.8125rem] max-sm:h-auto">

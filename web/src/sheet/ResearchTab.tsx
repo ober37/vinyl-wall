@@ -12,8 +12,7 @@ import {
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
 import { CopiesView } from './Copies'
-
-const link = 'text-primary underline-offset-2 hover:underline'
+import { link, LinkList } from './Links'
 
 // The prompt for Claude, copied; when the clipboard is blocked it shows selected, to copy by hand
 type Copied = { key: string; msg: string; text?: string }
@@ -263,15 +262,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
       {(wish || still) && (
         <Fieldset>
           <FieldsetLegend>Search elsewhere</FieldsetLegend>
-          <ul className="flex flex-col gap-2 text-sm">
-            {searchLinks(r).map(([t, u]) => (
-              <li key={t}>
-                <a href={u} target="_blank" rel="noopener" className={link}>
-                  {t} ↗
-                </a>
-              </li>
-            ))}
-          </ul>
+          <LinkList links={searchLinks(r)} />
         </Fieldset>
       )}
       <Confirm
