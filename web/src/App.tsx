@@ -145,6 +145,7 @@ export function App() {
               }
             : undefined
         }
+        onDiscogs={() => setSettingsOpen('discogs')}
       />
       <EquipmentSheet
         open={equipOpen}

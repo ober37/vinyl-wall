@@ -43,6 +43,9 @@ describe('patchFor', () => {
   it('flags Discogs sync only for synced fields', () => {
     expect(withSync({ title: 'a' })).toEqual({ title: 'a', needsSync: true })
     expect(withSync({ catalog: 'a', notes: [] })).toEqual({ catalog: 'a', notes: [] })
+    // a release written without how it was matched is the person's choice
+    expect(withSync({ discogsId: 5 })).toEqual({ discogsId: 5, discogsMatch: '', needsSync: true })
+    expect(withSync({ discogsId: 5, discogsMatch: 'catalog' })).toEqual({ discogsId: 5, discogsMatch: 'catalog', needsSync: true })
   })
 
   it('stores production shapes', () => {

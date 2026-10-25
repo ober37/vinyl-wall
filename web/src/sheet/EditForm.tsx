@@ -8,9 +8,10 @@ import { Button } from '@appica/ui-react/button'
 import { Textarea } from '@appica/ui-react/textarea'
 import { fromDate, toDate } from '../model/dates'
 import type { Form, TextKey } from '../model/edit'
-import { GRADES, OSTAT, shopHref, type Kind } from '../model/record'
+import { GRADES, OSTAT, shopHref, type Kind, type Rec } from '../model/record'
 import { Confirm } from './Confirm'
 import { CopiesEdit } from './CopiesEdit'
+import { DiscogsFields, Runout } from './DiscogsEdit'
 import { Segmented } from './Segmented'
 
 type Key = TextKey
@@ -31,6 +32,11 @@ type Props = {
   autoFilled?: string[]
   // a copy to put the cursor in (one added from Research)
   focusCopy?: number | null
+  // the record as stored, for its Discogs sync line (not on the new-record sheet)
+  r?: Rec
+  // Discogs is connected, and the way to Settings when it isn't
+  connected?: boolean
+  onConnect?: () => void
 }
 
 
@@ -187,10 +193,13 @@ function OrderFields(p: { form: Form; set: Props['set'] }) {
   )
 }
 
-export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy }: Props) {
+export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy, r, connected, onConnect }: Props) {
   const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
   const [confirm, setConfirm] = useState(false)
+  const discogs = !isNew && r && (
+    <DiscogsFields r={r} form={form} change={change} connected={!!connected} onConnect={onConnect} />
+  )
   return (
     <div className="flex flex-col gap-8">
       {onStatus && !isNew && (
@@ -271,6 +280,8 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
             <ShopUrl placeholder="e.g. https://www.roughtrade.com" {...p} />
             <Grade k="mediaGrade" label="Vinyl" {...p} />
             <Grade k="sleeveGrade" label="Sleeve" {...p} />
+            <Runout form={form} set={set} />
+            {discogs}
           </div>
         </Fieldset>
       )}
@@ -285,6 +296,12 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>
       </Fieldset>
+      {!own && discogs && (
+        <Fieldset>
+          <FieldsetLegend>Discogs</FieldsetLegend>
+          <div className="grid gap-4 sm:grid-cols-2">{discogs}</div>
+        </Fieldset>
+      )}
 
       {!isNew && (
         <>

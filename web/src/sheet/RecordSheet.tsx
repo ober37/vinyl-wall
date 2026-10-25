@@ -98,8 +98,9 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 }
 
 // onBack: the record was opened from Equipment, so its header offers the way back there
-export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClose: () => void; onBack?: () => void }) {
-  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
+// onDiscogs: open Settings on its Discogs section (the release line's way to connect)
+export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | null; onClose: () => void; onBack?: () => void; onDiscogs?: () => void }) {
+  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -262,6 +263,15 @@ export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClos
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
                     focusCopy={focusCopy}
+                    r={r}
+                    connected={!!settings.discogs?.hasToken}
+                    onConnect={
+                      onDiscogs &&
+                      (() => {
+                        close()
+                        onDiscogs()
+                      })
+                    }
                   />
                 ) : (
                   <ViewBody

@@ -20,10 +20,12 @@ export type Form = {
   shopUrl?: string
   mediaGrade?: string
   sleeveGrade?: string
+  matrix?: string
+  // the Discogs release (on wanted and ordered records, the first copy's)
+  discogsId?: number | ''
   // wanted and ordered records: the first copy's own fields (label, catalog and pressing above too)
   copyName?: string
   budget?: string
-  discogsId?: number | ''
   // wanted records: 1 Top, 2 Want, 3 Someday
   priority?: string
   // ordered records: the order (paid, shop and shopUrl above too); orderNotes only when an older record has some
@@ -43,9 +45,12 @@ const SYNCED = new Set([
   'title', 'artist', 'status', 'pressing', 'matrix', 'shop', 'acquired', 'paid', 'why', 'mediaGrade', 'sleeveGrade', 'priority',
   'budget', 'copyName', 'moreCopies', 'orderDate', 'orderStatus', 'eta', 'discogsId', 'deleted',
 ])
-// every write goes through this: a synced field changed means the background task pushes it to Discogs
-export const withSync = (patch: Record<string, unknown>) =>
-  Object.keys(patch).some((k) => SYNCED.has(k)) ? { ...patch, needsSync: true } : patch
+// every write goes through this: a synced field changed means the background task pushes it to Discogs, and a release
+// written without saying how it was matched is the person's own choice, not the matcher's
+export function withSync(patch: Record<string, unknown>) {
+  const p = 'discogsId' in patch && !('discogsMatch' in patch) ? { ...patch, discogsMatch: '' } : patch
+  return Object.keys(p).some((k) => SYNCED.has(k)) ? { ...p, needsSync: true } : p
+}
 
 const s = (v: unknown) => (v === undefined || v === null ? '' : String(v))
 
@@ -82,6 +87,8 @@ export function toForm(r: Rec): Form {
       shopUrl: s(r.shopUrl),
       mediaGrade: s(r.mediaGrade),
       sleeveGrade: s(r.sleeveGrade),
+      matrix: s(r.matrix),
+      discogsId: c0.discogsId,
     })
   return f
 }

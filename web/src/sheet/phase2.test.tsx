@@ -90,7 +90,7 @@ describe('edit mode: priority and copies', () => {
     await user.click(btn('Edit'))
     await user.click(within(legend('The copy you want')).getByRole('button', { name: 'Remove this copy' }))
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
-    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ pressing: '', discogsId: '', needsSync: true }))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ pressing: '', discogsId: '', discogsMatch: '', needsSync: true }))
     expect(within(legend('The copy you want')).getByRole('textbox', { name: 'Pressing' })).toHaveProperty('value', '')
     expect(screen.queryByRole('button', { name: 'Remove this copy' })).toBeNull()
   })
