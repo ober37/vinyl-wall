@@ -311,7 +311,7 @@
     pointer-events: none;
   }
   .bg-photo {
-    --washed: calc(var(--dim) * var(--wash-lo) + max(0%, var(--dim) - 70%) * var(--wash-hi) + var(--wash-b));
+    --washed: calc(var(--dim-light) * var(--wash-light) + var(--dim) * (1 - var(--wash-light)));
     background-image:
       linear-gradient(color-mix(in srgb, var(--wall) var(--washed), transparent), color-mix(in srgb, var(--wall) var(--washed), transparent)),
       var(--photo);
@@ -378,6 +378,7 @@
 [data-previewing] [data-slot='drawer-backdrop'] {
   opacity: 0;
   backdrop-filter: none;
+  transition: opacity 150ms ease-out;
 }
 [data-previewing] [data-slot='drawer-popup'] {
   visibility: hidden;

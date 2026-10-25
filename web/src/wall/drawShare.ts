@@ -71,12 +71,6 @@ const loadImg = (src: string) =>
     i.onerror = () => (clearTimeout(t), res(null))
     i.src = src
   })
-// a photo's wall-colour wash in %, as .bg-photo works it out from the theme's --wash-* (wall.css)
-function washed(dim: number) {
-  const s = getComputedStyle(document.documentElement)
-  const n = (k: string, d: number) => parseFloat(s.getPropertyValue(k)) || d
-  return dim * n('--wash-lo', 1) + Math.max(0, dim - 70) * n('--wash-hi', 0) + n('--wash-b', 0)
-}
 // how far down the photo the wall shows (its background-position's second part), 0-1
 function photoY(pos = '') {
   const [a, b] = pos.trim().split(/\s+/)
@@ -472,6 +466,8 @@ async function paint(list: Rec[], site: Site, withImages: boolean): Promise<Draw
   const H = pad + 100 + 76 + rowHs.reduce((a, b) => a + b, 0) + (list.length > SHARE_MAX ? 40 : 0) + pad
   const bg = site.background
   const ph = bg.kind === 'photo' ? bg : null
+  // the photo's wash as the wall lays it in this theme (theme.css --wash-light)
+  const light = getComputedStyle(document.documentElement).getPropertyValue('--wash-light').trim() === '1'
   const hang = site.hang
   const [photo, ...loaded] = withImages
     ? await Promise.all([ph && loadImg(ph.url), ...shown.filter(coverUrl).map(async (r) => [r.id, await loadImg(coverUrl(r))] as const)])
@@ -495,7 +491,7 @@ async function paint(list: Rec[], site: Site, withImages: boolean): Promise<Draw
     const w = photo.width * k
     const h = photo.height * k
     ctx.drawImage(photo, (W - w) / 2, (H - h) * photoY(ph.pos), w, h)
-    ctx.fillStyle = css(c.wall, washed(ph.dim) / 100)
+    ctx.fillStyle = css(c.wall, (light ? ph.light : ph.dim) / 100)
     ctx.fillRect(0, 0, W, H)
   }
   // over a photo, text gets the halo in the wall colour and the darker secondary ink it has on the page

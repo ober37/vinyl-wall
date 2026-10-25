@@ -67,7 +67,7 @@ export function WallBackground({ bg }: { bg: Background }) {
 // the classes and style that draw a background, on the page or on a tile in Settings
 export const bgClass = (bg: Background) => (bg.kind === 'photo' ? 'bg-photo' : 'bg-' + bg.preset)
 export const bgStyle = (bg: Background) =>
-  bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
+  bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--dim-light': bg.light + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
 
 // One sleeve. Takes only plain values, so a snapshot that didn't change this record leaves it (and its cover) alone.
 const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, example, onOpen }: {
