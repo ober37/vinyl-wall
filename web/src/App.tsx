@@ -35,7 +35,7 @@ function useLookupNews(n: number) {
   const [news, setNews] = useState('')
   const was = useRef(0)
   useEffect(() => {
-    if (n && !was.current) setNews(`Syncing ${n} record${n === 1 ? '' : 's'}`)
+    if (n && !was.current) setNews(`${n} record${n === 1 ? '' : 's'} syncing`)
     else if (!n && was.current) setNews('Sync finished')
     was.current = n
   }, [n])
@@ -88,13 +88,13 @@ export function App() {
             below={
               canEdit &&
               looking > 0 && (
-                // a count, not a filter: no outline, so it doesn't read as one of the chips
-                <span
-                  aria-label={`Syncing ${looking} record${looking === 1 ? '' : 's'}`}
-                  className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto"
-                >
+                // a count, not a filter: the chips' type, count first and padding, but no outline, so it doesn't read as one
+                <span className="text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono text-[0.8125rem] max-sm:h-auto">
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                  Syncing {looking}
+                  <span>
+                    <b className="text-ink font-medium">{looking}</b>
+                    <span className="sr-only"> record{looking === 1 ? '' : 's'}</span> syncing
+                  </span>
                 </span>
               )
             }
