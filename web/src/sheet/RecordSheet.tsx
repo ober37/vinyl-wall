@@ -146,7 +146,7 @@ export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClos
   // edit mode's manual lookup: mark the record and start the task
   const enrich = () => {
     if (!r) return
-    update(r.id, enrichPatch(r)).then((ok) => ok && fireTask())
+    update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }))
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''

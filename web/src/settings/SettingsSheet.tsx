@@ -47,7 +47,7 @@ function DiscogsImport({ dz }: { dz: Discogs }) {
     const t = setTimeout(() => redraw((n) => n + 1), (dz.importRequestedAt || 0) + STALL + 1000 - Date.now())
     return () => clearTimeout(t)
   }, [dz.importRequested, dz.importRequestedAt, stalled])
-  const ask = () => saveSettings({ discogs: { importRequested: true, importRequestedAt: Date.now() } }).then(() => fireTask(true))
+  const ask = () => saveSettings({ discogs: { importRequested: true, importRequestedAt: Date.now() } }).then(() => fireTask({ now: true, asked: true }))
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-2">
@@ -120,7 +120,7 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
         discogs: { username: user.trim(), hasToken: true, last4: v.slice(-4), savedAt: today(), status: 'pending', msg: '', verifiedUser: '', checkedAt: '' },
       })
       setStatus('')
-      fireTask()
+      fireTask({ asked: true })
     } catch (e) {
       setStatus("Couldn't save the token: " + ((e as { message?: string }).message || String(e)))
     }
@@ -175,7 +175,7 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
           <Button
             size="sm"
             variant="outline"
-            onClick={() => saveSettings({ discogs: { status: 'pending' } }).then(() => fireTask())}
+            onClick={() => saveSettings({ discogs: { status: 'pending' } }).then(() => fireTask({ asked: true }))}
           >
             Check again
           </Button>

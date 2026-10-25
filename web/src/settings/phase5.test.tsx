@@ -171,3 +171,24 @@ describe('the welcome card', () => {
     expect(screen.queryByRole('heading', { name: 'Start your wall' })).toBeNull()
   })
 })
+
+describe('starts the page makes on its own', () => {
+  it("say nothing when background updates can't run here, and Find cover & details still says why", async () => {
+    const { user } = setup({}, { mcp: 'none' })
+    await user.click(await screen.findByRole('button', { name: 'Add a record' }))
+    const sheet = await screen.findByRole('dialog')
+    await user.type(within(sheet).getByRole('textbox', { name: 'Album' }), 'Rumours')
+    await user.type(within(sheet).getByRole('textbox', { name: 'Artist' }), 'Fleetwood Mac')
+    await user.click(within(sheet).getByRole('button', { name: 'I own it' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Hang it' }))
+    await screen.findByRole('dialog', { name: 'Rumours' })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(screen.queryByText(/Background updates aren't available/)).toBeNull()
+    // a record that isn't already waiting on a lookup
+    await user.keyboard('{Escape}')
+    await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
+    await user.click(await screen.findByRole('button', { name: 'Edit' }))
+    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    expect(await screen.findByText(/Background updates aren't available in this view/)).toBeTruthy()
+  })
+})

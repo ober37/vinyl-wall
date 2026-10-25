@@ -59,8 +59,9 @@ type Runtime = {
   // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
   saveToken: (token: string) => Promise<void>
   removeToken: () => Promise<void>
-  // start the background task with what's waiting; at most once a minute (now skips that wait), one run at a time
-  fireTask: (now?: boolean) => void
+  // start the background task with what's waiting; at most once a minute (now skips that wait), one run at a time;
+  // asked: the owner asked for it, so say why when it can't start
+  fireTask: (how?: { now?: boolean; asked?: boolean }) => void
   // a sheet closing starts the task now if its edits are waiting to sync, instead of 20 seconds later
   flushSync: () => void
   // the last thing that went wrong, or a short notice about the page (production's flash): "Looking up …" isn't one, a
@@ -206,15 +207,16 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   }
 
   // ported from production's fireTask: one run at a time (settings.run marks it; the task clears it), a start asked for
-  // meanwhile waits for that run to end, and starts are at least a minute apart
-  const fireTask = (now?: boolean) => {
+  // meanwhile waits for that run to end, and starts are at least a minute apart. Only a start the owner asked for says
+  // why it can't run; one the page starts on its own (a record added, an edit to sync) stays quiet
+  const fireTask = (how?: { now?: boolean; asked?: boolean }) => {
     const t = task.current
-    if (now === true) {
+    if (how?.now) {
       t.lastFire = 0
       clearTimeout(t.fireTimer)
     }
     const { settings: s, records: recs } = live.current
-    if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.")
+    if (!mcp.current) return how?.asked && setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.")
     if (runActive(s)) {
       t.afterRun = true
       return
@@ -229,7 +231,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // each install stores the id of its own background task in settings (written during setup)
     if (!s.taskId) {
       t.lastFire = 0
-      return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
+      return how?.asked && setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")
     }
     saveSettings({ run: { startedMs: Date.now() } })
     mcp.current
