@@ -71,7 +71,7 @@ describe('the Equipment sheet', () => {
     expect(su).toMatchObject({ name: 'My setup' })
     expect(sets(fake, 'gear/')[0]).toMatchObject({ type: 'turntable', name: 'Technics SL-1500C', setup: su.path.split('/')[1], tracks: true, minutes: 0 })
     await user.click(btn('‹ All gear'))
-    expect(await screen.findByRole('button', { name: 'Add another setup' })).toBeTruthy()
+    expect(await screen.findByRole('button', { name: '+ Add another setup' })).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Add your turntable' })).toBeNull()
   })
 
@@ -136,7 +136,7 @@ describe('the Equipment sheet', () => {
     const { user } = setup({ canWrite: false })
     await equipment(user, /stylus:/)
     expect(screen.queryByRole('button', { name: 'Add equipment' })).toBeNull()
-    expect(screen.queryByRole('button', { name: 'Add another setup' })).toBeNull()
+    expect(screen.queryByRole('button', { name: '+ Add another setup' })).toBeNull()
     await user.click(screen.getByRole('button', { name: /ATN-VM95E/ }))
     await screen.findByRole('heading', { name: 'ATN-VM95E' })
     expect(screen.queryByRole('button', { name: 'Edit' })).toBeNull()

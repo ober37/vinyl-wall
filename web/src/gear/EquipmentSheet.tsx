@@ -88,8 +88,9 @@ function Root({ go, onRecord }: { go: (v: View) => void; onRecord: (id: string) 
         )
       })}
       {S.length > 0 && canEdit && (
-        <Button size="sm" variant="outline" className="-mt-4 self-start" onClick={() => newSetup(false)}>
-          Add another setup
+        // a dashed slot for the next setup, at section spacing, so it belongs to the list and not to the setup above it
+        <Button variant="ghost" className="border-border-strong text-foreground-muted h-14 w-full border border-dashed" onClick={() => newSetup(false)}>
+          + Add another setup
         </Button>
       )}
       {loose.length > 0 && (

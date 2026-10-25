@@ -2327,11 +2327,10 @@ function Root({ go, onRecord }) {
 				] }, x.id);
 			}),
 			S.length > 0 && canEdit && /* @__PURE__ */ jsx(Button, {
-				size: "sm",
-				variant: "outline",
-				className: "-mt-4 self-start",
+				variant: "ghost",
+				className: "border-border-strong text-foreground-muted h-14 w-full border border-dashed",
 				onClick: () => newSetup(false),
-				children: "Add another setup"
+				children: "+ Add another setup"
 			}),
 			loose.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [
 				/* @__PURE__ */ jsx(FieldsetLegend, { children: "Not in a setup" }),
@@ -6872,10 +6871,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-top: calc(var(--spacing) * -2);
   }
 
-  .-mt-4 {
-    margin-top: calc(var(--spacing) * -4);
-  }
-
   .mt-0\.5 {
     margin-top: calc(var(--spacing) * .5);
   }
@@ -7131,6 +7126,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .h-12 {
     height: calc(var(--spacing) * 12);
+  }
+
+  .h-14 {
+    height: calc(var(--spacing) * 14);
   }
 
   .h-\[calc\(100dvh-1\.5rem-var\(--snap-offset\,0\)\)\] {
