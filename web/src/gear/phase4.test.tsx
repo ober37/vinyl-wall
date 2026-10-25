@@ -37,7 +37,9 @@ describe('the header pill', () => {
   it('shows the stylus wear and opens Equipment', async () => {
     const { user } = setup()
     const pill = await screen.findByRole('button', { name: 'Stylus, Den: Getting close, 290 h played, rated 300–500 h' })
-    expect(pill.getAttribute('title')).toBe(pill.getAttribute('aria-label'))
+    // its name shows as a tooltip on hover
+    await userEvent.hover(pill)
+    expect(await screen.findByText('Stylus, Den: Getting close, 290 h played, rated 300–500 h')).toBeTruthy()
     await equipment(user, /^Stylus/)
     for (const name of ['Listening', 'Den', 'Living room', 'Shared equipment']) expect(screen.getByRole('group', { name })).toBeTruthy()
     expect(within(screen.getByRole('group', { name: 'Den' })).getByText('By the window')).toBeTruthy()

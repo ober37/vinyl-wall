@@ -4,6 +4,7 @@ import { Badge } from '@appica/ui-react/badge'
 import { Button, buttonVariants } from '@appica/ui-react/button'
 import { Input } from '@appica/ui-react/input'
 import { Toggle } from '@appica/ui-react/toggle'
+import { Tip, TipGroup } from './Tip'
 import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
 import { coverUrl, hueOf, tagOf, type Rec, type Tag } from '../model/record'
@@ -167,22 +168,26 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
           <h1 className="font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
             {title}
           </h1>
-          <div className="flex shrink-0 items-center gap-2">
-            {gear}
-            <Button
-              ref={searchBtn}
-              size="icon-md"
-              variant="outline"
-              aria-label="Search the wall"
-              aria-expanded={searching}
-              aria-controls="wall-search"
-              className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
-              onClick={() => (searching ? closeSearch() : setSearching(true))}
-            >
-              <SearchIcon />
-            </Button>
-            {tools}
-          </div>
+          <TipGroup>
+            <div className="flex shrink-0 items-center gap-2">
+              {gear}
+              <Tip label="Search the wall">
+                <Button
+                  ref={searchBtn}
+                  size="icon-md"
+                  variant="outline"
+                  aria-label="Search the wall"
+                  aria-expanded={searching}
+                  aria-controls="wall-search"
+                  className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+                  onClick={() => (searching ? closeSearch() : setSearching(true))}
+                >
+                  <SearchIcon />
+                </Button>
+              </Tip>
+              {tools}
+            </div>
+          </TipGroup>
         </div>
         {/* the filters with the status line and search under them, and Add a record held to the right edge under Settings
             (just "+" on phones) */}

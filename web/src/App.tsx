@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Boundary } from './Boundary'
+import { Tip } from './wall/Tip'
 import { EquipmentSheet } from './gear/EquipmentSheet'
 import { GearPill, gearPillShown } from './gear/GearPill'
 import { useRuntime } from './runtime/runtime'
@@ -71,15 +72,17 @@ export function App() {
               <>
                 {canEdit && (
                   <span className="relative">
-                    <Button
-                      size="icon-md"
-                      variant="outline"
-                      aria-label={update ? 'Settings (update available)' : 'Settings'}
-                      className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
-                      onClick={() => setSettingsOpen(true)}
-                    >
-                      <GearIcon />
-                    </Button>
+                    <Tip label={update ? 'Settings (update available)' : 'Settings'}>
+                      <Button
+                        size="icon-md"
+                        variant="outline"
+                        aria-label={update ? 'Settings (update available)' : 'Settings'}
+                        className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+                        onClick={() => setSettingsOpen(true)}
+                      >
+                        <GearIcon />
+                      </Button>
+                    </Tip>
                     {update && (
                       <span aria-hidden="true" className="bg-brass absolute end-0.5 top-0.5 size-2 rounded-full ring-2 ring-(--shade)" />
                     )}
