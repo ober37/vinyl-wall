@@ -32,7 +32,7 @@ export const HANGS: [string, string][] = [
   ['float', 'Floating'],
 ]
 
-export type Background = { kind: 'photo'; url: string; pos?: string; dim: number } | { kind: 'pattern'; preset: string }
+export type Background = { kind: 'photo'; url: string; pos?: string; dim: number; light: number } | { kind: 'pattern'; preset: string }
 export const isStockPhoto = (key: string) => !!PHOTOS[key]
 export type Site = { title: string; background: Background; hang: string }
 
@@ -46,6 +46,9 @@ export const stockDim = (v: number) => {
   const t = 40 + v * 0.6
   return Math.round((t <= 50 ? 50 + t / 2 : 75 + (t - 50) * 0.4) * 10) / 10
 }
+// light mode's wash for the same settings, wider and lighter (a light wall bleaches the photo): stock 0, 50 and 100 give
+// 15, 45 and 75; an upload's 20, 70 and 90 give 5, 30 and 70
+export const lightDim = (v: number, upload: boolean) => (upload ? (v <= 70 ? 5 + (v - 20) / 2 : 30 + (v - 70) * 2) : 15 + v * 0.6)
 
 export function siteOf(doc: Record<string, unknown> | null | undefined): Site {
   const s = doc || {}
@@ -53,12 +56,15 @@ export function siteOf(doc: Record<string, unknown> | null | undefined): Site {
   const bg = (s.bg && typeof s.bg === 'object' ? s.bg : { kind: 'preset', preset: 'listening' }) as Record<string, unknown>
   const dim = typeof s.dim === 'number' ? s.dim : undefined
   let background: Background
-  if (bg.kind === 'photo' && okAsset(bg.assetId)) background = { kind: 'photo', url: '/_blob/' + bg.assetId, dim: dim ?? DEFAULT_DIM.upload }
+  if (bg.kind === 'photo' && okAsset(bg.assetId)) {
+    const v = dim ?? DEFAULT_DIM.upload
+    background = { kind: 'photo', url: '/_blob/' + bg.assetId, dim: v, light: lightDim(v, true) }
+  }
   else {
     const preset = presetOf(bg)
     const photo = PHOTOS[preset]
     background = photo
-      ? { kind: 'photo', url: 'backgrounds/' + photo.file, pos: photo.pos, dim: stockDim(dim ?? DEFAULT_DIM.stock) }
+      ? { kind: 'photo', url: 'backgrounds/' + photo.file, pos: photo.pos, dim: stockDim(dim ?? DEFAULT_DIM.stock), light: lightDim(dim ?? DEFAULT_DIM.stock, false) }
       : { kind: 'pattern', preset }
   }
   return { title, background, hang: HANGS.some(([k]) => k === s.hang) ? String(s.hang) : 'barn' }

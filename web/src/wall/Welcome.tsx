@@ -32,7 +32,7 @@ export function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBla
   return (
     <section
       aria-labelledby="welcome-title"
-      className="border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_oklch,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6"
+      className="border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_srgb,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6"
     >
       <div className="flex flex-col gap-2">
         <h2 id="welcome-title" className="font-display text-ink text-[1.625rem] leading-none font-semibold tracking-[0.06em] uppercase">
@@ -45,7 +45,7 @@ export function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBla
       </div>
       <ol className="grid grid-cols-[2rem_1fr] sm:grid-cols-[2rem_1fr_auto]">
         {steps.map((s, i) => (
-          <li key={s.title} className="border-border col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0">
+          <li key={s.title} className="border-(--line) col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0">
             <span
               className={`grid size-8 place-items-center rounded-full border font-mono text-sm ${s.done ? 'bg-primary border-primary text-primary-foreground' : 'border-border text-foreground-muted'}`}
             >

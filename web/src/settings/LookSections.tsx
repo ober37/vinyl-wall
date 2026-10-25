@@ -89,9 +89,18 @@ export function BackgroundSection() {
   const current = isUpload ? 'photo:' + bg.assetId : 'preset:' + presetOf(bg)
   const stock = kindOf(current) === 'stock'
   const savedDim = typeof settings.dim === 'number' ? settings.dim : DEFAULT_DIM[isUpload ? 'upload' : 'stock']
-  // while the slider moves: the wash it would give, on the chosen tile and (where the wall shows beside the sheet) the wall
+  // while the slider moves: the wash it would give, on the chosen tile and the wall, with the sheet stepped aside (wall.css)
   const [dragging, setDragging] = useState<number | null>(null)
   const dim = dragging ?? savedDim
+  // the slider's min + max, to turn a stored wash into a strength and back
+  const top = isUpload ? 110 : 100
+  const previewing = dragging !== null
+  useEffect(() => {
+    if (!previewing) return
+    const root = document.documentElement
+    root.dataset.previewing = ''
+    return () => void delete root.dataset.previewing
+  }, [previewing])
   const [status, setStatus] = useState('')
   const [removing, setRemoving] = useState<string | null>(null)
   const file = useRef<HTMLInputElement>(null)
@@ -215,18 +224,24 @@ export function BackgroundSection() {
         {!hasAssets && <p className="text-foreground-muted text-sm">Uploading your own background isn't available in this view.</p>}
       </div>
       {(isUpload || stock) && (
-        <Field>
-          <FieldLabel>Soften the photo</FieldLabel>
+        <Field className="soften">
+          <FieldLabel>Photo strength</FieldLabel>
+          {/* the slider runs the other way to the stored wash: right is more photo, in either theme */}
           <Slider
-            value={dim}
+            value={top - dim}
             min={isUpload ? 20 : 0}
             max={isUpload ? 90 : 100}
             step={5}
-            thumbAriaLabel="Soften the photo"
-            onValueChange={(v) => setDragging(v as number)}
-            onValueCommitted={(v) => saveSettings({ dim: v as number }).then(() => setDragging(null))}
+            thumbAriaLabel="Photo strength"
+            tooltipVisibility="never"
+            onValueChange={(v) => setDragging(top - (v as number))}
+            onValueCommitted={(v) => saveSettings({ dim: top - (v as number) }).then(() => setDragging(null))}
           />
-          <FieldDescription>So the records stay readable over it.</FieldDescription>
+          <div aria-hidden="true" className="text-foreground-muted flex justify-between text-xs">
+            <span>Faint</span>
+            <span>Strong</span>
+          </div>
+          <FieldDescription>{previewing ? 'Showing your wall. Let go to come back.' : 'Turn it down if the records get hard to read.'}</FieldDescription>
         </Field>
       )}
       {dragging !== null && createPortal(<WallBackground bg={look(current, dragging)} />, document.body)}

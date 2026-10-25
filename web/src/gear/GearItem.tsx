@@ -109,7 +109,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
           </form>
         )}
         {notes.length ? (
-          <ul className="divide-border flex flex-col divide-y">
+          <ul className="divide-(--line) flex flex-col divide-y">
             {notes
               .map((n, i) => ({ n, i }))
               .reverse()
@@ -137,7 +137,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
       {g.tracks && recent.length > 0 && (
         <Fieldset>
           <FieldsetLegend>Recent plays</FieldsetLegend>
-          <ul className="divide-border flex flex-col divide-y">
+          <ul className="divide-(--line) flex flex-col divide-y">
             {recent.map((p, i) => (
               <li key={i} className="grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-2 text-sm">
                 <time className="text-foreground-muted text-xs">{playDate(p.d)}</time>

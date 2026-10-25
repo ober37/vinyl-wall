@@ -67,7 +67,7 @@ export function WallBackground({ bg }: { bg: Background }) {
 // the classes and style that draw a background, on the page or on a tile in Settings
 export const bgClass = (bg: Background) => (bg.kind === 'photo' ? 'bg-photo' : 'bg-' + bg.preset)
 export const bgStyle = (bg: Background) =>
-  bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
+  bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--dim-light': bg.light + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
 
 // One sleeve. Takes only plain values, so a snapshot that didn't change this record leaves it (and its cover) alone.
 const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, example, onOpen }: {
@@ -118,7 +118,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
               </Badge>
             )}
           </div>
-          <div className="cap on-photo min-w-0 px-0.5 pt-2.5">
+          <div className="cap on-photo mt-2.5 min-w-0">
             {/* above the title, not on the sleeve, where it would cover a generated cover's title */}
             {example && (
               <span className="bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase">

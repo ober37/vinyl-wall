@@ -45,8 +45,8 @@ describe('Settings: how the wall looks', () => {
     const sheet = await openSettings(user)
     const group = within(sheet).getByRole('group', { name: 'Background' })
     expect(within(group).getByRole('button', { name: 'Listening room' }).getAttribute('aria-pressed')).toBe('true')
-    // a stock photo offers the softening; a pattern doesn't
-    expect(within(sheet).getByRole('slider', { name: 'Soften the photo' })).toBeTruthy()
+    // a stock photo offers its strength; a pattern doesn't
+    expect(within(sheet).getByRole('slider', { name: 'Photo strength' })).toBeTruthy()
     await user.click(within(group).getByRole('button', { name: 'Walnut paneling' }))
     await waitFor(() => expect(site().bg).toEqual({ kind: 'preset', preset: 'walnut' }))
     expect(screen.getAllByTestId('wall-bg')[0].className).toContain('bg-walnut')
@@ -72,7 +72,7 @@ describe('Settings: how the wall looks', () => {
   it('keeps each photo kind on its own slider scale, even through a pattern or a photo missing from uploads', async () => {
     const { user, site } = setup({ bg: { kind: 'photo', assetId: 'x1' }, dim: 85 })
     const sheet = await openSettings(user)
-    expect(within(sheet).getByRole('slider', { name: 'Soften the photo' }).getAttribute('min')).toBe('20')
+    expect(within(sheet).getByRole('slider', { name: 'Photo strength' }).getAttribute('min')).toBe('20')
     const group = within(sheet).getByRole('group', { name: 'Background' })
     await user.click(within(group).getByRole('button', { name: 'Grooves' }))
     await waitFor(() => expect(site().bg).toMatchObject({ kind: 'preset', preset: 'grooves' }))
@@ -97,12 +97,12 @@ describe('Settings: how the wall looks', () => {
     expect(within(sheet).getByText("Uploading your own background isn't available in this view.")).toBeTruthy()
   })
 
-  it('softens the photo from the keyboard and saves where it stops', async () => {
+  it('strengthens the photo from the keyboard and saves where it stops, as less wash', async () => {
     const { user, site } = setup()
     const sheet = await openSettings(user)
-    within(sheet).getByRole('slider', { name: 'Soften the photo' }).focus()
+    within(sheet).getByRole('slider', { name: 'Photo strength' }).focus()
     await user.keyboard('{ArrowRight}')
-    await waitFor(() => expect(site().dim).toBe(55))
+    await waitFor(() => expect(site().dim).toBe(45))
   })
 
   it('hangs the records in the style picked', async () => {

@@ -466,6 +466,8 @@ async function paint(list: Rec[], site: Site, withImages: boolean): Promise<Draw
   const H = pad + 100 + 76 + rowHs.reduce((a, b) => a + b, 0) + (list.length > SHARE_MAX ? 40 : 0) + pad
   const bg = site.background
   const ph = bg.kind === 'photo' ? bg : null
+  // the photo's wash as the wall lays it in this theme (theme.css --wash-light)
+  const light = getComputedStyle(document.documentElement).getPropertyValue('--wash-light').trim() === '1'
   const hang = site.hang
   const [photo, ...loaded] = withImages
     ? await Promise.all([ph && loadImg(ph.url), ...shown.filter(coverUrl).map(async (r) => [r.id, await loadImg(coverUrl(r))] as const)])
@@ -489,7 +491,7 @@ async function paint(list: Rec[], site: Site, withImages: boolean): Promise<Draw
     const w = photo.width * k
     const h = photo.height * k
     ctx.drawImage(photo, (W - w) / 2, (H - h) * photoY(ph.pos), w, h)
-    ctx.fillStyle = css(c.wall, ph.dim / 100)
+    ctx.fillStyle = css(c.wall, (light ? ph.light : ph.dim) / 100)
     ctx.fillRect(0, 0, W, H)
   }
   // over a photo, text gets the halo in the wall colour and the darker secondary ink it has on the page

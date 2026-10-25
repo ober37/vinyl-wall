@@ -5,15 +5,16 @@
 
 :root,
 .light {
-  --wall: #dde2dc;
-  --wall-2: #cfd6cf;
-  --ink: #1b2220;
-  --ink-2: #4b5753;
-  --line: #b9c3bc;
-  --sheet: #eef1ec;
+  --wall: #d6d0c4;
+  --wall-2: #c8c1b3;
+  --ink: #221f1b;
+  --ink-2: #4f4a42;
+  --line: #a9a091; /* dividers and the dialog rim */
+  --edge: #7d7466; /* the edge of a control: buttons, fields */
+  --sheet: #e6e1d6;
   --accent: #2c5c4f;
   --accent-ink: #f2f5f1;
-  --brass: #a77a2c;
+  --brass: #94692a;
   --paper: #f6f4ec;
   --paper-ink: #2a2622;
   --someday: #56708f;
@@ -22,6 +23,7 @@
   --want-ink: #fff;
   --shade: #141c19; /* shadows are this at an opacity */
   --shade-alpha: 28%;
+  --wash-light: 1; /* a photo background takes light mode's wash (site.ts lightDim) */
   --vinyl: #111312;
   --groove: #2a2d2b;
   --plank: #5e5244;
@@ -69,6 +71,7 @@
   --ink: #e6ebe6;
   --ink-2: #a3b0aa;
   --line: #2f3a37;
+  --edge: #2f3a37;
   --sheet: #1a2120;
   --accent: #7fb8a4;
   --accent-ink: #0f1614;
@@ -81,6 +84,7 @@
   --want-ink: #1a0f0b;
   --shade: #000;
   --shade-alpha: 55%;
+  --wash-light: 0;
   --vinyl: #050606;
   --groove: #1d201f;
   --rail: #5a3b24;
@@ -104,9 +108,9 @@
   --background-strong: var(--wall-2);
   --background-inverse: var(--ink);
 
-  --border: var(--line);
+  --border: var(--edge);
   --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
-  --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
+  --border-strong: color-mix(in oklch, var(--edge) 70%, var(--ink-2));
   --border-emphasis: var(--ink-2);
   --border-intense: var(--ink);
   --border-inverse: var(--ink);

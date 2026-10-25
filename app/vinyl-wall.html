@@ -901,6 +901,7 @@ var stockDim = (v) => {
 	const t = 40 + v * .6;
 	return Math.round((t <= 50 ? 50 + t / 2 : 75 + (t - 50) * .4) * 10) / 10;
 };
+var lightDim = (v, upload) => upload ? v <= 70 ? 5 + (v - 20) / 2 : 30 + (v - 70) * 2 : 15 + v * .6;
 function siteOf(doc) {
 	const s = doc || {};
 	const title = String(s.title || "").trim() || "My Vinyl Wall";
@@ -910,19 +911,23 @@ function siteOf(doc) {
 	};
 	const dim = typeof s.dim === "number" ? s.dim : void 0;
 	let background;
-	if (bg.kind === "photo" && okAsset(bg.assetId)) background = {
-		kind: "photo",
-		url: "/_blob/" + bg.assetId,
-		dim: dim ?? DEFAULT_DIM.upload
-	};
-	else {
+	if (bg.kind === "photo" && okAsset(bg.assetId)) {
+		const v = dim ?? DEFAULT_DIM.upload;
+		background = {
+			kind: "photo",
+			url: "/_blob/" + bg.assetId,
+			dim: v,
+			light: lightDim(v, true)
+		};
+	} else {
 		const preset = presetOf(bg);
 		const photo = PHOTOS[preset];
 		background = photo ? {
 			kind: "photo",
 			url: "backgrounds/" + photo.file,
 			pos: photo.pos,
-			dim: stockDim(dim ?? DEFAULT_DIM.stock)
+			dim: stockDim(dim ?? DEFAULT_DIM.stock),
+			light: lightDim(dim ?? DEFAULT_DIM.stock, false)
 		} : {
 			kind: "pattern",
 			preset
@@ -1820,7 +1825,7 @@ function GearItem({ g, onOpen }) {
 					})]
 				}),
 				notes.length ? /* @__PURE__ */ jsx("ul", {
-					className: "divide-border flex flex-col divide-y",
+					className: "divide-(--line) flex flex-col divide-y",
 					children: notes.map((n, i) => ({
 						n,
 						i
@@ -1849,7 +1854,7 @@ function GearItem({ g, onOpen }) {
 				})
 			] }),
 			g.tracks && recent.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Recent plays" }), /* @__PURE__ */ jsx("ul", {
-				className: "divide-border flex flex-col divide-y",
+				className: "divide-(--line) flex flex-col divide-y",
 				children: recent.map((p, i) => /* @__PURE__ */ jsxs("li", {
 					className: "grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-2 text-sm",
 					children: [
@@ -3380,6 +3385,7 @@ var bgClass = (bg) => bg.kind === "photo" ? "bg-photo" : "bg-" + bg.preset;
 var bgStyle = (bg) => bg.kind === "photo" ? {
 	"--photo": `url("${bg.url}")`,
 	"--dim": bg.dim + "%",
+	"--dim-light": bg.light + "%",
 	"--photo-pos": bg.pos
 } : void 0;
 var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, example, onOpen }) {
@@ -3432,7 +3438,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 						})
 					]
 				}), /* @__PURE__ */ jsxs("div", {
-					className: "cap on-photo min-w-0 px-0.5 pt-2.5",
+					className: "cap on-photo mt-2.5 min-w-0",
 					children: [
 						example && /* @__PURE__ */ jsx("span", {
 							className: "bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase",
@@ -3681,6 +3687,14 @@ function BackgroundSection() {
 	const savedDim = typeof settings.dim === "number" ? settings.dim : DEFAULT_DIM[isUpload ? "upload" : "stock"];
 	const [dragging, setDragging] = useState(null);
 	const dim = dragging ?? savedDim;
+	const top = isUpload ? 110 : 100;
+	const previewing = dragging !== null;
+	useEffect(() => {
+		if (!previewing) return;
+		const root = document.documentElement;
+		root.dataset.previewing = "";
+		return () => void delete root.dataset.previewing;
+	}, [previewing]);
 	const [status, setStatus] = useState("");
 	const [removing, setRemoving] = useState(null);
 	const file = useRef(null);
@@ -3812,19 +3826,28 @@ function BackgroundSection() {
 				})
 			]
 		}),
-		(isUpload || stock) && /* @__PURE__ */ jsxs(Field, { children: [
-			/* @__PURE__ */ jsx(FieldLabel, { children: "Soften the photo" }),
-			/* @__PURE__ */ jsx(Slider, {
-				value: dim,
-				min: isUpload ? 20 : 0,
-				max: isUpload ? 90 : 100,
-				step: 5,
-				thumbAriaLabel: "Soften the photo",
-				onValueChange: (v) => setDragging(v),
-				onValueCommitted: (v) => saveSettings({ dim: v }).then(() => setDragging(null))
-			}),
-			/* @__PURE__ */ jsx(FieldDescription, { children: "So the records stay readable over it." })
-		] }),
+		(isUpload || stock) && /* @__PURE__ */ jsxs(Field, {
+			className: "soften",
+			children: [
+				/* @__PURE__ */ jsx(FieldLabel, { children: "Photo strength" }),
+				/* @__PURE__ */ jsx(Slider, {
+					value: top - dim,
+					min: isUpload ? 20 : 0,
+					max: isUpload ? 90 : 100,
+					step: 5,
+					thumbAriaLabel: "Photo strength",
+					tooltipVisibility: "never",
+					onValueChange: (v) => setDragging(top - v),
+					onValueCommitted: (v) => saveSettings({ dim: top - v }).then(() => setDragging(null))
+				}),
+				/* @__PURE__ */ jsxs("div", {
+					"aria-hidden": "true",
+					className: "text-foreground-muted flex justify-between text-xs",
+					children: [/* @__PURE__ */ jsx("span", { children: "Faint" }), /* @__PURE__ */ jsx("span", { children: "Strong" })]
+				}),
+				/* @__PURE__ */ jsx(FieldDescription, { children: previewing ? "Showing your wall. Let go to come back." : "Turn it down if the records get hard to read." })
+			]
+		}),
 		dragging !== null && createPortal(/* @__PURE__ */ jsx(WallBackground, { bg: look(current, dragging) }), document.body),
 		/* @__PURE__ */ jsx(Confirm, {
 			open: removing !== null,
@@ -5980,7 +6003,7 @@ function Listening({ r }) {
 							]
 						})]
 					}) }), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsx("ul", {
-						className: "divide-border flex flex-col divide-y",
+						className: "divide-(--line) flex flex-col divide-y",
 						children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
 							className: "py-2 text-sm",
 							children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
@@ -6091,7 +6114,7 @@ function NotesTab({ r }) {
 				className: "text-foreground-muted text-sm",
 				children: "No notes yet."
 			}) : /* @__PURE__ */ jsx("ul", {
-				className: "divide-border flex flex-col divide-y",
+				className: "divide-(--line) flex flex-col divide-y",
 				children: notes.map(({ n, ref }) => /* @__PURE__ */ jsxs("li", {
 					className: "flex flex-col gap-1 py-3 text-sm",
 					children: [/* @__PURE__ */ jsx("time", {
@@ -7971,6 +7994,7 @@ async function paint(list, site, withImages) {
 	const H = 236 + rowHs.reduce((a, b) => a + b, 0) + (list.length > 40 ? 40 : 0) + pad;
 	const bg = site.background;
 	const ph = bg.kind === "photo" ? bg : null;
+	const light = getComputedStyle(document.documentElement).getPropertyValue("--wash-light").trim() === "1";
 	const hang = site.hang;
 	const [photo, ...loaded] = withImages ? await Promise.all([ph && loadImg(ph.url), ...shown.filter(coverUrl).map(async (r) => [r.id, await loadImg(coverUrl(r))])]) : [null];
 	const covers = new Map(loaded);
@@ -7991,7 +8015,7 @@ async function paint(list, site, withImages) {
 		const w = photo.width * k;
 		const h = photo.height * k;
 		ctx.drawImage(photo, (W - w) / 2, (H - h) * photoY(ph.pos), w, h);
-		ctx.fillStyle = css(c.wall, ph.dim / 100);
+		ctx.fillStyle = css(c.wall, (light ? ph.light : ph.dim) / 100);
 		ctx.fillRect(0, 0, W, H);
 	}
 	const ink2 = photo ? mix(c["ink-2"], c.ink, .45) : c["ink-2"];
@@ -8241,7 +8265,7 @@ function ShareSheet({ shown, onClose }) {
 function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onImport }) {
 	return /* @__PURE__ */ jsxs("section", {
 		"aria-labelledby": "welcome-title",
-		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_oklch,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
+		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_srgb,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
 		children: [
 			/* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-2",
@@ -8279,7 +8303,7 @@ function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onI
 						on: onGear
 					}
 				].map((s, i) => /* @__PURE__ */ jsxs("li", {
-					className: "border-border col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0",
+					className: "border-(--line) col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0",
 					children: [
 						/* @__PURE__ */ jsxs("span", {
 							className: `grid size-8 place-items-center rounded-full border font-mono text-sm ${s.done ? "bg-primary border-primary text-primary-foreground" : "border-border text-foreground-muted"}`,
@@ -9178,7 +9202,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .rack[data-hang="float"] .cap {
-    padding-top: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .sleeve-box {
@@ -9234,14 +9258,34 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .bg-photo {
-    background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)), var(--photo);
+    --washed: calc(var(--dim-light) * var(--wash-light) + var(--dim) * (1 - var(--wash-light)));
+    background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--washed), transparent), color-mix(in srgb, var(--wall) var(--washed), transparent)), var(--photo);
     background-size: cover;
     background-position: var(--photo-pos, center);
+  }
+
+  .cap {
+    padding-inline: .125rem;
+  }
+
+  :root:not(.dark) .cap {
+    border-radius: var(--radius-sm);
+    --frost: color-mix(in srgb, var(--sheet) 55%, transparent);
+    background: var(--frost);
+    box-shadow: 0 0 .5rem .125rem var(--frost);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    padding: .375rem .625rem;
   }
 
   .photo-bg .on-photo {
     --ink-2: color-mix(in oklch, var(--ink-2) 55%, var(--ink));
     text-shadow: 0 0 2px var(--wall), 0 0 8px var(--wall), 0 0 14px var(--wall);
+  }
+
+  :root:not(.dark) .photo-bg .cap.on-photo {
+    --ink-2: inherit;
+    text-shadow: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -9572,6 +9616,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
+  }
+
+  .mt-2\.5 {
+    margin-top: calc(var(--spacing) * 2.5);
   }
 
   .mt-3 {
@@ -10319,8 +10367,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     border-bottom-width: calc(var(--border-width) * calc(1 - var(--tw-divide-y-reverse)));
   }
 
-  :where(.divide-border > :not(:last-child)) {
-    border-color: var(--border);
+  :where(.divide-\(--line\) > :not(:last-child)) {
+    border-color: var(--line);
   }
 
   .self-center {
@@ -10469,6 +10517,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     border-style: dashed;
   }
 
+  .border-\(--line\) {
+    border-color: var(--line);
+  }
+
   .border-\(--m2\) {
     border-color: var(--m2);
   }
@@ -10537,8 +10589,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-color: color-mix(in oklch,var(--m1) 16%,transparent);
   }
 
-  .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
-    background-color: color-mix(in oklch,var(--sheet) 88%,transparent);
+  .bg-\[color-mix\(in_srgb\,var\(--sheet\)_88\%\,transparent\)\] {
+    background-color: color-mix(in srgb,var(--sheet) 88%,transparent);
   }
 
   .bg-background {
@@ -14521,15 +14573,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 :root, .light {
-  --wall: #dde2dc;
-  --wall-2: #cfd6cf;
-  --ink: #1b2220;
-  --ink-2: #4b5753;
-  --line: #b9c3bc;
-  --sheet: #eef1ec;
+  --wall: #d6d0c4;
+  --wall-2: #c8c1b3;
+  --ink: #221f1b;
+  --ink-2: #4f4a42;
+  --line: #a9a091;
+  --edge: #7d7466;
+  --sheet: #e6e1d6;
   --accent: #2c5c4f;
   --accent-ink: #f2f5f1;
-  --brass: #a77a2c;
+  --brass: #94692a;
   --paper: #f6f4ec;
   --paper-ink: #2a2622;
   --someday: #56708f;
@@ -14538,6 +14591,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --want-ink: #fff;
   --shade: #141c19;
   --shade-alpha: 28%;
+  --wash-light: 1;
   --vinyl: #111312;
   --groove: #2a2d2b;
   --plank: #5e5244;
@@ -14584,6 +14638,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --ink: #e6ebe6;
   --ink-2: #a3b0aa;
   --line: #2f3a37;
+  --edge: #2f3a37;
   --sheet: #1a2120;
   --accent: #7fb8a4;
   --accent-ink: #0f1614;
@@ -14596,6 +14651,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --want-ink: #1a0f0b;
   --shade: #000;
   --shade-alpha: 55%;
+  --wash-light: 0;
   --vinyl: #050606;
   --groove: #1d201f;
   --rail: #5a3b24;
@@ -14614,9 +14670,9 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --background-muted: var(--wall);
   --background-strong: var(--wall-2);
   --background-inverse: var(--ink);
-  --border: var(--line);
+  --border: var(--edge);
   --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
-  --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
+  --border-strong: color-mix(in oklch, var(--edge) 70%, var(--ink-2));
   --border-emphasis: var(--ink-2);
   --border-intense: var(--ink);
   --border-inverse: var(--ink);
@@ -14676,6 +14732,26 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 body {
   background-color: var(--wall);
   color: var(--ink);
+}
+
+[data-previewing] [data-slot="drawer-backdrop"] {
+  opacity: 0;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+  transition: opacity .15s ease-out;
+}
+
+[data-previewing] [data-slot="drawer-popup"] {
+  visibility: hidden;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
+
+[data-previewing] .soften {
+  visibility: visible;
+  border-radius: var(--radius-xs);
+  background: var(--sheet);
+  box-shadow: 0 0 0 .75rem var(--sheet);
 }
 
 @media (hover: none) {
