@@ -1,0 +1,183 @@
+import { useEffect, useRef, useState } from 'react'
+import { Alert, AlertTitle } from '@appica/ui-react/alert'
+import { Button } from '@appica/ui-react/button'
+import { Boundary } from './Boundary'
+import { ROUND, Tip } from './wall/Tip'
+import { EquipmentSheet } from './gear/EquipmentSheet'
+import { GearPill, gearPillShown } from './gear/GearPill'
+import { useRuntime } from './runtime/runtime'
+import type { Rec } from './model/record'
+import { busy } from './model/task'
+import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
+import { NewRecordSheet } from './sheet/NewRecordSheet'
+import { RecordSheet } from './sheet/RecordSheet'
+import type { Shown } from './model/share'
+import { ShareSheet } from './wall/ShareSheet'
+import { Wall, WallBackground } from './wall/Wall'
+import { Welcome } from './wall/Welcome'
+
+const GearIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <circle cx="12" cy="12" r="3" />
+    <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z" />
+  </svg>
+)
+
+const MESSAGE = {
+  loading: 'Loading the wall…',
+  'no-runtime': 'This page runs inside claude.ai.',
+  'no-db': 'Open this page signed in to claude.ai to see the wall.',
+  revoked: 'This page lost access to its data. Reload to try again.',
+  ready: '',
+}
+
+// what a screen reader hears about lookups: once when they start and once when they finish, not at every record
+function useLookupNews(n: number) {
+  const [news, setNews] = useState('')
+  const was = useRef(0)
+  useEffect(() => {
+    if (n && !was.current) setNews(`${n} record${n === 1 ? '' : 's'} syncing`)
+    else if (!n && was.current) setNews('Sync finished')
+    was.current = n
+  }, [n])
+  return news
+}
+
+export function App() {
+  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings, hasDownloads } =
+    useRuntime()
+  const [openId, setOpenId] = useState<string | null>(null)
+  // Settings: closed, open, or open on the Discogs section or the import
+  const [settingsOpen, setSettingsOpen] = useState<false | 'top' | 'discogs' | 'import'>(false)
+  const [adding, setAdding] = useState(false)
+  const [equipOpen, setEquipOpen] = useState(false)
+  const [sharing, setSharing] = useState<Shown | null>(null)
+  // a record opened from Equipment's Listening summary offers the way back
+  const [fromEquip, setFromEquip] = useState(false)
+  const update = useUpdateAvailable()
+  const discogsOn = settings.discogs?.status === 'ok'
+  // busy (a lookup, or an edit waiting to go to Discogs while it's connected) for editors only: a viewer can't act on it
+  const isBusy = (r: Rec) => canEdit && busy(r, discogsOn)
+  const looking = records.filter(isBusy).length
+  const lookupNews = useLookupNews(looking)
+
+  return (
+    <main className={`mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === 'photo' ? 'photo-bg' : ''}`}>
+      <WallBackground bg={site.background} />
+      <p role="status" className="sr-only">
+        {lookupNews}
+      </p>
+      {MESSAGE[status] && (
+        <p role="status" className="on-photo text-ink-2 mb-4 text-sm">
+          {MESSAGE[status]}
+        </p>
+      )}
+      {(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && !sharing && (
+        <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
+          <AlertTitle>{error || wallNotice}</AlertTitle>
+        </Alert>
+      )}
+      {status === 'ready' && (
+        <Boundary title="Couldn't show the wall">
+          <Wall
+            records={records}
+            title={site.title}
+            hang={site.hang}
+            busy={isBusy}
+            onOpen={setOpenId}
+            onAdd={canEdit ? () => setAdding(true) : undefined}
+            // viewers too: the picture shows nothing they can't already see
+            onShare={hasDownloads ? setSharing : undefined}
+            below={
+              looking > 0 && (
+                // a count, not a filter: the chips' type, count first and padding, but no outline, so it doesn't read as one
+                <span className="text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono max-sm:px-0 text-[0.8125rem] max-sm:h-auto">
+                  <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
+                  <span>
+                    <b className="text-ink font-medium">{looking}</b>
+                    <span className="sr-only"> record{looking === 1 ? '' : 's'}</span> syncing
+                  </span>
+                </span>
+              )
+            }
+            welcome={
+              canEdit &&
+              settingsLoaded &&
+              !settings.welcomeDismissed && (
+                <Welcome
+                  discogsDone={discogsOn}
+                  gearDone={gear.some((g) => !g.example)}
+                  onAdd={() => setAdding(true)}
+                  onDiscogs={() => setSettingsOpen('discogs')}
+                  onGear={() => setEquipOpen(true)}
+                  onBlank={() => saveSettings({ welcomeDismissed: true })}
+                  onImport={() => setSettingsOpen('import')}
+                />
+              )
+            }
+            gear={gearPillShown(gear, canEdit) && <GearPill onOpen={() => setEquipOpen(true)} />}
+            tools={
+              <>
+                {canEdit && (
+                  <span className="relative">
+                    <Tip label={update ? 'Settings (update available)' : 'Settings'}>
+                      <Button
+                        size="icon-md"
+                        variant="outline"
+                        aria-label={update ? 'Settings (update available)' : 'Settings'}
+                        className={ROUND}
+                        onClick={() => setSettingsOpen('top')}
+                      >
+                        <GearIcon />
+                      </Button>
+                    </Tip>
+                    {update && (
+                      <span aria-hidden="true" className="bg-brass absolute end-0.5 top-0.5 size-2 rounded-full ring-2 ring-(--shade)" />
+                    )}
+                  </span>
+                )}
+              </>
+            }
+          />
+        </Boundary>
+      )}
+      <RecordSheet
+        id={openId}
+        onClose={() => {
+          setOpenId(null)
+          setFromEquip(false)
+        }}
+        onBack={
+          fromEquip
+            ? () => {
+                setOpenId(null)
+                setFromEquip(false)
+                setEquipOpen(true)
+              }
+            : undefined
+        }
+        onDiscogs={() => setSettingsOpen('discogs')}
+      />
+      <EquipmentSheet
+        open={equipOpen}
+        onClose={() => setEquipOpen(false)}
+        onRecord={(id) => {
+          setEquipOpen(false)
+          setFromEquip(true)
+          setOpenId(id)
+        }}
+      />
+      <ShareSheet shown={sharing} onClose={() => setSharing(null)} />
+      <SettingsSheet open={!!settingsOpen} at={settingsOpen || undefined} onClose={() => setSettingsOpen(false)} />
+      <NewRecordSheet
+        open={adding}
+        onClose={() => setAdding(false)}
+        // the new record opens in view, in place of the new-record sheet
+        onCreated={(id) => {
+          setAdding(false)
+          setOpenId(id)
+        }}
+      />
+    </main>
+  )
+}

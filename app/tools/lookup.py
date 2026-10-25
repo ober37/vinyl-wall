@@ -598,15 +598,18 @@ def needs_f(r):
 
 def plan(records_dir, artists_dir, versions_path, work, earlier=None):
     recs, arts, ver = load_dir(records_dir), load_dir(artists_dir) if os.path.isdir(artists_dir) else {}, json.load(open(versions_path))
-    tried = set(json.load(open(earlier))["records"]) if earlier else set()
+    e = json.load(open(earlier)) if earlier else {"records": {}, "later": [], "left": 0}
+    tried = set(e["records"]) | set(e["later"])  # the second plan leaves the records the first left for the next run
     todo = [rid for rid, r in recs.items() if rid not in tried and r.get("title") and r.get("artist") and (needs_a(r) or needs_f(r))]
     todo.sort(key=lambda rid: (-(recs[rid].get("added") or 0), recs[rid].get("title") or ""))  # newest first: a fresh add goes first
-    later = max(0, len(todo) - MAX_RECORDS)
-    todo = todo[:MAX_RECORDS]
+    todo, rest = todo[:MAX_RECORDS], todo[MAX_RECORDS:]
+    later = len(rest)
+    # how many of those still wait (not just short of a cover a lookup couldn't find): the page starts the next run for them
+    left = e["left"] + sum(1 for rid in rest if recs[rid].get("needsEnrich") or needs_f(recs[rid]))
     groups = [todo[:FIRST]] + chunks(todo[FIRST:], GROUP) if todo else []
     os.makedirs(work, exist_ok=True)
     _stamp(work, "plan")
-    json.dump({"groups": groups, "records": {rid: {"data": recs[rid], "version": ver.get("records", {}).get(rid)} for rid in todo},
+    json.dump({"groups": groups, "later": rest, "left": left, "records": {rid: {"data": recs[rid], "version": ver.get("records", {}).get(rid)} for rid in todo},
                "artists": {aid: {"data": a, "version": ver.get("artists", {}).get(aid)} for aid, a in arts.items()}},
               open(os.path.join(work, "plan.json"), "w"))
     if groups:  # look every group up in the background, in order, while the task saves the earlier ones
@@ -921,7 +924,7 @@ def _json(path, default):
     return json.load(open(path)) if os.path.exists(path) else default
 
 
-def _writer(wdir):
+def _writer(wdir, left=0):
     os.makedirs(wdir, exist_ok=True)
     writes = []
 
@@ -932,6 +935,10 @@ def _writer(wdir):
         if version:
             w["if_version"] = version
         writes.append(w)
+    # every batch tells the page the run is still going, so a run that stops early doesn't hold the wall for long, and
+    # how many records wait for the next run
+    # (an update must be pinned: the task puts settings/site's current version in place of SETTINGS_VERSION)
+    add("update", "settings", "site", {"run": {"beatMs": int(time.time() * 1000)}, "lookupLeft": left}, "SETTINGS_VERSION")
     return writes, add
 
 
@@ -959,7 +966,7 @@ def save(work, g, *pairs):
     after = _json(os.path.join(work, "versions-after.json"), {"records": {}, "artists": {}})
     fj = _wait_found(work, p, g)
     today = datetime.date.today().isoformat()
-    writes, add = _writer(os.path.join(work, f"g{g}", "facts"))
+    writes, add = _writer(os.path.join(work, f"g{g}", "facts"), p["left"])
     for key, a in fj["artists"].items():
         v = (p["artists"].get(key) or {}).get("version")
         add("update" if v else "set", "artists", key, _artist_doc(a), v)  # update keeps an existing summary until pass 2
@@ -1037,7 +1044,7 @@ def summaries(work, g=None, claude_path=None):
     albums, arts = cl.get("albums") or {}, cl.get("artists") or {}
     ver = _json(os.path.join(work, "versions-after.json"), {"records": {}, "artists": {}})
     today = datetime.date.today().isoformat()
-    writes, add = _writer(os.path.join(work, f"g{g}", "summaries"))
+    writes, add = _writer(os.path.join(work, f"g{g}", "summaries"), p["left"])
     for key, a in fjs[g]["artists"].items():
         s = ((arts.get(key) or {}).get("summary") or "").strip()
         if a.get("intro") and s:

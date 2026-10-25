@@ -1,0 +1,21 @@
+@import 'tailwindcss';
+@import '@appica/ui-react/styles.css';
+@import './theme.css';
+@import './wall/wall.css';
+
+/* only the appica components this app uses (and their shared internals), so the page doesn't carry 70 components' classes */
+@source '../node_modules/@appica/ui-react/dist/components/{accordion,alert,alert-dialog,badge,button,button-group,checkbox,checkbox-group,collapsible,copy-button,date-field,drawer,field,fieldset,form,input,meter,select,slider,tabs,textarea,toggle,toggle-group,tooltip}';
+@source '../node_modules/@appica/ui-react/dist/lib';
+@source '../node_modules/@appica/ui-react/dist/internal';
+@source '../node_modules/@appica/ui-react/dist/providers';
+
+/* phones and tablets: no scroll bars (iOS in the Claude app can draw a stuck one partway across); everything still
+   scrolls. Desktop keeps its scroll bars. Every scroller, since each sheet scrolls its own body */
+@media (hover: none) {
+  * {
+    scrollbar-width: none;
+  }
+  *::-webkit-scrollbar {
+    display: none;
+  }
+}

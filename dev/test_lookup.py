@@ -1,5 +1,5 @@
 """Offline checks for app/tools/lookup.py's pure helpers. Run by dev/test.sh."""
-import os, sys
+import json, os, sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "tools"))
 import lookup as L
@@ -50,6 +50,8 @@ done = {"title": "x", "aboutAt": "2026-10-01", "aboutV": 2, "about": {"summary":
 check("redo: a summary from an older run stays", not L.needs_f(done))
 check("redo: an older run with no summary goes once more", L.needs_f({**done, "about": {}}))
 check("redo: a redo that found nothing is done", not L.needs_f({**done, "about": {}, "aboutV": 3}))
+check("redo: the page's reset (Find cover & details, a new title) looks it up again",
+      L.needs_f({**done, "about": {}, "aboutV": 0, "aboutAt": ""}))
 snak = lambda v: {"rank": "normal", "mainsnak": {"datavalue": {"value": {"id": v}}}}
 singer = {"claims": {"P31": [snak("Q5")], "P106": [snak("Q488205")]}}
 check("artist: a singer-songwriter with no music ids counts", L.is_artist(singer))
@@ -84,4 +86,12 @@ L.fetch = lambda *a, **k: {"releases": [box, {"id": "lp", "media": [med("12\" Vi
 check("tracks: an all-vinyl release wins over a box set", L.mb_tracks("g")["tracksUrl"].endswith("/lp"))
 L.fetch = lambda *a, **k: {"releases": [{"id": "cd", "media": [med("CD", "1", "2")]}]}
 check("tracks: no vinyl, the earliest release's tracks", [t["pos"] for t in L.mb_tracks("g")["tracks"]] == ["1", "2"])
+import tempfile
+writes, add = L._writer(tempfile.mkdtemp(), 5)
+add("update", "records", "r1", {"x": 1}, 3)
+beat = json.load(open(writes[0]["file_path"]))
+check("batches: every write to an existing doc is pinned", all(w["op"] == "set" or w.get("if_version") for w in writes), writes)
+check("batches: each tells the page the run is still going and what it leaves for the next", writes[0]["collection"] == "settings" and writes[0]["doc_id"] == "site"
+      and writes[0]["if_version"] == "SETTINGS_VERSION" and beat["run"]["beatMs"] > 0 and beat["lookupLeft"] == 5 and writes[1]["doc_id"] == "r1",
+      (writes, beat))
 sys.exit(1 if fails else 0)

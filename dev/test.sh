@@ -7,6 +7,9 @@ PORT="${PORT:-8799}"
 python3 build.py >/dev/null || exit 1
 python3 -I test_lookup.py || exit 1
 python3 -I test_discogs.py >/dev/null || { python3 -I test_discogs.py | grep -v "^PASS"; exit 1; }
+# the React page in web/, when its packages are installed
+# and its built page in Chrome (needs the network: React and appica load from jsdelivr)
+if [ -d ../web/node_modules ]; then (cd ../web && npx tsc && npx vitest run --reporter=dot && npx vite build >/dev/null && npm run -s check:cdn) || exit 1; fi
 python3 -m http.server "$PORT" >/dev/null 2>&1 &
 SERVER=$!
 trap 'kill $SERVER 2>/dev/null; rm -rf "$PROFILE"' EXIT

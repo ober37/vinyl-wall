@@ -8,6 +8,7 @@ Vinyl Wall runs inside Claude, so a one-off question or fix ("point this record 
 
 1. **First outside install** by a tester, from the setup link alone.
 
+Done in v0.9.5, the fourth 1.0 beta: the page rebuilt on React and appica-ui at full parity (#60), with a link list of where to buy each copy you want (#58), a warmer light mode with a Photo strength slider (#72), and a sync marked from chat that starts on its own.
 Done in v0.9.4, the third 1.0 beta: the record sheet redesign with About (#27, #32) and stylus wear by hours left (#28), faster lookups (#30) with a dot on records being looked up (#42), covers and album info in the library file (#35, #37), the copies you want (#33), what you paid and where at Ordered it / Got it (#45), research in your Claude chat (#31) with + Want for a researched pressing (#52), and a chat skill for adding records that fills in the shop's website and grades (#46, #47).
 Done in v0.9.3, the second 1.0 beta: listening insights and earned badges (#6), pinned research (#7), a listening log you can scan (#24), and four ways to hang the records (#9).
 Done in v0.9.0, the 1.0 beta: search the wall (#15).
@@ -23,7 +24,7 @@ Each item below is a [GitHub issue labeled enhancement](https://github.com/ober3
 
 ## 1.0
 
-Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, four small, page-only additions in v0.9.3, and the record sheet with About, the copies you want and research in your Claude chat in v0.9.4, the third beta. 1.0.0 follows once beta feedback is in.
+Everything in the [1.0 milestone](https://github.com/ober37/vinyl-wall/milestone/1) has shipped: the first round in v0.9.0, the 1.0 beta, four small, page-only additions in v0.9.3, and the record sheet with About, the copies you want and research in your Claude chat in v0.9.4, the third beta, and the rebuilt page in v0.9.5, the fourth. 1.0.0 follows once beta feedback is in.
 
 ### Listening insights (#6)
 Most played, last spun, and stylus hours by record, from the existing play log.
