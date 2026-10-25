@@ -19,6 +19,8 @@ type Runtime = {
   records: Rec[]
   // the settings doc as stored, and what the wall draws from it (defaults until, or unless, it loads)
   settings: Settings
+  // the settings doc has arrived (until then settings holds nothing, not the wall's choices)
+  settingsLoaded: boolean
   site: Site
   // read-only here until its slice: About the artist
   artists: Doc[]
@@ -42,6 +44,8 @@ type Runtime = {
   create: (id: string, doc: Record<string, unknown>) => Promise<boolean>
   // store an image (already shrunk) and resolve its asset id; rejects with a message to show
   upload: (file: Blob) => Promise<string>
+  // removes a stored image nothing points at any more; a failure is left alone (production's assets.delete in a try)
+  deleteAsset: (id: string) => Promise<void>
   // only the changed fields are written, so a save never undoes what the background task wrote meanwhile
   saveSettings: (patch: Settings) => Promise<boolean>
   // equipment: a piece of gear is written whole with what changed merged in (as production's saveGear), one write at a
@@ -55,8 +59,8 @@ type Runtime = {
   // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
   saveToken: (token: string) => Promise<void>
   removeToken: () => Promise<void>
-  // start the background task with what's waiting; at most once a minute, one run at a time
-  fireTask: () => void
+  // start the background task with what's waiting; at most once a minute (now skips that wait), one run at a time
+  fireTask: (now?: boolean) => void
   // a sheet closing starts the task now if its edits are waiting to sync, instead of 20 seconds later
   flushSync: () => void
   // the last thing that went wrong, or a short notice about the page (production's flash): "Looking up …" isn't one, a
@@ -68,6 +72,15 @@ type Runtime = {
 }
 
 const Ctx = createContext<Runtime | null>(null)
+
+// a save's fields merge into what's there one level down, as the database's update does: { discogs: { status } } keeps
+// the rest of discogs, so a save made from an older copy can't undo a change made since
+const isObj = (v: unknown): v is Record<string, unknown> => !!v && typeof v === 'object' && !Array.isArray(v)
+function mergeSettings(s: Settings, patch: Settings): Settings {
+  const out: Settings = { ...s }
+  for (const [k, v] of Object.entries(patch)) out[k] = isObj(v) && isObj(s[k]) ? { ...s[k], ...v } : v
+  return out
+}
 
 export function useRuntime(): Runtime {
   const rt = useContext(Ctx)
@@ -171,9 +184,9 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   }, [claude])
 
   const saveSettings = (patch: Settings) => {
-    setSettings((s) => ({ ...s, ...patch }))
+    setSettings((s) => mergeSettings(s, patch))
     // a task started right after this save must already see it
-    live.current.settings = { ...live.current.settings, ...patch }
+    live.current.settings = mergeSettings(live.current.settings, patch)
     const next = settingsWriting.current.then(async () => {
       try {
         const ref = db.current!.doc('settings/site')
@@ -194,8 +207,12 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
 
   // ported from production's fireTask: one run at a time (settings.run marks it; the task clears it), a start asked for
   // meanwhile waits for that run to end, and starts are at least a minute apart
-  const fireTask = () => {
+  const fireTask = (now?: boolean) => {
     const t = task.current
+    if (now === true) {
+      t.lastFire = 0
+      clearTimeout(t.fireTimer)
+    }
     const { settings: s, records: recs } = live.current
     if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.")
     if (runActive(s)) {
@@ -278,7 +295,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     if (!t.syncDirty) return
     t.syncDirty = false
     clearTimeout(t.syncTimer)
-    writing.current.then(fireTask)
+    writing.current.then(() => fireTask())
   }
 
   // every write waits its turn; a fresh one reads the record first, so it builds on what's there now
@@ -331,7 +348,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     return next
   }
   const upload = async (file: Blob) => {
-    if (!assets.current) throw new Error("Cover uploads aren't available in this view.")
+    if (!assets.current) throw new Error("Uploads aren't available in this view.")
     const tryIt = () => assets.current!.upload(file)
     try {
       return (await tryIt().catch((e: { code?: string }) => (e?.code === 'store_unavailable' ? tryIt() : Promise.reject(e)))).id
@@ -341,7 +358,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
         code === 'too_large'
           ? 'That image is too big to store. Try a smaller one.'
           : code === 'not_granted' || code === 'capability_removed'
-            ? "Cover uploads aren't available in this view."
+            ? "Uploads aren't available in this view."
             : msgOf(e),
       )
     }
@@ -396,6 +413,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       status,
       records,
       settings,
+      settingsLoaded,
       site: siteOf(settings),
       artists,
       gear,
@@ -417,6 +435,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       newId: () => db.current!.collection('records').doc().id,
       create,
       upload,
+      deleteAsset: (id) => (assets.current ? assets.current.delete(id).then(() => {}, () => {}) : Promise.resolve()),
       saveSettings,
       saveGear,
       deleteGear,

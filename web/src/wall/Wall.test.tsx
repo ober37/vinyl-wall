@@ -85,6 +85,6 @@ describe('the wall', () => {
     await act(async () => fake.remoteDoc('settings/site', { title: 'Den Wall', bg: { kind: 'preset', preset: 'cafe' } }))
     expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('Den Wall')
     expect(document.title).toBe('Den Wall')
-    expect(screen.getByTestId('wall-photo').getAttribute('style')).toContain('backgrounds/coffee-shop.jpg')
+    expect(screen.getByTestId('wall-bg').getAttribute('style')).toContain('backgrounds/coffee-shop.jpg')
   })
 })

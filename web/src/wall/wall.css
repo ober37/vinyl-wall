@@ -1,5 +1,6 @@
-/* The rack: what appica has no component for (a barnwood plank, iron rings, a record behind each sleeve, a hang tag),
-   ported from production's CSS. Colours come only from theme.css tokens; the multi-layer gradients can't be utilities. */
+/* The rack: what appica has no component for (the four hanging styles, a record behind each sleeve, a hang tag, the
+   pattern backgrounds), ported from production's CSS. Colours come only from theme.css tokens; the multi-layer gradients
+   can't be utilities. The noise textures (cork, felt) are SVG alpha noise laid over a token colour. */
 
 @layer components {
   /* each row draws its own plank through the tops of its slots */
@@ -63,17 +64,23 @@
     transform: rotate(0.9deg);
   }
   @media (hover: hover) {
-    .slot:hover .hanger {
+    .rack[data-hang] .slot:nth-child(n):hover .hanger {
       transform: rotate(0) translateY(2px);
+    }
+    .rack[data-hang='float'] .slot:nth-child(n):hover .hanger {
+      transform: translateY(-5px);
     }
   }
 
-  /* an iron ring on a bracket */
+  /* what holds a sleeve, centred over it; each style below draws its own (Floating has none) */
   .ring {
     position: absolute;
     z-index: 3;
-    top: -0.875rem;
     left: 50%;
+  }
+  /* Barnwood: an iron ring on a bracket */
+  .rack[data-hang='barn'] .ring {
+    top: -0.875rem;
     width: 1.625rem;
     height: 1.625rem;
     margin-left: -0.8125rem;
@@ -83,7 +90,7 @@
     border-left-color: var(--iron-mid);
     filter: drop-shadow(0 2px 2px var(--shadow-tone));
   }
-  .ring::after {
+  .rack[data-hang='barn'] .ring::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -95,6 +102,159 @@
     background:
       radial-gradient(circle at 50% 50%, var(--iron-hi) 0 1.2px, transparent 1.8px),
       linear-gradient(var(--bracket), var(--bracket-2));
+  }
+
+  /* Pegs: a dark Shaker peg rail with turned pegs, each sleeve hung on a loop of twisted yarn */
+  .rack[data-hang='peg'] .slot::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 0.125rem;
+    height: 1rem;
+    background:
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 23px, color-mix(in srgb, var(--shade) 14%, transparent) 23px 25px, transparent 25px 61px, color-mix(in srgb, var(--shade) 8%, transparent) 61px 63px, transparent 63px 97px),
+      repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 20%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px),
+      linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
+    box-shadow:
+      0 5px 9px var(--shadow-tone),
+      inset 0 1px 0 color-mix(in srgb, var(--gleam) 12%, transparent),
+      inset 0 -2px 0 color-mix(in srgb, var(--shade) 45%, transparent);
+  }
+  .rack[data-hang='peg'] .hanger {
+    transform-origin: 50% -1.25rem;
+  }
+  .rack[data-hang='peg'] .ring {
+    top: -1.4375rem;
+    left: 50%;
+    width: 1rem;
+    height: 1rem;
+    margin-left: -0.5rem;
+    border-radius: 50%;
+    background: radial-gradient(circle at 36% 32%, var(--peg) 0 8%, var(--peg-2) 30%, var(--peg-3) 62%, var(--peg-rail-4));
+    box-shadow:
+      0 3px 4px color-mix(in srgb, var(--shade) 50%, transparent),
+      inset 0 0 0 1.5px color-mix(in srgb, var(--shade) 35%, transparent);
+  }
+  /* the loop: a solid strand and its twist, each drawn by a mask in a token colour */
+  .rack[data-hang='peg'] .hanger::before,
+  .rack[data-hang='peg'] .hanger::after {
+    content: '';
+    position: absolute;
+    inset-inline: 10%;
+    top: -1.125rem;
+    height: 1.25rem;
+    z-index: 2;
+    pointer-events: none;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+    background: var(--yarn);
+  }
+  .rack[data-hang='peg'] .hanger::after {
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='1.4' stroke-dasharray='2.2 2.6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    background: var(--yarn-2);
+  }
+
+  /* Cork: a cork strip behind the top of each row and a coloured push pin above each sleeve, each leaning its own way
+     (a fixed pattern, so it doesn't change between redraws). --la is the lean, --ll how far the cap sits from the base */
+  .rack[data-hang='cork'] .slot::before {
+    content: '';
+    position: absolute;
+    inset-inline: 0;
+    top: 1.0625rem;
+    height: 1.1875rem;
+    background-color: var(--cork);
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
+    background-size: 160px 60px, auto;
+    box-shadow:
+      0 5px 5px -3px var(--shadow-tone),
+      inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent),
+      inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
+  }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 1) { --tx: -8px; --la: -58deg; --ll: 5px; }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 2) { --tx: 5px; --la: 52deg; --ll: 5px; }
+  .rack[data-hang='cork'] .slot:nth-child(3n) { --tx: -2px; --la: -80deg; --ll: 6px; }
+  .rack[data-hang='cork'] .slot:nth-child(4n) { --tx: 10px; --la: 70deg; }
+  .rack[data-hang='cork'] .slot:nth-child(7n + 3) { --la: 100deg; --ll: 4px; }
+  .rack[data-hang='cork'] .slot:nth-child(5n + 1) { --pin: var(--pin-1); }
+  .rack[data-hang='cork'] .slot:nth-child(5n + 2) { --pin: var(--pin-2); }
+  .rack[data-hang='cork'] .slot:nth-child(5n + 3) { --pin: var(--pin-3); }
+  .rack[data-hang='cork'] .slot:nth-child(5n + 4) { --pin: var(--pin-4); }
+  .rack[data-hang='cork'] .slot:nth-child(5n) { --pin: var(--pin-5); }
+  .rack[data-hang='cork'] .hanger {
+    transform-origin: calc(50% + var(--tx, 0px)) -0.375rem;
+  }
+  .rack[data-hang='cork'] .slot:nth-child(odd) .hanger {
+    transform: rotate(-1.6deg);
+  }
+  .rack[data-hang='cork'] .slot:nth-child(even) .hanger {
+    transform: rotate(1.3deg);
+  }
+  .rack[data-hang='cork'] .ring {
+    top: -0.8125rem;
+    left: 50%;
+    width: 13px;
+    height: 13px;
+    margin-left: -6.5px;
+    border-radius: 50%;
+    transform: translateX(var(--tx, 0px));
+    background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
+    box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
+  }
+  .rack[data-hang='cork'] .ring::before,
+  .rack[data-hang='cork'] .ring::after {
+    content: '';
+    position: absolute;
+  }
+  .rack[data-hang='cork'] .ring::before {
+    left: 50%;
+    bottom: 50%;
+    width: 6px;
+    margin-left: -3px;
+    height: var(--ll, 7px);
+    transform-origin: 50% 100%;
+    transform: rotate(var(--la, 0deg));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
+  }
+  .rack[data-hang='cork'] .ring::after {
+    left: 1px;
+    top: 1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
+    box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
+  }
+
+  /* Floating: no rail or ring; each sleeve sits straight, a little off the wall, on a soft deep shadow */
+  /* no rail to trim, so a hang tag may reach into the page's gutter; columns as narrow as the railed styles', so
+     switching styles keeps the sleeves' size */
+  .rack[data-hang='float'] {
+    column-gap: 1.75rem;
+    grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+    overflow-x: visible;
+  }
+  .rack[data-hang='float'] .slot {
+    padding: 1rem 0 0;
+  }
+  /* hidden, not just undrawn: "ring" is also Tailwind's ring utility, whose 1px shadow would show as a dot */
+  .rack[data-hang='float'] .ring {
+    display: none;
+  }
+  .rack[data-hang='float'] .slot:nth-child(n) .hanger {
+    transform: none;
+  }
+  .rack[data-hang='float'] .sleeve-face {
+    box-shadow:
+      inset 0 1px 0 color-mix(in srgb, var(--gleam) 22%, transparent),
+      0 3px 0 color-mix(in srgb, var(--shade) 32%, transparent),
+      0 46px 58px -20px color-mix(in srgb, var(--shade) 78%, transparent),
+      0 22px 30px -10px color-mix(in srgb, var(--shade) 42%, transparent),
+      0 2px 4px var(--shadow-tone);
+  }
+  .rack[data-hang='float'] .cap {
+    padding-top: 1.5rem;
   }
 
   .sleeve-box {
@@ -143,12 +303,15 @@
     clip-path: polygon(0.5rem 0, 100% 0, 100% 100%, 0.5rem 100%, 0 50%);
     box-shadow: 0 3px 6px var(--shadow-tone);
   }
-  /* the photo behind everything: a fixed layer (iOS ignores background-attachment: fixed), washed in the wall colour */
-  .wall-photo {
+  /* the photo or pattern behind everything: a fixed layer (iOS ignores background-attachment: fixed); a photo is washed
+     in the wall colour. Settings' background tiles use the same classes. */
+  .wall-bg {
     position: fixed;
     inset: 0;
     z-index: -1;
     pointer-events: none;
+  }
+  .bg-photo {
     background-image:
       linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)),
       var(--photo);
@@ -169,8 +332,41 @@
     .disc {
       transition: none;
     }
-    .slot:nth-child(n) .hanger {
+    .rack[data-hang] .slot:nth-child(n) .hanger {
       transform: none;
     }
+  }
+}
+
+/* the pattern backgrounds, from production's presets */
+@layer components {
+  .bg-grooves {
+    background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, color-mix(in srgb, var(--wall-2) 80%, var(--line)) 3px 4px);
+  }
+  .bg-walnut {
+    background-image:
+      repeating-linear-gradient(90deg, transparent 0 178px, color-mix(in srgb, var(--rail) 45%, var(--wall)) 178px 180px),
+      repeating-linear-gradient(90deg, color-mix(in srgb, var(--rail) 22%, var(--wall)) 0 4px, color-mix(in srgb, var(--rail) 32%, var(--wall)) 4px 6px, color-mix(in srgb, var(--rail) 18%, var(--wall)) 6px 13px, color-mix(in srgb, var(--rail) 27%, var(--wall)) 13px 15px);
+  }
+  .bg-foam {
+    background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, color-mix(in srgb, var(--wall-2) 70%, var(--line)) 72%);
+    background-size: 34px 34px;
+  }
+  .bg-sunburst {
+    background-image: repeating-conic-gradient(from 0deg at 50% -20%, var(--wall) 0 4deg, var(--wall-2) 4deg 8deg);
+  }
+  .bg-spines {
+    background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, color-mix(in srgb, var(--line) 70%, var(--wall)) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
+  }
+  .bg-felt {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .45 0 0 0 0 .45 0 0 0 .38 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+  .bg-grille {
+    background-image:
+      radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px),
+      radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px),
+      linear-gradient(color-mix(in srgb, var(--wall-2) 60%, var(--wall)), color-mix(in srgb, var(--wall-2) 60%, var(--wall)));
+    background-size: 9px 9px, 9px 9px, auto;
+    background-position: 0 0, 4.5px 4.5px, 0 0;
   }
 }

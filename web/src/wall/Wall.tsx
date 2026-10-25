@@ -1,10 +1,9 @@
 import { memo, useDeferredValue, useEffect, useRef, useState, type CSSProperties } from 'react'
-import { BackgroundPattern } from '@appica/ui-react/background-pattern'
 import { Badge } from '@appica/ui-react/badge'
 import { Button, buttonVariants } from '@appica/ui-react/button'
 import { Input } from '@appica/ui-react/input'
 import { Toggle } from '@appica/ui-react/toggle'
-import { Tip, TipGroup } from './Tip'
+import { ROUND, Tip, TipGroup } from './Tip'
 import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
 import { coverUrl, hueOf, tagOf, type Rec, type Tag } from '../model/record'
@@ -56,22 +55,12 @@ const SearchIcon = () => (
 
 // The photo or pattern behind the page
 export function WallBackground({ bg }: { bg: Background }) {
-  if (bg.kind === 'photo')
-    return (
-      <div
-        className="wall-photo"
-        data-testid="wall-photo"
-        style={{ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--photo-pos': bg.pos } as CSSProperties}
-      />
-    )
-  if (bg.preset === 'grille')
-    return (
-      <div className="fixed inset-0 -z-10" aria-hidden="true">
-        <BackgroundPattern variant="dots" className="size-full" />
-      </div>
-    )
-  return null
+  return <div className={`wall-bg ${bgClass(bg)}`} data-testid="wall-bg" style={bgStyle(bg)} aria-hidden="true" />
 }
+// the classes and style that draw a background, on the page or on a tile in Settings
+export const bgClass = (bg: Background) => (bg.kind === 'photo' ? 'bg-photo' : 'bg-' + bg.preset)
+export const bgStyle = (bg: Background) =>
+  bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
 
 // One sleeve. Takes only plain values, so a snapshot that didn't change this record leaves it (and its cover) alone.
 const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, onOpen }: {
@@ -120,7 +109,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
               </Badge>
             )}
           </div>
-          <div className="on-photo min-w-0 px-0.5 pt-2.5">
+          <div className="cap on-photo min-w-0 px-0.5 pt-2.5">
             <div className="text-ink text-sm leading-tight font-semibold break-words">{title}</div>
             <div className="text-ink-2 text-[0.8125rem] break-words">{artist}</div>
             {meta && <div className="text-ink-2 mt-0.5 font-mono text-[0.6875rem]">{meta}</div>}
@@ -131,7 +120,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }: {
+export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome }: {
   records: Rec[]
   title: string
   hang: string
@@ -143,6 +132,8 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
   gear?: React.ReactNode
   // at the end of the filter row: how many records are being looked up (owners only)
   below?: React.ReactNode
+  // an owner's first visit: shown in place of the empty wall
+  welcome?: React.ReactNode
 }) {
   const [filter, setFilter] = useWallFilter()
   const [searching, setSearching] = useState(false)
@@ -179,7 +170,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
                   aria-label="Search the wall"
                   aria-expanded={searching}
                   aria-controls="wall-search"
-                  className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+                  className={ROUND}
                   onClick={() => (searching ? closeSearch() : setSearching(true))}
                 >
                   <SearchIcon />
@@ -211,7 +202,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
                         variant: 'ghost',
                         size: 'sm',
                         // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
-                        className: 'text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+                        className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
                       })}
                     >
                       {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
@@ -253,9 +244,11 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
       </header>
 
       {!records.length ? (
-        <p className="on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm">
-          {onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : 'Nothing hanging yet.'}
-        </p>
+        welcome || (
+          <p className="on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm">
+            {onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : 'Nothing hanging yet.'}
+          </p>
+        )
       ) : !list.length ? (
         <div className="on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm">
           <span>Nothing on the wall matches “{q}”.</span>

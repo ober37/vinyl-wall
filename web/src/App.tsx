@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Boundary } from './Boundary'
-import { Tip } from './wall/Tip'
+import { ROUND, Tip } from './wall/Tip'
 import { EquipmentSheet } from './gear/EquipmentSheet'
 import { GearPill, gearPillShown } from './gear/GearPill'
 import { useRuntime } from './runtime/runtime'
@@ -11,6 +11,7 @@ import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
 import { NewRecordSheet } from './sheet/NewRecordSheet'
 import { RecordSheet } from './sheet/RecordSheet'
 import { Wall, WallBackground } from './wall/Wall'
+import { Welcome } from './wall/Welcome'
 
 const GearIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
@@ -40,9 +41,10 @@ function useLookupNews(n: number) {
 }
 
 export function App() {
-  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear } = useRuntime()
+  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
-  const [settingsOpen, setSettingsOpen] = useState(false)
+  // Settings: closed, open, or open on the Discogs section
+  const [settingsOpen, setSettingsOpen] = useState<false | 'top' | 'discogs'>(false)
   const [adding, setAdding] = useState(false)
   const [equipOpen, setEquipOpen] = useState(false)
   // a record opened from Equipment's Listening summary offers the way back
@@ -88,6 +90,20 @@ export function App() {
                 </span>
               )
             }
+            welcome={
+              canEdit &&
+              settingsLoaded &&
+              !settings.welcomeDismissed && (
+                <Welcome
+                  discogsDone={settings.discogs?.status === 'ok'}
+                  gearDone={gear.some((g) => !g.example)}
+                  onAdd={() => setAdding(true)}
+                  onDiscogs={() => setSettingsOpen('discogs')}
+                  onGear={() => setEquipOpen(true)}
+                  onBlank={() => saveSettings({ welcomeDismissed: true })}
+                />
+              )
+            }
             gear={gearPillShown(gear, canEdit) && <GearPill onOpen={() => setEquipOpen(true)} />}
             tools={
               <>
@@ -98,8 +114,8 @@ export function App() {
                         size="icon-md"
                         variant="outline"
                         aria-label={update ? 'Settings (update available)' : 'Settings'}
-                        className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
-                        onClick={() => setSettingsOpen(true)}
+                        className={ROUND}
+                        onClick={() => setSettingsOpen('top')}
                       >
                         <GearIcon />
                       </Button>
@@ -139,7 +155,7 @@ export function App() {
           setOpenId(id)
         }}
       />
-      <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+      <SettingsSheet open={!!settingsOpen} at={settingsOpen === 'discogs' ? 'discogs' : undefined} onClose={() => setSettingsOpen(false)} />
       <NewRecordSheet
         open={adding}
         onClose={() => setAdding(false)}

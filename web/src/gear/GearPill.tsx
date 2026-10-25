@@ -1,7 +1,7 @@
 import { Button } from '@appica/ui-react/button'
 import { activeGear, gState, pillOf, wearPct, type Gear, type Tone } from '../model/gear'
 import { useRuntime } from '../runtime/runtime'
-import { Tip } from '../wall/Tip'
+import { ROUND, Tip } from '../wall/Tip'
 
 const ARC: Record<Tone, string> = { '': 'stroke-ship', warn: 'stroke-brass', bad: 'stroke-want' }
 
@@ -23,7 +23,7 @@ export function GearPill({ onOpen }: { onOpen: () => void }) {
           variant="outline"
           aria-label={p.aria}
           onClick={onOpen}
-          className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+          className={ROUND}
         >
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-full p-0.5">
             {p.gear && (

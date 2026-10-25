@@ -1,5 +1,5 @@
 // The wall's settings doc (settings/site) as what the wall draws, with production's defaults and checks
-// (applySettings in app/vinyl-wall.html). Read-only in the prototype until there's a Settings sheet.
+// (applySettings in app/vinyl-wall.html), and the choices Settings offers.
 
 export const DEFAULT_TITLE = 'My Vinyl Wall'
 const PHOTOS: Record<string, { file: string; pos?: string }> = {
@@ -9,14 +9,38 @@ const PHOTOS: Record<string, { file: string; pos?: string }> = {
   cafe: { file: 'coffee-shop.jpg' },
   tavern: { file: 'coffee-shop-2.jpg' },
 }
-// production's pattern presets; in this prototype "grille" is appica's dots pattern and the others are a plain wall
-const PATTERNS = ['grille', 'grooves', 'walnut', 'foam', 'sunburst', 'spines', 'felt', 'plain']
-const HANGS = ['barn', 'peg', 'cork', 'float']
+// Settings' background choices in production's order: the photos, then the patterns (drawn by .bg-<key> in wall.css)
+export const BACKGROUNDS: [string, string][] = [
+  ['listening', 'Listening room'],
+  ['crates', 'Crate digging'],
+  ['shop', 'Record shop'],
+  ['cafe', 'Coffee shop'],
+  ['tavern', 'Cozy tavern'],
+  ['grille', 'Speaker grille'],
+  ['grooves', 'Grooves'],
+  ['walnut', 'Walnut paneling'],
+  ['foam', 'Studio foam'],
+  ['sunburst', 'Sunburst'],
+  ['spines', 'Crate dig'],
+  ['felt', 'Felt slipmat'],
+  ['plain', 'Plain wall'],
+]
+export const HANGS: [string, string][] = [
+  ['barn', 'Barnwood'],
+  ['peg', 'Pegs'],
+  ['cork', 'Cork'],
+  ['float', 'Floating'],
+]
 
 export type Background = { kind: 'photo'; url: string; pos?: string; dim: number } | { kind: 'pattern'; preset: string }
+export const isStockPhoto = (key: string) => !!PHOTOS[key]
 export type Site = { title: string; background: Background; hang: string }
 
-const okAsset = (id: unknown) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id)
+// the wash a photo starts at: an uploaded photo's slider is the wash itself, a stock photo's runs 0-100 (stockDim)
+export const DEFAULT_DIM = { upload: 70, stock: 50 }
+// a known preset, or the default
+export const presetOf = (bg: Record<string, unknown>) => (BACKGROUNDS.some(([k]) => k === bg.preset) ? String(bg.preset) : 'listening')
+export const okAsset = (id: unknown) => typeof id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(id)
 // a stock photo's slider (0-100) lays the wall-coloured wash at 70-95%: 0, 50 and 100 give 70, 83 and 95
 export const stockDim = (v: number) => {
   const t = 40 + v * 0.6
@@ -29,13 +53,13 @@ export function siteOf(doc: Record<string, unknown> | null | undefined): Site {
   const bg = (s.bg && typeof s.bg === 'object' ? s.bg : { kind: 'preset', preset: 'listening' }) as Record<string, unknown>
   const dim = typeof s.dim === 'number' ? s.dim : undefined
   let background: Background
-  if (bg.kind === 'photo' && okAsset(bg.assetId)) background = { kind: 'photo', url: '/_blob/' + bg.assetId, dim: dim ?? 70 }
+  if (bg.kind === 'photo' && okAsset(bg.assetId)) background = { kind: 'photo', url: '/_blob/' + bg.assetId, dim: dim ?? DEFAULT_DIM.upload }
   else {
-    const preset = String(bg.preset)
-    const photo = PHOTOS[preset] ?? (PATTERNS.includes(preset) ? null : PHOTOS.listening)
+    const preset = presetOf(bg)
+    const photo = PHOTOS[preset]
     background = photo
-      ? { kind: 'photo', url: 'backgrounds/' + photo.file, pos: photo.pos, dim: stockDim(dim ?? 50) }
+      ? { kind: 'photo', url: 'backgrounds/' + photo.file, pos: photo.pos, dim: stockDim(dim ?? DEFAULT_DIM.stock) }
       : { kind: 'pattern', preset }
   }
-  return { title, background, hang: HANGS.includes(String(s.hang)) ? String(s.hang) : 'barn' }
+  return { title, background, hang: HANGS.some(([k]) => k === s.hang) ? String(s.hang) : 'barn' }
 }

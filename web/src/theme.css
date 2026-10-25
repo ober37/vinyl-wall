@@ -34,6 +34,22 @@
   --iron-mid: #5a5651;
   --bracket: #3b3b3b;
   --bracket-2: #151515;
+  --rail: #6a462b; /* the walnut paneling background's boards */
+  --cork: #bd8f5f;
+  --pin-1: #d63a35; /* push pins on the cork, in turn */
+  --pin-2: #f2c418;
+  --pin-3: #1f5fc4;
+  --pin-4: #1f9a52;
+  --pin-5: #f1efe9;
+  --peg-rail: #5b3b27; /* the Shaker peg rail, top to bottom */
+  --peg-rail-2: #45291a;
+  --peg-rail-3: #2f1c11;
+  --peg-rail-4: #24150c;
+  --peg: #9a6a46; /* a turned peg, highlight to rim */
+  --peg-2: #6a4129;
+  --peg-3: #3d2416;
+  --yarn: #2b201b; /* the loop a sleeve hangs from on a peg, and its twist */
+  --yarn-2: #614a3d;
   --gleam: #fff; /* highlights in the wood */
   --cover-ink: #fff; /* type on a generated cover */
   /* earned badges' metals (both themes, as production): a highlight and a rim each */
@@ -67,6 +83,7 @@
   --shade-alpha: 55%;
   --vinyl: #050606;
   --groove: #1d201f;
+  --rail: #5a3b24;
 }
 
 /* appica's roles, from the palette above */

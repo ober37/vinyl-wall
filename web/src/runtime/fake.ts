@@ -135,6 +135,9 @@ export function fakeClaude(
       calls.push({ path: 'assets', op: 'upload', data: { size: blob.size } })
       return { id: `a_${++seq}`, url: `/_blob/a_${seq}`, sizeBytes: blob.size, contentType: blob.type }
     },
+    async delete(id: string) {
+      calls.push({ path: 'assets/' + id, op: 'delete' })
+    },
   }
   const caps: Record<string, unknown> = { db, user, mcp: opts.mcp === 'none' ? null : mcp, assets: opts.assets === 'none' ? null : assets }
   const claude = { use: async (name: string) => caps[name] ?? null }
