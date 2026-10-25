@@ -41,8 +41,8 @@ describe('an edit waiting to go to Discogs', () => {
 
   it('shows as busy like a lookup, while Discogs is connected; a loaded record is checked quietly', async () => {
     const { user } = setup(recs, connected)
-    expect((await sleeve('Edited Album')).getAttribute('aria-label')).toMatch(/looking up details$/)
-    expect((await sleeve('Loaded Album')).getAttribute('aria-label')).not.toMatch(/looking up/)
+    expect((await sleeve('Edited Album')).getAttribute('aria-label')).toMatch(/syncing$/)
+    expect((await sleeve('Loaded Album')).getAttribute('aria-label')).not.toMatch(/syncing/)
     await user.click(await sleeve('Edited Album'))
     expect(await screen.findByText('Waiting to sync…')).toBeTruthy()
     // in edit, the Discogs section says it, once
@@ -52,7 +52,7 @@ describe('an edit waiting to go to Discogs', () => {
 
   it('doesn’t, while Discogs isn’t connected', async () => {
     const { user } = setup(recs)
-    expect((await sleeve('Edited Album')).getAttribute('aria-label')).not.toMatch(/looking up/)
+    expect((await sleeve('Edited Album')).getAttribute('aria-label')).not.toMatch(/syncing/)
     await user.click(await sleeve('Edited Album'))
     await screen.findByRole('heading', { name: 'Edited Album' })
     expect(screen.queryByText('Waiting to sync…')).toBeNull()

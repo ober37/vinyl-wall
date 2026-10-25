@@ -53,7 +53,7 @@ describe.each([
     expect(screen.getByText(badge, { selector: '[data-slot=badge]' })).toBeTruthy()
     expect(screen.getByText('Looking up the cover and details…')).toBeTruthy()
     // the wall sits behind the open sheet, out of the accessibility tree until it closes
-    expect(screen.getByRole('button', { name: /^Open Rumours by Fleetwood Mac.*, looking up details$/, hidden: true })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /^Open Rumours by Fleetwood Mac.*, syncing$/, hidden: true })).toBeTruthy()
   })
 })
 

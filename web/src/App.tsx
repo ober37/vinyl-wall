@@ -35,8 +35,8 @@ function useLookupNews(n: number) {
   const [news, setNews] = useState('')
   const was = useRef(0)
   useEffect(() => {
-    if (n && !was.current) setNews(`Looking up ${n} record${n === 1 ? '' : 's'}`)
-    else if (!n && was.current) setNews('Lookups finished')
+    if (n && !was.current) setNews(`Syncing ${n} record${n === 1 ? '' : 's'}`)
+    else if (!n && was.current) setNews('Sync finished')
     was.current = n
   }, [n])
   return news
@@ -90,11 +90,11 @@ export function App() {
               looking > 0 && (
                 // a count, not a filter: no outline, so it doesn't read as one of the chips
                 <span
-                  aria-label={`Looking up ${looking} record${looking === 1 ? '' : 's'}`}
+                  aria-label={`Syncing ${looking} record${looking === 1 ? '' : 's'}`}
                   className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto"
                 >
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                  Looking up {looking}
+                  Syncing {looking}
                 </span>
               )
             }

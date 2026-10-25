@@ -105,7 +105,7 @@ describe('starting the background task', () => {
     )
     const v = render(ui)
     await waitFor(() => expect(fires(fake)).toHaveLength(1))
-    expect(screen.getByLabelText(/^Looking up \d records$/)).toBeTruthy()
+    expect(screen.getByLabelText(/^Syncing \d records$/)).toBeTruthy()
     v.unmount()
     render(ui)
     await new Promise((r) => setTimeout(r, 50))

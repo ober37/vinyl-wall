@@ -94,8 +94,8 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
           data-testid="sleeve"
           data-id={id}
           onClick={() => onOpen(id)}
-          aria-label={`Open ${title} by ${artist}${tag ? ', ' + tag.text.replace(/ · /g, ', ') : ''}${looking ? ', looking up details' : ''}`}
-          title={looking ? 'Looking up details' : undefined}
+          aria-label={`Open ${title} by ${artist}${tag ? ', ' + tag.text.replace(/ · /g, ', ') : ''}${looking ? ', syncing' : ''}`}
+          title={looking ? 'Syncing' : undefined}
           className="group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
         >
           <div className="sleeve-box transition-transform group-active:scale-[0.975]">
