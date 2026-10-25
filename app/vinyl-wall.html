@@ -309,6 +309,7 @@ var hash = (s) => {
 	return Math.abs(h);
 };
 var hueOf = (r) => hash((r.title || "") + (r.artist || "")) % 360;
+var faceColors = (hue) => [`hsl(${hue} 45% 32%)`, `hsl(${(hue + 40) % 360} 50% 18%)`];
 var OSTAT = {
 	preorder: "Pre-order",
 	ordered: "Ordered",
@@ -3235,10 +3236,14 @@ var matches = (r, w) => {
 	].join(" "));
 	return w.every((x) => hay.includes(x));
 };
+function countByKey(list) {
+	const n = {};
+	for (const r of list) n[fkey(r)] = (n[fkey(r)] || 0) + 1;
+	return n;
+}
 function shownList(records, filter, query) {
 	const all = wallOrder(records);
-	const n = {};
-	for (const r of all) n[fkey(r)] = (n[fkey(r)] || 0) + 1;
+	const n = countByKey(all);
 	const on = FKEYS.filter((k) => filter.includes(k) && n[k]);
 	const w = words(query);
 	return {
@@ -3260,7 +3265,7 @@ function Face({ title, artist, hue, cover, className = "", small }) {
 	});
 	return /* @__PURE__ */ jsxs("div", {
 		className: `flex flex-col justify-between overflow-hidden text-(--cover-ink) ${small ? "p-2" : "p-3"} ${className}`,
-		style: { background: `linear-gradient(150deg, hsl(${hue} 45% 32%), hsl(${(hue + 40) % 360} 50% 18%))` },
+		style: { background: `linear-gradient(150deg, ${faceColors(hue).join(", ")})` },
 		children: [/* @__PURE__ */ jsx("span", {
 			className: `font-display leading-[0.95] font-extrabold break-words uppercase ${small ? "text-base" : "text-2xl"}`,
 			children: title || "Untitled"
@@ -3271,7 +3276,7 @@ function Face({ title, artist, hue, cover, className = "", small }) {
 	});
 }
 // src/wall/Wall.tsx
-var TAG_TONE = {
+var TAG_TONE$1 = {
 	ship: "bg-ship text-ship-ink",
 	want: "bg-want text-want-ink",
 	someday: "bg-someday text-someday-ink",
@@ -3323,6 +3328,20 @@ var SearchIcon = () => /* @__PURE__ */ jsxs("svg", {
 		cy: "11",
 		r: "6.5"
 	}), /* @__PURE__ */ jsx("path", { d: "M16 16l4.5 4.5" })]
+});
+var ShareIcon = () => /* @__PURE__ */ jsxs("svg", {
+	viewBox: "0 0 24 24",
+	fill: "none",
+	stroke: "currentColor",
+	strokeWidth: "1.8",
+	strokeLinecap: "round",
+	strokeLinejoin: "round",
+	"aria-hidden": "true",
+	children: [
+		/* @__PURE__ */ jsx("path", { d: "M12 3v12" }),
+		/* @__PURE__ */ jsx("path", { d: "M7 8l5-5 5 5" }),
+		/* @__PURE__ */ jsx("path", { d: "M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" })
+	]
 });
 function WallBackground({ bg }) {
 	return /* @__PURE__ */ jsx("div", {
@@ -3377,7 +3396,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 							className: "bg-brass motion-safe:animate-pulse-dot absolute end-2 top-2 z-4 size-2.5 rounded-full shadow-[0_0_0_2px_var(--shade),0_0_0_3px_var(--wall)]"
 						}),
 						tag && /* @__PURE__ */ jsxs(Badge, {
-							className: `hang-tag absolute h-auto rounded-(--radius-4xs) py-1.5 ps-3.5 pe-2 font-mono text-[0.6875rem] leading-none tracking-wider uppercase ${TAG_TONE[tag.tone]}`,
+							className: `hang-tag absolute h-auto rounded-(--radius-4xs) py-1.5 ps-3.5 pe-2 font-mono text-[0.6875rem] leading-none tracking-wider uppercase ${TAG_TONE$1[tag.tone]}`,
 							children: [/* @__PURE__ */ jsx("span", {
 								"aria-hidden": "true",
 								className: "bg-wall absolute start-1.5 top-1/2 size-1 -translate-y-1/2 rounded-full"
@@ -3408,13 +3427,14 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 		})
 	});
 });
-function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome }) {
+function Wall({ records, title, hang, onOpen, onAdd, onShare, tools, gear, below, welcome }) {
 	const [filter, setFilter] = useWallFilter();
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
 	const q = useDeferredValue(query);
 	const searchBtn = useRef(null);
 	const { n, on, list } = shownList(records, filter, searching ? q : "");
+	const lowHang = hang === "cork" || hang === "float";
 	useEffect(() => {
 		document.title = title;
 	}, [title]);
@@ -3424,14 +3444,14 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome
 		searchBtn.current?.focus();
 	};
 	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("header", {
-		className: "mb-8 flex flex-col gap-2",
+		className: `mb-8 flex flex-col gap-2 ${lowHang ? "max-sm:mb-3" : "max-sm:mb-4"}`,
 		children: [/* @__PURE__ */ jsxs("div", {
-			className: "flex items-start justify-between gap-5",
+			className: "flex items-start justify-between gap-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4",
 			children: [/* @__PURE__ */ jsx("h1", {
-				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase",
+				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance break-words uppercase",
 				children: title
 			}), /* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs("div", {
-				className: "flex shrink-0 items-center gap-2",
+				className: "flex shrink-0 items-center gap-2 max-sm:self-end",
 				children: [
 					gear,
 					/* @__PURE__ */ jsx(Tip, {
@@ -3446,6 +3466,22 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome
 							className: ROUND,
 							onClick: () => searching ? closeSearch() : setSearching(true),
 							children: /* @__PURE__ */ jsx(SearchIcon, {})
+						})
+					}),
+					onShare && list.length > 0 && /* @__PURE__ */ jsx(Tip, {
+						label: "Share your wall",
+						children: /* @__PURE__ */ jsx(Button, {
+							size: "icon-md",
+							variant: "outline",
+							"aria-label": "Share your wall",
+							className: "bg-wall/70 rounded-full before:rounded-full before:bg-transparent",
+							onClick: () => onShare({
+								list,
+								total: records.length,
+								filtered: on.length > 0,
+								searched: searching && !!q.trim()
+							}),
+							children: /* @__PURE__ */ jsx(ShareIcon, {})
 						})
 					}),
 					tools
@@ -3533,7 +3569,7 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome
 			children: "Clear the search"
 		})]
 	}) : /* @__PURE__ */ jsx("ul", {
-		className: "rack",
+		className: `rack ${lowHang ? "max-sm:pt-0" : ""}`,
 		"data-hang": hang,
 		"aria-label": "Records",
 		children: list.map((r) => /* @__PURE__ */ jsx(Sleeve, {
@@ -7049,6 +7085,917 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		})
 	});
 }
+// src/model/share.ts
+function countsLine(list) {
+	const n = countByKey(list);
+	return FKEYS.filter((k) => n[k]).map((k) => n[k] + " " + FLABEL[k]).join("  ·  ");
+}
+function narrowedNote({ list, total, filtered, searched }) {
+	if (list.length >= total || !filtered && !searched) return "";
+	return `${list.length} of ${total} records, as ${filtered && searched ? "filtered and searched" : filtered ? "filtered" : "searched"}.`;
+}
+function missedNote(covers, photo) {
+	return [covers ? `${covers === 1 ? "A cover couldn't" : "Some covers couldn't"} be drawn, so ${covers === 1 ? "it shows as a plain sleeve" : "they show as plain sleeves"}.` : "", photo ? "The background photo couldn't be drawn, so the picture uses the plain wall color." : ""].filter(Boolean).join(" ");
+}
+// src/wall/grain.ts
+function noiseTile(w, h, rgb, alpha, scale) {
+	const cv = document.createElement("canvas");
+	[w, h] = [w * scale, h * scale];
+	cv.width = w;
+	cv.height = h;
+	const x = cv.getContext("2d");
+	const img = x.createImageData(w, h);
+	const d = img.data;
+	let q = 7;
+	const rnd = () => (q = q * 16807 % 2147483647) / 2147483647;
+	const octave = (cell) => {
+		const cols = Math.ceil(w / cell);
+		const v = Array.from({ length: cols * Math.ceil(h / cell) }, rnd);
+		return (px, py) => v[Math.floor(py / cell) * cols + Math.floor(px / cell)];
+	};
+	const [o1, o2, o4] = [
+		octave(scale),
+		octave(2 * scale),
+		octave(4 * scale)
+	];
+	for (let py = 0, k = 0; py < h; py++) for (let px = 0; px < w; px++, k += 4) {
+		const n = .5 + .7 * (.5 * o1(px, py) + .3 * o2(px, py) + .2 * o4(px, py) - .5);
+		d[k] = rgb[0];
+		d[k + 1] = rgb[1];
+		d[k + 2] = rgb[2];
+		d[k + 3] = Math.round(255 * Math.min(1, Math.max(0, alpha(n))));
+	}
+	x.putImageData(img, 0, 0);
+	return cv;
+}
+var once = (make) => {
+	const made = /* @__PURE__ */ new Map();
+	return (scale) => made.get(scale) ?? made.set(scale, make(scale)).get(scale);
+};
+var corkNoise = once((s) => noiseTile(160, 60, [
+	0,
+	0,
+	0
+], (n) => 2.2 * n - .75, s));
+var feltNoise = once((s) => noiseTile(180, 180, [
+	115,
+	115,
+	115
+], (n) => .38 * n, s));
+function setGrain() {
+	try {
+		const root = document.documentElement.style;
+		const s = Math.min(3, Math.max(1, Math.round(devicePixelRatio || 1)));
+		root.setProperty("--cork-grain", `url(${corkNoise(s).toDataURL()})`);
+		root.setProperty("--felt-grain", `url(${feltNoise(s).toDataURL()})`);
+	} catch {}
+}
+// src/wall/drawShare.ts
+var W = 1080;
+var COLS = 5;
+var SCALE = 2;
+function readTokens(names) {
+	const probe = document.createElement("i");
+	document.body.append(probe);
+	const c = document.createElement("canvas");
+	c.width = c.height = 1;
+	const x = c.getContext("2d", { willReadFrequently: true });
+	const out = {};
+	for (const n of names) {
+		probe.style.color = `var(--${n})`;
+		x.clearRect(0, 0, 1, 1);
+		x.fillStyle = getComputedStyle(probe).color;
+		x.fillRect(0, 0, 1, 1);
+		const [r, g, b, a] = x.getImageData(0, 0, 1, 1).data;
+		out[n] = [
+			r,
+			g,
+			b,
+			a / 255
+		];
+	}
+	probe.remove();
+	return out;
+}
+var css = ([r, g, b, a], alpha = 1) => `rgba(${r},${g},${b},${a * alpha})`;
+var mix = (p, q, t) => p.map((v, i) => i < 3 ? Math.round(v + (q[i] - v) * t) : v + (q[i] - v) * t);
+var TOKENS = [
+	"wall",
+	"wall-2",
+	"line",
+	"rail",
+	"ink",
+	"ink-2",
+	"shade",
+	"gleam",
+	"cover-ink",
+	"accent",
+	"accent-ink",
+	"want",
+	"want-ink",
+	"someday",
+	"someday-ink",
+	"paper",
+	"paper-ink",
+	"plank",
+	"plank-2",
+	"plank-3",
+	"nail",
+	"rust",
+	"peg-rail",
+	"peg-rail-2",
+	"peg-rail-3",
+	"peg-rail-4",
+	"peg",
+	"peg-2",
+	"peg-3",
+	"yarn",
+	"yarn-2",
+	"iron",
+	"iron-hi",
+	"iron-mid",
+	"bracket",
+	"bracket-2",
+	"cork",
+	"pin-1",
+	"pin-2",
+	"pin-3",
+	"pin-4",
+	"pin-5",
+	"shadow-tone"
+];
+var TAG_TONE = {
+	ship: ["accent", "accent-ink"],
+	want: ["want", "want-ink"],
+	someday: ["someday", "someday-ink"],
+	paper: ["paper", "paper-ink"]
+};
+var F = {
+	title: "800 84px \"Big Shoulders Display\"",
+	gen: "800 22px \"Big Shoulders Display\"",
+	cap: "600 20px \"Instrument Sans\"",
+	by: "400 17px \"Instrument Sans\"",
+	meta: "500 14px \"IBM Plex Mono\"",
+	mono: "500 20px \"IBM Plex Mono\"",
+	small: "500 13px \"IBM Plex Mono\""
+};
+var loadImg = (src) => new Promise((res) => {
+	const i = new Image();
+	const t = setTimeout(() => {
+		i.src = "";
+		res(null);
+	}, 1e4);
+	i.onload = () => (clearTimeout(t), res(i));
+	i.onerror = () => (clearTimeout(t), res(null));
+	i.src = src;
+});
+function photoY(pos = "") {
+	const [a, b] = pos.trim().split(/\s+/);
+	const v = b || (a === "top" || a === "bottom" ? a : "center");
+	const k = {
+		top: 0,
+		center: .5,
+		bottom: 1
+	};
+	return v in k ? k[v] : Number.isFinite(parseFloat(v)) ? parseFloat(v) / 100 : .5;
+}
+function fitText(ctx, t, w) {
+	if (ctx.measureText(t).width <= w) return t;
+	while (t && ctx.measureText(t + "…").width > w) t = t.slice(0, -1);
+	return t.trimEnd() + "…";
+}
+function wrapText(ctx, t, w, max) {
+	const out = [];
+	let line = "";
+	for (const wd of t.split(/\s+/)) {
+		const next = line ? line + " " + wd : wd;
+		if (!line || ctx.measureText(next).width <= w) line = next;
+		else {
+			out.push(line);
+			line = wd;
+		}
+	}
+	if (line) out.push(line);
+	if (out.length > max) {
+		out.length = max;
+		out[max - 1] += "…";
+	}
+	return out.map((l) => fitText(ctx, l, w));
+}
+function fillTile(ctx, tile, x, y, w, h) {
+	const p = ctx.createPattern(tile, "repeat");
+	p.setTransform(new DOMMatrix().translate(x, y).scale(1 / SCALE));
+	ctx.fillStyle = p;
+	ctx.fillRect(x, y, w, h);
+}
+function drawPattern(ctx, c, preset, w, h) {
+	const band = (period, stripes) => {
+		for (let x = 0; x < w; x += period) for (const [at, wd, col] of stripes) {
+			ctx.fillStyle = css(col);
+			ctx.fillRect(x + at, 0, wd, h);
+		}
+	};
+	ctx.fillStyle = css(preset === "grille" ? mix(c["wall-2"], c.wall, .4) : c.wall);
+	ctx.fillRect(0, 0, w, h);
+	if (preset === "grooves") {
+		const [cx, cy] = [w * 1.12, -h * .12];
+		ctx.strokeStyle = css(mix(c["wall-2"], c.line, .2));
+		ctx.lineWidth = 1;
+		for (let r = 3.5; r < Math.hypot(cx, h - cy); r += 4) {
+			ctx.beginPath();
+			ctx.arc(cx, cy, r, 0, Math.PI * 2);
+			ctx.stroke();
+		}
+	} else if (preset === "walnut") {
+		const rail = (t) => mix(c.wall, c.rail, t);
+		band(15, [
+			[
+				0,
+				4,
+				rail(.22)
+			],
+			[
+				4,
+				2,
+				rail(.32)
+			],
+			[
+				6,
+				7,
+				rail(.18)
+			],
+			[
+				13,
+				2,
+				rail(.27)
+			]
+		]);
+		band(180, [[
+			178,
+			2,
+			rail(.45)
+		]]);
+	} else if (preset === "spines") band(47, [
+		[
+			11,
+			2,
+			c["wall-2"]
+		],
+		[
+			29,
+			1,
+			mix(c.line, c.wall, .3)
+		],
+		[
+			41,
+			6,
+			c["wall-2"]
+		]
+	]);
+	else if (preset === "foam") for (let y = 0; y < h; y += 34) for (let x = 0; x < w; x += 34) {
+		const g = ctx.createRadialGradient(x + 17, y + 17, 0, x + 17, y + 17, 24);
+		g.addColorStop(.28, css(c.wall));
+		g.addColorStop(.72, css(mix(c["wall-2"], c.line, .3)));
+		ctx.fillStyle = g;
+		ctx.fillRect(x, y, 34, 34);
+	}
+	else if (preset === "sunburst") {
+		const [cx, cy, r] = [
+			w / 2,
+			-h * .2,
+			Math.hypot(w, h * 1.2)
+		];
+		ctx.fillStyle = css(c["wall-2"]);
+		for (let a = 4; a < 360; a += 8) {
+			ctx.beginPath();
+			ctx.moveTo(cx, cy);
+			ctx.arc(cx, cy, r, (a - 90) * Math.PI / 180, (a - 86) * Math.PI / 180);
+			ctx.fill();
+		}
+	} else if (preset === "grille") {
+		const t = document.createElement("canvas");
+		t.width = t.height = 18;
+		const tx = t.getContext("2d");
+		tx.scale(SCALE, SCALE);
+		tx.fillStyle = css(c.ink, .16);
+		for (const [dx, dy] of [
+			[4.5, 4.5],
+			[0, 0],
+			[9, 0],
+			[0, 9],
+			[9, 9]
+		]) {
+			tx.beginPath();
+			tx.arc(dx, dy, 1.75, 0, Math.PI * 2);
+			tx.fill();
+		}
+		fillTile(ctx, t, 0, 0, w, h);
+	} else if (preset === "felt") fillTile(ctx, feltNoise(SCALE), 0, 0, w, h);
+}
+function drawCork(ctx, c, x, y, w) {
+	const h = 19;
+	ctx.save();
+	ctx.shadowColor = css(c["shadow-tone"]);
+	ctx.shadowBlur = 5;
+	ctx.shadowOffsetY = 2;
+	ctx.fillStyle = css(c.cork);
+	ctx.fillRect(x, y, w, h);
+	ctx.restore();
+	fillTile(ctx, corkNoise(SCALE), x, y, w, h);
+	const g = ctx.createLinearGradient(0, y, 0, y + h);
+	g.addColorStop(0, css(c.gleam, .12));
+	g.addColorStop(1, css(c.shade, .14));
+	ctx.fillStyle = g;
+	ctx.fillRect(x, y, w, h);
+	ctx.fillStyle = css(c.gleam, .18);
+	ctx.fillRect(x, y, w, 1);
+	ctx.fillStyle = css(c.shade, .3);
+	ctx.fillRect(x, y + h - 1, w, 1);
+}
+function shadow(ctx, c, a, blur, y, x = 0) {
+	ctx.shadowColor = css(c.shade, a);
+	ctx.shadowBlur = blur;
+	ctx.shadowOffsetX = x;
+	ctx.shadowOffsetY = y;
+}
+function drawTag(ctx, tag, right, bottom, maxW, c) {
+	const [bg, fg] = TAG_TONE[tag.tone];
+	const text = tag.text.toUpperCase();
+	ctx.save();
+	ctx.font = F.small;
+	if ("letterSpacing" in ctx) ctx.letterSpacing = "1px";
+	const h = 24;
+	const w = Math.min(maxW, ctx.measureText(text).width + 24);
+	ctx.translate(right - w / 2, bottom - h / 2);
+	ctx.rotate(6 * Math.PI / 180);
+	ctx.save();
+	shadow(ctx, c, .28, 6, 3);
+	ctx.beginPath();
+	ctx.moveTo(-w / 2 + 8, -12);
+	ctx.lineTo(w / 2, -12);
+	ctx.lineTo(w / 2, h / 2);
+	ctx.lineTo(-w / 2 + 8, h / 2);
+	ctx.lineTo(-w / 2, 0);
+	ctx.closePath();
+	ctx.fillStyle = css(c[bg]);
+	ctx.fill();
+	ctx.restore();
+	ctx.fillStyle = css(c.wall);
+	ctx.beginPath();
+	ctx.arc(-w / 2 + 8, 0, 2.5, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.fillStyle = css(c[fg]);
+	ctx.textBaseline = "middle";
+	ctx.fillText(fitText(ctx, text, w - 24), -w / 2 + 15, 1);
+	ctx.restore();
+}
+function drawPlank(ctx, c, x, y, w, n, barn) {
+	const h = barn ? 21 : 16;
+	const i = n + 1;
+	const g = ctx.createLinearGradient(0, y, 0, y + h);
+	const stops = barn ? [
+		[0, "plank"],
+		[.48, "plank-2"],
+		[1, "plank-3"]
+	] : [
+		[0, "peg-rail"],
+		[.45, "peg-rail-2"],
+		[.88, "peg-rail-3"],
+		[1, "peg-rail-4"]
+	];
+	for (const [o, k] of stops) g.addColorStop(o, css(c[k]));
+	ctx.save();
+	ctx.shadowColor = css(c["shadow-tone"]);
+	ctx.shadowBlur = 9;
+	ctx.shadowOffsetY = 5;
+	ctx.fillStyle = g;
+	ctx.fillRect(x, y, w, h);
+	ctx.restore();
+	ctx.save();
+	ctx.beginPath();
+	ctx.rect(x, y, w, h);
+	ctx.clip();
+	const grain = barn ? {
+		period: 109,
+		light: [
+			0,
+			31,
+			.035
+		],
+		dark: [[
+			31,
+			6,
+			.09
+		], [
+			73,
+			3,
+			.05
+		]]
+	} : {
+		period: 97,
+		light: [
+			0,
+			23,
+			.035
+		],
+		dark: [[
+			23,
+			2,
+			.14
+		], [
+			61,
+			2,
+			.08
+		]]
+	};
+	for (let gx = x; gx < x + w; gx += grain.period) {
+		ctx.fillStyle = css(c.gleam, grain.light[2]);
+		ctx.fillRect(gx, y, grain.light[1], h);
+		for (const [at, wd, a] of grain.dark) {
+			ctx.fillStyle = css(c.shade, a);
+			ctx.fillRect(gx + at, y, wd, h);
+		}
+	}
+	for (let gy = y; gy < y + h; gy += 6) {
+		ctx.fillStyle = css(c.shade, barn ? .16 : .2);
+		ctx.fillRect(x, gy, w, 1);
+		ctx.fillStyle = css(c.gleam, .04);
+		ctx.fillRect(x, gy + 3, w, 1);
+	}
+	if (barn) {
+		const knot = i % 3 === 2 ? .28 : i % 3 === 0 ? .81 : .64;
+		const [crack, crackW] = i % 4 === 0 ? [0, 0] : i % 3 === 2 ? [.58, .3] : i % 3 === 0 ? [.08, .24] : [.22, .38];
+		ctx.fillStyle = css(c.shade, .45);
+		ctx.fillRect(x + crack * w, y + h * .34, crackW * w, h * .05);
+		ctx.save();
+		ctx.translate(x + knot * w, y + h * .58);
+		ctx.scale(13 / 4, 1);
+		const kg = ctx.createRadialGradient(0, 0, 0, 0, 0, 4);
+		kg.addColorStop(0, css(c.nail, .7));
+		kg.addColorStop(.6, css(c.nail, .25));
+		kg.addColorStop(.75, css(c.nail, 0));
+		ctx.fillStyle = kg;
+		ctx.fillRect(-4, -4, 8, 8);
+		ctx.restore();
+		for (const [nx, ny] of [[x + 12, y + h * .52], [x + w - 12, y + h * .48]]) {
+			const ng = ctx.createRadialGradient(nx, ny, 0, nx, ny, 6);
+			ng.addColorStop(0, css(c.nail));
+			ng.addColorStop(1.8 / 6, css(c.nail));
+			ng.addColorStop(2.4 / 6, css(c.rust, .55));
+			ng.addColorStop(4.5 / 6, css(c.rust, .18));
+			ng.addColorStop(1, css(c.rust, 0));
+			ctx.fillStyle = ng;
+			ctx.fillRect(nx - 6, ny - 6, 12, 12);
+		}
+	} else {
+		ctx.fillStyle = css(c.gleam, .12);
+		ctx.fillRect(x, y, w, 1);
+	}
+	ctx.fillStyle = css(c.shade, barn ? .4 : .45);
+	ctx.fillRect(x, y + h - 2, w, 2);
+	ctx.restore();
+}
+function drawRing(ctx, c, cx, y) {
+	const cy = y + 13;
+	const bg = ctx.createLinearGradient(0, y - 10, 0, y);
+	bg.addColorStop(0, css(c.bracket));
+	bg.addColorStop(1, css(c["bracket-2"]));
+	ctx.fillStyle = bg;
+	ctx.beginPath();
+	ctx.roundRect(cx - 6, y - 10, 12, 10, 2);
+	ctx.fill();
+	ctx.fillStyle = css(c["iron-hi"]);
+	ctx.beginPath();
+	ctx.arc(cx, y - 5, 1.2, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.save();
+	ctx.shadowColor = css(c["shadow-tone"]);
+	ctx.shadowBlur = 2;
+	ctx.shadowOffsetY = 2;
+	ctx.lineWidth = 4;
+	ctx.strokeStyle = css(c.iron);
+	ctx.beginPath();
+	ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+	ctx.stroke();
+	ctx.restore();
+	ctx.lineWidth = 4;
+	for (const [from, to, k] of [[
+		.75,
+		1.25,
+		"iron-mid"
+	], [
+		1.25,
+		1.75,
+		"iron-hi"
+	]]) {
+		ctx.strokeStyle = css(c[k]);
+		ctx.beginPath();
+		ctx.arc(cx, cy, 11, from * Math.PI, to * Math.PI);
+		ctx.stroke();
+	}
+	ctx.lineWidth = 1;
+	ctx.strokeStyle = css(c.ink);
+	ctx.beginPath();
+	ctx.arc(cx, cy, 13.5, 0, Math.PI * 2);
+	ctx.stroke();
+}
+function drawPeg(ctx, c, x, sw, top) {
+	const px = x + sw / 2;
+	const py = top - 20;
+	ctx.save();
+	ctx.lineCap = "round";
+	ctx.lineJoin = "round";
+	const loop = () => {
+		ctx.beginPath();
+		ctx.moveTo(x + sw * .1, top + 2);
+		ctx.lineTo(px, top - 19);
+		ctx.lineTo(x + sw * .9, top + 2);
+		ctx.stroke();
+	};
+	ctx.strokeStyle = css(c.yarn);
+	ctx.lineWidth = 3.4;
+	loop();
+	ctx.strokeStyle = css(c["yarn-2"]);
+	ctx.lineWidth = 1.4;
+	ctx.lineCap = "butt";
+	ctx.setLineDash([2.2, 2.6]);
+	loop();
+	ctx.restore();
+	const pg = ctx.createRadialGradient(px - 2.2, py - 2.9, 0, px - 2.2, py - 2.9, 15);
+	pg.addColorStop(0, css(c.peg));
+	pg.addColorStop(.08, css(c.peg));
+	pg.addColorStop(.3, css(c["peg-2"]));
+	pg.addColorStop(.62, css(c["peg-3"]));
+	pg.addColorStop(1, css(c["peg-rail-4"]));
+	ctx.save();
+	shadow(ctx, c, .5, 4, 3);
+	ctx.fillStyle = pg;
+	ctx.beginPath();
+	ctx.arc(px, py, 8, 0, Math.PI * 2);
+	ctx.fill();
+	ctx.restore();
+	ctx.strokeStyle = css(c.shade, .35);
+	ctx.lineWidth = 1.5;
+	ctx.beginPath();
+	ctx.arc(px, py, 7.25, 0, Math.PI * 2);
+	ctx.stroke();
+}
+function pinFor(n, c) {
+	let [tx, la, ll] = [
+		[
+			-8,
+			-58,
+			5
+		],
+		[
+			5,
+			52,
+			5
+		],
+		[
+			-2,
+			-80,
+			6
+		]
+	][n % 3];
+	if (n % 4 === 3) [tx, la] = [10, 70];
+	if (n % 7 === 2) [la, ll] = [100, 4];
+	return {
+		tx,
+		la: la * Math.PI / 180,
+		ll,
+		pin: c[[
+			"pin-1",
+			"pin-2",
+			"pin-3",
+			"pin-4",
+			"pin-5"
+		][n % 5]]
+	};
+}
+function drawPin(ctx, cx, cy, P, c) {
+	const dx = Math.sin(P.la) * P.ll;
+	const dy = -Math.cos(P.la) * P.ll;
+	const disc = (x, y, r, hi) => {
+		const g = ctx.createRadialGradient(x - r * .3, y - r * .35, 0, x, y, r);
+		g.addColorStop(0, css(mix(P.pin, c.gleam, hi)));
+		g.addColorStop(.5, css(P.pin));
+		g.addColorStop(1, css(mix(P.pin, c.shade, .4)));
+		ctx.fillStyle = g;
+		ctx.beginPath();
+		ctx.arc(x, y, r, 0, Math.PI * 2);
+		ctx.fill();
+	};
+	ctx.save();
+	shadow(ctx, c, .45, 2, 2, 1);
+	disc(cx, cy, 6.5, .3);
+	ctx.restore();
+	ctx.save();
+	ctx.strokeStyle = css(mix(P.pin, c.shade, .25));
+	ctx.lineWidth = 6;
+	ctx.beginPath();
+	ctx.moveTo(cx, cy);
+	ctx.lineTo(cx + dx, cy + dy);
+	ctx.stroke();
+	ctx.restore();
+	ctx.save();
+	shadow(ctx, c, .35, 4, 4, 2);
+	disc(cx + dx, cy + dy, 5.5, .6);
+	ctx.restore();
+}
+var drawShare = (list, site) => paint(list, site, true).catch((e) => e?.name === "SecurityError" ? paint(list, site, false) : Promise.reject(e));
+async function paint(list, site, withImages) {
+	const c = readTokens(TOKENS);
+	await Promise.all(Object.values(F).map((f) => document.fonts.load(f).catch(() => {})));
+	const pad = 60;
+	const gap = 24;
+	const sw = 864 / COLS;
+	const shown = list.slice(0, 40);
+	const m = document.createElement("canvas").getContext("2d");
+	const caps = shown.map((r) => {
+		m.font = F.cap;
+		const title = wrapText(m, r.title || "Untitled", sw, 2);
+		m.font = F.by;
+		const artist = fitText(m, r.artist || "", sw);
+		m.font = F.meta;
+		const meta = fitText(m, [r.year, r.label].filter(Boolean).join(" · "), sw);
+		return {
+			title,
+			artist,
+			meta,
+			h: title.length * 24 + 4 + 22 + (meta ? 22 : 0)
+		};
+	});
+	const rowHs = Array.from({ length: Math.ceil(shown.length / COLS) }, (_, k) => 220.8 + Math.max(...caps.slice(k * COLS, k * COLS + COLS).map((x) => x.h)) + 24);
+	const H = 236 + rowHs.reduce((a, b) => a + b, 0) + (list.length > 40 ? 40 : 0) + pad;
+	const bg = site.background;
+	const ph = bg.kind === "photo" ? bg : null;
+	const hang = site.hang;
+	const [photo, ...loaded] = withImages ? await Promise.all([ph && loadImg(ph.url), ...shown.filter(coverUrl).map(async (r) => [r.id, await loadImg(coverUrl(r))])]) : [null];
+	const covers = new Map(loaded);
+	const missedCovers = shown.filter(coverUrl).length - [...covers.values()].filter(Boolean).length;
+	const cv = document.createElement("canvas");
+	cv.width = W * SCALE;
+	cv.height = Math.ceil(H) * SCALE;
+	const ctx = cv.getContext("2d");
+	ctx.scale(SCALE, SCALE);
+	ctx.textBaseline = "top";
+	if (bg.kind === "pattern") drawPattern(ctx, c, bg.preset, W, H);
+	else {
+		ctx.fillStyle = css(c.wall);
+		ctx.fillRect(0, 0, W, H);
+	}
+	if (photo && ph) {
+		const k = Math.max(W / photo.width, H / photo.height);
+		const w = photo.width * k;
+		const h = photo.height * k;
+		ctx.drawImage(photo, (W - w) / 2, (H - h) * photoY(ph.pos), w, h);
+		ctx.fillStyle = css(c.wall, ph.dim / 100);
+		ctx.fillRect(0, 0, W, H);
+	}
+	const ink2 = photo ? mix(c["ink-2"], c.ink, .45) : c["ink-2"];
+	const glow = (on) => {
+		ctx.shadowColor = on && photo ? css(c.wall) : "transparent";
+		ctx.shadowBlur = on && photo ? 10 : 0;
+		ctx.shadowOffsetY = 0;
+	};
+	let y = pad;
+	glow(true);
+	ctx.fillStyle = css(c.ink);
+	ctx.font = F.title;
+	ctx.fillText(fitText(ctx, site.title.toUpperCase(), 960), pad, y);
+	y += 100;
+	ctx.fillStyle = css(ink2);
+	ctx.font = F.mono;
+	ctx.fillText(countsLine(list), pad, y);
+	y += 76;
+	glow(false);
+	for (let i = 0; i < shown.length; i += COLS) {
+		const row = shown.slice(i, i + COLS);
+		row.forEach((_, j) => {
+			const sx = pad - gap / 2 + j * 196.8;
+			if (hang === "barn" || hang === "peg") drawPlank(ctx, c, sx, y + (hang === "barn" ? 9 : 8), 196.8, i + j, hang === "barn");
+			else if (hang === "cork") drawCork(ctx, c, sx, y + 23, 196.8);
+		});
+		row.forEach((r, j) => {
+			const x = pad + j * 196.8;
+			const top = y + 36;
+			const im = covers.get(r.id);
+			const P = hang === "cork" ? pinFor(i + j, c) : null;
+			const oddPlace = (i + j) % 2 === 0;
+			const sway = P ? oddPlace ? -1.6 : 1.3 : hang === "float" ? 0 : oddPlace ? -1.1 : .9;
+			const [ox, oy] = P ? [x + sw / 2 + P.tx, top - 6] : [x + sw / 2, top - (hang === "peg" ? 20 : 18)];
+			ctx.save();
+			ctx.translate(ox, oy);
+			ctx.rotate(sway * Math.PI / 180);
+			ctx.translate(-ox, -oy);
+			ctx.save();
+			if (hang === "float") shadow(ctx, c, .6, 34, 22);
+			else shadow(ctx, c, .28, 18, 8);
+			if (im) {
+				const k = Math.min(im.width, im.height);
+				ctx.drawImage(im, (im.width - k) / 2, (im.height - k) / 2, k, k, x, top, sw, sw);
+			} else {
+				const [from, to] = faceColors(hueOf(r));
+				const gr = ctx.createLinearGradient(x, top, x + sw, top + sw);
+				gr.addColorStop(0, from);
+				gr.addColorStop(1, to);
+				ctx.fillStyle = gr;
+				ctx.fillRect(x, top, sw, sw);
+			}
+			ctx.restore();
+			if (!im) {
+				ctx.fillStyle = css(c["cover-ink"]);
+				ctx.font = F.gen;
+				wrapText(ctx, (r.title || "Untitled").toUpperCase(), 148.8, 4).forEach((l, n) => ctx.fillText(l, x + 12, top + 12 + n * 22));
+				ctx.globalAlpha = .85;
+				ctx.font = F.small;
+				ctx.fillText(fitText(ctx, r.artist || "", 148.8), x + 12, top + sw - 26);
+				ctx.globalAlpha = 1;
+			}
+			if (hang === "barn") drawRing(ctx, c, x + sw / 2, top - 14);
+			else if (hang === "peg") drawPeg(ctx, c, x, sw, top);
+			else if (P) drawPin(ctx, x + sw / 2 + P.tx, top - 6.5, P, c);
+			const tag = tagOf(r);
+			if (tag) drawTag(ctx, tag, x + sw + 4, top + sw * .82, 176.8, c);
+			const cap = caps[i + j];
+			let cy = top + sw + 12;
+			glow(true);
+			ctx.fillStyle = css(c.ink);
+			ctx.font = F.cap;
+			for (const l of cap.title) {
+				ctx.fillText(l, x, cy);
+				cy += 24;
+			}
+			ctx.fillStyle = css(ink2);
+			ctx.font = F.by;
+			ctx.fillText(cap.artist, x, cy + 4);
+			ctx.font = F.meta;
+			if (cap.meta) ctx.fillText(cap.meta, x, cy + 4 + 22 + 4);
+			glow(false);
+			ctx.restore();
+		});
+		y += rowHs[i / COLS];
+	}
+	if (list.length > 40) {
+		glow(true);
+		ctx.fillStyle = css(ink2);
+		ctx.font = F.mono;
+		ctx.fillText(`+ ${list.length - 40} more`, pad, y);
+		glow(false);
+	}
+	return {
+		blob: await new Promise((res, rej) => {
+			try {
+				cv.toBlob((b) => b ? res(b) : rej(/* @__PURE__ */ new Error("empty")), "image/jpeg", .92);
+			} catch (e) {
+				rej(e);
+			}
+		}),
+		missedCovers,
+		missedPhoto: !!ph && !photo
+	};
+}
+// src/wall/ShareSheet.tsx
+function ShareSheet({ shown, onClose }) {
+	const { site, saveFile } = useRuntime();
+	const [drawn, setDrawn] = useState(null);
+	const [msg, setMsg] = useState("");
+	const first = useRef(null);
+	const [settled, setSettled] = useState(false);
+	const url = useRef("");
+	useEffect(() => () => URL.revokeObjectURL(url.current), []);
+	useEffect(() => {
+		if (!shown) return;
+		let live = true;
+		setMsg("");
+		drawShare(shown.list, site).then((d) => {
+			if (!live) return;
+			const file = new File([d.blob], `vinyl-wall-${today()}.jpg`, { type: "image/jpeg" });
+			URL.revokeObjectURL(url.current);
+			url.current = URL.createObjectURL(file);
+			let canShare = false;
+			try {
+				canShare = !!navigator.canShare?.({ files: [file] });
+			} catch {}
+			setDrawn({
+				for: shown,
+				pic: {
+					file,
+					url: url.current,
+					canShare,
+					missed: missedNote(d.missedCovers, d.missedPhoto)
+				}
+			});
+		}, () => live && setDrawn({
+			for: shown,
+			pic: "failed"
+		}));
+		return () => {
+			live = false;
+		};
+	}, [shown]);
+	const pic = drawn && (!shown || drawn.for === shown) ? drawn.pic : null;
+	const ready = pic && pic !== "failed" ? pic : null;
+	useEffect(() => {
+		if (ready && shown && settled) first.current?.focus();
+	}, [
+		ready,
+		shown,
+		settled
+	]);
+	const canShare = !!ready?.canShare;
+	const viaSave = !canShare && matchMedia("(pointer: coarse)").matches;
+	const share = async () => {
+		try {
+			await navigator.share({
+				files: [ready.file],
+				title: site.title
+			});
+			setMsg("");
+		} catch (e) {
+			setMsg(e?.name === "AbortError" ? "" : "Sharing isn't available here. Save the image instead.");
+		}
+	};
+	const save = async () => {
+		try {
+			await saveFile(ready.file.name, ready.file);
+			setMsg("Saved.");
+		} catch (e) {
+			setMsg(e?.code === "declined" ? "" : "Couldn't save the picture: " + msgOf(e));
+		}
+	};
+	const note = shown ? narrowedNote(shown) : "";
+	const done = (open) => {
+		setSettled(open);
+		if (open) return;
+		setDrawn(null);
+		URL.revokeObjectURL(url.current);
+		url.current = "";
+	};
+	return /* @__PURE__ */ jsx(Drawer, {
+		side: "right",
+		open: !!shown,
+		onOpenChange: (o) => !o && onClose(),
+		onOpenChangeComplete: done,
+		children: /* @__PURE__ */ jsxs(DrawerContent, {
+			className: "w-full sm:max-w-xl",
+			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [/* @__PURE__ */ jsx(DrawerTitle, { children: "Share your wall" }), /* @__PURE__ */ jsx(DrawerDescription, { children: "A picture of your wall to save or post." })] }), /* @__PURE__ */ jsx(DrawerBody, { children: /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-4 pb-8",
+				children: [
+					note && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground text-sm",
+						children: note
+					}),
+					!pic && /* @__PURE__ */ jsx("p", {
+						role: "status",
+						className: "text-foreground-muted text-sm",
+						children: "Drawing your wall…"
+					}),
+					pic === "failed" && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Couldn't draw the picture here."
+					}),
+					ready && /* @__PURE__ */ jsxs(Fragment, { children: [
+						/* @__PURE__ */ jsxs("div", {
+							className: "flex flex-col gap-2",
+							children: [/* @__PURE__ */ jsxs("div", {
+								className: "flex flex-col gap-3 sm:flex-row *:w-full sm:*:w-auto",
+								children: [canShare && /* @__PURE__ */ jsx(Button, {
+									ref: first,
+									onClick: share,
+									children: "Share"
+								}), /* @__PURE__ */ jsx(Button, {
+									ref: canShare ? void 0 : first,
+									variant: canShare ? "outline" : "primary",
+									onClick: save,
+									children: viaSave ? "Share or save" : "Save image"
+								})]
+							}), viaSave && /* @__PURE__ */ jsx("p", {
+								className: "text-foreground-muted text-sm",
+								children: "Allow the download, then choose where it goes."
+							})]
+						}),
+						/* @__PURE__ */ jsx("p", {
+							role: "status",
+							className: "text-foreground-muted text-sm empty:hidden",
+							children: msg
+						}),
+						ready.missed && /* @__PURE__ */ jsx("p", {
+							className: "text-foreground-muted text-sm",
+							children: ready.missed
+						}),
+						/* @__PURE__ */ jsx("img", {
+							src: ready.url,
+							alt: "Picture of your wall",
+							className: "border-border h-auto w-full rounded-(--radius-xs) border"
+						})
+					] })
+				]
+			}) })]
+		})
+	});
+}
 // src/wall/Welcome.tsx
 function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onImport }) {
 	return /* @__PURE__ */ jsxs("section", {
@@ -7184,11 +8131,12 @@ function useLookupNews(n) {
 	return news;
 }
 function App() {
-	const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings } = useRuntime();
+	const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings, hasDownloads } = useRuntime();
 	const [openId, setOpenId] = useState(null);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [adding, setAdding] = useState(false);
 	const [equipOpen, setEquipOpen] = useState(false);
+	const [sharing, setSharing] = useState(null);
 	const [fromEquip, setFromEquip] = useState(false);
 	const update = useUpdateAvailable();
 	const looking = records.filter(lookingUp).length;
@@ -7207,7 +8155,7 @@ function App() {
 				className: "on-photo text-ink-2 mb-4 text-sm",
 				children: MESSAGE[status]
 			}),
-			(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && /* @__PURE__ */ jsx(Alert, {
+			(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && !sharing && /* @__PURE__ */ jsx(Alert, {
 				variant: error ? "error" : "info",
 				className: "mb-4",
 				dismissible: true,
@@ -7222,9 +8170,10 @@ function App() {
 					hang: site.hang,
 					onOpen: setOpenId,
 					onAdd: canEdit ? () => setAdding(true) : void 0,
+					onShare: hasDownloads ? setSharing : void 0,
 					below: canEdit && looking > 0 && /* @__PURE__ */ jsxs("span", {
 						"aria-label": `Looking up ${looking} record${looking === 1 ? "" : "s"}`,
-						className: "text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem]",
+						className: "text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto",
 						children: [
 							/* @__PURE__ */ jsx("span", {
 								"aria-hidden": "true",
@@ -7285,6 +8234,10 @@ function App() {
 					setOpenId(id);
 				}
 			}),
+			/* @__PURE__ */ jsx(ShareSheet, {
+				shown: sharing,
+				onClose: () => setSharing(null)
+			}),
 			/* @__PURE__ */ jsx(SettingsSheet, {
 				open: !!settingsOpen,
 				at: settingsOpen || void 0,
@@ -7307,6 +8260,7 @@ var THEME_KEY = "vw-theme";
 async function runtime() {
 	return window.claude;
 }
+setGrain();
 runtime().then((claude) => createRoot(document.getElementById("root")).render(/* @__PURE__ */ jsx(StrictMode, { children: /* @__PURE__ */ jsx(ThemeProvider, {
 	storageKey: THEME_KEY,
 	children: /* @__PURE__ */ jsx(RuntimeProvider, {
@@ -7415,6 +8369,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --radius-2xl: var(--radius-2xl);
     --radius-3xl: var(--radius-3xl);
     --radius-4xl: var(--radius-4xl);
+    --shadow-md: 0 4px 8px -2px var(--shadow-color);
     --ease-in: cubic-bezier(.4, 0, 1, 1);
     --ease-out: cubic-bezier(0, 0, .2, 1);
     --ease-in-out: cubic-bezier(.4, 0, .2, 1);
@@ -7925,7 +8880,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .rack[data-hang="cork"] .slot:before {
     content: "";
     background-color: var(--cork);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(var(--gleam), var(--shade));
+    background-image: var(--cork-grain, none), linear-gradient(var(--gleam), var(--shade));
     inset-inline: 0;
     height: 1.1875rem;
     position: absolute;
@@ -7934,7 +8889,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .slot:before {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
+      background-image: var(--cork-grain, none), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     }
   }
 
@@ -8251,7 +9206,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .bg-felt {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .45 0 0 0 0 .45 0 0 0 .38 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    background-image: var(--felt-grain, none);
+    background-size: 180px 180px;
   }
 
   .bg-grille {
@@ -10296,6 +11252,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     caret-color: #0000;
   }
 
+  .accent-ink {
+    accent-color: var(--ink);
+  }
+
   .opacity-0 {
     opacity: 0;
   }
@@ -10310,6 +11270,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .opacity-\[calc\(1-var\(--drawer-swipe-progress\)\)\] {
     opacity: calc(1 - var(--drawer-swipe-progress));
+  }
+
+  .shadow {
+    --tw-shadow: var(--shadow-md);
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
   .shadow-2xl {
@@ -10477,6 +11442,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .outline-ring-warning {
     outline-color: var(--focus-ring-warning);
+  }
+
+  .blur {
+    --tw-blur: blur(8px);
+    filter: var(--tw-blur, ) var(--tw-brightness, ) var(--tw-contrast, ) var(--tw-grayscale, ) var(--tw-hue-rotate, ) var(--tw-invert, ) var(--tw-saturate, ) var(--tw-sepia, ) var(--tw-drop-shadow, );
   }
 
   .filter {
@@ -12757,6 +13727,38 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       padding: 0;
       position: absolute;
       overflow: hidden;
+    }
+
+    .max-sm\:mb-3 {
+      margin-bottom: calc(var(--spacing) * 3);
+    }
+
+    .max-sm\:mb-4 {
+      margin-bottom: calc(var(--spacing) * 4);
+    }
+
+    .max-sm\:h-auto {
+      height: auto;
+    }
+
+    .max-sm\:flex-col-reverse {
+      flex-direction: column-reverse;
+    }
+
+    .max-sm\:items-stretch {
+      align-items: stretch;
+    }
+
+    .max-sm\:gap-4 {
+      gap: calc(var(--spacing) * 4);
+    }
+
+    .max-sm\:self-end {
+      align-self: flex-end;
+    }
+
+    .max-sm\:pt-0 {
+      padding-top: 0;
     }
   }
 
