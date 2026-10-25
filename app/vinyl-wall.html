@@ -3388,8 +3388,8 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 				"data-testid": "sleeve",
 				"data-id": id,
 				onClick: () => onOpen(id),
-				"aria-label": `Open ${title} by ${artist}${tag ? ", " + tag.text.replace(/ · /g, ", ") : ""}${looking ? ", looking up details" : ""}`,
-				title: looking ? "Looking up details" : void 0,
+				"aria-label": `Open ${title} by ${artist}${tag ? ", " + tag.text.replace(/ · /g, ", ") : ""}${looking ? ", syncing" : ""}`,
+				title: looking ? "Syncing" : void 0,
 				className: "group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
 				children: [/* @__PURE__ */ jsxs("div", {
 					className: "sleeve-box transition-transform group-active:scale-[0.975]",
@@ -8139,8 +8139,8 @@ function useLookupNews(n) {
 	const [news, setNews] = useState("");
 	const was = useRef(0);
 	useEffect(() => {
-		if (n && !was.current) setNews(`Looking up ${n} record${n === 1 ? "" : "s"}`);
-		else if (!n && was.current) setNews("Lookups finished");
+		if (n && !was.current) setNews(`Syncing ${n} record${n === 1 ? "" : "s"}`);
+		else if (!n && was.current) setNews("Sync finished");
 		was.current = n;
 	}, [n]);
 	return news;
@@ -8189,14 +8189,14 @@ function App() {
 					onAdd: canEdit ? () => setAdding(true) : void 0,
 					onShare: hasDownloads ? setSharing : void 0,
 					below: canEdit && looking > 0 && /* @__PURE__ */ jsxs("span", {
-						"aria-label": `Looking up ${looking} record${looking === 1 ? "" : "s"}`,
+						"aria-label": `Syncing ${looking} record${looking === 1 ? "" : "s"}`,
 						className: "text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto",
 						children: [
 							/* @__PURE__ */ jsx("span", {
 								"aria-hidden": "true",
 								className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
 							}),
-							"Looking up ",
+							"Syncing ",
 							looking
 						]
 					}),
