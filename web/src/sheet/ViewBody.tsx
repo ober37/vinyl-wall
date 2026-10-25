@@ -98,7 +98,8 @@ function Tracks({ r }: { r: Rec }) {
         {shown.map((t, i) => (
           <Fragment key={i}>
             {sided && sideOf(t.pos) !== sideOf(shown[i - 1]?.pos) && (
-              <li className={`text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? 'pt-3' : ''}`}>
+              // a side's heading, not a track: screen readers count only the tracks
+              <li role="presentation" className={`text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? 'pt-3' : ''}`}>
                 Side {sideOf(t.pos)}
                 {sideTime(sideOf(t.pos))}
               </li>
@@ -253,7 +254,7 @@ function LinkList({ links }: { links: [string, string][] }) {
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {links.map(([t, u]) => (
-        <li key={u}>
+        <li key={t + u}>
           <a href={u} target="_blank" rel="noopener" className={link}>
             {t} ↗
           </a>
@@ -329,7 +330,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
               {notes && (
                 <TabsTrigger value="notes">
                   Notes{notesN > 0 && ' '}
-                  {notesN > 0 && <span className="text-foreground-muted ms-1">{notesN}</span>}
+                  {notesN > 0 && <span className="text-foreground-muted">{notesN}</span>}
                 </TabsTrigger>
               )}
               {about && <TabsTrigger value="about">About</TabsTrigger>}

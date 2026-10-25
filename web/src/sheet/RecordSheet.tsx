@@ -123,6 +123,9 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+  // a status move opens the record's new task tab (It arrived lands on Listening)
+  const kindNow = r ? kindOf(r) : undefined
+  useEffect(() => setTab(''), [kindNow])
 
   // edit mode's status control moves without asking what was paid, as production's does
   const moveTo = (to: Kind, ci?: number) => {

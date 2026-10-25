@@ -136,6 +136,13 @@ describe('Copy runout for a Discogs submission', () => {
     const box = (await screen.findByRole('textbox', { name: 'Runout for a Discogs submission' })) as HTMLTextAreaElement
     expect(box.value).toMatch(/^Matrix \/ Runout: Side A: AAPJ 8163-45 A/)
     expect(screen.getByText("Selected: copy it with your device's copy command")).toBeTruthy()
+    expect(document.activeElement).toBe(box)
+    // it follows what's typed, and leaves the cursor where it's typed
+    const b = screen.getByRole('textbox', { name: 'Side B' })
+    await user.clear(b)
+    await user.type(b, 'NEW')
+    expect(box.value).toMatch(/Side B: NEW/)
+    expect(document.activeElement).toBe(b)
     vi.restoreAllMocks()
   })
 })
@@ -212,6 +219,14 @@ describe('the design checklist pass', () => {
     const { user } = setup()
     await open(user, 'Pet Sounds')
     expect(screen.getByText("No copies yet. Add the pressing you're after in Edit.")).toBeTruthy()
+  })
+
+  it('opens the new task tab after a status move', async () => {
+    const { user } = setup()
+    await open(user, 'Aja')
+    await user.click(screen.getByRole('tab', { name: /Notes/ }))
+    await user.click(screen.getByRole('button', { name: 'It arrived' }))
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Listening' }).getAttribute('aria-selected')).toBe('true'))
   })
 
   it('puts Hang it after the details once they are open', async () => {

@@ -15,10 +15,15 @@ import { APP_VERSION } from '../version'
 import { ImportView, LibrarySection, useLibrary } from './Library'
 import { BackgroundSection, HangingSection, PageSection } from './LookSections'
 
-// an update is offered only on the owner's own wall with background updates set up (production's updateState)
-// a stored date (or timestamp) as the page shows dates: Oct 23, 2026
-const day = (d: unknown) => longDate(String(d || '').slice(0, 10))
+// a stored date as the page shows dates (Oct 23, 2026); the task's check-in time ("2026-10-25 20:05 UTC") on this
+// device's own calendar, so a check just after a save isn't dated the next day
+const day = (d: unknown) => {
+  const s = String(d || '')
+  const m = /^(\d{4}-\d\d-\d\d) (\d\d:\d\d) UTC$/.exec(s)
+  return m ? new Date(`${m[1]}T${m[2]}Z`).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : longDate(s.slice(0, 10))
+}
 
+// an update is offered only on the owner's own wall with background updates set up (production's updateState)
 export function useUpdateAvailable() {
   const { canEdit, hasMcp, settings } = useRuntime()
   return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, APP_VERSION)

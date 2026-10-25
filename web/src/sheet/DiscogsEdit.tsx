@@ -5,7 +5,7 @@ import { CopyButton } from '@appica/ui-react/copy-button'
 import { Field, FieldLabel, FieldDescription, FieldError } from '@appica/ui-react/field'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
-import { useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { wantCopies } from '../model/copies'
 import { generalMatch, releaseOf, runJoin, runoutText, runSides, syncLine, type Sync } from '../model/discogs'
 import type { Form } from '../model/edit'
@@ -79,7 +79,14 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
   // what's typed while it isn't a release; otherwise the field shows the number (a pasted link becomes it at once)
   const [draft, setDraft] = useState<string | null>(null)
   const [copied, setCopied] = useState('')
-  const [manual, setManual] = useState('')
+  // the clipboard is blocked: the runout shown to copy by hand, as it reads now, selected once when it appears
+  const [manual, setManual] = useState(false)
+  const manualBox = useRef<HTMLTextAreaElement>(null)
+  useEffect(() => {
+    if (!manual) return
+    manualBox.current?.focus()
+    manualBox.current?.select()
+  }, [manual])
   const bad = draft !== null
   const changed = id !== wantCopies(r)[0].discogsId
   const typed = (v: string) => {
@@ -105,6 +112,7 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
   )
   const own = kindOf(r) === 'own'
   const matrix = runJoin(runSides(form.matrix))
+  const runout = runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim())
   return (
     <>
       <Field className="sm:col-span-2" invalid={bad}>
@@ -142,10 +150,13 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
             variant="outline"
             label="Copy runout for a Discogs submission"
             copiedLabel="Copied runout"
-            value={() => runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim())}
-            onCopy={() => setCopied("Copied. Paste it into the release's edit form on Discogs.")}
+            value={() => runout}
+            onCopy={() => {
+              setManual(false)
+              setCopied("Copied. Paste it into the release's edit form on Discogs.")
+            }}
             onCopyError={() => {
-              setManual(runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim()))
+              setManual(true)
               setCopied("Selected: copy it with your device's copy command")
             }}
           >
@@ -155,9 +166,7 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
             {copied}
           </span>
           {/* the clipboard is blocked here: the text, selected, to copy by hand */}
-          {manual && (
-            <Textarea readOnly aria-label="Runout for a Discogs submission" value={manual} ref={(el) => el?.select()} className="w-full font-mono" />
-          )}
+          {manual && <Textarea readOnly aria-label="Runout for a Discogs submission" value={runout} ref={manualBox} className="w-full font-mono" />}
         </div>
       )}
     </>
