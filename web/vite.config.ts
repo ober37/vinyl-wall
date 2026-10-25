@@ -54,20 +54,25 @@ const cdn = () => ({
 // @supports. The page already needs a browser with oklch(), and the Claude apps' browsers all have color-mix(), so keep
 // only the real one: unwrap the @supports and let Lightning CSS drop each declaration it overrides (minify), then print
 // it readable again
-const supportsColorMix = /@supports\s*\(color:\s*color-mix\(in lab,\s*red,\s*red\)\)\s*\{/
+const supportsColorMix = /@supports\s*\(color:\s*color-mix\(in lab,\s*red,\s*red\)\)\s*\{/g
 const modern = { safari: (16 << 16) | (4 << 8), chrome: 111 << 16, firefox: 128 << 16 }
 const noColorFallbacks = () => ({
   name: 'no-color-fallbacks',
   apply: 'build' as const,
   transform(code: string, id: string) {
-    if (!id.endsWith('.css') || !supportsColorMix.test(code)) return
+    if (!id.endsWith('.css')) return
+    const parts = []
+    let from = 0
     for (let m; (m = supportsColorMix.exec(code)); ) {
       let depth = 1, end = m.index + m[0].length
       for (; depth && end < code.length; end++) depth += code[end] === '{' ? 1 : code[end] === '}' ? -1 : 0
       if (depth) throw new Error(`${id}: unclosed @supports (color: color-mix(...)) block`)
-      code = code.slice(0, m.index) + code.slice(m.index + m[0].length, end - 1) + code.slice(end)
+      parts.push(code.slice(from, m.index), code.slice(m.index + m[0].length, end - 1))
+      from = supportsColorMix.lastIndex = end
     }
-    const minified = transform({ filename: id, code: Buffer.from(code), minify: true, targets: modern }).code
+    if (!from) return
+    parts.push(code.slice(from))
+    const minified = transform({ filename: id, code: Buffer.from(parts.join('')), minify: true, targets: modern }).code
     // Lightning CSS keeps a plain colour in front of a color-mix() that uses var(), since it can't check the var(), and
     // each pass adds its prefixes again: drop both here
     const readable = transform({ filename: id, code: minified, targets: modern }).code.toString()
