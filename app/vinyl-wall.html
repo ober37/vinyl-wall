@@ -2316,18 +2316,12 @@ function Root({ go, onRecord }) {
 					})
 				] }, x.id);
 			}),
-			S.length > 0 && canEdit && /* @__PURE__ */ jsxs("div", {
-				className: "-mt-4 flex flex-col gap-2",
-				children: [/* @__PURE__ */ jsx(Button, {
-					size: "sm",
-					variant: "outline",
-					className: "self-start",
-					onClick: () => newSetup(false),
-					children: "Add another setup"
-				}), /* @__PURE__ */ jsx("p", {
-					className: "text-foreground-muted text-xs",
-					children: "Another turntable somewhere else gets its own setup, so its plays and wear are tracked separately."
-				})]
+			S.length > 0 && canEdit && /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				className: "-mt-4 self-start",
+				onClick: () => newSetup(false),
+				children: "Add another setup"
 			}),
 			loose.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [
 				/* @__PURE__ */ jsx(FieldsetLegend, { children: "Not in a setup" }),
@@ -5682,7 +5676,7 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
 				}), tools]
 			}),
 			(onAdd || gear) && /* @__PURE__ */ jsxs("div", {
-				className: "order-last flex basis-full items-center justify-between gap-2 sm:order-none sm:basis-auto",
+				className: "flex basis-full items-center justify-between gap-2 sm:basis-auto",
 				children: [gear, onAdd && /* @__PURE__ */ jsx(Button, {
 					onClick: onAdd,
 					children: "Add a record"
@@ -5702,7 +5696,7 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
 							className: buttonVariants({
 								variant: "ghost",
 								size: "sm",
-								className: "text-ink-2 data-pressed:text-ink data-pressed:ring-border-emphasis gap-1.5 px-1.5 font-mono text-[0.8125rem] data-pressed:ring-1"
+								className: "text-ink-2 data-pressed:text-ink data-pressed:ring-border-emphasis gap-1.5 px-1.5! font-mono text-[0.8125rem] data-pressed:ring-1"
 							}),
 							children: [
 								CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
@@ -6679,10 +6673,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .z-50 {
     z-index: 50;
-  }
-
-  .order-last {
-    order: 9999;
   }
 
   .container {
@@ -7993,6 +7983,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .px-1\.5 {
     padding-inline: calc(var(--spacing) * 1.5);
+  }
+
+  .px-1\.5\! {
+    padding-inline: calc(var(--spacing) * 1.5) !important;
   }
 
   .px-2 {
@@ -10827,10 +10821,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   @media (min-width: 40rem) {
-    .sm\:order-none {
-      order: 0;
-    }
-
     .sm\:col-span-2 {
       grid-column: span 2 / span 2;
     }

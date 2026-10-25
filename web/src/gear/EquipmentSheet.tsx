@@ -88,12 +88,9 @@ function Root({ go, onRecord }: { go: (v: View) => void; onRecord: (id: string) 
         )
       })}
       {S.length > 0 && canEdit && (
-        <div className="-mt-4 flex flex-col gap-2">
-          <Button size="sm" variant="outline" className="self-start" onClick={() => newSetup(false)}>
-            Add another setup
-          </Button>
-          <p className="text-foreground-muted text-xs">Another turntable somewhere else gets its own setup, so its plays and wear are tracked separately.</p>
-        </div>
+        <Button size="sm" variant="outline" className="-mt-4 self-start" onClick={() => newSetup(false)}>
+          Add another setup
+        </Button>
       )}
       {loose.length > 0 && (
         <Fieldset>

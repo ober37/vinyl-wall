@@ -178,7 +178,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
           {tools}
         </div>
         {(onAdd || gear) && (
-          <div className="order-last flex basis-full items-center justify-between gap-2 sm:order-none sm:basis-auto">
+          <div className="flex basis-full items-center justify-between gap-2 sm:basis-auto">
             {gear}
             {onAdd && <Button onClick={onAdd}>Add a record</Button>}
           </div>
@@ -199,7 +199,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
                   className={buttonVariants({
                     variant: 'ghost',
                     size: 'sm',
-                    className: 'text-ink-2 data-pressed:text-ink data-pressed:ring-border-emphasis gap-1.5 px-1.5 font-mono text-[0.8125rem] data-pressed:ring-1',
+                    className: 'text-ink-2 data-pressed:text-ink data-pressed:ring-border-emphasis gap-1.5 px-1.5! font-mono text-[0.8125rem] data-pressed:ring-1',
                   })}
                 >
                   {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
