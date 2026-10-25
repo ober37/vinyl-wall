@@ -717,7 +717,8 @@ function lookupStatus(r) {
 	if (r.needsEnrich) return r.coverAsset ? "Looking up details…" : "Looking up the cover and details…";
 	return aboutPending(r) ? "Looking up the album…" : "";
 }
-var runActive = (s, now = Date.now()) => now - (s.run?.startedMs || 0) < 36e5;
+var runEnds = (s) => Math.max(s.run?.startedMs || 0, s.run?.beatMs || 0) + 12e5;
+var runActive = (s, now = Date.now()) => now < runEnds(s);
 var PLAIN = /^\d+\.\d+\.\d+$/;
 function newer(a, b) {
 	const x = String(a || "").replace(/^v/, "");
@@ -1088,7 +1089,11 @@ function RuntimeProvider({ claude, children }) {
 			t.lastFire = 0;
 			return how?.asked && setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
 		}
-		saveSettings({ run: { startedMs: Date.now() } });
+		saveSettings({
+			run: { startedMs: Date.now() },
+			lookupLeft: 0,
+			syncLeft: 0
+		});
 		mcp.current.callTool("Claude Code Remote", "fire_trigger", {
 			trigger_id: s.taskId,
 			text: pendingWork(recs, s)
@@ -1098,16 +1103,23 @@ function RuntimeProvider({ claude, children }) {
 			setNotice(e.code === "not_granted" || e.code === "permission_denied" ? "Background updates need permission to start Claude tasks. Allow it for this page and try again." : "Couldn't start the background update: " + msgOf(e));
 		});
 	};
+	const [quiet, setQuiet] = useState(0);
 	useEffect(() => {
 		const t = task.current;
-		if (t.afterRun && !runActive(settings)) {
+		if (runActive(settings)) {
+			const id = setTimeout(() => setQuiet((n) => n + 1), Math.min(runEnds(settings) - Date.now(), 12e5) + 1e3);
+			return () => clearTimeout(id);
+		}
+		if (t.afterRun) {
 			t.afterRun = false;
 			if (pendingParts(records, settings, true).length) {
 				t.lastFire = 0;
 				fireTask();
+				return;
 			}
 		}
-	}, [settings]);
+		if (canEdit && (Number(settings.lookupLeft) > 0 || Number(settings.syncLeft) > 0)) fireTask();
+	}, [settings, quiet]);
 	useEffect(() => {
 		if (status !== "ready" || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return;
 		if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return;
