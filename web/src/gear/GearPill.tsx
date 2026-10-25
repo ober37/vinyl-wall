@@ -1,25 +1,58 @@
 import { Button } from '@appica/ui-react/button'
-import { activeGear, gState, pillOf, wearPct, type Gear } from '../model/gear'
+import { activeGear, gState, pillOf, wearPct, type Gear, type Tone } from '../model/gear'
 import { useRuntime } from '../runtime/runtime'
-import { WearBar } from './Wear'
 
-// The header's way to Equipment: the tracked part nearest its rating (stylus wear, usually), a count of the gear when
-// none is rated, or "Add your gear" for an owner with none. Viewers don't see it until there's gear (gearPillShown).
+const ARC: Record<Tone, string> = { '': 'stroke-ship', warn: 'stroke-brass', bad: 'stroke-want' }
+
+// The header's way to Equipment: a round button like Search and Settings, a record in the middle and a ring around it
+// filled as far as the tracked part nearest its rating has worn (stylus wear, usually); red and dotted once it's due.
+// No ring when nothing is rated, and a "+" for an owner with no gear. Viewers don't see it until there's gear
+// (gearPillShown). The hours are in its name and tooltip.
 export const gearPillShown = (gear: Gear[], canEdit: boolean) => canEdit || activeGear(gear).length > 0
 export function GearPill({ onOpen }: { onOpen: () => void }) {
   const { gear, setups } = useRuntime()
   const p = pillOf(gear, setups)
+  const tone = p.gear ? gState(p.gear).tone : ''
+  const pct = p.gear ? (tone === 'bad' ? 100 : wearPct(p.gear)) : 0
   return (
-    <Button
-      variant="outline"
-      aria-label={p.aria}
-      title={p.aria}
-      onClick={onOpen}
-      className="min-h-11 gap-2.5 rounded-full bg-transparent before:rounded-full before:bg-transparent"
-    >
-      {p.label && <span className="text-foreground-muted font-mono text-[0.6875rem] tracking-wider uppercase">{p.label}</span>}
-      {p.gear && <WearBar pct={wearPct(p.gear)} tone={gState(p.gear).tone} className="w-14 sm:w-18" />}
-      <span className="font-mono text-xs whitespace-nowrap tabular-nums">{p.text}</span>
-    </Button>
+    <span className="relative">
+      <Button
+        size="icon-md"
+        variant="outline"
+        aria-label={p.aria}
+        title={p.aria}
+        onClick={onOpen}
+        className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+      >
+        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true" className="size-full p-0.5">
+          {p.gear && (
+            <>
+              <circle cx="12" cy="12" r="10.5" strokeWidth="2" className="stroke-border" />
+              <circle
+                cx="12"
+                cy="12"
+                r="10.5"
+                strokeWidth="2"
+                strokeLinecap="round"
+                pathLength={100}
+                strokeDasharray={`${pct} 100`}
+                transform="rotate(-90 12 12)"
+                className={ARC[tone]}
+              />
+            </>
+          )}
+          <circle cx="12" cy="12" r="5.5" strokeWidth="1.6" stroke="currentColor" />
+          <circle cx="12" cy="12" r="1.3" fill="currentColor" />
+        </svg>
+      </Button>
+      {(tone === 'bad' || !p.label) && (
+        <span
+          aria-hidden="true"
+          className={`absolute end-0 top-0 grid size-3.5 place-items-center rounded-full font-mono text-[0.625rem] leading-none font-semibold ring-2 ring-(--shade) ${tone === 'bad' ? 'bg-want text-want-ink' : 'bg-ship text-ship-ink'}`}
+        >
+          {tone === 'bad' ? '' : '+'}
+        </span>
+      )}
+    </span>
   )
 }

@@ -41,6 +41,11 @@ function useWallFilter() {
   return [filter, set] as const
 }
 
+const PlusIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="size-5 sm:size-4">
+    <path d="M12 5v14M5 12h14" />
+  </svg>
+)
 const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
     <circle cx="11" cy="11" r="6.5" />
@@ -133,7 +138,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
   // editors only: opens the new-record sheet
   onAdd?: () => void
   tools?: React.ReactNode
-  // the Equipment pill: beside Add a record, which on phones is a row of its own under the title
+  // the Equipment button, first of the round buttons beside the title
   gear?: React.ReactNode
   // a line under the counts (records being looked up)
   below?: React.ReactNode
@@ -156,78 +161,85 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
 
   return (
     <>
-      <header className="mb-8 flex flex-wrap items-start justify-between gap-x-5 gap-y-3">
-        <div className="min-w-0 flex-1">
-          <h1 className="font-display text-ink text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
+      <header className="mb-8 flex flex-col gap-3">
+        <div className="flex items-start justify-between gap-5">
+          <h1 className="font-display text-ink min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
             {title}
           </h1>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            ref={searchBtn}
-            size="icon-md"
-            variant="outline"
-            aria-label="Search the wall"
-            aria-expanded={searching}
-            aria-controls="wall-search"
-            className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
-            onClick={() => (searching ? closeSearch() : setSearching(true))}
-          >
-            <SearchIcon />
-          </Button>
-          {tools}
-        </div>
-        {(onAdd || gear) && (
-          <div className="flex basis-full items-center justify-between gap-2 sm:basis-auto">
+          <div className="flex shrink-0 items-center gap-2">
             {gear}
-            {onAdd && <Button onClick={onAdd}>Add a record</Button>}
-          </div>
-        )}
-        <div className="basis-full">
-          {records.length > 0 && (
-            <ToggleGroup
-              multiple
-              aria-label="Show on the wall"
-              value={on}
-              onValueChange={(v) => setFilter(v as FKey[])}
-              className="on-photo -ms-1.5 flex-wrap gap-1"
+            <Button
+              ref={searchBtn}
+              size="icon-md"
+              variant="outline"
+              aria-label="Search the wall"
+              aria-expanded={searching}
+              aria-controls="wall-search"
+              className="rounded-full bg-transparent before:rounded-full before:bg-transparent"
+              onClick={() => (searching ? closeSearch() : setSearching(true))}
             >
-              {FKEYS.filter((k) => n[k]).map((k) => (
-                <Toggle
-                  key={k}
-                  value={k}
-                  className={buttonVariants({
-                    variant: 'ghost',
-                    size: 'sm',
-                    className: 'text-ink-2 data-pressed:text-ink data-pressed:ring-border-emphasis gap-1.5 px-1.5! font-mono text-[0.8125rem] data-pressed:ring-1',
-                  })}
-                >
-                  {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
-                  <b className="text-ink font-medium">{n[k]}</b>
-                  <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
-                </Toggle>
-              ))}
-            </ToggleGroup>
-          )}
-          {below}
-          {searching && (
-            <div role="search" id="wall-search" className="mt-3 flex max-w-md items-center gap-2">
-              <Input
-                type="search"
-                aria-label="Search the wall"
-                placeholder="Title, artist, label or year"
-                autoFocus
-                autoComplete="off"
-                enterKeyHint="search"
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
-                className="flex-1"
-              />
-              <Button size="sm" variant="outline" onClick={closeSearch}>
-                Clear
-              </Button>
-            </div>
+              <SearchIcon />
+            </Button>
+            {tools}
+          </div>
+        </div>
+        {/* the filters with the status line and search under them, and Add a record held to the right edge under Settings
+            (just "+" on phones) */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            {records.length > 0 && (
+              <ToggleGroup
+                multiple
+                aria-label="Show on the wall"
+                value={on}
+                onValueChange={(v) => setFilter(v as FKey[])}
+                // centred on the round + beside it (44px on phones, 40 from sm up)
+                className="on-photo flex-wrap gap-1.5 py-1.5 sm:py-1"
+              >
+                {FKEYS.filter((k) => n[k]).map((k) => (
+                  <Toggle
+                    key={k}
+                    value={k}
+                    className={buttonVariants({
+                      variant: 'ghost',
+                      size: 'sm',
+                      // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
+                      className: 'text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+                    })}
+                  >
+                    {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
+                    <b className="text-ink font-medium">{n[k]}</b>
+                    <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
+                  </Toggle>
+                ))}
+              </ToggleGroup>
+            )}
+            {below}
+            {searching && (
+              <div role="search" id="wall-search" className="mt-3 flex max-w-md items-center gap-2">
+                <Input
+                  type="search"
+                  aria-label="Search the wall"
+                  placeholder="Title, artist, label or year"
+                  autoFocus
+                  autoComplete="off"
+                  enterKeyHint="search"
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
+                  className="flex-1"
+                />
+                <Button size="sm" variant="outline" onClick={closeSearch}>
+                  Clear
+                </Button>
+              </div>
+            )}
+          </div>
+          {onAdd && (
+            <Button onClick={onAdd} className="ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4">
+              <PlusIcon />
+              <span className="max-sm:sr-only">Add a record</span>
+            </Button>
           )}
         </div>
       </header>
