@@ -1,6 +1,6 @@
 import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
@@ -110,6 +110,21 @@ describe('starting the background task', () => {
     render(ui)
     await new Promise((r) => setTimeout(r, 50))
     expect(fires(fake)).toHaveLength(1)
+  })
+
+  it('starts on its own, after the usual wait, for a sync marked elsewhere (chat, another device)', async () => {
+    const { fake } = setup({ taskId: 't1', discogs: { status: 'ok' }, update: { checkedMs: Date.now() } })
+    await screen.findByRole('button', { name: /Open Blue Train/ })
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await act(async () => fake.remote('r3', { needsSync: true }))
+      expect(fires(fake)).toHaveLength(0)
+      await act(async () => vi.advanceTimersByTime(20500))
+      await waitFor(() => expect(fires(fake)).toHaveLength(1))
+      expect(fires(fake)[0].data!.text).toMatch(/sync \d+ records? to Discogs \(Part C\)/)
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it('closing the sheet after a synced edit starts the task without the 20 second wait', async () => {

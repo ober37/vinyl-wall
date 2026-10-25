@@ -5,7 +5,7 @@ import { withSync } from '../model/edit'
 import type { Gear, Setup } from '../model/gear'
 import type { Rec } from '../model/record'
 import { siteOf, type Site } from '../model/site'
-import { aboutPending, pendingParts, pendingWork, runActive, runEnds, type Settings } from '../model/task'
+import { aboutPending, pendingParts, pendingWork, runActive, runEnds, syncing, type Settings } from '../model/task'
 
 type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
@@ -283,10 +283,12 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, quiet])
 
-  // records waiting for album info start the task on their own, at most every 30 minutes across reloads
+  // records waiting for album info, or for a sync marked elsewhere (chat, another device), start the task on their own,
+  // at most every 30 minutes across reloads; a sync waits the usual 20 seconds, so the page's own edits still finish first
   useEffect(() => {
     if (status !== 'ready' || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return
-    if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return
+    const look = records.some((r) => !r.deleted && !r.example && aboutPending(r))
+    if (!look && !records.some((r) => syncing(r, settings.discogs?.status === 'ok'))) return
     let t = 0
     try {
       t = +(localStorage.getItem('vw-lookup') || 0)
@@ -299,7 +301,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     } catch {
       // not remembered
     }
-    fireTask()
+    if (look) fireTask()
+    else syncSoon()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, settingsLoaded, canEdit, hasMcp, records, settings])
 

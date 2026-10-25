@@ -1157,7 +1157,8 @@ function RuntimeProvider({ claude, children }) {
 	}, [settings, quiet]);
 	useEffect(() => {
 		if (status !== "ready" || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return;
-		if (!records.some((r) => !r.deleted && !r.example && aboutPending(r))) return;
+		const look = records.some((r) => !r.deleted && !r.example && aboutPending(r));
+		if (!look && !records.some((r) => syncing(r, settings.discogs?.status === "ok"))) return;
 		let t = 0;
 		try {
 			t = +(localStorage.getItem("vw-lookup") || 0);
@@ -1166,7 +1167,8 @@ function RuntimeProvider({ claude, children }) {
 		try {
 			localStorage.setItem("vw-lookup", String(Date.now()));
 		} catch {}
-		fireTask();
+		if (look) fireTask();
+		else syncSoon();
 	}, [
 		status,
 		settingsLoaded,
