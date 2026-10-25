@@ -45,12 +45,15 @@ I.instances = lambda rid: []
 tmp = tempfile.mkdtemp()
 os.makedirs(os.path.join(tmp, "wall"))
 with open(os.path.join(tmp, "wall", "x.json"), "w") as fh:
-    json.dump({"id": "x", "data": {"title": "Old Album", "artist": "Someone", "status": "wish"}}, fh)
+    json.dump({"id": "x", "version": 1, "data": {"title": "Old Album", "artist": "Someone", "status": "wish"}}, fh)
 sys.argv = ["x", os.path.join(tmp, "wall"), os.path.join(tmp, "out.json")]
 I.main()
 writes = json.load(open(os.path.join(tmp, "out.json")))
 out = {w["doc_id"]: w["data"] for w in writes if w["collection"] == "records"}
 done = writes[-1]
+# ArtifactData refuses a batch with a write to an existing doc that isn't pinned, and writes none of it
+pinned = lambda ws: all(w["op"] == "set" or w.get("if_version") for w in ws)
+check("import: every write to an existing doc is pinned", pinned(writes), writes)
 check("import: the last write marks the import done, so it lands with the records",
       done["collection"] == "settings" and done["doc_id"] == "site" and done["data"]["discogs"]["importRequested"] == {"__delete__": True}
       and done["data"]["discogs"]["importMsg"].startswith("Imported 2 records"), done)
@@ -120,5 +123,6 @@ check("sync: past its budget it leaves the rest for the next run and says how ma
 S.BUDGET = 600
 S.main()
 sw = json.load(open(os.path.join(tmp, "sync.json")))
+check("sync: every write to an existing doc is pinned", pinned(sw), sw)
 check("sync: within it, every record syncs and nothing is left", len(sw) == 5 and sw[-1]["data"]["syncLeft"] == 0, sw)
 sys.exit(1 if fails else 0)

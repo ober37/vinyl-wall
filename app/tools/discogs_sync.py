@@ -8,7 +8,8 @@ exported files don't carry versions.
 (each file: {"id", "data", "version", ...} or the raw doc). Writes a list of DB writes
 to <out.json>: [{"op":"update"|"delete","doc_id","if_version","data"}], then one update to settings/site that tells the
 page the run is still going and how many records wait for the next run: the sync stops starting records after
-BUDGET seconds, so a run with a lot to sync doesn't go quiet long enough for the page to take it for dead.
+BUDGET seconds, so a run with a lot to sync doesn't go quiet long enough for the page to take it for dead (the task
+puts settings/site's current version in place of its if_version "SETTINGS_VERSION").
 
 Mapping:
   status own      -> Collection (Uncategorized), Media/Sleeve condition + Notes fields
@@ -418,7 +419,7 @@ def main():
                            "data": {"discogsSync": {**sync, "state": "error", "at": now(),
                                                     "msg": str(e)[:300]}, "needsSync": {"__delete__": True}}})
             report.append(f"{d.get('title')}: ERROR {e}")
-    writes.append({"op": "update", "collection": "settings", "doc_id": "site",
+    writes.append({"op": "update", "collection": "settings", "doc_id": "site", "if_version": "SETTINGS_VERSION",
                    "data": {"run": {"beatMs": int(time.time() * 1000)}, "syncLeft": left}})
     if left:
         report.append(f"{left} more wait for the next run.")

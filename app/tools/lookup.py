@@ -937,7 +937,8 @@ def _writer(wdir, left=0):
         writes.append(w)
     # every batch tells the page the run is still going, so a run that stops early doesn't hold the wall for long, and
     # how many records wait for the next run
-    add("update", "settings", "site", {"run": {"beatMs": int(time.time() * 1000)}, "lookupLeft": left}, None)
+    # (an update must be pinned: the task puts settings/site's current version in place of SETTINGS_VERSION)
+    add("update", "settings", "site", {"run": {"beatMs": int(time.time() * 1000)}, "lookupLeft": left}, "SETTINGS_VERSION")
     return writes, add
 
 
