@@ -5743,13 +5743,14 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
 			className: "flex items-start justify-between gap-3",
 			children: [/* @__PURE__ */ jsxs("div", {
 				className: "min-w-0 flex-1",
-				children: [
-					records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
+				children: [/* @__PURE__ */ jsxs("div", {
+					className: "on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1",
+					children: [records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
 						multiple: true,
 						"aria-label": "Show on the wall",
 						value: on,
 						onValueChange: (v) => setFilter(v),
-						className: "on-photo flex-wrap gap-1.5 py-1.5 sm:py-1",
+						className: "flex-wrap gap-1.5",
 						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsxs(Toggle, {
 							value: k,
 							className: buttonVariants({
@@ -5772,31 +5773,29 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
 								})
 							]
 						}, k))
-					}),
-					below,
-					searching && /* @__PURE__ */ jsxs("div", {
-						role: "search",
-						id: "wall-search",
-						className: "mt-3 flex max-w-md items-center gap-2",
-						children: [/* @__PURE__ */ jsx(Input, {
-							type: "search",
-							"aria-label": "Search the wall",
-							placeholder: "Title, artist, label or year",
-							autoFocus: true,
-							autoComplete: "off",
-							enterKeyHint: "search",
-							value: query,
-							onChange: (e) => setQuery(e.target.value),
-							onKeyDown: (e) => e.key === "Escape" && closeSearch(),
-							className: "flex-1"
-						}), /* @__PURE__ */ jsx(Button, {
-							size: "sm",
-							variant: "outline",
-							onClick: closeSearch,
-							children: "Clear"
-						})]
-					})
-				]
+					}), below]
+				}), searching && /* @__PURE__ */ jsxs("div", {
+					role: "search",
+					id: "wall-search",
+					className: "mt-3 flex max-w-md items-center gap-2",
+					children: [/* @__PURE__ */ jsx(Input, {
+						type: "search",
+						"aria-label": "Search the wall",
+						placeholder: "Title, artist, label or year",
+						autoFocus: true,
+						autoComplete: "off",
+						enterKeyHint: "search",
+						value: query,
+						onChange: (e) => setQuery(e.target.value),
+						onKeyDown: (e) => e.key === "Escape" && closeSearch(),
+						className: "flex-1"
+					}), /* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "outline",
+						onClick: closeSearch,
+						children: "Clear"
+					})]
+				})]
 			}), onAdd && /* @__PURE__ */ jsxs(Button, {
 				onClick: onAdd,
 				className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
@@ -5861,6 +5860,16 @@ var MESSAGE = {
 	revoked: "This page lost access to its data. Reload to try again.",
 	ready: ""
 };
+function useLookupNews(n) {
+	const [news, setNews] = useState("");
+	const was = useRef(0);
+	useEffect(() => {
+		if (n && !was.current) setNews(`Looking up ${n} record${n === 1 ? "" : "s"}`);
+		else if (!n && was.current) setNews("Lookups finished");
+		was.current = n;
+	}, [n]);
+	return news;
+}
 function App() {
 	const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear } = useRuntime();
 	const [openId, setOpenId] = useState(null);
@@ -5870,10 +5879,16 @@ function App() {
 	const [fromEquip, setFromEquip] = useState(false);
 	const update = useUpdateAvailable();
 	const looking = records.filter(lookingUp).length;
+	const lookupNews = useLookupNews(canEdit ? looking : 0);
 	return /* @__PURE__ */ jsxs("main", {
 		className: `mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === "photo" ? "photo-bg" : ""}`,
 		children: [
 			/* @__PURE__ */ jsx(WallBackground, { bg: site.background }),
+			/* @__PURE__ */ jsx("p", {
+				role: "status",
+				className: "sr-only",
+				children: lookupNews
+			}),
 			MESSAGE[status] && /* @__PURE__ */ jsx("p", {
 				role: "status",
 				className: "on-photo text-ink-2 mb-4 text-sm",
@@ -5894,19 +5909,20 @@ function App() {
 					hang: site.hang,
 					onOpen: setOpenId,
 					onAdd: canEdit ? () => setAdding(true) : void 0,
-					below: looking > 0 && /* @__PURE__ */ jsxs("p", {
-						role: "status",
-						className: "on-photo text-ink-2 mt-2 flex items-center gap-1.5 font-mono text-xs",
+					below: canEdit && looking > 0 && /* @__PURE__ */ jsxs("span", {
+						"aria-label": `Looking up ${looking} record${looking === 1 ? "" : "s"}`,
+						className: "text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem]",
 						children: [
 							/* @__PURE__ */ jsx("span", {
 								"aria-hidden": "true",
 								className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
 							}),
-							"Looking up ",
-							looking,
-							" record",
-							looking === 1 ? "" : "s",
-							"…"
+							/* @__PURE__ */ jsx("span", {
+								className: "max-sm:sr-only",
+								children: "Looking up"
+							}),
+							" ",
+							looking
 						]
 					}),
 					gear: gearPillShown(gear, canEdit) && /* @__PURE__ */ jsx(GearPill, { onOpen: () => setEquipOpen(true) }),

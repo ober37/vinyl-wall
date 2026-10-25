@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Boundary } from './Boundary'
@@ -27,6 +27,18 @@ const MESSAGE = {
   ready: '',
 }
 
+// what a screen reader hears about lookups: once when they start and once when they finish, not at every record
+function useLookupNews(n: number) {
+  const [news, setNews] = useState('')
+  const was = useRef(0)
+  useEffect(() => {
+    if (n && !was.current) setNews(`Looking up ${n} record${n === 1 ? '' : 's'}`)
+    else if (!n && was.current) setNews('Lookups finished')
+    was.current = n
+  }, [n])
+  return news
+}
+
 export function App() {
   const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
@@ -37,10 +49,14 @@ export function App() {
   const [fromEquip, setFromEquip] = useState(false)
   const update = useUpdateAvailable()
   const looking = records.filter(lookingUp).length
+  const lookupNews = useLookupNews(canEdit ? looking : 0)
 
   return (
     <main className={`mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === 'photo' ? 'photo-bg' : ''}`}>
       <WallBackground bg={site.background} />
+      <p role="status" className="sr-only">
+        {lookupNews}
+      </p>
       {MESSAGE[status] && (
         <p role="status" className="on-photo text-ink-2 mb-4 text-sm">
           {MESSAGE[status]}
@@ -60,11 +76,17 @@ export function App() {
             onOpen={setOpenId}
             onAdd={canEdit ? () => setAdding(true) : undefined}
             below={
+              canEdit &&
               looking > 0 && (
-                <p role="status" className="on-photo text-ink-2 mt-2 flex items-center gap-1.5 font-mono text-xs">
+                // a count, not a filter: no outline, so it doesn't read as one of the chips
+                <span
+                  aria-label={`Looking up ${looking} record${looking === 1 ? '' : 's'}`}
+                  className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem]"
+                >
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                  Looking up {looking} record{looking === 1 ? '' : 's'}…
-                </p>
+                  {/* on phones just the dot and the count, as the other chips drop their words */}
+                  <span className="max-sm:sr-only">Looking up</span> {looking}
+                </span>
               )
             }
             gear={gearPillShown(gear, canEdit) && <GearPill onOpen={() => setEquipOpen(true)} />}

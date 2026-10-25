@@ -141,7 +141,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
   tools?: React.ReactNode
   // the Equipment button, first of the round buttons beside the title
   gear?: React.ReactNode
-  // a line under the counts (records being looked up)
+  // at the end of the filter row: how many records are being looked up (owners only)
   below?: React.ReactNode
 }) {
   const [filter, setFilter] = useWallFilter()
@@ -189,38 +189,40 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
             </div>
           </TipGroup>
         </div>
-        {/* the filters with the status line and search under them, and Add a record held to the right edge under Settings
-            (just "+" on phones) */}
+        {/* the filters, the lookup count after them and search under them, and Add a record held to the right edge under
+            Settings (just "+" on phones) */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            {records.length > 0 && (
-              <ToggleGroup
-                multiple
-                aria-label="Show on the wall"
-                value={on}
-                onValueChange={(v) => setFilter(v as FKey[])}
-                // centred on the round + beside it (44px on phones, 40 from sm up)
-                className="on-photo flex-wrap gap-1.5 py-1.5 sm:py-1"
-              >
-                {FKEYS.filter((k) => n[k]).map((k) => (
-                  <Toggle
-                    key={k}
-                    value={k}
-                    className={buttonVariants({
-                      variant: 'ghost',
-                      size: 'sm',
-                      // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
-                      className: 'text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
-                    })}
-                  >
-                    {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
-                    <b className="text-ink font-medium">{n[k]}</b>
-                    <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
-                  </Toggle>
-                ))}
-              </ToggleGroup>
-            )}
-            {below}
+            {/* centred on the round + beside it (44px on phones, 40 from sm up) */}
+            <div className="on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1">
+              {records.length > 0 && (
+                <ToggleGroup
+                  multiple
+                  aria-label="Show on the wall"
+                  value={on}
+                  onValueChange={(v) => setFilter(v as FKey[])}
+                  className="flex-wrap gap-1.5"
+                >
+                  {FKEYS.filter((k) => n[k]).map((k) => (
+                    <Toggle
+                      key={k}
+                      value={k}
+                      className={buttonVariants({
+                        variant: 'ghost',
+                        size: 'sm',
+                        // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
+                        className: 'text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+                      })}
+                    >
+                      {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
+                      <b className="text-ink font-medium">{n[k]}</b>
+                      <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
+                    </Toggle>
+                  ))}
+                </ToggleGroup>
+              )}
+              {below}
+            </div>
             {searching && (
               <div role="search" id="wall-search" className="mt-3 flex max-w-md items-center gap-2">
                 <Input
