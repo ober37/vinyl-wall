@@ -1,13 +1,15 @@
 // Phase 7: the pieces the parity audit found missing or different from 0.9.4 (docs/parity-map.md)
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
 
 type C = Record<string, Record<string, unknown>>
+// the wall's filter is remembered in this browser; one test's filter isn't the next one's
+afterEach(() => localStorage.clear())
 const ARTISTS: C = {
   'mb-miles': {
     name: 'Miles Davis',
@@ -187,5 +189,42 @@ describe('back to 0.9.4', () => {
     )
     await screen.findByText('Nothing hanging yet.')
     expect(screen.queryByRole('button', { name: 'Search the wall' })).toBeNull()
+  })
+})
+
+describe('the design checklist pass', () => {
+  it('shows a viewer no busy dots or lookup line, which only an editor can act on', async () => {
+    const { user } = setup((s) => Object.assign(s.records.r3, { needsEnrich: true }), { canWrite: false })
+    const sleeve = await screen.findByRole('button', { name: /Open Blue Train/ })
+    expect(sleeve.getAttribute('aria-label')).not.toMatch(/syncing/)
+    await open(user, 'Blue Train')
+    expect(screen.queryByText(/^Looking up/)).toBeNull()
+  })
+
+  it('names a viewer’s lone Research tab', async () => {
+    const { user } = setup(() => {}, { canWrite: false })
+    await open(user, 'Abbey Road')
+    expect(screen.queryByRole('tablist')).toBeNull()
+    expect(screen.getByRole('group', { name: 'Research' })).toBeTruthy()
+  })
+
+  it('tells an editor how to add the copy a hunt is after', async () => {
+    const { user } = setup()
+    await open(user, 'Pet Sounds')
+    expect(screen.getByText("No copies yet. Add the pressing you're after in Edit.")).toBeTruthy()
+  })
+
+  it('puts Hang it after the details once they are open', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('button', { name: 'Add a record' }))
+    const sheet = await screen.findByRole('dialog', { name: 'Add a record' })
+    const order = () => {
+      const hang = within(sheet).getByRole('button', { name: 'Hang it' })
+      const more = within(sheet).getByRole('button', { name: 'Add details now' })
+      return more.compareDocumentPosition(hang) & Node.DOCUMENT_POSITION_FOLLOWING ? 'after' : 'before'
+    }
+    expect(order()).toBe('before')
+    await user.click(within(sheet).getByRole('button', { name: 'Add details now' }))
+    expect(order()).toBe('after')
   })
 })

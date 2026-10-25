@@ -109,7 +109,8 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
     <>
       <Field className="sm:col-span-2" invalid={bad}>
         <FieldLabel>Release number</FieldLabel>
-        <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:grid-cols-2">
+        {/* the link's column only when there's a link, so the field reaches the right edge on phones without it */}
+        <div className={`grid items-center gap-4 sm:grid-cols-2 ${id !== '' && !bad ? 'grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1'}`}>
           <Input
             value={draft ?? String(id)}
             onChange={(e) => typed(e.target.value)}

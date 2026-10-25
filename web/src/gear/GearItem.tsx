@@ -76,7 +76,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
           <Gauge g={g} />
           {S.msg && <p className="text-foreground-muted text-sm">{S.msg}</p>}
           {canEdit && (
-            <form onSubmit={addTime} className="flex flex-wrap gap-2">
+            <form onSubmit={addTime} className="flex flex-wrap gap-3">
               <Input
                 aria-label="Minutes played off the wall"
                 value={mins}
@@ -101,8 +101,8 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
       <Fieldset>
         <FieldsetLegend>Log</FieldsetLegend>
         {canEdit && (
-          <form onSubmit={addNote} className="flex flex-wrap gap-2">
-            <Input aria-label="Log entry" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Set tracking force to 3.5 g" autoComplete="off" className="min-w-0 flex-1" />
+          <form onSubmit={addNote} className="flex flex-wrap gap-3">
+            <Input aria-label="Log entry" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Cleaned with the brush" autoComplete="off" className="min-w-0 flex-1" />
             <Button type="submit" size="sm" variant="outline" disabled={!note.trim()}>
               Log
             </Button>
@@ -122,8 +122,9 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
                     </p>
                   </div>
                   {canEdit && (
-                    <Button size="sm" variant="ghost" onClick={() => setDrop(i)}>
-                      Delete
+                    // pulled back by its padding so its word ends on the right edge, under Log
+                    <Button size="sm" variant="ghost" className="-me-4" onClick={() => setDrop(i)}>
+                      Delete…
                     </Button>
                   )}
                 </li>
@@ -149,7 +150,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
       )}
       {canEdit && g.status !== 'retired' && (
         <Button className="self-start" onClick={() => setReplace(true)}>
-          Replace with a new one
+          Replace with a new one…
         </Button>
       )}
       <Confirm
@@ -326,7 +327,7 @@ export function GearEdit({ g, onStatus, onGone }: { g: Gear; onStatus: (s: strin
           </>
         )}
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-3">
         {g.status === 'retired' ? (
           <Button variant="outline" size="sm" onClick={() => saveGear(g.id, { status: 'active', retired: '' })}>
             Put back in use

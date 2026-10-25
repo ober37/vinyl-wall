@@ -79,7 +79,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
               <Input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="e.g. Rough Trade" />
             </Field>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-3">
             <Button type="submit" size="sm" disabled={busy}>
               Save
             </Button>
@@ -92,7 +92,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     )
 
   return (
-    <div className="flex flex-wrap gap-2">
+    <div className="flex flex-wrap gap-3">
       {k === 'ordered' ? (
         <Button disabled={busy} onClick={() => move('own')}>
           It arrived

@@ -358,6 +358,6 @@ describe('when a gear write fails', () => {
     const { user } = setup()
     await equipment(user, /cartridge:/)
     await openPiece(user, 'ATN-VM95E')
-    expect(screen.getByRole('textbox', { name: 'Log entry' }).getAttribute('placeholder')).toBe('e.g. Set tracking force to 3.5 g')
+    expect(screen.getByRole('textbox', { name: 'Log entry' }).getAttribute('placeholder')).toBe('e.g. Cleaned with the brush')
   })
 })

@@ -136,12 +136,14 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
+export function Wall({ records, title, hang, discogsOn = false, canEdit = false, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
   records: Rec[]
   title: string
   hang: string
   // an edit waiting to go to Discogs shows as busy only while Discogs is connected
   discogsOn?: boolean
+  // the busy dots are for editors, like the count; a viewer can't act on them
+  canEdit?: boolean
   onOpen: (id: string) => void
   // editors only: opens the new-record sheet
   onAdd?: () => void
@@ -178,7 +180,7 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
     <>
       <header className={`mb-8 flex flex-col gap-2 ${lowHang ? 'max-sm:mb-3' : 'max-sm:mb-4'}`}>
         {/* on phones the round buttons get their own row above the title, so the title has the full width */}
-        <div className="flex items-start justify-between gap-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4">
+        <div className="flex items-start justify-between gap-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4">
           {/* the display face sets its first letter in a little; pulled back so the letters start on the chips' edge.
               A single word too long for the line breaks rather than running off the page */}
           <h1 className="font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance break-words uppercase">
@@ -266,7 +268,8 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
-                  className="flex-1"
+                  // Clear is the one way to clear it, so not the browser's own × as well
+                  className="flex-1 [&::-webkit-search-cancel-button]:appearance-none"
                 />
                 <Button size="sm" variant="outline" onClick={closeSearch}>
                   Clear
@@ -285,16 +288,13 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
 
       {!records.length ? (
         welcome || (
-          <p className="on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm">
+          <p className="on-photo text-ink-2 bg-wall/70 border-border-emphasis max-w-xl rounded-(--radius-xs) border border-dashed px-5 py-7 text-sm">
             {onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : 'Nothing hanging yet.'}
           </p>
         )
       ) : !list.length ? (
         <div className="on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm">
           <span>Nothing on the wall matches “{q}”{on.length ? ' with this filter' : ''}.</span>
-          <Button size="sm" variant="outline" onClick={closeSearch}>
-            Clear the search
-          </Button>
         </div>
       ) : (
         <ul className={`rack ${lowHang ? 'max-sm:pt-0' : ''}`} data-hang={hang} aria-label="Records">
@@ -309,7 +309,7 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
               hue={hueOf(r)}
               tagText={tagOf(r)?.text ?? ''}
               tagTone={tagOf(r)?.tone ?? 'paper'}
-              looking={busy(r, discogsOn)}
+              looking={canEdit && busy(r, discogsOn)}
               example={!!r.example}
               onOpen={onOpen}
             />

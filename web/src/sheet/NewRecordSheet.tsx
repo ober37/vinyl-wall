@@ -33,6 +33,8 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
   const [coverStatus, setCoverStatus] = useState('')
   const [uploading, setUploading] = useState(false)
   const [hanging, setHanging] = useState(false)
+  // Add details now is open
+  const [details, setDetails] = useState(false)
   // set at once on the first click, so a quick second click can't hang it twice; the id is minted once per draft, so a
   // retry after a failed write reuses it
   const busy = useRef(false)
@@ -48,6 +50,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
     setStatus('')
     setCoverStatus('')
     setHanging(false)
+    setDetails(false)
     busy.current = false
     id.current = null
     clearError()
@@ -80,6 +83,20 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
     if (doc.needsEnrich) fireTask()
     onCreated(id.current)
   }
+
+  const hangIt = (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button disabled={!kind || hanging || uploading} onClick={hang}>
+          {hanging ? 'Hanging…' : 'Hang it'}
+        </Button>
+        <span role="status" className="text-foreground-muted text-sm">
+          {status}
+        </span>
+      </div>
+      <p className="text-foreground-muted text-xs">The cover, year, label and tracklist are looked up for you.</p>
+    </div>
+  )
 
   return (
     <Drawer
@@ -132,18 +149,8 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
               ]}
             />
           </Fieldset>
-          <div className="flex flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-3">
-              <Button disabled={!kind || hanging || uploading} onClick={hang}>
-                {hanging ? 'Hanging…' : 'Hang it'}
-              </Button>
-              <span role="status" className="text-foreground-muted text-sm">
-                {status}
-              </span>
-            </div>
-            <p className="text-foreground-muted text-xs">The cover, year, label and tracklist are looked up for you.</p>
-          </div>
-          <Collapsible>
+          {!details && hangIt}
+          <Collapsible open={details} onOpenChange={setDetails}>
             <CollapsibleTrigger className="group text-foreground-intense flex items-center gap-1.5 py-2 text-sm font-medium underline-offset-2 hover:underline">
               Add details now
               <svg
@@ -185,6 +192,8 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
               )}
             </CollapsibleContent>
           </Collapsible>
+          {/* with the details open, Hang it comes after them, where the form ends */}
+          {details && hangIt}
         </DrawerBody>
       </DrawerContent>
     </Drawer>

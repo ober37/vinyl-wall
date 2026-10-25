@@ -18,12 +18,14 @@ const budgetRow = (c: Copy): Row[] => (c.budget ? [['Budget', 'Up to $' + c.budg
 // Nothing when there are none.
 export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number) => void }) {
   const L = stillCopies(r)
-  if (!L.length) return null
+  // a hunt with no copy chosen yet says how to add one, to whoever can
+  const none = onEditCopy && kindOf(r) === 'wish' ? <p className="text-foreground-muted text-sm">No copies yet. Add the pressing you're after in Edit.</p> : null
+  if (!L.length) return none
   let body: React.ReactNode
   if (L.length === 1 && kindOf(r) === 'wish') {
     const [c, i] = L[0]
     const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...budgetRow(c)]
-    if (!rows.length && !c.name) return null
+    if (!rows.length && !c.name) return none
     body = (
       <div className="flex flex-col gap-2">
         {c.name && <h4 className="text-foreground-intense text-sm font-medium">{c.name}</h4>}
@@ -89,7 +91,7 @@ export function CopyPicker({ r, to, onPick, onCancel }: { r: Rec; to: 'own' | 'o
           </Button>
         ))}
       </div>
-      <Button variant="ghost" size="sm" className="-ms-3 self-start" onClick={onCancel}>
+      <Button variant="ghost" size="sm" className="-ms-4 self-start" onClick={onCancel}>
         Cancel
       </Button>
     </div>

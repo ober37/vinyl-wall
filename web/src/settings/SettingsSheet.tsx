@@ -7,7 +7,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Field, FieldLabel, FieldDescription } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
-import { today } from '../model/record'
+import { longDate, today } from '../model/record'
 import { newer, updateAsk } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
@@ -16,6 +16,9 @@ import { ImportView, LibrarySection, useLibrary } from './Library'
 import { BackgroundSection, HangingSection, PageSection } from './LookSections'
 
 // an update is offered only on the owner's own wall with background updates set up (production's updateState)
+// a stored date (or timestamp) as the page shows dates: Oct 23, 2026
+const day = (d: unknown) => longDate(String(d || '').slice(0, 10))
+
 export function useUpdateAvailable() {
   const { canEdit, hasMcp, settings } = useRuntime()
   return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, APP_VERSION)
@@ -147,7 +150,7 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
         <Input value={user} onChange={(e) => typeUser(e.target.value)} autoComplete="off" autoCapitalize="off" autoFocus={focus} />
       </Field>
       {dz.hasToken && (
-        <div className="bg-wall flex flex-wrap items-center gap-2.5 rounded-(--radius-xs) p-3">
+        <div className="bg-wall flex flex-wrap items-center gap-3 rounded-(--radius-xs) p-3">
           <span className="font-mono text-sm tracking-wider">••••••••{dz.last4}</span>
           {dz.status === 'ok' ? (
             <Badge size="sm" variant="success">
@@ -163,14 +166,14 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
             </Badge>
           )}
           <span className="text-foreground-muted text-xs">
-            Saved {dz.savedAt}
-            {dz.checkedAt ? ' · checked ' + dz.checkedAt : ''}
+            Saved {day(dz.savedAt)}
+            {dz.checkedAt ? ' · checked ' + day(dz.checkedAt) : ''}
           </span>
         </div>
       )}
       {dz.hasToken && dz.status === 'error' && dz.msg && <p className="text-error-emphasis text-sm">{dz.msg}</p>}
       {dz.hasToken && !replacing ? (
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-3">
           <Button size="sm" variant="outline" onClick={() => setReplacing(true)}>
             Replace token
           </Button>
@@ -188,7 +191,7 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
       ) : (
         <Field>
           <FieldLabel>Personal access token</FieldLabel>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Input
               type={show ? 'text' : 'password'}
               value={token}

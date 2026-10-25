@@ -177,7 +177,7 @@ function OrderFields(p: { form: Form; set: Props['set'] }) {
         <Paid placeholder="incl. shipping" {...p} />
         <DateIn k="orderDate" label="Ordered on" {...p} />
         <Text k="orderNum" label="Order #" mono {...p} />
-        <Text k="carrier" label="Carrier" placeholder="USPS, UPS, FedEx, DHL" {...p} />
+        <Text k="carrier" label="Carrier" placeholder="e.g. UPS" {...p} />
         <Field className="sm:col-span-2">
           <FieldLabel>Tracking #</FieldLabel>
           <Input

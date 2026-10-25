@@ -62,7 +62,7 @@ const WARN_HOURS = 10
 export type Tone = '' | 'warn' | 'bad'
 export function gState(g: Gear): { tone: Tone; label: string; msg: string } {
   const h = gHours(g), lo = lowOf(g), hi = highOf(g)
-  if (g.status === 'retired') return { tone: '', label: 'Retired', msg: `Retired${g.retired ? ' ' + g.retired : ''} at ${fmtH(h)} h.` }
+  if (g.status === 'retired') return { tone: '', label: 'Retired', msg: `Retired at ${fmtH(h)} h.` }
   if (!g.tracks) return { tone: '', label: 'In use', msg: '' }
   if (!lo && !hi) return { tone: '', label: 'Tracking', msg: 'No rated life set. Hours are logged for reference.' }
   const top = hi || lo

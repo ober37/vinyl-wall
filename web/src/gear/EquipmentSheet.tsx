@@ -30,7 +30,7 @@ function GearCard({ g, onOpen }: { g: Gear; onOpen: (id: string) => void }) {
   )
 }
 const Cards = ({ items, onOpen }: { items: Gear[]; onOpen: (id: string) => void }) => (
-  <div className="grid gap-2 sm:grid-cols-2">
+  <div className="grid gap-3 sm:grid-cols-2">
     {items.map((g) => (
       <GearCard key={g.id} g={g} onOpen={onOpen} />
     ))}
@@ -75,7 +75,7 @@ function Root({ go, onRecord }: { go: (v: View) => void; onRecord: (id: string) 
             {x.note && <p className="text-foreground-muted text-sm whitespace-pre-line">{x.note}</p>}
             {items.length ? <Cards items={items} onOpen={open} /> : <p className="text-foreground-muted text-sm">No equipment in this setup yet.</p>}
             {canEdit && (
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-3">
                 <Button size="sm" variant="outline" onClick={() => go({ k: 'add', setup: x.id })}>
                   Add equipment
                 </Button>
@@ -186,7 +186,7 @@ export function EquipmentSheet({ open, onClose, onRecord }: { open: boolean; onC
           </DrawerTitle>
           <DrawerDescription>{head.d}</DrawerDescription>
           {view.k === 'item' && g && canEdit && (
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-3">
               <Button size="sm" variant={editing ? 'primary' : 'outline'} onClick={() => setEditing(!editing)}>
                 {editing ? 'Done' : 'Edit'}
               </Button>

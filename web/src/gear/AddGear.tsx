@@ -44,7 +44,8 @@ export function AddGear({ setup, type: first, onAdded, onCancel }: {
         <FieldsetLegend>What is it?</FieldsetLegend>
         <Segmented label="Equipment type" value={type} onChange={pick} options={GEAR_ORDER.map((k) => [k, GEAR_TYPES[k].label])} />
       </Fieldset>
-      {T ? (
+      {/* before a type is picked, ‹ All gear is the way back; Cancel comes with the form */}
+      {T && (
         <form onSubmit={add} className="flex flex-col gap-6">
           <Fieldset>
             <FieldsetLegend>{T.label}</FieldsetLegend>
@@ -83,7 +84,7 @@ export function AddGear({ setup, type: first, onAdded, onCancel }: {
               </p>
             )}
           </Fieldset>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-3">
             <Button type="submit" disabled={busy}>
               Add
             </Button>
@@ -92,10 +93,6 @@ export function AddGear({ setup, type: first, onAdded, onCancel }: {
             </Button>
           </div>
         </form>
-      ) : (
-        <Button variant="outline" className="self-start" onClick={onCancel}>
-          Cancel
-        </Button>
       )}
     </div>
   )

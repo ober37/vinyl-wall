@@ -42,7 +42,7 @@ function CopyFields({ c, ph, on, auto, focus }: {
           value={c.budget}
           onChange={(e) => on('budget', e.target.value)}
           inputMode="decimal"
-          placeholder="60"
+          placeholder="e.g. 60"
           startSlot={<span aria-hidden="true">$</span>}
           className="font-mono"
         />

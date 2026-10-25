@@ -76,11 +76,13 @@ export type WantMsg = { key: string; undo: Wanted }
 // The Research tab, as production's: on owned and ordered records the copies still wanted first; then the research log
 // from Claude chats (pinned first and open) with Copy for Claude to start one; then Search elsewhere, on a hunt or while
 // copies are still wanted. A reader sees what's there without the buttons.
-export function ResearchTab({ r, onEditCopy, want, setWant }: {
+export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
   r: Rec
   onEditCopy: (ci: number) => void
   want: WantMsg | null
   setWant: (w: WantMsg | null) => void
+  // the only tab, so there's no tab bar to name it
+  lone?: boolean
 }) {
   const { canEdit, settings, mutate } = useRuntime()
   const k = kindOf(r)
@@ -206,7 +208,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant }: {
               </Section>
             )}
             {canEdit && (
-              <div className="-ms-3 flex flex-wrap items-center gap-1">
+              <div className="-ms-4 flex flex-wrap items-center gap-1">
                 <Button size="sm" variant="ghost" onClick={() => pin(key, !!e.pinned)}>
                   {e.pinned ? 'Unpin' : 'Pin'}
                 </Button>
@@ -215,7 +217,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant }: {
                     Follow up in chat
                   </Button>
                 )}
-                <Button size="sm" variant="ghost" className="text-error-emphasis ms-auto" onClick={() => setDel(key)}>
+                <Button size="sm" variant="ghost" className="text-error-emphasis -me-4 ms-auto" onClick={() => setDel(key)}>
                   Remove this research
                 </Button>
                 {copied?.key === key && <CopyStatus c={copied} />}
@@ -232,8 +234,8 @@ export function ResearchTab({ r, onEditCopy, want, setWant }: {
       {!wish && <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />}
       {(canEdit || items.length > 0) && (
         <Fieldset>
-          {/* the tab says Research; a heading only when the copies still wanted sit above it */}
-          {!wish && still && <FieldsetLegend>Research</FieldsetLegend>}
+          {/* the tab says Research; a heading when the copies still wanted sit above it, or when there's no tab bar */}
+          {(lone || (!wish && still)) && <FieldsetLegend>Research</FieldsetLegend>}
           {canEdit && (
             <div className="flex flex-col gap-3">
               <p className="text-foreground-muted text-sm">

@@ -156,7 +156,8 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
   // a lookup says what it's doing; an edit waiting for Discogs says so too, except in edit, where the Discogs section does
-  const status = r ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
+  // for editors only, like the wall's busy dots: a viewer can't act on it
+  const status = r && canEdit ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
 
   return (
     <Drawer side="right" open={!!r} onOpenChange={(o) => !o && close()}>
@@ -234,7 +235,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   </Alert>
                 )}
                 {editing && (
-                  <div className="mb-6 flex flex-wrap items-center gap-2">
+                  <div className="mb-6 flex flex-wrap items-center gap-3">
                     <CoverButton
                       hasCover={!!r.coverAsset}
                       onStatus={setSaved}

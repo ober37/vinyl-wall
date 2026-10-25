@@ -40,7 +40,7 @@ export function NotesTab({ r }: { r: Rec }) {
     <div className="flex flex-col gap-6">
       {canEdit && (
         <form
-          className="flex flex-col gap-2"
+          className="flex flex-col gap-4"
           onSubmit={(e) => {
             e.preventDefault()
             add()
@@ -75,7 +75,7 @@ export function NotesTab({ r }: { r: Rec }) {
               {edit && same(edit.ref, ref) ? (
                 <div className="flex flex-col gap-2">
                   <Textarea aria-label="Edit note" rows={3} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} autoFocus />
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-3">
                     <Button size="sm" onClick={save}>
                       Save
                     </Button>

@@ -154,7 +154,7 @@ function Blurb({ text, clampAt, credit }: { text: string; clampAt: number; credi
       )}
       <div className="flex flex-wrap items-baseline gap-3">
         {long && (
-          <Button size="sm" variant="ghost" className="-ms-4" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Button size="sm" variant="ghost" className="-ms-4 -me-4" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? 'Less' : 'More'}
           </Button>
         )}
@@ -288,6 +288,8 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const notes = canEdit || notesN > 0
   const research = hasResearch(r, canEdit)
   const tabs = [...(own ? ['listening'] : []), ...(k === 'ordered' ? ['order'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
+  // the space under the tab bar, none without one
+  const pad = tabs.length > 1 ? 'pt-4' : ''
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
   const titled = (name: string, node: React.ReactNode) =>
     tabs.length === 1 ? (
@@ -334,27 +336,27 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
             </TabsList>
           )}
           {own && (
-            <TabsContent value="listening" className="pt-4">
+            <TabsContent value="listening" className={pad}>
               {titled('Listening', <Listening r={r} />)}
             </TabsContent>
           )}
           {k === 'ordered' && (
-            <TabsContent value="order" className="pt-4">
+            <TabsContent value="order" className={pad}>
               {titled('Order', <OrderCard r={r} />)}
             </TabsContent>
           )}
           {research && (
-            <TabsContent value="research" className="pt-4">
-              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} />
+            <TabsContent value="research" className={pad}>
+              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} lone={tabs.length === 1} />
             </TabsContent>
           )}
           {notes && (
-            <TabsContent value="notes" className="pt-4">
+            <TabsContent value="notes" className={pad}>
               {titled('Notes', <NotesTab r={r} />)}
             </TabsContent>
           )}
           {about && (
-            <TabsContent value="about" className="flex flex-col gap-8 pt-4">
+            <TabsContent value="about" className={`flex flex-col gap-8 ${pad}`}>
               {info.length > 0 && (
                 <Fieldset>
                   <FieldsetLegend>About the album</FieldsetLegend>

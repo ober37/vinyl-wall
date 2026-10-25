@@ -144,12 +144,14 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
 
   return (
     <div className="bg-background-muted flex flex-col gap-3 rounded-md p-3">
-      <div className="text-foreground text-sm">{[p.date, p.what, p.setup].filter(Boolean).join(' · ')}</div>
-      {j.fresh && j.msg && (
-        <p role="status" className="text-foreground-muted -mt-2 text-xs">
-          {j.msg}
-        </p>
-      )}
+      <div className="flex flex-col gap-2">
+        <div className="text-foreground text-sm">{[p.date, p.what, p.setup].filter(Boolean).join(' · ')}</div>
+        {j.fresh && j.msg && (
+          <p role="status" className="text-foreground-muted text-xs">
+            {j.msg}
+          </p>
+        )}
+      </div>
       {vibe ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -180,7 +182,7 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
           <DateField value={toDate(date)} onValueChange={(d) => setDate(fromDate(d) || date)} />
         </Field>
       )}
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-3">
         <Button size="sm" onClick={save}>
           Save
         </Button>
