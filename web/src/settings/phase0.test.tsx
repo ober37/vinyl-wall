@@ -5,6 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { APP_VERSION } from '../version'
 
 type Opts = Parameters<typeof fakeClaude>[1]
 function setup(site: Record<string, unknown> = { taskId: 't1', update: { checkedMs: Date.now() } }, opts: Opts = {}) {
@@ -153,7 +154,7 @@ describe('settings', () => {
   })
 
   it('offers no update for this or an older version', async () => {
-    setup({ taskId: 't1', update: { latest: '1.0.0', checkedMs: Date.now() } })
+    setup({ taskId: 't1', update: { latest: APP_VERSION, checkedMs: Date.now() } })
     expect(await screen.findByRole('button', { name: 'Settings' })).toBeTruthy()
   })
 
