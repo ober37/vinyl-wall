@@ -16,12 +16,12 @@ describe('wear', () => {
 
 describe('the header pill', () => {
   it('invites an owner with no gear, counts unrated gear, and shows the worst rated part', () => {
-    expect(pillOf([], S)).toMatchObject({ label: '', text: 'Add your gear' })
-    expect(pillOf([{ id: 'a', type: 'amp' }, { id: 'b', type: 'speakers' }], S)).toMatchObject({ label: 'Gear', text: '2 items' })
+    expect(pillOf([], S)).toMatchObject({ label: '', aria: 'Add your gear' })
+    expect(pillOf([{ id: 'a', type: 'amp' }, { id: 'b', type: 'speakers' }], S)).toMatchObject({ label: 'Gear', aria: 'Equipment, 2 items' })
     const p = pillOf([stylus(60 * 250), stylus(60 * 100, { id: 't', type: 'belt', ratedLow: 1000, ratedHigh: '' })], S)
-    expect(p).toMatchObject({ label: 'Stylus', text: '50 h left' })
-    expect(p.aria).toBe('Stylus, Den: Healthy, 250 h played, rated 300–500 h')
-    expect(pillOf([stylus(60 * 320)], S).text).toBe('Replace')
+    expect(p).toMatchObject({ label: 'Stylus', aria: 'Den stylus: Healthy, 50 h remaining' })
+    expect(pillOf([stylus(60 * 320)], S).aria).toBe('Den stylus: Replace window, 180 h to its upper rating')
+    expect(pillOf([stylus(60 * 520, { setup: '' })], S).aria).toBe('Stylus: Replace now, 20 h past its rating')
   })
 })
 

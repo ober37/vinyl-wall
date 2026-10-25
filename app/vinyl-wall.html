@@ -471,18 +471,19 @@ function pillOf(gear, setups) {
 		const n = activeGear(gear).length;
 		return {
 			label: n ? "Gear" : "",
-			text: n ? `${n} item${n > 1 ? "s" : ""}` : "Add your gear",
 			gear: null,
 			aria: n ? `Equipment, ${n} item${n > 1 ? "s" : ""}` : "Add your gear"
 		};
 	}
-	const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w);
-	const where = setups.length > 1 && setups.some((x) => x.id === w.setup) ? ", " + setupName(setups, w.setup) : "";
+	const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w), top = hi || lo;
+	const type = typeOf(w).label;
+	const who = setups.some((x) => x.id === w.setup) ? `${setupName(setups, w.setup)} ${type.toLowerCase()}` : type;
+	const over = fmtLeft(h - top);
+	const left = lo && h < lo ? `${fmtLeft(lo - h)} h remaining` : hi && h < hi ? `${fmtLeft(hi - h)} h to its upper rating` : over === "0" ? "at its rating" : `${over} h past its rating`;
 	return {
-		label: typeOf(w).label,
-		text: S.tone === "bad" ? "Replace" : lo && h < lo ? wearLeft(w) : `${fmtH(h)} h`,
+		label: type,
 		gear: w,
-		aria: `${typeOf(w).label}${where}: ${S.label}, ${fmtH(h)} h played${lo ? `, rated ${lo}${hi ? "–" + hi : ""} h` : ""}`
+		aria: `${who}: ${S.label}, ${left}`
 	};
 }
 var LAST = "rw.lastSetup";

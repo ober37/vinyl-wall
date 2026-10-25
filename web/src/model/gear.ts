@@ -103,21 +103,21 @@ export function worstGear(gear: Gear[]): Gear | null {
   return r.sort((a, b) => use(b) - use(a))[0] || null
 }
 
-// the header pill: the worst part's meter, or a count, or (owners with no gear) an invitation
+// the header's Equipment button: the worst rated part and its name ("Office stylus: Healthy, 298 h remaining"), else
+// a count of the gear, else (owners with no gear) an invitation
 export function pillOf(gear: Gear[], setups: Setup[]) {
   const w = worstGear(gear)
   if (!w) {
     const n = activeGear(gear).length
-    return { label: n ? 'Gear' : '', text: n ? `${n} item${n > 1 ? 's' : ''}` : 'Add your gear', gear: null, aria: n ? `Equipment, ${n} item${n > 1 ? 's' : ''}` : 'Add your gear' }
+    return { label: n ? 'Gear' : '', gear: null, aria: n ? `Equipment, ${n} item${n > 1 ? 's' : ''}` : 'Add your gear' }
   }
-  const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w)
-  const where = setups.length > 1 && setups.some((x) => x.id === w.setup) ? ', ' + setupName(setups, w.setup) : ''
-  return {
-    label: typeOf(w).label,
-    text: S.tone === 'bad' ? 'Replace' : lo && h < lo ? wearLeft(w) : `${fmtH(h)} h`,
-    gear: w,
-    aria: `${typeOf(w).label}${where}: ${S.label}, ${fmtH(h)} h played${lo ? `, rated ${lo}${hi ? '–' + hi : ''} h` : ''}`,
-  }
+  const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w), top = hi || lo
+  const type = typeOf(w).label
+  const who = setups.some((x) => x.id === w.setup) ? `${setupName(setups, w.setup)} ${type.toLowerCase()}` : type
+  const over = fmtLeft(h - top)
+  const left =
+    lo && h < lo ? `${fmtLeft(lo - h)} h remaining` : hi && h < hi ? `${fmtLeft(hi - h)} h to its upper rating` : over === '0' ? 'at its rating' : `${over} h past its rating`
+  return { label: type, gear: w, aria: `${who}: ${S.label}, ${left}` }
 }
 
 // a play: which setup it's on (the remembered one, else the first), and the minutes for the gear on it

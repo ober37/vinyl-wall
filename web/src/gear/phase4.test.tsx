@@ -36,11 +36,11 @@ const equipment = async (user: ReturnType<typeof userEvent.setup>, pill: RegExp)
 describe('the header pill', () => {
   it('shows the stylus wear and opens Equipment', async () => {
     const { user } = setup()
-    const pill = await screen.findByRole('button', { name: 'Stylus, Den: Getting close, 290 h played, rated 300–500 h' })
+    const pill = await screen.findByRole('button', { name: 'Den stylus: Getting close, 10 h remaining' })
     // its name shows as a tooltip on hover
     await userEvent.hover(pill)
-    expect(await screen.findByText('Stylus, Den: Getting close, 290 h played, rated 300–500 h')).toBeTruthy()
-    await equipment(user, /^Stylus/)
+    expect(await screen.findByText('Den stylus: Getting close, 10 h remaining')).toBeTruthy()
+    await equipment(user, /stylus:/)
     for (const name of ['Listening', 'Den', 'Living room', 'Shared equipment']) expect(screen.getByRole('group', { name })).toBeTruthy()
     expect(within(screen.getByRole('group', { name: 'Den' })).getByText('By the window')).toBeTruthy()
   })
@@ -77,7 +77,7 @@ describe('the Equipment sheet', () => {
 
   it('the Listening summary opens a record, which offers the way back', async () => {
     const { user } = setup()
-    await equipment(user, /^Stylus/)
+    await equipment(user, /stylus:/)
     const L = screen.getByRole('group', { name: 'Listening' })
     expect(within(L).getByText(/in all · last spun Kind of Blue/)).toBeTruthy()
     await user.click(within(L).getByRole('button', { name: /Kind of Blue/ }))
@@ -88,7 +88,7 @@ describe('the Equipment sheet', () => {
 
   it('a piece of gear: play time and details in view, the fields in edit', async () => {
     const { fake, user } = setup()
-    await equipment(user, /^Stylus/)
+    await equipment(user, /stylus:/)
     await user.click(screen.getByRole('button', { name: /ATN-VM95E/ }))
     await screen.findByRole('heading', { name: 'ATN-VM95E' })
     expect(screen.getByText('Getting close')).toBeTruthy()
@@ -108,7 +108,7 @@ describe('the Equipment sheet', () => {
 
   it('Replace asks calmly, retires this one and opens the new one', async () => {
     const { fake, user } = setup()
-    await equipment(user, /^Stylus/)
+    await equipment(user, /stylus:/)
     await user.click(screen.getByRole('button', { name: /ATN-VM95E/ }))
     await user.click(await screen.findByRole('button', { name: 'Replace with a new one' }))
     const dlg = await screen.findByRole('alertdialog')
@@ -124,7 +124,7 @@ describe('the Equipment sheet', () => {
 
   it('deleting a log entry asks first', async () => {
     const { fake, user } = setup()
-    await equipment(user, /^Stylus/)
+    await equipment(user, /stylus:/)
     await user.click(screen.getByRole('button', { name: /ATN-VM95E/ }))
     await user.click(await screen.findByRole('button', { name: 'Delete' }))
     const dlg = await screen.findByRole('alertdialog')
@@ -134,7 +134,7 @@ describe('the Equipment sheet', () => {
 
   it('a viewer sees the gear without any way to change it', async () => {
     const { user } = setup({ canWrite: false })
-    await equipment(user, /^Stylus/)
+    await equipment(user, /stylus:/)
     expect(screen.queryByRole('button', { name: 'Add equipment' })).toBeNull()
     expect(screen.queryByRole('button', { name: 'Add another setup' })).toBeNull()
     await user.click(screen.getByRole('button', { name: /ATN-VM95E/ }))
