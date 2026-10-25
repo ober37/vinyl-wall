@@ -6,6 +6,7 @@ import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
 import { Textarea } from '@appica/ui-react/textarea'
+import { fromDate, toDate } from '../model/dates'
 import type { Form, TextKey } from '../model/edit'
 import { GRADES, OSTAT, shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
@@ -32,10 +33,6 @@ type Props = {
   focusCopy?: number | null
 }
 
-// "YYYY-MM-DD" <-> a local Date at noon, so a timezone never moves the day
-const toDate = (s: string | undefined) => (s && /^\d{4}-\d\d-\d\d$/.test(s) ? new Date(s + 'T12:00') : null)
-const fromDate = (d: Date | null) =>
-  d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
 
 // Base UI's Select needs a non-empty value for "Not graded"
 const NONE = '-'

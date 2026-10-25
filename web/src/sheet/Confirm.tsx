@@ -8,11 +8,14 @@ import {
   AlertDialogClose,
 } from '@appica/ui-react/alert-dialog'
 
-// The one confirm used for every delete in the sheet: a record, a play, a note
-export function Confirm({ open, title, yes, onYes, onClose }: {
+// The one confirm used for every delete in the sheet: a record, a play, a note. A step that isn't a delete (retiring a
+// piece of gear) passes calm, so its button isn't red, and its own answer for no.
+export function Confirm({ open, title, yes, no = 'Keep it', calm, onYes, onClose }: {
   open: boolean
   title: string
   yes: string
+  no?: string
+  calm?: boolean
   onYes: () => void
   onClose: () => void
 }) {
@@ -23,9 +26,9 @@ export function Confirm({ open, title, yes, onYes, onClose }: {
           <AlertDialogTitle>{title}</AlertDialogTitle>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogClose render={<Button variant="outline">Keep it</Button>} />
+          <AlertDialogClose render={<Button variant="outline">{no}</Button>} />
           <Button
-            variant="destructive"
+            variant={calm ? 'primary' : 'destructive'}
             onClick={() => {
               onYes()
               onClose()

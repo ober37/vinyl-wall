@@ -55,3 +55,24 @@ export const sample = () => ({
     },
   } as Record<string, Record<string, unknown>>,
 })
+
+// sample equipment for `npm run dev` with ?gear (two setups, shared headphones, a retired stylus)
+export const sampleGear = () => ({
+  setups: {
+    den: { name: 'Den', note: 'By the window, into the bookshelf speakers.', added: 1 },
+    lr: { name: 'Living room', note: '', added: 2 },
+  },
+  gear: {
+    sty: {
+      type: 'stylus', name: 'Audio-Technica ATN-VM95E', setup: 'den', status: 'active', tracks: true, ratedLow: 300, ratedHigh: 500, startHours: 250,
+      minutes: 2520, installed: '2025-06-01', shop: 'Audio Advice', paid: '79', specs: 'Tracking force 2 g, anti-skate 1.5.',
+      plays: [{ d: day(3), id: 'r1', title: 'Kind of Blue', min: 46, setup: 'den' }, { d: day(1), title: 'Manual entry', min: 45 }],
+      notes: [{ d: day(30), t: 'Cleaned with the brush and fluid.' }], added: 1,
+    },
+    tt: { type: 'turntable', name: 'Technics SL-1500C', setup: 'den', status: 'active', tracks: true, minutes: 9000, plays: [], notes: [], installed: '2024-02-10', added: 2 },
+    amp: { type: 'amp', name: 'Yamaha A-S501', setup: 'den', status: 'active', tracks: false, installed: '2024-02-10', added: 3 },
+    lp: { type: 'turntable', name: 'Audio-Technica AT-LP60X', setup: 'lr', status: 'active', tracks: true, minutes: 1200, plays: [], notes: [], added: 4 },
+    hp: { type: 'headphones', name: 'Sennheiser HD 600', setup: '*', status: 'active', tracks: true, minutes: 600, plays: [], notes: [], added: 5 },
+    old: { type: 'stylus', name: 'Ortofon 2M Red stylus', setup: 'den', status: 'retired', retired: '2025-06-01', tracks: true, ratedLow: 300, ratedHigh: 500, minutes: 30000, plays: [], notes: [], added: 0 },
+  } as Record<string, Record<string, unknown>>,
+})

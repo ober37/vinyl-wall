@@ -2,6 +2,7 @@
 // to writes and to starting the background task.
 import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { withSync } from '../model/edit'
+import type { Gear, Setup } from '../model/gear'
 import type { Rec } from '../model/record'
 import { siteOf, type Site } from '../model/site'
 import { aboutPending, pendingParts, pendingWork, runActive, type Settings } from '../model/task'
@@ -10,6 +11,7 @@ type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
 type Assets = ClaudeCapabilityMap['assets']
 type Doc = Record<string, unknown> & { id: string }
+type GearPatch = Record<string, unknown> | ((g: Gear | undefined) => Record<string, unknown> | null | undefined)
 export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
 
 type Runtime = {
@@ -18,10 +20,10 @@ type Runtime = {
   // the settings doc as stored, and what the wall draws from it (defaults until, or unless, it loads)
   settings: Settings
   site: Site
-  // read-only here until their slices: About the artist, Equipment
+  // read-only here until its slice: About the artist
   artists: Doc[]
-  gear: Doc[]
-  setups: Doc[]
+  gear: Gear[]
+  setups: Setup[]
   canEdit: boolean
   // this viewer's id (their private data lives under data/users/<id>), and what this view can do
   myId: string | null
@@ -42,6 +44,14 @@ type Runtime = {
   upload: (file: Blob) => Promise<string>
   // only the changed fields are written, so a save never undoes what the background task wrote meanwhile
   saveSettings: (patch: Settings) => Promise<boolean>
+  // equipment: a piece of gear is written whole with what changed merged in (as production's saveGear), one write at a
+  // time; setups are set whole too. Each resolves false when the write was refused.
+  // data can be worked out from the piece as it is (undefined when it's gone); nothing returned writes nothing
+  saveGear: (id: string, data: GearPatch) => Promise<boolean>
+  deleteGear: (id: string) => Promise<boolean>
+  saveSetup: (id: string, doc: Record<string, unknown>) => Promise<boolean>
+  deleteSetup: (id: string) => Promise<boolean>
+  newDocId: (collection: 'gear' | 'setups') => string
   // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
   saveToken: (token: string) => Promise<void>
   removeToken: () => Promise<void>
@@ -73,8 +83,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   const [settings, setSettings] = useState<Settings>({})
   const [settingsLoaded, setSettingsLoaded] = useState(false)
   const [artists, setArtists] = useState<Doc[]>([])
-  const [gear, setGear] = useState<Doc[]>([])
-  const [setups, setSetups] = useState<Doc[]>([])
+  const [gear, setGear] = useState<Gear[]>([])
+  const [setups, setSetups] = useState<Setup[]>([])
   const [canEdit, setCanEdit] = useState(false)
   const [myId, setMyId] = useState<string | null>(null)
   const [hasMcp, setHasMcp] = useState(false)
@@ -87,6 +97,18 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   const writing = useRef<Promise<unknown>>(Promise.resolve())
   const settingsWriting = useRef<Promise<unknown>>(Promise.resolve())
   const settingsExist = useRef(false)
+  const gearWriting = useRef<Promise<unknown>>(Promise.resolve())
+  // the gear as the page has it, writes included; a snapshot taken while gear writes wait is held until they're done
+  // (production's pendingGear), so it can't undo one that hasn't been written yet
+  const gearLive = useRef<Gear[]>([])
+  const gearPending = useRef(0)
+  const gearSnap = useRef<Gear[] | null>(null)
+  const gotGear = (G: Gear[]) => {
+    gearSnap.current = G
+    if (gearPending.current) return
+    gearLive.current = G
+    setGear(G)
+  }
   // the latest data, for the task logic (which runs outside renders)
   const live = useRef({ records, settings, canEdit })
   live.current = { records, settings, canEdit }
@@ -127,8 +149,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       const docs = (path: string, set: (d: Doc[]) => void) =>
         unsubs.push(d.collection(path).onSnapshot((snap) => set(snap.docs.map((x) => ({ ...x.data(), id: x.id }))), () => {}))
       docs('artists', setArtists)
-      docs('gear', setGear)
-      docs('setups', setSetups)
+      docs('gear', gotGear as (d: Doc[]) => void)
+      docs('setups', setSetups as (d: Doc[]) => void)
       unsubs.push(
         d.collection('records').onSnapshot(
           (snap) => {
@@ -325,6 +347,48 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     }
   }
 
+  // gear and setups take their turn in their own queue; the gear shows the change at once
+  const gearWrite = (what: string, fn: () => Promise<unknown>) => {
+    gearPending.current++
+    const next = gearWriting.current.then(async () => {
+      try {
+        await fn()
+        return true
+      } catch (e) {
+        setError(`Couldn't ${what}: ` + msgOf(e))
+        return false
+      } finally {
+        if (!--gearPending.current && gearSnap.current) gotGear(gearSnap.current)
+      }
+    })
+    gearWriting.current = next
+    return next
+  }
+  const saveGear = (id: string, data: GearPatch) => {
+    const G = gearLive.current
+    const cur = G.find((x) => x.id === id)
+    const patch = typeof data === 'function' ? data(cur) : data
+    if (!patch) return Promise.resolve(false)
+    const g = { ...(cur || {}), ...patch, id } as Gear
+    gearLive.current = G.some((x) => x.id === id) ? G.map((x) => (x.id === id ? g : x)) : [...G, g]
+    setGear(gearLive.current)
+    const { id: _, ...payload } = g
+    return gearWrite('save equipment', () => db.current!.collection('gear').doc(id).set(payload))
+  }
+  const deleteGear = (id: string) => {
+    gearLive.current = gearLive.current.filter((x) => x.id !== id)
+    setGear(gearLive.current)
+    return gearWrite('delete', () => db.current!.collection('gear').doc(id).delete())
+  }
+  const saveSetup = (id: string, doc: Record<string, unknown>) => {
+    setSetups((S) => (S.some((x) => x.id === id) ? S.map((x) => (x.id === id ? { ...doc, id } : x)) : [...S, { ...doc, id }]))
+    return gearWrite('save the setup', () => db.current!.collection('setups').doc(id).set(doc))
+  }
+  const deleteSetup = (id: string) => {
+    setSetups((S) => S.filter((x) => x.id !== id))
+    return gearWrite('delete', () => db.current!.collection('setups').doc(id).delete())
+  }
+
   const secret = () => (myId && db.current ? db.current.collection('data/users/' + myId).doc('discogs') : null)
 
   const value = useMemo<Runtime>(
@@ -354,6 +418,11 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       create,
       upload,
       saveSettings,
+      saveGear,
+      deleteGear,
+      saveSetup,
+      deleteSetup,
+      newDocId: (c) => db.current!.collection(c).doc().id,
       saveToken: async (token) => {
         const ref = secret()
         if (!ref) throw new Error('Sign in to claude.ai to save your token.')

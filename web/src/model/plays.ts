@@ -1,5 +1,5 @@
 // Logging plays and their journal, as logPlay and the journal handlers in app/vinyl-wall.html write them.
-// Gear minutes are left to the Equipment slice: a play with no setups is exactly what production writes without gear.
+// The minutes a play puts on gear are in model/gear.ts.
 import { findNote, notesOf, type NoteRef } from './notes'
 import { recordTracks, today, type Note, type Rec } from './record'
 export { VIBES, vibeOf } from './record'
@@ -37,15 +37,19 @@ export function collapsePick(r: Rec, kind: PlayKind, side: string, picks: string
   return { kind, side: '', tracks: picks }
 }
 
-export function playNote(r: Rec, kind: PlayKind, side: string, tracks: string[]): Note {
+export function playMin(r: Rec, kind: PlayKind, tracks: string[]) {
   const rt = +r.runtime! || 40
-  const min = kind === 'tracks' ? tracksMin(r, tracks) : kind === 'side' ? Math.round(rt / 2) : rt
+  return kind === 'tracks' ? tracksMin(r, tracks) : kind === 'side' ? Math.round(rt / 2) : rt
+}
+
+// on: the setup's name, once the wall has any setup
+export function playNote(r: Rec, kind: PlayKind, side: string, tracks: string[], on = ''): Note {
   const t =
     (kind === 'tracks'
       ? `Played ${tracks.length} track${tracks.length > 1 ? 's' : ''}`
       : kind === 'side'
         ? 'Played one side'
-        : 'Played the whole album') + ` (~${min} min)`
+        : 'Played the whole album') + (on ? ` on ${on}` : '') + ` (~${playMin(r, kind, tracks)} min)`
   return { d: today(), t, ...(side ? { side } : {}), ...(tracks.length ? { tracks } : {}) }
 }
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Checkbox } from '@appica/ui-react/checkbox'
@@ -6,10 +6,13 @@ import { CheckboxGroup } from '@appica/ui-react/checkbox-group'
 import { DateField } from '@appica/ui-react/date-field'
 import { Field, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
+import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from '@appica/ui-react/select'
 import { Slider } from '@appica/ui-react/slider'
 import { Textarea } from '@appica/ui-react/textarea'
+import { fromDate, toDate } from '../model/dates'
 import { deleteNote, notesOf, type NoteRef } from '../model/notes'
-import { collapsePick, playNote, recordSides, saveJournal, sideOf, VIBES, type PlayKind } from '../model/plays'
+import { gearForPlay, gearOfPlay, lastSetup, loggedText, offText, playMoved, playOff, rememberSetup, setupName, sortSetups } from '../model/gear'
+import { collapsePick, playMin, playNote, recordSides, saveJournal, sideOf, VIBES, type PlayKind } from '../model/plays'
 import { fmtH, playDate, playMonths, recordTracks, today, type Play, type Rec } from '../model/record'
 import { playStats } from '../model/stats'
 import { useRuntime } from '../runtime/runtime'
@@ -17,15 +20,15 @@ import { Confirm } from './Confirm'
 import { Linkify } from './Linkify'
 import { Segmented } from './Segmented'
 
-// the play whose journal is open; fresh = just logged (Skip and Undo instead of a date and Delete)
-type Journal = { ref: NoteRef; fresh: boolean }
-const toDate = (s: string) => (/^\d{4}-\d\d-\d\d$/.test(s) ? new Date(s + 'T12:00') : null)
-const fromDate = (d: Date | null) =>
-  d ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}` : ''
+// the play whose journal is open; fresh = just logged (Skip and Undo instead of a date and Delete), with what it put on the gear
+type Journal = { ref: NoteRef; fresh: boolean; msg?: string }
 
 function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
-  const { mutate } = useRuntime()
+  const { mutate, gear, setups, saveGear } = useRuntime()
   const T = recordTracks(r)
+  const S = sortSetups(setups)
+  // with two setups or more, which one it was played on (the last one used, remembered on this device)
+  const [on, setOn] = useState(() => lastSetup(setups))
   const [kind, setKind] = useState<PlayKind>('full')
   const [side, setSide] = useState(recordSides(r)[0])
   const [picks, setPicks] = useState<string[]>([])
@@ -35,7 +38,10 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
 
   const log = async () => {
     const c = collapsePick(r, kind, side, picks)
-    const note = playNote(r, c.kind, c.side, c.tracks)
+    // a wall with setups names the one it was played on, even when there's only one
+    const setup = S.length > 1 && S.some((x) => x.id === on) ? on : S[0]?.id || ''
+    if (S.length > 1) rememberSetup(setup)
+    const note = playNote(r, c.kind, c.side, c.tracks, setup ? setupName(S, setup) : '')
     let i = -1
     setBusy(true)
     const ok = await mutate(r.id, (latest) => {
@@ -46,7 +52,12 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
     setBusy(false)
     if (ok) {
       setPicks([])
-      onLogged({ ref: { i, d: note.d, t: note.t }, fresh: true })
+      const min = playMin(r, c.kind, c.tracks)
+      const hits = gearForPlay(gear, S, setup, r, min)
+      // each piece's minutes and plays are added to it as it is when its write is made
+      hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data))
+      const after = gear.map((g) => ({ ...g, ...hits.find((x) => x.g.id === g.id)?.data }))
+      onLogged({ ref: { i, d: note.d, t: note.t }, fresh: true, msg: loggedText(hits.length, min, after) })
     }
   }
 
@@ -79,6 +90,23 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
           ))}
         </CheckboxGroup>
       )}
+      {S.length > 1 && (
+        <Field className="max-w-xs">
+          <FieldLabel>Played on</FieldLabel>
+          <Select value={S.some((x) => x.id === on) ? on : S[0].id} onValueChange={(v) => setOn(String(v))} items={S.map((x) => ({ value: x.id, label: x.name || 'Untitled setup' }))}>
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {S.map((x) => (
+                <SelectItem key={x.id} value={x.id}>
+                  {x.name || 'Untitled setup'}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </Field>
+      )}
       <Button className="self-start" disabled={busy || (kind === 'tracks' && !picks.length)} onClick={log}>
         {kind !== 'tracks' ? 'Log play' : picks.length ? `Log ${picks.length} track${picks.length > 1 ? 's' : ''}` : 'Pick tracks'}
       </Button>
@@ -87,7 +115,7 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
 }
 
 function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDone: () => void }) {
-  const { mutate } = useRuntime()
+  const { mutate, gear, saveGear } = useRuntime()
   const [vibe, setVibe] = useState(p.vibe)
   const [text, setText] = useState(p.thoughts)
   const [date, setDate] = useState(p.day)
@@ -95,15 +123,29 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
   const gone = () => {
     throw new Error('This play changed elsewhere. Try again.')
   }
+  // the gear entries holding this play's minutes: a new date moves them, deleting the play takes them off
+  const hits = useMemo(() => gearOfPlay(gear, r.id, j.ref), [gear, r.id, j.ref])
   const save = () =>
-    mutate(r.id, (latest) => ({ notes: saveJournal(latest, j.ref, { text, vibe, date: j.fresh ? undefined : date }) ?? gone() })).then(
-      (ok) => ok && onDone(),
-    )
-  const drop = () => mutate(r.id, (latest) => ({ notes: deleteNote(latest, j.ref) ?? gone() })).then((ok) => ok && onDone())
+    mutate(r.id, (latest) => ({ notes: saveJournal(latest, j.ref, { text, vibe, date: j.fresh ? undefined : date }) ?? gone() })).then((ok) => {
+      if (!ok) return
+      if (!j.fresh && date !== p.day && /^\d{4}-\d\d-\d\d$/.test(date)) hits.forEach((x) => saveGear(x.g.id, (g) => g && playMoved(g, x.k, date)))
+      onDone()
+    })
+  const drop = () =>
+    mutate(r.id, (latest) => ({ notes: deleteNote(latest, j.ref) ?? gone() })).then((ok) => {
+      if (!ok) return
+      hits.forEach((x) => saveGear(x.g.id, (g) => g && playOff(g, x.k, x.m)))
+      onDone()
+    })
 
   return (
     <div className="bg-background-muted flex flex-col gap-3 rounded-md p-3">
       <div className="text-foreground text-sm">{[p.date, p.what, p.setup].filter(Boolean).join(' · ')}</div>
+      {j.fresh && j.msg && (
+        <p role="status" className="text-foreground-muted -mt-2 text-xs">
+          {j.msg}
+        </p>
+      )}
       {vibe ? (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
@@ -151,7 +193,7 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
           </Button>
         )}
       </div>
-      <Confirm open={confirm} title="Delete this play?" yes="Delete" onYes={drop} onClose={() => setConfirm(false)} />
+      <Confirm open={confirm} title={'Delete this play?' + offText(hits)} yes="Delete" onYes={drop} onClose={() => setConfirm(false)} />
     </div>
   )
 }

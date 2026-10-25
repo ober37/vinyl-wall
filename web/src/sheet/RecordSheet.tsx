@@ -97,7 +97,8 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
   return { form, set, change, saved, setSaved, flush, cancel }
 }
 
-export function RecordSheet({ id, onClose }: { id: string | null; onClose: () => void }) {
+// onBack: the record was opened from Equipment, so its header offers the way back there
+export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClose: () => void; onBack?: () => void }) {
   const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
@@ -155,6 +156,20 @@ export function RecordSheet({ id, onClose }: { id: string | null; onClose: () =>
       <DrawerContent className="w-full sm:max-w-xl">
         {r && (
           <>
+            {onBack && (
+              <Button
+                size="sm"
+                variant="ghost"
+                className="ms-3 mt-3 -mb-3 self-start"
+                onClick={() => {
+                  flush()
+                  flushSync()
+                  onBack()
+                }}
+              >
+                ‹ Equipment
+              </Button>
+            )}
             <DrawerHeader className="flex-row items-start gap-4">
               <Face
                 key={r.id}

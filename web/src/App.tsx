@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Boundary } from './Boundary'
+import { EquipmentSheet } from './gear/EquipmentSheet'
+import { GearPill, gearPillShown } from './gear/GearPill'
 import { useRuntime } from './runtime/runtime'
 import { lookingUp } from './model/task'
 import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
@@ -25,10 +27,13 @@ const MESSAGE = {
 }
 
 export function App() {
-  const { status, records, site, error, notice: wallNotice, clearError, canEdit } = useRuntime()
+  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [adding, setAdding] = useState(false)
+  const [equipOpen, setEquipOpen] = useState(false)
+  // a record opened from Equipment's Listening summary offers the way back
+  const [fromEquip, setFromEquip] = useState(false)
   const update = useUpdateAvailable()
   const looking = records.filter(lookingUp).length
 
@@ -40,7 +45,7 @@ export function App() {
           {MESSAGE[status]}
         </p>
       )}
-      {(error || wallNotice) && !openId && !settingsOpen && !adding && (
+      {(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && (
         <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
           <AlertTitle>{error || wallNotice}</AlertTitle>
         </Alert>
@@ -61,6 +66,7 @@ export function App() {
                 </p>
               )
             }
+            gear={gearPillShown(gear, canEdit) && <GearPill onOpen={() => setEquipOpen(true)} />}
             tools={
               <>
                 {canEdit && (
@@ -84,7 +90,31 @@ export function App() {
           />
         </Boundary>
       )}
-      <RecordSheet id={openId} onClose={() => setOpenId(null)} />
+      <RecordSheet
+        id={openId}
+        onClose={() => {
+          setOpenId(null)
+          setFromEquip(false)
+        }}
+        onBack={
+          fromEquip
+            ? () => {
+                setOpenId(null)
+                setFromEquip(false)
+                setEquipOpen(true)
+              }
+            : undefined
+        }
+      />
+      <EquipmentSheet
+        open={equipOpen}
+        onClose={() => setEquipOpen(false)}
+        onRecord={(id) => {
+          setEquipOpen(false)
+          setFromEquip(true)
+          setOpenId(id)
+        }}
+      />
       <SettingsSheet open={settingsOpen} onClose={() => setSettingsOpen(false)} />
       <NewRecordSheet
         open={adding}

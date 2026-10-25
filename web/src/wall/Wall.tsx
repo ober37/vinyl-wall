@@ -125,7 +125,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, onOpen, onAdd, tools, below }: {
+export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }: {
   records: Rec[]
   title: string
   hang: string
@@ -133,6 +133,8 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, below }: {
   // editors only: opens the new-record sheet
   onAdd?: () => void
   tools?: React.ReactNode
+  // the Equipment pill: beside Add a record, which on phones is a row of its own under the title
+  gear?: React.ReactNode
   // a line under the counts (records being looked up)
   below?: React.ReactNode
 }) {
@@ -175,9 +177,10 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, below }: {
           </Button>
           {tools}
         </div>
-        {onAdd && (
-          <div className="order-last flex basis-full justify-end sm:order-none sm:basis-auto">
-            <Button onClick={onAdd}>Add a record</Button>
+        {(onAdd || gear) && (
+          <div className="order-last flex basis-full items-center justify-between gap-2 sm:order-none sm:basis-auto">
+            {gear}
+            {onAdd && <Button onClick={onAdd}>Add a record</Button>}
           </div>
         )}
         <div className="basis-full">

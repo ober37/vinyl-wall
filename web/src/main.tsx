@@ -10,9 +10,10 @@ import './index.css'
 async function runtime(): Promise<Window['claude'] | undefined> {
   const real = (window as Partial<Window>).claude
   if (real || !import.meta.env.DEV) return real
-  const [{ fakeClaude }, { sample }] = await Promise.all([import('./runtime/fake'), import('./runtime/sample')])
+  const [{ fakeClaude }, { sample, sampleGear }] = await Promise.all([import('./runtime/fake'), import('./runtime/sample')])
   const q = new URLSearchParams(location.search)
-  const seed = sample()
+  // ?gear adds sample equipment
+  const seed = { ...sample(), ...(q.has('gear') ? { collections: sampleGear() } : {}) }
   // ?bg=cafe&dim=30&hang=barn tries a look on the sample wall
   if (q.has('bg')) seed.docs['settings/site'].bg = { kind: 'preset', preset: q.get('bg') }
   if (q.has('dim')) seed.docs['settings/site'].dim = +q.get('dim')!
