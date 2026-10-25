@@ -5700,11 +5700,11 @@ function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
 		searchBtn.current?.focus();
 	};
 	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("header", {
-		className: "mb-8 flex flex-col gap-3",
+		className: "mb-8 flex flex-col gap-2",
 		children: [/* @__PURE__ */ jsxs("div", {
 			className: "flex items-start justify-between gap-5",
 			children: [/* @__PURE__ */ jsx("h1", {
-				className: "font-display text-ink min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase",
+				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase",
 				children: title
 			}), /* @__PURE__ */ jsxs("div", {
 				className: "flex shrink-0 items-center gap-2",
@@ -5881,7 +5881,7 @@ function App() {
 					onAdd: canEdit ? () => setAdding(true) : void 0,
 					below: looking > 0 && /* @__PURE__ */ jsxs("p", {
 						role: "status",
-						className: "on-photo text-ink-2 mt-1.5 flex items-center gap-1.5 font-mono text-xs",
+						className: "on-photo text-ink-2 mt-2 flex items-center gap-1.5 font-mono text-xs",
 						children: [
 							/* @__PURE__ */ jsx("span", {
 								"aria-hidden": "true",
@@ -6786,6 +6786,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .-ms-3 {
     margin-inline-start: calc(var(--spacing) * -3);
+  }
+
+  .-ms-\[0\.045em\] {
+    margin-inline-start: -.045em;
   }
 
   .ms-1 {

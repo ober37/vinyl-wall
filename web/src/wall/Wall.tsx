@@ -161,9 +161,10 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }
 
   return (
     <>
-      <header className="mb-8 flex flex-col gap-3">
+      <header className="mb-8 flex flex-col gap-2">
         <div className="flex items-start justify-between gap-5">
-          <h1 className="font-display text-ink min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
+          {/* the display face sets its first letter in a little; pulled back so the letters start on the chips' edge */}
+          <h1 className="font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
             {title}
           </h1>
           <div className="flex shrink-0 items-center gap-2">

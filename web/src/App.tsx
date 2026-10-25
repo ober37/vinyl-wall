@@ -60,7 +60,7 @@ export function App() {
             onAdd={canEdit ? () => setAdding(true) : undefined}
             below={
               looking > 0 && (
-                <p role="status" className="on-photo text-ink-2 mt-1.5 flex items-center gap-1.5 font-mono text-xs">
+                <p role="status" className="on-photo text-ink-2 mt-2 flex items-center gap-1.5 font-mono text-xs">
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
                   Looking up {looking} record{looking === 1 ? '' : 's'}…
                 </p>
