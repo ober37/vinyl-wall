@@ -22,6 +22,7 @@ Run this before showing any UI change, on every screen the change touches.
   |---|---|
   | Between a sheet's sections (fieldsets) | `gap-8` |
   | Between the blocks of a view (a tab's summaries, logs, lists) | `gap-6` |
+  | A tab bar and its panel | `gap-5` |
   | Inside a section (its fields and field grids; appica's `Fieldset` default) | `gap-4` |
   | A row of buttons or inline items; a small card's blocks (gear cards, log entries) | `gap-3` |
   | Inside a group (a label and its field, a heading and its sentence) | `gap-2` |

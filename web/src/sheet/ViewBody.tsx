@@ -275,10 +275,11 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           {msg}
         </p>
       )}
+      {/* the tab bar sits 20px above its panel, closer than appica's default (the owner's call) */}
       {tabs.length > 0 && (
-        <Tabs value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
+        <Tabs className="gap-5" value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
           {tabs.length > 1 && (
-            <TabsList variant="line" size="sm" activateOnFocus className="mb-4">
+            <TabsList variant="line" size="sm" activateOnFocus>
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
               {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
               {research && <TabsTrigger value="research">Research</TabsTrigger>}

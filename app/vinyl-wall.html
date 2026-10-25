@@ -6938,6 +6938,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 				children: msg
 			}),
 			tabs.length > 0 && /* @__PURE__ */ jsxs(Tabs, {
+				className: "gap-5",
 				value: tabs.includes(tab) ? tab : tabs[0],
 				onValueChange: (v) => setTab(String(v)),
 				children: [
@@ -6945,7 +6946,6 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 						variant: "line",
 						size: "sm",
 						activateOnFocus: true,
-						className: "mb-4",
 						children: [
 							own && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "listening",
@@ -10429,6 +10429,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .gap-4 {
     gap: calc(var(--spacing) * 4);
+  }
+
+  .gap-5 {
+    gap: calc(var(--spacing) * 5);
   }
 
   .gap-6 {
