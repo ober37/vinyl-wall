@@ -89,9 +89,16 @@ export function BackgroundSection() {
   const current = isUpload ? 'photo:' + bg.assetId : 'preset:' + presetOf(bg)
   const stock = kindOf(current) === 'stock'
   const savedDim = typeof settings.dim === 'number' ? settings.dim : DEFAULT_DIM[isUpload ? 'upload' : 'stock']
-  // while the slider moves: the wash it would give, on the chosen tile and (where the wall shows beside the sheet) the wall
+  // while the slider moves: the wash it would give, on the chosen tile and the wall, with the sheet stepped aside (wall.css)
   const [dragging, setDragging] = useState<number | null>(null)
   const dim = dragging ?? savedDim
+  const previewing = dragging !== null
+  useEffect(() => {
+    if (!previewing) return
+    const root = document.documentElement
+    root.dataset.previewing = ''
+    return () => void delete root.dataset.previewing
+  }, [previewing])
   const [status, setStatus] = useState('')
   const [removing, setRemoving] = useState<string | null>(null)
   const file = useRef<HTMLInputElement>(null)
@@ -215,7 +222,7 @@ export function BackgroundSection() {
         {!hasAssets && <p className="text-foreground-muted text-sm">Uploading your own background isn't available in this view.</p>}
       </div>
       {(isUpload || stock) && (
-        <Field>
+        <Field className="soften">
           <FieldLabel>Soften the photo</FieldLabel>
           <Slider
             value={dim}
@@ -223,6 +230,7 @@ export function BackgroundSection() {
             max={isUpload ? 90 : 100}
             step={5}
             thumbAriaLabel="Soften the photo"
+            tooltipVisibility="never"
             onValueChange={(v) => setDragging(v as number)}
             onValueCommitted={(v) => saveSettings({ dim: v as number }).then(() => setDragging(null))}
           />

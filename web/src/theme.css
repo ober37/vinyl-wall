@@ -23,7 +23,10 @@
   --want-ink: #fff;
   --shade: #141c19; /* shadows are this at an opacity */
   --shade-alpha: 28%;
-  --wash: 0.78; /* a photo background's wall-colour wash, scaled (a light wash bleaches the photo) */
+  /* a photo background's wall-colour wash from its setting: lighter in light mode, or the light wall bleaches the photo */
+  --wash-lo: 0.4;
+  --wash-hi: 0.8;
+  --wash-b: 2%;
   --vinyl: #111312;
   --groove: #2a2d2b;
   --plank: #5e5244;
@@ -84,7 +87,9 @@
   --want-ink: #1a0f0b;
   --shade: #000;
   --shade-alpha: 55%;
-  --wash: 1;
+  --wash-lo: 1;
+  --wash-hi: 0;
+  --wash-b: 0%;
   --vinyl: #050606;
   --groove: #1d201f;
   --rail: #5a3b24;
