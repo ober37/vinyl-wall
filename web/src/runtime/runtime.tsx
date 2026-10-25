@@ -10,6 +10,7 @@ import { aboutPending, pendingParts, pendingWork, runActive, type Settings } fro
 type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
 type Assets = ClaudeCapabilityMap['assets']
+type Downloads = ClaudeCapabilityMap['downloads']
 type Doc = Record<string, unknown> & { id: string }
 type GearPatch = Record<string, unknown> | ((g: Gear | undefined) => Record<string, unknown> | null | undefined)
 export type Status = 'loading' | 'no-runtime' | 'no-db' | 'ready' | 'revoked'
@@ -56,6 +57,14 @@ type Runtime = {
   saveSetup: (id: string, doc: Record<string, unknown>) => Promise<boolean>
   deleteSetup: (id: string) => Promise<boolean>
   newDocId: (collection: 'gear' | 'setups') => string
+  // the library file (Export and Import in Settings): save a file to the viewer's device (rejects with { code }, "declined"
+  // when they cancel), every document in a collection as stored (deleted records too), a document written whole, and the
+  // ids of the images this wall holds (null when they can't be listed)
+  hasDownloads: boolean
+  saveFile: (filename: string, data: string | Blob) => Promise<void>
+  readAll: (collection: string) => Promise<Doc[]>
+  put: (collection: string, id: string, doc: Record<string, unknown>) => Promise<void>
+  assetIds: () => Promise<Set<string> | null>
   // the viewer's Discogs token, in their private data (the background task reads data/users/me/discogs)
   saveToken: (token: string) => Promise<void>
   removeToken: () => Promise<void>
@@ -89,7 +98,7 @@ export function useRuntime(): Runtime {
   return rt
 }
 
-const msgOf = (e: unknown) => (e as { message?: string; code?: string })?.message || (e as { code?: string })?.code || String(e)
+export const msgOf = (e: unknown) => (e as { message?: string; code?: string })?.message || (e as { code?: string })?.code || String(e)
 
 export function RuntimeProvider({ claude, children }: { claude: Window['claude'] | undefined; children: ReactNode }) {
   const [status, setStatus] = useState<Status>(claude?.use ? 'loading' : 'no-runtime')
@@ -108,6 +117,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   const mcp = useRef<Mcp | null>(null)
   const assets = useRef<Assets | null>(null)
   const [hasAssets, setHasAssets] = useState(false)
+  const downloads = useRef<Downloads | null>(null)
+  const [hasDownloads, setHasDownloads] = useState(false)
   const writing = useRef<Promise<unknown>>(Promise.resolve())
   const settingsWriting = useRef<Promise<unknown>>(Promise.resolve())
   const settingsExist = useRef(false)
@@ -133,7 +144,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     const unsubs: (() => void)[] = []
     let alive = true
     const use = <K extends keyof ClaudeCapabilityMap & string>(k: K) => claude.use(k).catch(() => null)
-    Promise.all([use('db'), use('user'), use('mcp'), use('assets')]).then(async ([d, u, m, a]) => {
+    Promise.all([use('db'), use('user'), use('mcp'), use('assets'), use('downloads')]).then(async ([d, u, m, a, dl]) => {
       if (!alive) return
       if (!d) return setStatus('no-db')
       db.current = d
@@ -141,6 +152,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       setHasMcp(!!m)
       assets.current = a
       setHasAssets(!!a)
+      downloads.current = dl
+      setHasDownloads(!!dl)
       // can("data.write") is the platform's answer; null means it said nothing, so fall back to production's check.
       // Walls installed earlier keep the runtime they were published with, which may not have can() at all.
       const w = u ? (typeof u.can === 'function' ? await u.can('data.write').catch(() => null) : null) : false
@@ -452,11 +465,33 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       removeToken: async () => {
         await secret()?.delete()
       },
+      hasDownloads,
+      saveFile: async (filename, data) => {
+        if (!downloads.current) throw { code: 'unavailable', message: "Saving files isn't available here." }
+        await downloads.current.save({ filename, data })
+      },
+      readAll: async (c) => (await db.current!.collection(c).get()).docs.map((x) => ({ ...x.data(), id: x.id }) as Doc),
+      // in turn with the record writes; a record put in counts for the task's start message straight away, as create's do
+      put: (c, id, doc) => {
+        const next = writing.current.then(async () => {
+          await db.current!.collection(c).doc(id).set(doc)
+          if (c === 'records' && !live.current.records.some((r) => r.id === id)) live.current.records = [...live.current.records, { ...doc, id } as Rec]
+        })
+        writing.current = next.catch(() => {})
+        return next
+      },
+      assetIds: async () => {
+        try {
+          return assets.current ? new Set((await assets.current.list()).assets.map((a) => a.id)) : null
+        } catch {
+          return null
+        }
+      },
       fireTask,
       flushSync,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, error, notice],
+    [status, records, settings, artists, gear, setups, canEdit, myId, hasMcp, hasAssets, hasDownloads, error, notice],
   )
 
   return <Ctx value={value}>{children}</Ctx>

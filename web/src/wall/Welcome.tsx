@@ -2,13 +2,15 @@ import { Button } from '@appica/ui-react/button'
 
 // Start your wall: an owner's empty wall until they add a record or choose to start blank (production's #welcome).
 // On phones a step's button drops under its sentence; from sm up the buttons share one column, so both edges line up.
-export function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank }: {
+export function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onImport }: {
   discogsDone: boolean
   gearDone: boolean
   onAdd: () => void
   onDiscogs: () => void
   onGear: () => void
   onBlank: () => void
+  // Settings' Import from a file: an empty wall also takes the file's look
+  onImport: () => void
 }) {
   const steps = [
     { title: 'Add your first record', text: "Something you own, or one you're hunting for.", button: 'Add a record', primary: true, on: onAdd },
@@ -72,6 +74,12 @@ export function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBla
         </Button>
         <span className="text-foreground-muted text-sm">Skip this and hang records as you go.</span>
       </div>
+      <p className="text-foreground-muted text-sm">
+        Moving from another wall?{' '}
+        <button type="button" className="text-primary underline-offset-2 hover:underline" onClick={onImport}>
+          Import from a file
+        </button>
+      </p>
     </section>
   )
 }

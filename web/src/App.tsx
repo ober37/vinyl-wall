@@ -43,8 +43,8 @@ function useLookupNews(n: number) {
 export function App() {
   const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings } = useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
-  // Settings: closed, open, or open on the Discogs section
-  const [settingsOpen, setSettingsOpen] = useState<false | 'top' | 'discogs'>(false)
+  // Settings: closed, open, or open on the Discogs section or the import
+  const [settingsOpen, setSettingsOpen] = useState<false | 'top' | 'discogs' | 'import'>(false)
   const [adding, setAdding] = useState(false)
   const [equipOpen, setEquipOpen] = useState(false)
   // a record opened from Equipment's Listening summary offers the way back
@@ -101,6 +101,7 @@ export function App() {
                   onDiscogs={() => setSettingsOpen('discogs')}
                   onGear={() => setEquipOpen(true)}
                   onBlank={() => saveSettings({ welcomeDismissed: true })}
+                  onImport={() => setSettingsOpen('import')}
                 />
               )
             }
@@ -156,7 +157,7 @@ export function App() {
           setOpenId(id)
         }}
       />
-      <SettingsSheet open={!!settingsOpen} at={settingsOpen === 'discogs' ? 'discogs' : undefined} onClose={() => setSettingsOpen(false)} />
+      <SettingsSheet open={!!settingsOpen} at={settingsOpen || undefined} onClose={() => setSettingsOpen(false)} />
       <NewRecordSheet
         open={adding}
         onClose={() => setAdding(false)}

@@ -18,8 +18,8 @@ const split = (path: string) => {
 }
 
 export function fakeClaude(
-  // collections by path; `docs` puts single docs in by their full path (settings/site)
-  seed: { records: Data; docs?: Data; collections?: Record<string, Data> },
+  // collections by path; `docs` puts single docs in by their full path (settings/site); `assets`: the images the wall holds
+  seed: { records: Data; docs?: Data; collections?: Record<string, Data>; assets?: string[] },
   // oldRuntime: a wall published on an earlier runtime, whose user capability has no can()
   // failCreate: the first set() of a new record fails (then succeeds); assets: uploads work, fail, or aren't there
   opts: {
@@ -30,6 +30,8 @@ export function fakeClaude(
     oldRuntime?: boolean
     failCreate?: boolean
     assets?: 'ok' | 'fail' | 'none'
+    // downloads: saves are kept in `saved`; 'decline' is the viewer cancelling
+    downloads?: 'ok' | 'decline' | 'none'
   } = {},
 ) {
   const store: Record<string, Data> = structuredClone({ ...(seed.collections || {}), records: seed.records })
@@ -89,6 +91,10 @@ export function fakeClaude(
   const collection = (c: string) => ({
     path: c,
     doc: (id?: string) => docRef(c, id ?? `n_${++seq}`),
+    async get() {
+      const docs = Object.keys(store[c] || {}).map((id) => snapOf(c, id))
+      return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: meta }
+    },
     onSnapshot(next: (s: unknown) => void) {
       const fire = () =>
         queueMicrotask(() => {
@@ -138,8 +144,21 @@ export function fakeClaude(
     async delete(id: string) {
       calls.push({ path: 'assets/' + id, op: 'delete' })
     },
+    async list() {
+      return { assets: (seed.assets || []).map((id) => ({ id })) }
+    },
   }
-  const caps: Record<string, unknown> = { db, user, mcp: opts.mcp === 'none' ? null : mcp, assets: opts.assets === 'none' ? null : assets }
+  const saved: { filename: string; data: string | Blob }[] = []
+  const downloads = {
+    async save(f: { filename: string; data: string | Blob }) {
+      if (opts.downloads === 'decline') throw { code: 'declined', message: 'Declined' }
+      saved.push(f)
+      return { filename: f.filename }
+    },
+  }
+  const caps: Record<string, unknown> = {
+    db, user, mcp: opts.mcp === 'none' ? null : mcp, assets: opts.assets === 'none' ? null : assets, downloads: opts.downloads === 'none' ? null : downloads,
+  }
   const claude = { use: async (name: string) => caps[name] ?? null }
-  return { claude: claude as unknown as Window['claude'], calls, remote, remoteDoc, records: store.records, store }
+  return { claude: claude as unknown as Window['claude'], calls, remote, remoteDoc, records: store.records, store, saved }
 }

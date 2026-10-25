@@ -12,6 +12,7 @@ import { newer, updateAsk } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
 import { APP_VERSION } from '../version'
+import { ImportView, LibrarySection, useLibrary } from './Library'
 import { BackgroundSection, HangingSection, PageSection } from './LookSections'
 
 // an update is offered only on the owner's own wall with background updates set up (production's updateState)
@@ -237,13 +238,38 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
 
 const REPO_URL = 'https://github.com/ober37/vinyl-wall'
 
-// at: 'discogs' opens it on the Discogs section with the username ready (the welcome card's Connect Discogs)
-export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'discogs'; onClose: () => void }) {
+// at: 'discogs' opens it on the Discogs section with the username ready (the welcome card's Connect Discogs); 'import' on
+// the import (as does an import under way, or one finished while Settings was closed)
+export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top' | 'discogs' | 'import'; onClose: () => void }) {
   const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime()
   const update = useUpdateAvailable()
   const [copyNote, setCopyNote] = useState('')
   const ask = useRef<HTMLSpanElement>(null)
   const discogs = useRef<HTMLDivElement>(null)
+  const lib = useLibrary()
+  const [view, setView] = useState<'main' | 'import'>('main')
+  const title = useRef<HTMLHeadingElement>(null)
+  useEffect(() => {
+    if (open) setView(at === 'import' || lib.active ? 'import' : 'main')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open])
+  // a change of view puts focus on the new title, except where the step's own button takes it (a plan, a finished import)
+  const shown = useRef(view)
+  useEffect(() => {
+    const was = shown.current
+    shown.current = view
+    if (!open || view === was || (view === 'import' && (lib.stage === 'plan' || lib.stage === 'done'))) return
+    requestAnimationFrame(() => title.current?.focus())
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, view])
+  const back = () => {
+    lib.leave()
+    setView('main')
+  }
+  const close = () => {
+    if (view === 'import') lib.leave()
+    onClose()
+  }
   useEffect(() => {
     if (!open || at !== 'discogs') return
     const t = setTimeout(() => discogs.current?.scrollIntoView({ block: 'start' }), 350)
@@ -257,11 +283,20 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'disc
   }, [open])
 
   return (
-    <Drawer side="right" open={open} onOpenChange={(o) => !o && onClose()}>
+    <Drawer side="right" open={open} onOpenChange={(o) => !o && close()}>
       <DrawerContent className="w-full sm:max-w-xl">
         <DrawerHeader>
-          <DrawerTitle>Settings</DrawerTitle>
-          <DrawerDescription>How your wall looks, Discogs and help</DrawerDescription>
+          {view === 'import' && (
+            <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={back}>
+              ‹ Settings
+            </Button>
+          )}
+          <DrawerTitle ref={title} tabIndex={-1} className="outline-none">
+            {view === 'import' ? 'Import your library' : 'Settings'}
+          </DrawerTitle>
+          <DrawerDescription>
+            {view === 'import' ? 'Bring in a file you saved with Export your library.' : 'How your wall looks, Discogs, your library and help'}
+          </DrawerDescription>
         </DrawerHeader>
         <DrawerBody>
           {(error || notice) && (
@@ -269,65 +304,72 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'disc
               <AlertTitle>{error || notice}</AlertTitle>
             </Alert>
           )}
-          <div className="flex flex-col gap-8 pb-8 *:shrink-0">
-            {update && (
-              <Alert variant="warning">
-                <AlertTitle>An update is available</AlertTitle>
-                <AlertDescription className="flex flex-col gap-2">
-                  <span>To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are.</span>
-                  <span ref={ask} className="bg-background-strong block rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all">
-                    {updateAsk(settings)}
-                  </span>
-                  <span className="flex items-center gap-2">
-                    <CopyButton
-                      size="sm"
-                      variant="outline"
-                      value={updateAsk(settings)}
-                      copiedLabel="Copied"
-                      onCopyError={() => {
-                        const sel = getSelection()
-                        if (ask.current && sel) {
-                          const r = document.createRange()
-                          r.selectNodeContents(ask.current)
-                          sel.removeAllRanges()
-                          sel.addRange(r)
-                        }
-                        setCopyNote("Selected: copy it with your device's copy command")
-                      }}
-                    >
-                      Copy
-                    </CopyButton>
-                    {copyNote && <span className="text-xs">{copyNote}</span>}
-                  </span>
-                </AlertDescription>
-              </Alert>
-            )}
-            {canEdit && (
-              <>
-                <PageSection />
-                <BackgroundSection />
-                <HangingSection />
-                <div ref={discogs} className="scroll-mt-6">
-                  <DiscogsSection focus={at === 'discogs'} />
-                </div>
-              </>
-            )}
-            <Fieldset>
-              <FieldsetLegend>Help</FieldsetLegend>
-              <p className="text-foreground-muted text-sm">
-                Found a problem or have an idea?{' '}
-                <a href={REPO_URL + '/issues/new/choose'} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
-                  Tell us on GitHub
-                </a>
-                .
-              </p>
-              <p className="text-foreground-muted text-sm">
-                Anyone you share this wall with can see everything on it, including prices, orders and notes. Only you and people you make
-                Editors can change it.
-              </p>
-              <p className="text-foreground-muted font-mono text-xs">Vinyl Wall {APP_VERSION}</p>
-            </Fieldset>
-          </div>
+          {view === 'import' ? (
+            <div className="pb-8">
+              <ImportView lib={lib} onDone={close} />
+            </div>
+          ) : (
+            <div className="flex flex-col gap-8 pb-8 *:shrink-0">
+              {update && (
+                <Alert variant="warning">
+                  <AlertTitle>An update is available</AlertTitle>
+                  <AlertDescription className="flex flex-col gap-2">
+                    <span>To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are.</span>
+                    <span ref={ask} className="bg-background-strong block rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all">
+                      {updateAsk(settings)}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <CopyButton
+                        size="sm"
+                        variant="outline"
+                        value={updateAsk(settings)}
+                        copiedLabel="Copied"
+                        onCopyError={() => {
+                          const sel = getSelection()
+                          if (ask.current && sel) {
+                            const r = document.createRange()
+                            r.selectNodeContents(ask.current)
+                            sel.removeAllRanges()
+                            sel.addRange(r)
+                          }
+                          setCopyNote("Selected: copy it with your device's copy command")
+                        }}
+                      >
+                        Copy
+                      </CopyButton>
+                      {copyNote && <span className="text-xs">{copyNote}</span>}
+                    </span>
+                  </AlertDescription>
+                </Alert>
+              )}
+              {canEdit && (
+                <>
+                  <PageSection />
+                  <BackgroundSection />
+                  <HangingSection />
+                  <div ref={discogs} className="scroll-mt-6">
+                    <DiscogsSection focus={at === 'discogs'} />
+                  </div>
+                  <LibrarySection lib={lib} onImport={() => setView('import')} />
+                </>
+              )}
+              <Fieldset>
+                <FieldsetLegend>Help</FieldsetLegend>
+                <p className="text-foreground-muted text-sm">
+                  Found a problem or have an idea?{' '}
+                  <a href={REPO_URL + '/issues/new/choose'} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
+                    Tell us on GitHub
+                  </a>
+                  .
+                </p>
+                <p className="text-foreground-muted text-sm">
+                  Anyone you share this wall with can see everything on it, including prices, orders and notes. Only you and people you make
+                  Editors can change it.
+                </p>
+                <p className="text-foreground-muted font-mono text-xs">Vinyl Wall {APP_VERSION}</p>
+              </Fieldset>
+            </div>
+          )}
         </DrawerBody>
       </DrawerContent>
     </Drawer>
