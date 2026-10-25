@@ -73,13 +73,13 @@
   }
 
   /* what holds a sleeve, centred over it; each style below draws its own (Floating has none) */
-  .ring {
+  .hook {
     position: absolute;
     z-index: 3;
     left: 50%;
   }
   /* Barnwood: an iron ring on a bracket */
-  .rack[data-hang='barn'] .ring {
+  .rack[data-hang='barn'] .hook {
     top: -0.875rem;
     width: 1.625rem;
     height: 1.625rem;
@@ -90,7 +90,7 @@
     border-left-color: var(--iron-mid);
     filter: drop-shadow(0 2px 2px var(--shadow-tone));
   }
-  .rack[data-hang='barn'] .ring::after {
+  .rack[data-hang='barn'] .hook::after {
     content: '';
     position: absolute;
     left: 50%;
@@ -123,8 +123,8 @@
   .rack[data-hang='peg'] .hanger {
     transform-origin: 50% -1.25rem;
   }
-  .rack[data-hang='peg'] .ring {
-    top: -1.4375rem;
+  .rack[data-hang='peg'] .hook {
+    top: -1.75rem;
     left: 50%;
     width: 1rem;
     height: 1rem;
@@ -141,8 +141,8 @@
     content: '';
     position: absolute;
     inset-inline: 10%;
-    top: -1.125rem;
-    height: 1.25rem;
+    top: -1.25rem;
+    height: 1.375rem;
     z-index: 2;
     pointer-events: none;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
@@ -153,8 +153,8 @@
     background: var(--yarn-2);
   }
 
-  /* Cork: a cork strip behind the top of each row and a coloured push pin above each sleeve, each leaning its own way
-     (a fixed pattern, so it doesn't change between redraws). --la is the lean, --ll how far the cap sits from the base */
+  /* Cork: a cork strip behind the top of each row and a flat coloured thumbtack holding each sleeve, a little off
+     centre (a fixed pattern, so it doesn't change between redraws) */
   .rack[data-hang='cork'] .slot::before {
     content: '';
     position: absolute;
@@ -171,16 +171,14 @@
       inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent),
       inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
   }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 1) { --tx: -8px; --la: -58deg; --ll: 5px; }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 2) { --tx: 5px; --la: 52deg; --ll: 5px; }
-  .rack[data-hang='cork'] .slot:nth-child(3n) { --tx: -2px; --la: -80deg; --ll: 6px; }
-  .rack[data-hang='cork'] .slot:nth-child(4n) { --tx: 10px; --la: 70deg; }
-  .rack[data-hang='cork'] .slot:nth-child(7n + 3) { --la: 100deg; --ll: 4px; }
   .rack[data-hang='cork'] .slot:nth-child(5n + 1) { --pin: var(--pin-1); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 2) { --pin: var(--pin-2); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 3) { --pin: var(--pin-3); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 4) { --pin: var(--pin-4); }
   .rack[data-hang='cork'] .slot:nth-child(5n) { --pin: var(--pin-5); }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 1) { --tx: -8px; }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 2) { --tx: 5px; }
+  .rack[data-hang='cork'] .slot:nth-child(4n) { --tx: 10px; }
   .rack[data-hang='cork'] .hanger {
     transform-origin: calc(50% + var(--tx, 0px)) -0.375rem;
   }
@@ -190,41 +188,18 @@
   .rack[data-hang='cork'] .slot:nth-child(even) .hanger {
     transform: rotate(1.3deg);
   }
-  .rack[data-hang='cork'] .ring {
-    top: -0.8125rem;
-    left: 50%;
+  .rack[data-hang='cork'] .hook {
+    top: -0.375rem;
     width: 13px;
     height: 13px;
     margin-left: -6.5px;
     border-radius: 50%;
     transform: translateX(var(--tx, 0px));
-    background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
-    box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
-  }
-  .rack[data-hang='cork'] .ring::before,
-  .rack[data-hang='cork'] .ring::after {
-    content: '';
-    position: absolute;
-  }
-  .rack[data-hang='cork'] .ring::before {
-    left: 50%;
-    bottom: 50%;
-    width: 6px;
-    margin-left: -3px;
-    height: var(--ll, 7px);
-    transform-origin: 50% 100%;
-    transform: rotate(var(--la, 0deg));
-    background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
-  }
-  .rack[data-hang='cork'] .ring::after {
-    left: 1px;
-    top: 1px;
-    width: 11px;
-    height: 11px;
-    border-radius: 50%;
-    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
-    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
-    box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
+    background: var(--pin);
+    box-shadow:
+      inset 0 0 0 1.5px color-mix(in srgb, var(--pin) 70%, var(--shade)),
+      inset 0 0 0 3px color-mix(in srgb, var(--pin) 82%, var(--gleam)),
+      1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
   }
 
   /* Floating: no rail or ring; each sleeve sits straight, a little off the wall, on a soft deep shadow */
@@ -237,10 +212,6 @@
   }
   .rack[data-hang='float'] .slot {
     padding: 1rem 0 0;
-  }
-  /* hidden, not just undrawn: "ring" is also Tailwind's ring utility, whose 1px shadow would show as a dot */
-  .rack[data-hang='float'] .ring {
-    display: none;
   }
   .rack[data-hang='float'] .slot:nth-child(n) .hanger {
     transform: none;

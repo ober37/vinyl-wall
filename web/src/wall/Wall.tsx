@@ -80,7 +80,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   return (
     <li className="slot">
       <div className="hanger">
-        <span className="ring" aria-hidden="true" />
+        <span className="hook" aria-hidden="true" />
         <button
           type="button"
           data-testid="sleeve"

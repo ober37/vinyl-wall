@@ -54,7 +54,7 @@ describe('Settings: how the wall looks', () => {
   })
 
   it('uploads a photo as the background, and removing it for good goes back to the listening room', async () => {
-    const { fake, user, site } = setup({ dim: 40 })
+    const { fake, user, site } = setup({ bg: { kind: 'preset', preset: 'crates' }, dim: 40 })
     const sheet = await openSettings(user)
     await user.upload(within(sheet).getByLabelText('Upload your own background'), new File(['x'], 'my den.jpg', { type: 'image/jpeg' }))
     // an uploaded photo starts at its own scale's default
@@ -62,10 +62,10 @@ describe('Settings: how the wall looks', () => {
     expect(within(sheet).getByRole('button', { name: 'my den' }).getAttribute('aria-pressed')).toBe('true')
     await user.click(within(sheet).getByRole('button', { name: 'Remove my den' }))
     const ask = await screen.findByRole('alertdialog')
-    expect(within(ask).getByText(/The wall goes back to the Listening room/)).toBeTruthy()
+    expect(within(ask).getByText(/The wall goes back to Crate digging/)).toBeTruthy()
     await user.click(within(ask).getByRole('button', { name: 'Remove' }))
-    // the stock photo starts at its own scale's default, not the upload's wash
-    await waitFor(() => expect(site()).toMatchObject({ bg: { kind: 'preset', preset: 'listening' }, uploads: [], dim: 50 }))
+    // back to the background it replaced, at the wash it had
+    await waitFor(() => expect(site()).toMatchObject({ bg: { kind: 'preset', preset: 'crates' }, uploads: [], dim: 40 }))
     await waitFor(() => expect(fake.calls.some((c) => c.path === 'assets/a_1' && c.op === 'delete')).toBe(true))
   })
 

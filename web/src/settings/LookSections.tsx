@@ -104,9 +104,17 @@ export function BackgroundSection() {
     return k !== 'pattern' && k !== kindOf(current) ? { dim: DEFAULT_DIM[k] } : {}
   }
 
+  // moving onto an uploaded photo remembers the background it replaced, so removing the photo goes back to it
+  const before = (key: string) =>
+    key.startsWith('photo:') && !isUpload
+      ? { bgBefore: { preset: current.slice(7), ...(typeof settings.dim === 'number' ? { dim: settings.dim } : {}) } }
+      : {}
+  const prev = (settings.bgBefore || {}) as { preset?: string; dim?: number }
+  const back = 'preset:' + presetOf(prev)
+  const backName = BACKGROUNDS.find(([k]) => 'preset:' + k === back)![1]
   const pick = (key: string) => {
     if (!key || key === current) return
-    saveSettings({ bg: bgOf(key), ...dimFor(key) })
+    saveSettings({ bg: bgOf(key), ...dimFor(key), ...before(key) })
   }
   const [busy, setBusy] = useState(false)
   const add = async (f: File | undefined) => {
@@ -121,6 +129,7 @@ export function BackgroundSection() {
         uploads: [...uploads, { id, name }],
         bg: { kind: 'photo', assetId: id },
         ...dimFor('photo:' + id),
+        ...before('photo:' + id),
       })
       setStatus('')
     } catch (e) {
@@ -132,7 +141,8 @@ export function BackgroundSection() {
     const patch: Record<string, unknown> = {
       uploads: uploads.filter((u) => u.id !== id),
     }
-    if (current === 'photo:' + id) Object.assign(patch, { bg: bgOf('preset:listening') }, dimFor('preset:listening'))
+    if (current === 'photo:' + id)
+      Object.assign(patch, { bg: bgOf(back) }, typeof prev.dim === 'number' && kindOf(back) === 'stock' ? { dim: prev.dim } : dimFor(back))
     if (await saveSettings(patch)) deleteAsset(id)
   }
   const removingCurrent = removing !== null && current === 'photo:' + removing
@@ -222,7 +232,7 @@ export function BackgroundSection() {
       {dragging !== null && createPortal(<WallBackground bg={look(current, dragging)} />, document.body)}
       <Confirm
         open={removing !== null}
-        title={'Remove this background for good?' + (removingCurrent ? ' The wall goes back to the Listening room.' : '')}
+        title={'Remove this background for good?' + (removingCurrent ? ` The wall goes back to ${backName}.` : '')}
         yes="Remove"
         onYes={() => removing && remove(removing)}
         onClose={() => setRemoving(null)}
@@ -248,7 +258,7 @@ export function HangingSection() {
               <span className="rack grid-cols-1" data-hang={k}>
                 <span className="slot block">
                   <span className="hanger block">
-                    <span className="ring" />
+                    <span className="hook" />
                     <span className="sleeve-box mx-auto block w-24">
                       <span className="sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" />
                     </span>
