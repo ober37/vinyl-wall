@@ -8139,7 +8139,7 @@ function useLookupNews(n) {
 	const [news, setNews] = useState("");
 	const was = useRef(0);
 	useEffect(() => {
-		if (n && !was.current) setNews(`Syncing ${n} record${n === 1 ? "" : "s"}`);
+		if (n && !was.current) setNews(`${n} record${n === 1 ? "" : "s"} syncing`);
 		else if (!n && was.current) setNews("Sync finished");
 		was.current = n;
 	}, [n]);
@@ -8189,16 +8189,21 @@ function App() {
 					onAdd: canEdit ? () => setAdding(true) : void 0,
 					onShare: hasDownloads ? setSharing : void 0,
 					below: canEdit && looking > 0 && /* @__PURE__ */ jsxs("span", {
-						"aria-label": `Syncing ${looking} record${looking === 1 ? "" : "s"}`,
-						className: "text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto",
-						children: [
-							/* @__PURE__ */ jsx("span", {
-								"aria-hidden": "true",
-								className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
+						className: "text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono text-[0.8125rem] max-sm:h-auto",
+						children: [/* @__PURE__ */ jsx("span", {
+							"aria-hidden": "true",
+							className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
+						}), /* @__PURE__ */ jsxs("span", { children: [
+							/* @__PURE__ */ jsx("b", {
+								className: "text-ink font-medium",
+								children: looking
 							}),
-							"Syncing ",
-							looking
-						]
+							/* @__PURE__ */ jsxs("span", {
+								className: "sr-only",
+								children: [" record", looking === 1 ? "" : "s"]
+							}),
+							" syncing"
+						] })]
 					}),
 					welcome: canEdit && settingsLoaded && !settings.welcomeDismissed && /* @__PURE__ */ jsx(Welcome, {
 						discogsDone: discogsOn,
