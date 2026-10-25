@@ -1820,7 +1820,7 @@ function GearItem({ g, onOpen }) {
 					})]
 				}),
 				notes.length ? /* @__PURE__ */ jsx("ul", {
-					className: "divide-border flex flex-col divide-y",
+					className: "divide-(--line) flex flex-col divide-y",
 					children: notes.map((n, i) => ({
 						n,
 						i
@@ -1849,7 +1849,7 @@ function GearItem({ g, onOpen }) {
 				})
 			] }),
 			g.tracks && recent.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Recent plays" }), /* @__PURE__ */ jsx("ul", {
-				className: "divide-border flex flex-col divide-y",
+				className: "divide-(--line) flex flex-col divide-y",
 				children: recent.map((p, i) => /* @__PURE__ */ jsxs("li", {
 					className: "grid grid-cols-[auto_1fr_auto] items-baseline gap-3 py-2 text-sm",
 					children: [
@@ -5980,7 +5980,7 @@ function Listening({ r }) {
 							]
 						})]
 					}) }), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsx("ul", {
-						className: "divide-border flex flex-col divide-y",
+						className: "divide-(--line) flex flex-col divide-y",
 						children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
 							className: "py-2 text-sm",
 							children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
@@ -6091,7 +6091,7 @@ function NotesTab({ r }) {
 				className: "text-foreground-muted text-sm",
 				children: "No notes yet."
 			}) : /* @__PURE__ */ jsx("ul", {
-				className: "divide-border flex flex-col divide-y",
+				className: "divide-(--line) flex flex-col divide-y",
 				children: notes.map(({ n, ref }) => /* @__PURE__ */ jsxs("li", {
 					className: "flex flex-col gap-1 py-3 text-sm",
 					children: [/* @__PURE__ */ jsx("time", {
@@ -8241,7 +8241,7 @@ function ShareSheet({ shown, onClose }) {
 function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onImport }) {
 	return /* @__PURE__ */ jsxs("section", {
 		"aria-labelledby": "welcome-title",
-		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_oklch,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
+		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_srgb,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
 		children: [
 			/* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-2",
@@ -8279,7 +8279,7 @@ function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onI
 						on: onGear
 					}
 				].map((s, i) => /* @__PURE__ */ jsxs("li", {
-					className: "border-border col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0",
+					className: "border-(--line) col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0",
 					children: [
 						/* @__PURE__ */ jsxs("span", {
 							className: `grid size-8 place-items-center rounded-full border font-mono text-sm ${s.done ? "bg-primary border-primary text-primary-foreground" : "border-border text-foreground-muted"}`,
@@ -9234,7 +9234,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .bg-photo {
-    background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)), var(--photo);
+    background-image: linear-gradient(color-mix(in srgb, var(--wall) calc(var(--dim) * var(--wash)), transparent), color-mix(in srgb, var(--wall) calc(var(--dim) * var(--wash)), transparent)), var(--photo);
     background-size: cover;
     background-position: var(--photo-pos, center);
   }
@@ -10319,8 +10319,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     border-bottom-width: calc(var(--border-width) * calc(1 - var(--tw-divide-y-reverse)));
   }
 
-  :where(.divide-border > :not(:last-child)) {
-    border-color: var(--border);
+  :where(.divide-\(--line\) > :not(:last-child)) {
+    border-color: var(--line);
   }
 
   .self-center {
@@ -10469,6 +10469,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     border-style: dashed;
   }
 
+  .border-\(--line\) {
+    border-color: var(--line);
+  }
+
   .border-\(--m2\) {
     border-color: var(--m2);
   }
@@ -10537,8 +10541,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-color: color-mix(in oklch,var(--m1) 16%,transparent);
   }
 
-  .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
-    background-color: color-mix(in oklch,var(--sheet) 88%,transparent);
+  .bg-\[color-mix\(in_srgb\,var\(--sheet\)_88\%\,transparent\)\] {
+    background-color: color-mix(in srgb,var(--sheet) 88%,transparent);
   }
 
   .bg-background {
@@ -14521,15 +14525,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 :root, .light {
-  --wall: #dde2dc;
-  --wall-2: #cfd6cf;
-  --ink: #1b2220;
-  --ink-2: #4b5753;
-  --line: #b9c3bc;
-  --sheet: #eef1ec;
+  --wall: #d6d0c4;
+  --wall-2: #c8c1b3;
+  --ink: #221f1b;
+  --ink-2: #4f4a42;
+  --line: #a9a091;
+  --edge: #7d7466;
+  --sheet: #e6e1d6;
   --accent: #2c5c4f;
   --accent-ink: #f2f5f1;
-  --brass: #a77a2c;
+  --brass: #94692a;
   --paper: #f6f4ec;
   --paper-ink: #2a2622;
   --someday: #56708f;
@@ -14538,6 +14543,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --want-ink: #fff;
   --shade: #141c19;
   --shade-alpha: 28%;
+  --wash: .78;
   --vinyl: #111312;
   --groove: #2a2d2b;
   --plank: #5e5244;
@@ -14584,6 +14590,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --ink: #e6ebe6;
   --ink-2: #a3b0aa;
   --line: #2f3a37;
+  --edge: #2f3a37;
   --sheet: #1a2120;
   --accent: #7fb8a4;
   --accent-ink: #0f1614;
@@ -14596,6 +14603,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --want-ink: #1a0f0b;
   --shade: #000;
   --shade-alpha: 55%;
+  --wash: 1;
   --vinyl: #050606;
   --groove: #1d201f;
   --rail: #5a3b24;
@@ -14614,9 +14622,9 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --background-muted: var(--wall);
   --background-strong: var(--wall-2);
   --background-inverse: var(--ink);
-  --border: var(--line);
+  --border: var(--edge);
   --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
-  --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
+  --border-strong: color-mix(in oklch, var(--edge) 70%, var(--ink-2));
   --border-emphasis: var(--ink-2);
   --border-intense: var(--ink);
   --border-inverse: var(--ink);

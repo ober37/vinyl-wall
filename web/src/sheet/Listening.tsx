@@ -269,7 +269,7 @@ export function Listening({ r }: { r: Rec }) {
                 </span>
               </AccordionTrigger>
               <AccordionContent>
-                <ul className="divide-border flex flex-col divide-y">
+                <ul className="divide-(--line) flex flex-col divide-y">
                   {m.plays.map((p) => (
                     <li key={p.key} className="py-2 text-sm">
                       {isOpen(p) ? (

@@ -312,7 +312,7 @@
   }
   .bg-photo {
     background-image:
-      linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)),
+      linear-gradient(color-mix(in srgb, var(--wall) calc(var(--dim) * var(--wash)), transparent), color-mix(in srgb, var(--wall) calc(var(--dim) * var(--wash)), transparent)),
       var(--photo);
     background-size: cover;
     background-position: var(--photo-pos, center);

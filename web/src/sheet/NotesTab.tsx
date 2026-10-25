@@ -68,7 +68,7 @@ export function NotesTab({ r }: { r: Rec }) {
       {notes.length === 0 ? (
         !canEdit && <p className="text-foreground-muted text-sm">No notes yet.</p>
       ) : (
-        <ul className="divide-border flex flex-col divide-y">
+        <ul className="divide-(--line) flex flex-col divide-y">
           {notes.map(({ n, ref }) => (
             <li key={ref.i} className="flex flex-col gap-1 py-3 text-sm">
               <time className="text-foreground-muted text-xs">{n.d ? playDate(String(n.d)) : ''}</time>
