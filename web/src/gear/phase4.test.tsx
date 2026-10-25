@@ -170,6 +170,8 @@ describe('plays on gear', () => {
     await screen.findByRole('heading', { name: 'Blue Train' })
     expect(screen.queryByRole('combobox', { name: 'Played on' })).toBeNull()
     await user.click(btn('Log play'))
+    // one piece took the minutes, so the line names it
+    expect(await screen.findByText('Logged 42 min on ATN-VM95E.')).toBeTruthy()
     await waitFor(() => expect(sets(fake, 'gear/sty')).toHaveLength(1))
     const rec = fake.calls.filter((c) => c.path === 'records/r3' && c.op === 'update').at(-1)!.data!
     expect((rec.notes as { t: string }[]).at(-1)!.t).toBe('Played the whole album on Den (~42 min)')

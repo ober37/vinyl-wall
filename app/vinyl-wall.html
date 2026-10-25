@@ -548,11 +548,12 @@ function offText(hits) {
 	const L = [...new Set(hits.map((x) => typeOf(x.g).label.toLowerCase()))];
 	return ` ~${hits[0].m} min come off your ${L.length > 1 ? L.slice(0, -1).join(", ") + " and " + L[L.length - 1] : L[0]}.`;
 }
-function loggedText(n, min, gear) {
-	if (!n) return "Logged the listen. Add your gear to track wear.";
-	const w = worstGear(gear);
+function loggedText(min, pieces) {
+	if (!pieces.length) return "Logged the listen. Add your gear to track wear.";
+	if (pieces.length === 1) return `Logged ${min} min on ${gName(pieces[0])}.`;
+	const w = worstGear(pieces);
 	const S = w && gState(w);
-	return `Logged ${min} min on ${n} piece${n > 1 ? "s" : ""} of gear.` + (w ? ` ${gName(w)} at ${fmtH(gHours(w))} h${S.tone ? " · " + S.label : ""}.` : "");
+	return `Logged ${min} min on ${pieces.length} pieces of gear.` + (w ? ` ${gName(w)} at ${fmtH(gHours(w))} h${S.tone ? " · " + S.label : ""}.` : "");
 }
 var num = (s) => isNaN(parseFloat(s)) ? "" : parseFloat(s);
 function newGear(type, setup, f) {
@@ -3968,10 +3969,6 @@ function LogCard({ r, onLogged }) {
 			const min = playMin(r, c.kind, c.tracks);
 			const hits = gearForPlay(gear, S, setup, r, min);
 			hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data));
-			const after = gear.map((g) => ({
-				...g,
-				...hits.find((x) => x.g.id === g.id)?.data
-			}));
 			onLogged({
 				ref: {
 					i,
@@ -3979,7 +3976,10 @@ function LogCard({ r, onLogged }) {
 					t: note.t
 				},
 				fresh: true,
-				msg: loggedText(hits.length, min, after)
+				msg: loggedText(min, hits.map((x) => ({
+					...x.g,
+					...x.data
+				})))
 			});
 		}
 	};

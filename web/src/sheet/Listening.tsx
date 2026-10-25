@@ -59,8 +59,7 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
       const hits = gearForPlay(gear, S, setup, r, min)
       // each piece's minutes and plays are added to it as it is when its write is made
       hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data))
-      const after = gear.map((g) => ({ ...g, ...hits.find((x) => x.g.id === g.id)?.data }))
-      onLogged({ ref: { i, d: note.d, t: note.t }, fresh: true, msg: loggedText(hits.length, min, after) })
+      onLogged({ ref: { i, d: note.d, t: note.t }, fresh: true, msg: loggedText(min, hits.map((x) => ({ ...x.g, ...x.data }))) })
     }
   }
 

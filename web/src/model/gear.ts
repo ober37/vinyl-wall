@@ -178,12 +178,14 @@ export function offText(hits: { g: Gear; m: number }[]) {
   const L = [...new Set(hits.map((x) => typeOf(x.g).label.toLowerCase()))]
   return ` ~${hits[0].m} min come off your ${L.length > 1 ? L.slice(0, -1).join(', ') + ' and ' + L[L.length - 1] : L[0]}.`
 }
-// the line after Log play
-export function loggedText(n: number, min: number, gear: Gear[]) {
-  if (!n) return 'Logged the listen. Add your gear to track wear.'
-  const w = worstGear(gear)
+// the line after Log play: the one piece that took the minutes by name, or how many, and the most worn rated part
+// among them (production names the most worn part on the whole wall, which read as if it had been played)
+export function loggedText(min: number, pieces: Gear[]) {
+  if (!pieces.length) return 'Logged the listen. Add your gear to track wear.'
+  if (pieces.length === 1) return `Logged ${min} min on ${gName(pieces[0])}.`
+  const w = worstGear(pieces)
   const S = w && gState(w)
-  return `Logged ${min} min on ${n} piece${n > 1 ? 's' : ''} of gear.` + (w ? ` ${gName(w)} at ${fmtH(gHours(w))} h${S!.tone ? ' · ' + S!.label : ''}.` : '')
+  return `Logged ${min} min on ${pieces.length} pieces of gear.` + (w ? ` ${gName(w)} at ${fmtH(gHours(w))} h${S!.tone ? ' · ' + S!.label : ''}.` : '')
 }
 
 // a typed number, or '' as production stores an empty one
