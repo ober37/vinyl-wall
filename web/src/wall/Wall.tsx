@@ -103,11 +103,6 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
           <div className="sleeve-box transition-transform group-active:scale-[0.975]">
             <div className="disc" style={{ '--disc-label': `hsl(${hue} 60% 45%)` } as CSSProperties} />
             <Face title={title} artist={artist} hue={hue} cover={cover} className="sleeve-face" />
-            {example && (
-              <span className="bg-paper text-paper-ink absolute start-1.5 top-1.5 z-4 rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase">
-                Example
-              </span>
-            )}
             {looking && (
               // a brass dot in the corner nothing else uses, ringed so it shows on any cover
               <span
@@ -125,6 +120,12 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
             )}
           </div>
           <div className="cap on-photo min-w-0 px-0.5 pt-2.5">
+            {/* above the title, not on the sleeve, where it would cover a generated cover's title */}
+            {example && (
+              <span className="bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase">
+                Example
+              </span>
+            )}
             <div className="text-ink text-sm leading-tight font-semibold break-words">{title}</div>
             <div className="text-ink-2 text-[0.8125rem] break-words">{artist}</div>
             {meta && <div className="text-ink-2 mt-0.5 font-mono text-[0.6875rem]">{meta}</div>}
