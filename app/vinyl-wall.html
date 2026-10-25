@@ -955,6 +955,8 @@ function RuntimeProvider({ claude, children }) {
 	const mcp = useRef(null);
 	const assets = useRef(null);
 	const [hasAssets, setHasAssets] = useState(false);
+	const downloads = useRef(null);
+	const [hasDownloads, setHasDownloads] = useState(false);
 	const writing = useRef(Promise.resolve());
 	const settingsWriting = useRef(Promise.resolve());
 	const settingsExist = useRef(false);
@@ -994,8 +996,9 @@ function RuntimeProvider({ claude, children }) {
 			use("db"),
 			use("user"),
 			use("mcp"),
-			use("assets")
-		]).then(async ([d, u, m, a]) => {
+			use("assets"),
+			use("downloads")
+		]).then(async ([d, u, m, a, dl]) => {
 			if (!alive) return;
 			if (!d) return setStatus("no-db");
 			db.current = d;
@@ -1003,6 +1006,8 @@ function RuntimeProvider({ claude, children }) {
 			setHasMcp(!!m);
 			assets.current = a;
 			setHasAssets(!!a);
+			downloads.current = dl;
+			setHasDownloads(!!dl);
 			const edit = (u ? typeof u.can === "function" ? await u.can("data.write").catch(() => null) : null : false) ?? (u ? await u.canEdit().catch(() => false) || await u.isOwner().catch(() => false) : false);
 			const id = u ? await u.id().catch(() => null) : null;
 			if (!alive) return;
@@ -1296,6 +1301,39 @@ function RuntimeProvider({ claude, children }) {
 		removeToken: async () => {
 			await secret()?.delete();
 		},
+		hasDownloads,
+		saveFile: async (filename, data) => {
+			if (!downloads.current) throw {
+				code: "unavailable",
+				message: "Saving files isn't available here."
+			};
+			await downloads.current.save({
+				filename,
+				data
+			});
+		},
+		readAll: async (c) => (await db.current.collection(c).get()).docs.map((x) => ({
+			...x.data(),
+			id: x.id
+		})),
+		put: (c, id, doc) => {
+			const next = writing.current.then(async () => {
+				await db.current.collection(c).doc(id).set(doc);
+				if (c === "records" && !live.current.records.some((r) => r.id === id)) live.current.records = [...live.current.records, {
+					...doc,
+					id
+				}];
+			});
+			writing.current = next.catch(() => {});
+			return next;
+		},
+		assetIds: async () => {
+			try {
+				return assets.current ? new Set((await assets.current.list()).assets.map((a) => a.id)) : null;
+			} catch {
+				return null;
+			}
+		},
 		fireTask,
 		flushSync
 	}), [
@@ -1309,6 +1347,7 @@ function RuntimeProvider({ claude, children }) {
 		myId,
 		hasMcp,
 		hasAssets,
+		hasDownloads,
 		error,
 		notice
 	]);
@@ -2636,6 +2675,536 @@ async function shrinkImage(file, max, quality, api = browser) {
 		return file;
 	}
 }
+// src/model/library.ts
+var nowUTC = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace("T", " ") + " UTC";
+var libNorm = (s) => String(s || "").toLowerCase().replace(/\s*\(\d+\)|\*/g, "").replace(/&/g, " and ").split(/[^a-z0-9]+/).filter((w) => w && w !== "the").join("");
+var rids = (d) => [d.discogsId, d.discogsSync?.rid].map((v) => parseInt(String(v), 10)).filter(Boolean);
+var key = (d) => libNorm(d.artist) + "|" + libNorm(d.title);
+function libCount(recs, gear, setups) {
+	const part = (n, one, many) => n ? `${n} ${n === 1 ? one : many}` : "";
+	const a = [
+		part(recs, "record", "records"),
+		part(gear, "piece of equipment", "pieces of equipment"),
+		part(setups, "setup", "setups")
+	].filter(Boolean);
+	return a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0] || "nothing";
+}
+var byId = (list) => Object.fromEntries(list.filter((x) => !x.example && !x.deleted).map(({ id, ...d }) => [id, d]));
+function exportFile(p) {
+	const site = {};
+	for (const k of [
+		"title",
+		"bg",
+		"dim",
+		"hang"
+	]) if (p.settings[k] !== void 0) site[k] = p.settings[k];
+	const records = byId(p.records);
+	const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean));
+	return {
+		vinylWall: 1,
+		exportedAt: nowUTC(),
+		app: p.app,
+		settings: { site },
+		setups: byId(p.setups),
+		gear: byId(p.gear),
+		records,
+		artists: byId(p.artists.filter((a) => refs.has(a.id))),
+		covers: {}
+	};
+}
+function coverIds(f) {
+	const covers = new Set(Object.values(f.records).map((r) => r.coverAsset).filter((x) => typeof x === "string" && !!x));
+	const bg = f.settings?.site?.bg;
+	const ids = [...covers];
+	if (bg?.kind === "photo" && typeof bg.assetId === "string" && !covers.has(bg.assetId)) ids.push(bg.assetId);
+	return {
+		ids,
+		covers
+	};
+}
+function planImport(text, w) {
+	let snap = null;
+	try {
+		snap = JSON.parse(text);
+	} catch {}
+	if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== "object" || !snap.records) return "This file wasn't made by Export on a Vinyl Wall.";
+	if (snap.vinylWall > 1) return "This file was made by a newer Vinyl Wall. Update this wall first, then import it.";
+	const ids = new Set(w.records.map((r) => r.id));
+	const R = /* @__PURE__ */ new Set();
+	const K = /* @__PURE__ */ new Set();
+	const remember = (d) => {
+		rids(d).forEach((n) => R.add(n));
+		K.add(key(d));
+	};
+	w.records.forEach(remember);
+	const recs = [];
+	let skipped = 0;
+	for (const [id, d] of Object.entries(snap.records)) {
+		if (!d || typeof d !== "object" || d.deleted || !d.title) continue;
+		if (ids.has(id) || rids(d).some((n) => R.has(n)) || K.has(key(d))) {
+			skipped++;
+			continue;
+		}
+		recs.push([id, d]);
+		ids.add(id);
+		remember(d);
+	}
+	const fresh = (list, have) => Object.entries(list || {}).filter(([id, d]) => d && typeof d === "object" && !d.example && !d.deleted && !have.some((x) => x.id === id));
+	const refs = new Set(recs.map(([, d]) => d.artistRef).filter(Boolean));
+	const p = {
+		recs,
+		gear: fresh(snap.gear, w.gear),
+		setups: fresh(snap.setups, w.setups),
+		artists: fresh(snap.artists, w.artists).filter(([id, d]) => refs.has(id) && /^[\w.-]{1,100}$/.test(id) && typeof d.name === "string"),
+		skipped,
+		site: snap.settings?.site || {},
+		empty: !w.records.some((r) => !r.deleted),
+		known: w.artists.map((a) => a.id),
+		covers: snap.covers && typeof snap.covers === "object" ? snap.covers : {}
+	};
+	if (p.recs.length + p.gear.length + p.setups.length === 0) return "Everything in this file is already on the wall.";
+	return p;
+}
+var planSummary = (p) => `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
+var IMPORT_FIELDS = [
+	"title",
+	"artist",
+	"year",
+	"label",
+	"catalog",
+	"pressing",
+	"matrix",
+	"runtime",
+	"status",
+	"why",
+	"notes",
+	"shop",
+	"shopUrl",
+	"acquired",
+	"paid",
+	"mediaGrade",
+	"sleeveGrade",
+	"priority",
+	"budget",
+	"copyName",
+	"moreCopies",
+	"orderDate",
+	"orderStatus",
+	"eta",
+	"orderNum",
+	"carrier",
+	"tracking",
+	"orderNotes",
+	"discogsId",
+	"discogsMatch",
+	"coverAsset",
+	"coverOriginal",
+	"researchLog",
+	"added",
+	"autoFilled",
+	"about",
+	"aboutAt",
+	"aboutV",
+	"artistRef",
+	"aboutBlocked"
+];
+var ARTIST_FIELDS = {
+	name: "string",
+	wiki: "string",
+	wikidata: "string",
+	intro: "string",
+	summary: "string",
+	source: "string",
+	fetchedAt: "number"
+};
+function importableArtist(d) {
+	const a = {};
+	for (const [k, t] of Object.entries(ARTIST_FIELDS)) if (typeof d[k] === t) a[k] = d[k];
+	if (Array.isArray(d.links)) a.links = d.links.filter((l) => l && typeof l.kind === "string" && typeof l.url === "string").map((l) => ({
+		kind: l.kind,
+		url: l.url
+	}));
+	return a;
+}
+function importable(d) {
+	const r = {};
+	for (const k of IMPORT_FIELDS) if (d[k] !== void 0) r[k] = d[k];
+	if (!Array.isArray(r.notes)) r.notes = [];
+	if (r.copyName !== void 0 && typeof r.copyName !== "string") delete r.copyName;
+	if (r.moreCopies !== void 0) r.moreCopies = wantCopies({
+		id: "",
+		moreCopies: r.moreCopies
+	}).slice(1);
+	r.needsSync = true;
+	return r;
+}
+var fileImage = (p, id) => typeof id === "string" && Object.hasOwn(p.covers, id) && /^data:image\/(jpeg|png|webp);base64,/.test(p.covers[id]) ? p.covers[id] : null;
+function imageFile(u) {
+	const [head, b64] = u.split(",");
+	const bin = atob(b64);
+	const a = new Uint8Array(bin.length);
+	for (let i = 0; i < bin.length; i++) a[i] = bin.charCodeAt(i);
+	const type = head.slice(5).split(";")[0];
+	return new File([a], "cover." + type.split("/")[1], { type });
+}
+function recordWrites(p, has, moved, artistIds) {
+	return p.recs.map(([id, d]) => {
+		const r = importable(d);
+		if (!has(r.coverOriginal)) delete r.coverOriginal;
+		if (moved.has(r.coverAsset)) r.coverAsset = moved.get(r.coverAsset);
+		else if (!has(r.coverAsset)) {
+			delete r.coverAsset;
+			r.needsEnrich = true;
+		}
+		if (!r.aboutBlocked && r.artistRef && !artistIds.has(String(r.artistRef))) {
+			delete r.aboutAt;
+			delete r.aboutV;
+		}
+		return [id, r];
+	});
+}
+function lookPatch(site, photoId) {
+	const bg = site.bg || {};
+	const patch = {};
+	if (typeof site.title === "string") patch.title = site.title.slice(0, 60);
+	if (bg.kind === "preset" && BACKGROUNDS.some(([k]) => k === bg.preset)) patch.bg = {
+		kind: "preset",
+		preset: bg.preset
+	};
+	else if (bg.kind === "photo" && photoId) patch.bg = {
+		kind: "photo",
+		assetId: photoId
+	};
+	if (typeof site.dim === "number") patch.dim = site.dim;
+	if (HANGS.some(([k]) => k === site.hang)) patch.hang = site.hang;
+	return patch;
+}
+function doneMessage(p, recs) {
+	const enrich = recs.some((d) => d.needsEnrich);
+	const about = recs.some((d) => aboutPending(d));
+	const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d)).length;
+	const what = enrich && about ? "covers or album info" : enrich ? "covers" : "album info";
+	return `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
+}
+// src/settings/Library.tsx
+async function pool(n, items, fn) {
+	let next = 0;
+	await Promise.all(Array.from({ length: n }, async () => {
+		while (next < items.length) await fn(items[next++]);
+	}));
+}
+var dataURL = (b) => new Promise((res, rej) => {
+	const fr = new FileReader();
+	fr.onload = () => res(String(fr.result));
+	fr.onerror = () => rej(fr.error);
+	fr.readAsDataURL(b);
+});
+function useLibrary() {
+	const rt = useRuntime();
+	const live = useRef(rt);
+	live.current = rt;
+	const [stage, setStage] = useState("idle");
+	const [msg, setMsg] = useState("");
+	const [plan, setPlan] = useState(null);
+	const [fileName, setFileName] = useState("");
+	const text = useRef("");
+	const [seen, setSeen] = useState(true);
+	const [exporting, setExporting] = useState(false);
+	const [exportMsg, setExportMsg] = useState("");
+	const exportIt = async () => {
+		if (exporting) return;
+		setExporting(true);
+		setExportMsg("Saving your library…");
+		const file = exportFile({
+			records: rt.records,
+			gear: rt.gear,
+			setups: rt.setups,
+			artists: rt.artists,
+			settings: rt.settings,
+			app: APP_VERSION
+		});
+		const { ids, covers } = coverIds(file);
+		let missed = 0;
+		await pool(6, ids, async (id) => {
+			try {
+				const res = await fetch("/_blob/" + encodeURIComponent(id));
+				if (!res.ok) throw new Error(String(res.status));
+				file.covers[id] = await dataURL(await res.blob());
+			} catch {
+				if (covers.has(id)) missed++;
+			}
+		});
+		try {
+			await rt.saveFile(`vinyl-wall-${today()}.json`, JSON.stringify(file, null, 1));
+			const n = (o) => Object.keys(o || {}).length;
+			setExportMsg(`Saved ${libCount(n(file.records), n(file.gear), n(file.setups))}.` + (missed ? ` ${missed} cover${missed === 1 ? "" : "s"} couldn't be included.` : ""));
+		} catch (e) {
+			setExportMsg(e?.code === "declined" ? "" : "Couldn't save the file: " + msgOf(e));
+		}
+		setExporting(false);
+	};
+	const read = async (t) => {
+		setPlan(null);
+		try {
+			const [records, artists] = await Promise.all([rt.readAll("records"), rt.readAll("artists")]);
+			const p = planImport(t, {
+				records,
+				artists,
+				gear: rt.gear,
+				setups: rt.setups
+			});
+			if (typeof p === "string") {
+				setMsg(p);
+				setStage("msg");
+			} else {
+				setPlan(p);
+				setMsg("");
+				setStage("plan");
+			}
+		} catch (e) {
+			setMsg("Couldn't read the wall: " + msgOf(e));
+			setStage("msg");
+		}
+	};
+	const choose = async (f) => {
+		if (stage === "busy") return;
+		setFileName(f.name || "");
+		try {
+			text.current = await f.text();
+		} catch {
+			setMsg("Couldn't read this file. Choose it again, or another one.");
+			setStage("msg");
+			return;
+		}
+		read(text.current);
+	};
+	const apply = async () => {
+		const p = plan;
+		if (!p || stage === "busy") return;
+		setPlan(null);
+		setStage("busy");
+		setSeen(false);
+		setMsg("Bringing in your library…");
+		const stored = rt.hasAssets ? await rt.assetIds() : null;
+		const has = (id) => !!stored?.has(id);
+		const moved = /* @__PURE__ */ new Map();
+		const upload = async (id, max) => {
+			try {
+				moved.set(id, await rt.upload(await shrinkImage(imageFile(fileImage(p, id)), max, .82)));
+			} catch {}
+		};
+		const up = [...new Set(p.recs.map(([, d]) => d.coverAsset).filter((id) => typeof id === "string" && !has(id) && !!fileImage(p, id)))];
+		let uploaded = 0;
+		if (rt.hasAssets) await pool(3, up, async (id) => {
+			await upload(id, 500);
+			if (++uploaded % 5 === 0 || uploaded === up.length) setMsg(`Bringing in covers: ${uploaded} of ${up.length}…`);
+		});
+		setMsg("Bringing in records…");
+		const recs = recordWrites(p, has, moved, /* @__PURE__ */ new Set([...p.artists.map(([id]) => id), ...p.known]));
+		let done = 0;
+		try {
+			for (const [id, d] of p.setups) await rt.put("setups", id, d);
+			for (const [id, d] of p.gear) await rt.put("gear", id, d);
+			for (const [id, d] of p.artists) await rt.put("artists", id, importableArtist(d));
+			for (const [id, d] of recs) {
+				await rt.put("records", id, d);
+				if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`);
+			}
+			if (p.empty) await takeLook(p, has, moved, upload);
+			setMsg(doneMessage(p, recs.map(([, d]) => d)));
+			text.current = "";
+			setStage("done");
+			if (recs.some(([, d]) => d.needsEnrich || aboutPending(d))) rt.fireTask({ now: true });
+		} catch (e) {
+			setMsg(`Stopped after ${done} of ${recs.length} records: ${msgOf(e)}. Import the file again to bring in the rest.`);
+			setStage("stopped");
+		}
+	};
+	const takeLook = async (p, has, moved, upload) => {
+		const bg = p.site.bg || {};
+		let photo = null;
+		if (bg.kind === "photo" && bg.assetId) {
+			if (has(bg.assetId)) photo = bg.assetId;
+			else if (live.current.hasAssets && fileImage(p, bg.assetId)) {
+				await upload(bg.assetId, 2e3);
+				photo = moved.get(bg.assetId) || null;
+			}
+		}
+		const patch = lookPatch(p.site, photo);
+		const rt = live.current;
+		const uploads = rt.settings.uploads || [];
+		if (photo && !uploads.some((u) => u.id === photo)) patch.uploads = [...uploads, {
+			id: photo,
+			name: "Your photo"
+		}];
+		if (Object.keys(patch).length) await rt.saveSettings(patch);
+		if (!p.setups.length) return;
+		const left = /* @__PURE__ */ new Set([...rt.setups.map((x) => x.id), ...p.setups.map(([id]) => id)]);
+		for (const x of rt.setups) if (x.name === "My setup" && !x.note && !rt.gear.some((g) => g.setup === x.id) && !p.gear.some(([, d]) => d.setup === x.id) && left.size > 1) {
+			await rt.deleteSetup(x.id);
+			left.delete(x.id);
+		}
+	};
+	const leave = () => {
+		if (stage === "busy") return;
+		setSeen(true);
+		if (stage !== "stopped") {
+			text.current = "";
+			setStage("idle");
+			setPlan(null);
+			setMsg("");
+			setFileName("");
+		}
+	};
+	return {
+		stage,
+		msg,
+		plan,
+		fileName,
+		exporting,
+		exportMsg,
+		exportIt,
+		choose,
+		apply,
+		leave,
+		tryAgain: () => read(text.current),
+		active: stage === "busy" || !seen && (stage === "done" || stage === "stopped")
+	};
+}
+function useChooser(lib) {
+	const input = useRef(null);
+	return {
+		el: /* @__PURE__ */ jsx("input", {
+			ref: input,
+			type: "file",
+			accept: ".json,application/json",
+			hidden: true,
+			"aria-hidden": "true",
+			onChange: (e) => {
+				const f = e.target.files?.[0];
+				e.target.value = "";
+				if (f) lib.choose(f);
+			}
+		}),
+		open: () => input.current?.click()
+	};
+}
+function LibrarySection({ lib, onImport }) {
+	const { hasDownloads } = useRuntime();
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [
+		/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-col gap-2",
+			children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your library" }), /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "Save your records, equipment and settings to a file you keep, or bring in a file you exported from a wall. Your Discogs token is never included."
+			})]
+		}),
+		/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-wrap gap-3",
+			children: [hasDownloads && /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				disabled: lib.exporting,
+				onClick: lib.exportIt,
+				children: "Export your library"
+			}), /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				onClick: onImport,
+				children: "Import from a file"
+			})]
+		}),
+		/* @__PURE__ */ jsx("p", {
+			role: "status",
+			className: "text-foreground-muted text-sm empty:hidden",
+			children: lib.exportMsg
+		}),
+		lib.active && /* @__PURE__ */ jsxs("p", {
+			className: "text-foreground-muted text-sm",
+			children: [
+				lib.msg,
+				" ",
+				/* @__PURE__ */ jsx("button", {
+					type: "button",
+					className: "text-primary underline-offset-2 hover:underline",
+					onClick: onImport,
+					children: "See progress"
+				})
+			]
+		})
+	] });
+}
+function ImportView({ lib, onDone }) {
+	const chooser = useChooser(lib);
+	const first = useRef(null);
+	useEffect(() => {
+		if (lib.stage === "plan" || lib.stage === "done") first.current?.focus();
+	}, [lib.stage]);
+	const row = "flex flex-col gap-3 sm:flex-row *:w-full sm:*:w-auto";
+	const file = lib.fileName && /* @__PURE__ */ jsx("p", {
+		className: "text-foreground-intense font-mono text-sm break-all",
+		children: lib.fileName
+	});
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-6",
+		children: [
+			chooser.el,
+			/* @__PURE__ */ jsxs("div", {
+				className: lib.stage === "idle" ? "sr-only" : "flex flex-col gap-2",
+				children: [
+					lib.stage !== "done" && file,
+					/* @__PURE__ */ jsx("p", {
+						role: "status",
+						className: "text-foreground text-sm",
+						children: lib.stage === "plan" && lib.plan ? planSummary(lib.plan) : lib.msg
+					}),
+					lib.stage === "busy" && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Keep this page open until it's done."
+					})
+				]
+			}),
+			lib.stage === "plan" && /* @__PURE__ */ jsxs("div", {
+				className: row,
+				children: [/* @__PURE__ */ jsx(Button, {
+					ref: first,
+					onClick: lib.apply,
+					children: "Bring them in"
+				}), /* @__PURE__ */ jsx(Button, {
+					variant: "outline",
+					onClick: chooser.open,
+					children: "Choose another file"
+				})]
+			}),
+			lib.stage === "stopped" && /* @__PURE__ */ jsxs("div", {
+				className: row,
+				children: [/* @__PURE__ */ jsx(Button, {
+					onClick: lib.tryAgain,
+					children: "Try again"
+				}), /* @__PURE__ */ jsx(Button, {
+					variant: "outline",
+					onClick: chooser.open,
+					children: "Choose another file"
+				})]
+			}),
+			(lib.stage === "idle" || lib.stage === "msg") && /* @__PURE__ */ jsx("div", {
+				className: row,
+				children: /* @__PURE__ */ jsx(Button, {
+					onClick: chooser.open,
+					children: "Choose a file"
+				})
+			}),
+			lib.stage === "done" && /* @__PURE__ */ jsx("div", {
+				className: row,
+				children: /* @__PURE__ */ jsx(Button, {
+					ref: first,
+					onClick: onDone,
+					children: "See your wall"
+				})
+			})
+		]
+	});
+}
 // src/model/filter.ts
 var FKEYS = [
 	"own",
@@ -3507,6 +4076,27 @@ function SettingsSheet({ open, at, onClose }) {
 	const [copyNote, setCopyNote] = useState("");
 	const ask = useRef(null);
 	const discogs = useRef(null);
+	const lib = useLibrary();
+	const [view, setView] = useState("main");
+	const title = useRef(null);
+	useEffect(() => {
+		if (open) setView(at === "import" || lib.active ? "import" : "main");
+	}, [open]);
+	const shown = useRef(view);
+	useEffect(() => {
+		const was = shown.current;
+		shown.current = view;
+		if (!open || view === was || view === "import" && (lib.stage === "plan" || lib.stage === "done")) return;
+		requestAnimationFrame(() => title.current?.focus());
+	}, [open, view]);
+	const back = () => {
+		lib.leave();
+		setView("main");
+	};
+	const close = () => {
+		if (view === "import") lib.leave();
+		onClose();
+	};
 	useEffect(() => {
 		if (!open || at !== "discogs") return;
 		const t = setTimeout(() => discogs.current?.scrollIntoView({ block: "start" }), 350);
@@ -3518,16 +4108,37 @@ function SettingsSheet({ open, at, onClose }) {
 	return /* @__PURE__ */ jsx(Drawer, {
 		side: "right",
 		open,
-		onOpenChange: (o) => !o && onClose(),
+		onOpenChange: (o) => !o && close(),
 		children: /* @__PURE__ */ jsxs(DrawerContent, {
 			className: "w-full sm:max-w-xl",
-			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [/* @__PURE__ */ jsx(DrawerTitle, { children: "Settings" }), /* @__PURE__ */ jsx(DrawerDescription, { children: "How your wall looks, Discogs and help" })] }), /* @__PURE__ */ jsxs(DrawerBody, { children: [(error || notice) && /* @__PURE__ */ jsx(Alert, {
+			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [
+				view === "import" && /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					className: "-ms-3 self-start",
+					onClick: back,
+					children: "‹ Settings"
+				}),
+				/* @__PURE__ */ jsx(DrawerTitle, {
+					ref: title,
+					tabIndex: -1,
+					className: "outline-none",
+					children: view === "import" ? "Import your library" : "Settings"
+				}),
+				/* @__PURE__ */ jsx(DrawerDescription, { children: view === "import" ? "Bring in a file you saved with Export your library." : "How your wall looks, Discogs, your library and help" })
+			] }), /* @__PURE__ */ jsxs(DrawerBody, { children: [(error || notice) && /* @__PURE__ */ jsx(Alert, {
 				variant: error ? "error" : "info",
 				className: "mb-4",
 				dismissible: true,
 				onOpenChange: (o) => !o && clearError(),
 				children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
-			}), /* @__PURE__ */ jsxs("div", {
+			}), view === "import" ? /* @__PURE__ */ jsx("div", {
+				className: "pb-8",
+				children: /* @__PURE__ */ jsx(ImportView, {
+					lib,
+					onDone: close
+				})
+			}) : /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-8 pb-8 *:shrink-0",
 				children: [
 					update && /* @__PURE__ */ jsxs(Alert, {
@@ -3575,6 +4186,10 @@ function SettingsSheet({ open, at, onClose }) {
 							ref: discogs,
 							className: "scroll-mt-6",
 							children: /* @__PURE__ */ jsx(DiscogsSection, { focus: at === "discogs" })
+						}),
+						/* @__PURE__ */ jsx(LibrarySection, {
+							lib,
+							onImport: () => setView("import")
 						})
 					] }),
 					/* @__PURE__ */ jsxs(Fieldset, { children: [
@@ -6435,7 +7050,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 	});
 }
 // src/wall/Welcome.tsx
-function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank }) {
+function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank, onImport }) {
 	return /* @__PURE__ */ jsxs("section", {
 		"aria-labelledby": "welcome-title",
 		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_oklch,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
@@ -6519,6 +7134,19 @@ function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank }) {
 					className: "text-foreground-muted text-sm",
 					children: "Skip this and hang records as you go."
 				})]
+			}),
+			/* @__PURE__ */ jsxs("p", {
+				className: "text-foreground-muted text-sm",
+				children: [
+					"Moving from another wall?",
+					" ",
+					/* @__PURE__ */ jsx("button", {
+						type: "button",
+						className: "text-primary underline-offset-2 hover:underline",
+						onClick: onImport,
+						children: "Import from a file"
+					})
+				]
 			})
 		]
 	});
@@ -6612,7 +7240,8 @@ function App() {
 						onAdd: () => setAdding(true),
 						onDiscogs: () => setSettingsOpen("discogs"),
 						onGear: () => setEquipOpen(true),
-						onBlank: () => saveSettings({ welcomeDismissed: true })
+						onBlank: () => saveSettings({ welcomeDismissed: true }),
+						onImport: () => setSettingsOpen("import")
 					}),
 					gear: gearPillShown(gear, canEdit) && /* @__PURE__ */ jsx(GearPill, { onOpen: () => setEquipOpen(true) }),
 					tools: /* @__PURE__ */ jsx(Fragment, { children: canEdit && /* @__PURE__ */ jsxs("span", {
@@ -6658,7 +7287,7 @@ function App() {
 			}),
 			/* @__PURE__ */ jsx(SettingsSheet, {
 				open: !!settingsOpen,
-				at: settingsOpen === "discogs" ? "discogs" : void 0,
+				at: settingsOpen || void 0,
 				onClose: () => setSettingsOpen(false)
 			}),
 			/* @__PURE__ */ jsx(NewRecordSheet, {
@@ -10136,6 +10765,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     position: relative;
   }
 
+  :is(.\*\:w-full > *) {
+    width: 100%;
+  }
+
   :is(.\*\:shrink-0 > *) {
     flex-shrink: 0;
   }
@@ -12224,6 +12857,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .sm\:py-1 {
       padding-block: var(--spacing);
+    }
+
+    :is(.sm\:\*\:w-auto > *) {
+      width: auto;
     }
   }
 
