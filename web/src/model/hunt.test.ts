@@ -19,8 +19,8 @@ describe('copies', () => {
   it('reads the first copy from the record and coerces the rest', () => {
     const C = wantCopies({ ...hunt, moreCopies: [{ name: 3, discogsId: 'x' }, 'junk', null] })
     expect(C).toHaveLength(2)
-    expect(C[0]).toEqual({ name: 'UK first', pressing: 'UK first pressing', label: 'Apple', catalog: 'PCS 7088', budget: '150', discogsId: 99 })
-    expect(C[1]).toEqual({ name: '3', pressing: '', label: '', catalog: '', budget: '', discogsId: '' })
+    expect(C[0]).toEqual({ name: 'UK first', pressing: 'UK first pressing', label: 'Apple', catalog: 'PCS 7088', budget: '150', discogsId: 99, buyLinks: [] })
+    expect(C[1]).toEqual({ name: '3', pressing: '', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [] })
   })
 
   it('titles a copy by name, pressing, release, or place', () => {
@@ -52,7 +52,7 @@ describe('copies', () => {
   it('writes a list back: a hunt into its own fields, an owned record into moreCopies', () => {
     const [, ...rest] = wantCopies(hunt)
     expect(copiesPatch(hunt, rest)).toEqual({
-      copyName: 'Half-speed', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '40', discogsId: 7, moreCopies: rest.slice(1),
+      copyName: 'Half-speed', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '40', discogsId: 7, buyLinks: [], moreCopies: rest.slice(1),
     })
     expect(copiesPatch({ ...hunt, status: 'own' }, wantCopies(hunt).slice(0, 2))).toEqual({ moreCopies: [wantCopies(hunt)[1]] })
   })
@@ -110,7 +110,7 @@ describe('research', () => {
     const { patch, undo } = wantPatch(r, 'Japan Odeon')
     const more = patch.moreCopies as unknown[]
     expect(more).toHaveLength(4)
-    expect(more[3]).toEqual({ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '' })
+    expect(more[3]).toEqual({ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [] })
     expect(undo).toEqual({ ci: 4, p: 'Japan Odeon', did: null })
     const after = { ...r, ...patch }
     expect(undoWantPatch(after, undo)).toEqual({ moreCopies: wantCopies(r).slice(1) })

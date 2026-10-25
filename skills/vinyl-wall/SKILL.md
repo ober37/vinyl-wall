@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 11.
+Skill version 12.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -20,7 +20,7 @@ The wall is a published artifact. Its records are documents in the page's `recor
 - The pressing, often from photos of the record: `pressing` (e.g. "2015 Analogue Productions 45rpm reissue"), `label`, `catalog` (the catalog number), `discogsId` (the Discogs release number, as a number) and `matrix`, the runouts as `"Side A: <runout> · Side B: <runout>"`, one entry per side, joined by " · ".
 - Owned: `acquired` (`YYYY-MM-DD`, only when they give a date or say today; otherwise leave it out), `paid` (a number as text, `"48"`), `shop`, `shopUrl`, `mediaGrade`, `sleeveGrade`.
 - Ordered: `copyName` (a short name for the copy, like "MoFi one-step"), `shop`, `shopUrl`, `paid`, `orderDate`, `eta` (`YYYY-MM-DD`), `orderStatus` (`"preorder"`, `"ordered"`, `"shipped"` or `"delayed"`), `orderNum`, `carrier`, `tracking`.
-- Wish: `copyName`, `budget`.
+- Wish: `copyName`, `budget`, `buyLinks` (see Where to buy a copy).
 
 Write only what the person said or the photos show; leave the rest out. Before adding, `list` `records` and check it isn't already there (same artist and title); if it is, ask whether this is another copy or a change to the one there.
 
@@ -29,6 +29,12 @@ Ask either/or questions as a yes/no where you can ("Is it new or sealed?", not "
 If a shop listing shows a release date still to come (a pre-order), ask whether they have it in hand before adding it as owned rather than ordered.
 
 To change a record, `update` only the fields that change, plus `needsSync: true` so the change reaches Discogs (an order that arrives moves from the wantlist to the collection).
+
+## Where to buy a copy
+
+Each copy they want can keep the shop pages where that exact copy is sold: `buyLinks`, a list of `https://` addresses. The first copy's is the record's own `buyLinks`; each other copy's is on its entry in `moreCopies`. When they give you a shop page for a copy, `get` the record, add the link to that copy's `buyLinks` (skip it if it's already there), and `update` with `if_version`.
+
+When they point at links in a note, move each link onto the copy it's for, asking which copy when it's unclear. A link for a variant that isn't one of their copies yet: ask whether to add it as a copy they want (append it to `moreCopies` with its `buyLinks`, and add `needsSync: true`). Leave the note as it is unless they ask you to change it.
 
 ## An order that arrived
 

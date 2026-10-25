@@ -135,7 +135,7 @@ export const planSummary = (p: Plan) =>
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
 // prettier-ignore
 const IMPORT_FIELDS = ["title", "artist", "year", "label", "catalog", "pressing", "matrix", "runtime", "status", "why", "notes", "shop", "shopUrl", "acquired", "paid",
-  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
+  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
   "discogsMatch", "coverAsset", "coverOriginal", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
 // what an artist may carry in: the lookup's own fields, with the right types
 const ARTIST_FIELDS: Record<string, string> = { name: 'string', wiki: 'string', wikidata: 'string', intro: 'string', summary: 'string', source: 'string', fetchedAt: 'number' }
@@ -152,6 +152,7 @@ export function importable(d: Data): Data {
   if (!Array.isArray(r.notes)) r.notes = []
   if (r.copyName !== undefined && typeof r.copyName !== 'string') delete r.copyName
   if (r.moreCopies !== undefined) r.moreCopies = wantCopies({ id: '', moreCopies: r.moreCopies } as Rec).slice(1)
+  if (r.buyLinks !== undefined) r.buyLinks = wantCopies({ id: '', buyLinks: r.buyLinks } as Rec)[0].buyLinks
   r.needsSync = 'check' // checked against this wall's Discogs account, if it has one (quietly: see syncing)
   return r
 }

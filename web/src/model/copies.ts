@@ -1,9 +1,10 @@
 // The copies a wanted record hunts, ported from app/vinyl-wall.html. The first lives in the record's own fields (copyName,
-// pressing, label, catalog, budget, discogsId), so Discogs sync and older walls read it as before; any others are in
-// moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted.
-import { kindOf, pressingText, type Rec } from './record'
+// pressing, label, catalog, budget, discogsId, buyLinks), so Discogs sync and older walls read it as before; any others are
+// in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted.
+import { kindOf, pressingText, shopHref, type Rec } from './record'
 
-export type Copy = { name: string; pressing: string; label: string; catalog: string; budget: string; discogsId: number | '' }
+// buyLinks: where the copy is sold, one address each
+export type Copy = { name: string; pressing: string; label: string; catalog: string; budget: string; discogsId: number | ''; buyLinks: string[] }
 export const COPY_KEYS = ['name', 'pressing', 'label', 'catalog', 'budget'] as const
 
 const s = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
@@ -11,20 +12,33 @@ const did = (v: unknown): number | '' => {
   const n = parseInt(String(v), 10)
   return n > 0 ? n : ''
 }
-export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catalog: '', budget: '', discogsId: '' })
+const links = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
+export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [] })
 
 export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
-    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId) },
-    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId) })),
+    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks) },
+    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks) })),
   ]
 }
 
 // a copy's name for headings and the copy picker: its name, else its pressing, else its Discogs release, else "Copy N"
 export const copyTitle = (c: Copy, i: number) =>
   c.name || c.pressing.split('\n')[0].trim() || (c.discogsId ? 'Discogs release ' + c.discogsId : 'Copy ' + (i + 1))
-export const copyHas = (c: Copy) => COPY_KEYS.some((k) => c[k])
+export const copyHas = (c: Copy) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0
+
+// a copy's links that open, each named by its site: "roughtrade.com", then "roughtrade.com (2)" for another on the same site
+export function buyHosts(L: string[]): [string, string][] {
+  const seen: Record<string, number> = {}
+  return L.map(shopHref)
+    .filter(Boolean)
+    .map((u) => {
+      const h = new URL(u).hostname.replace(/^www\./, '')
+      seen[h] = (seen[h] || 0) + 1
+      return [seen[h] > 1 ? `${h} (${seen[h]})` : h, u]
+    })
+}
 
 // the sync's matcher's own discogsMatch values (tools/discogs_sync.py); any other value was chosen by someone
 export const AUTO_MATCH = [
@@ -39,7 +53,7 @@ export function firstCopyChosen(r: Rec): boolean {
   const c = wantCopies(r)[0]
   const auto = AUTO_MATCH.includes(String(r.discogsMatch))
   const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes('label'))
-  return !!(c.name || c.pressing || c.catalog || c.budget || (c.discogsId && !auto) || (typed && c.label && c.label !== origLabel(r)))
+  return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || (c.discogsId && !auto) || (typed && c.label && c.label !== origLabel(r)))
 }
 
 // the copies still wanted, with their index in wantCopies: a hunt's own, or an owned or ordered record's moreCopies
@@ -55,7 +69,7 @@ export const copiesLegend = (r: Rec) =>
 export function copyLabelShown(r: Rec, c: Copy, i: number): boolean {
   const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes('label'))
   return (
-    i > 0 || !!(c.name || c.pressing || c.catalog || c.budget) || (!!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch))) ||
+    i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length) || (!!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch))) ||
     (typed && !!c.label && c.label !== origLabel(r))
   )
 }
@@ -65,7 +79,7 @@ export function copyLabelShown(r: Rec, c: Copy, i: number): boolean {
 export function copiesPatch(r: Rec, L: Copy[]): Record<string, unknown> {
   const [a, ...rest] = L
   return kindOf(r) === 'wish'
-    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, moreCopies: rest }
+    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, buyLinks: a.buyLinks, moreCopies: rest }
     : { moreCopies: rest }
 }
 
@@ -79,7 +93,7 @@ export function pickPatch(r: Rec, ci: number): Record<string, unknown> {
   const k = Math.max(0, Math.min(C.length - 1, ci | 0))
   const c = C[k]
   return {
-    copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId || '',
+    copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId || '', buyLinks: c.buyLinks,
     moreCopies: C.filter((_, j) => j !== k),
   }
 }
