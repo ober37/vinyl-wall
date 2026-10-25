@@ -31,7 +31,8 @@
 
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Vinyl Wall appica</title>
+    <title>Vinyl Wall</title>
+    <meta name="claude:viewport-fit-sides" content="cover" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -39,12 +40,12 @@
       href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap"
     />
     <script type="importmap">{"imports":{"react":"https://cdn.jsdelivr.net/npm/react@19.3.0/+esm","@appica/ui-react/alert":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/alert/alert.js","@appica/ui-react/button":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/button/index.js","@appica/ui-react/date-field":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/date-field/date-field.js","@appica/ui-react/field":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/field/field.js","@appica/ui-react/fieldset":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/fieldset/fieldset.js","@appica/ui-react/input":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/input/index.js","@appica/ui-react/drawer":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/drawer/drawer.js","@appica/ui-react/checkbox":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/checkbox/checkbox.js","@appica/ui-react/select":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/select/select.js","@appica/ui-react/textarea":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/textarea/textarea.js","@appica/ui-react/badge":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/badge/badge.js","@appica/ui-react/meter":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/meter/meter.js","react-dom/client":"https://cdn.jsdelivr.net/npm/react-dom@19.3.0/client/+esm","@appica/ui-react/providers/theme-provider":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/providers/theme-provider/index.js","@appica/ui-react/copy-button":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/copy-button/copy-button.js","@appica/ui-react/alert-dialog":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/alert-dialog/alert-dialog.js","@appica/ui-react/accordion":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/accordion/accordion.js","@appica/ui-react/checkbox-group":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/checkbox-group/checkbox-group.js","@appica/ui-react/slider":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/slider/slider.js","@appica/ui-react/collapsible":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/collapsible/collapsible.js","@appica/ui-react/form":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/form/form.js","@appica/ui-react/toggle":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/toggle/toggle.js","@appica/ui-react/toggle-group":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/toggle-group/toggle-group.js","@appica/ui-react/tabs":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/tabs/tabs.js","@appica/ui-react/tooltip":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/tooltip/tooltip.js","@appica/ui-react/background-pattern":"https://cdn.jsdelivr.net/npm/@appica/ui-react@1.3.0/dist/components/background-pattern/index.js","react/jsx-runtime":"https://cdn.jsdelivr.net/npm/react@19.3.0/jsx-runtime/+esm","class-variance-authority":"https://cdn.jsdelivr.net/npm/class-variance-authority@0.7.1/dist/index.mjs","motion/react":"https://cdn.jsdelivr.net/npm/motion@14.6.0/dist/es/react.mjs","date-fns":"https://cdn.jsdelivr.net/npm/date-fns@4.4.0/+esm","@base-ui/react/internals/field-root-context":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/internals/field-root-context/index.mjs","@base-ui/react/direction-provider":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/direction-provider/index.mjs","@base-ui/react/field":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/field/index.mjs","@base-ui/react/fieldset":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/fieldset/index.mjs","@base-ui/react/drawer":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/drawer/index.mjs","@base-ui/react/checkbox":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/checkbox/index.mjs","@base-ui/react/select":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/select/index.mjs","@base-ui/react/merge-props":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/merge-props/index.mjs","@base-ui/react/use-render":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/use-render/index.mjs","@base-ui/react/meter":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/meter/index.mjs","@base-ui/react/alert-dialog":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/alert-dialog/index.mjs","@base-ui/react/accordion":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/accordion/index.mjs","@base-ui/react/checkbox-group":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/checkbox-group/index.mjs","@base-ui/react/slider":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/slider/index.mjs","@base-ui/react/collapsible":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/collapsible/index.mjs","@base-ui/react/form":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/form/index.mjs","@base-ui/react/toggle":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/toggle/index.mjs","@base-ui/react/toggle-group":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/toggle-group/index.mjs","@base-ui/react/tabs":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/tabs/index.mjs","@base-ui/react/tooltip":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/tooltip/index.mjs","clsx":"https://cdn.jsdelivr.net/npm/clsx@2.1.1/dist/clsx.mjs","framer-motion":"https://cdn.jsdelivr.net/npm/framer-motion@14.6.0/dist/es/index.mjs","tailwind-merge":"https://cdn.jsdelivr.net/npm/tailwind-merge@3.7.0/dist/bundle-mjs.mjs","@base-ui/react/button":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/button/index.mjs","@base-ui/react/input":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/input/index.mjs","motion-dom":"https://cdn.jsdelivr.net/npm/motion-dom@14.6.0/dist/es/index.mjs","motion-utils":"https://cdn.jsdelivr.net/npm/motion-utils@14.6.0/dist/es/index.mjs","@base-ui/utils/formatErrorMessage":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/formatErrorMessage.mjs","@base-ui/utils/empty":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/empty.mjs","@base-ui/utils/mergeObjects":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/mergeObjects.mjs","@base-ui/utils/useControlled":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useControlled.mjs","@base-ui/utils/useIsoLayoutEffect":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useIsoLayoutEffect.mjs","@base-ui/utils/useStableCallback":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useStableCallback.mjs","@base-ui/utils/areArraysEqual":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/areArraysEqual.mjs","@base-ui/utils/error":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/error.mjs","@base-ui/utils/safeReact":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/safeReact.mjs","@base-ui/utils/useTimeout":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useTimeout.mjs","@base-ui/utils/useRefWithInit":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useRefWithInit.mjs","@base-ui/utils/addEventListener":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/addEventListener.mjs","@base-ui/utils/owner":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/owner.mjs","@base-ui/utils/platform":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/platform/index.mjs","react-dom":"https://cdn.jsdelivr.net/npm/react-dom@19.3.0/+esm","@floating-ui/utils/dom":"https://cdn.jsdelivr.net/npm/@floating-ui/utils@0.2.12/dist/floating-ui.utils.dom.mjs","@base-ui/utils/useAnimationFrame":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useAnimationFrame.mjs","@base-ui/utils/clamp":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/clamp.mjs","@base-ui/utils/useMergedRefs":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useMergedRefs.mjs","@base-ui/utils/visuallyHidden":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/visuallyHidden.mjs","@base-ui/utils/getDefaultFormSubmitter":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/getDefaultFormSubmitter.mjs","@base-ui/utils/useOnFirstRender":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useOnFirstRender.mjs","@base-ui/utils/usePreviousValue":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/usePreviousValue.mjs","@base-ui/utils/isElementDisabled":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/isElementDisabled.mjs","@base-ui/utils/useValueAsRef":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useValueAsRef.mjs","@base-ui/utils/store":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/store/index.mjs","@base-ui/utils/inertValue":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/inertValue.mjs","@floating-ui/utils":"https://cdn.jsdelivr.net/npm/@floating-ui/utils@0.2.12/dist/floating-ui.utils.mjs","@base-ui/utils/getReactElementRef":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/getReactElementRef.mjs","@base-ui/utils/warn":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/warn.mjs","@base-ui/utils/formatNumber":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/formatNumber.mjs","@base-ui/utils/useId":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useId.mjs","@base-ui/utils/useForcedRerendering":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useForcedRerendering.mjs","@base-ui/utils/fastHooks":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/fastHooks.mjs","@floating-ui/react-dom":"https://cdn.jsdelivr.net/npm/@floating-ui/react-dom@2.1.9/dist/floating-ui.react-dom.mjs","@base-ui/utils/useEnhancedClickHandler":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useEnhancedClickHandler.mjs","@base-ui/utils/useScrollLock":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useScrollLock.mjs","@base-ui/utils/useInterval":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useInterval.mjs","@base-ui/utils/hydration":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/hydration.mjs","@base-ui/utils/shadowDom":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/shadowDom.mjs","@base-ui/utils/useOnMount":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/useOnMount.mjs","@base-ui/utils/mergeCleanups":"https://cdn.jsdelivr.net/npm/@base-ui/utils@0.5.0/mergeCleanups.mjs","@floating-ui/dom":"https://cdn.jsdelivr.net/npm/@floating-ui/dom@1.8.0/dist/floating-ui.dom.mjs","use-sync-external-store/shim":"https://cdn.jsdelivr.net/npm/use-sync-external-store@1.7.0/shim/+esm","reselect":"https://cdn.jsdelivr.net/npm/reselect@5.3.0/dist/reselect.mjs","use-sync-external-store/shim/with-selector":"https://cdn.jsdelivr.net/npm/use-sync-external-store@1.7.0/shim/with-selector/+esm","@floating-ui/core":"https://cdn.jsdelivr.net/npm/@floating-ui/core@1.8.0/dist/floating-ui.core.mjs","https://cdn.jsdelivr.net/npm/react@%5E19.3.0/":"https://cdn.jsdelivr.net/npm/react@19.3.0/","https://cdn.jsdelivr.net/npm/react@19.2.8/":"https://cdn.jsdelivr.net/npm/react@19.3.0/"},"scopes":{"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/":{"#prehydration/slider/thumb":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/internals/prehydrationScript.stub.mjs","#prehydration/tabs/indicator":"https://cdn.jsdelivr.net/npm/@base-ui/react@1.9.0/internals/prehydrationScript.stub.mjs"}}}</script>
-    <script type="module" crossorigin>import { Component, StrictMode, createContext, memo, useContext, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
+    <script type="module" crossorigin>import { Component, Fragment, StrictMode, createContext, memo, useContext, useDeferredValue, useEffect, useId, useMemo, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { ThemeProvider } from "@appica/ui-react/providers/theme-provider";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@appica/ui-react/alert";
 import { Button, buttonVariants } from "@appica/ui-react/button";
-import { Fragment, jsx, jsxs } from "react/jsx-runtime";
+import { Fragment as Fragment$1, jsx, jsxs } from "react/jsx-runtime";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@appica/ui-react/tooltip";
 import { Drawer, DrawerBody, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@appica/ui-react/drawer";
 import { Fieldset, FieldsetLegend } from "@appica/ui-react/fieldset";
@@ -250,7 +251,10 @@ function playMonths(r) {
 		const d = String(n.d || "");
 		const tp = Array.isArray(n.tracks) ? n.tracks : [];
 		const cnt = tp.length || +(/^Played (\d+)/.exec(t) || [])[1] || 0;
-		const what = /^Played the whole album/.test(t) ? "Whole album" : /^Played one side/.test(t) ? n.side ? "Side " + n.side : "One side" : `${cnt} track${cnt === 1 ? "" : "s"}${tp.length ? " · " + tp.slice(0, 2).map(title).join(", ") + (tp.length > 2 ? ` +${tp.length - 2}` : "") : ""}`;
+		const on = /^(?: on (.+))? $/.exec(m[2]);
+		const whole = m[1] === "the whole album";
+		const side = m[1] === "one side";
+		const what = !on ? t : whole ? "Whole album" : side ? n.side ? "Side " + n.side : "One side" : `${cnt} track${cnt === 1 ? "" : "s"}${tp.length ? " · " + tp.slice(0, 2).map(title).join(", ") + (tp.length > 2 ? ` +${tp.length - 2}` : "") : ""}`;
 		const play = {
 			key: i,
 			ref: {
@@ -261,10 +265,11 @@ function playMonths(r) {
 			day: d,
 			date: d ? playDate(d) : "",
 			what,
-			setup: (/ on (.+?) \(~\d+ min\)/.exec(t) || [])[1] || "",
+			icon: whole ? "●" : side ? "◐" : "◔",
+			setup: on?.[1] || "",
 			min: +m[3] || 0,
 			vibe: vibeOf(n),
-			thoughts: String(n.j ?? t.slice(m[0].length).replace(/^\.\s*/, "")).trim()
+			thoughts: String(n.j ?? (on ? t.slice(m[0].length).replace(/^\.\s*/, "") : "")).trim()
 		};
 		const month = /^\d{4}-\d\d-\d\d$/.test(d) ? d.slice(0, 7) : "";
 		let g = months[months.length - 1];
@@ -299,7 +304,11 @@ function keyInfo(r) {
 	const cat = k !== "wish" && !(r.matrix && k !== "ordered") ? r.catalog : "";
 	if (lab || cat) f.push(["Label", [lab, cat].filter(Boolean).join(" · ")]);
 	if (list(ab.producers)) f.push(["Producer", list(ab.producers)]);
-	if (ab.recorded) f.push(["Recorded", String(ab.recorded)]);
+	if (ab.recorded) {
+		const t = String(ab.recorded);
+		const i = t.lastIndexOf(" · ");
+		f.push(["Recorded", i < 0 ? t : t.slice(0, i) + "\n" + t.slice(i + 3)]);
+	}
 	if (list(ab.genres)) f.push(["Genre", list(ab.genres)]);
 	return f;
 }
@@ -413,7 +422,7 @@ function gState(g) {
 	if (g.status === "retired") return {
 		tone: "",
 		label: "Retired",
-		msg: `Retired${g.retired ? " " + g.retired : ""} at ${fmtH(h)} h.`
+		msg: `Retired at ${fmtH(h)} h.`
 	};
 	if (!g.tracks) return {
 		tone: "",
@@ -451,7 +460,7 @@ var fmtLeft = (x) => Math.abs(x - Math.round(x)) < .05 ? String(Math.round(x)) :
 function wearLeft(g) {
 	const h = gHours(g), lo = lowOf(g), hi = highOf(g), top = hi || lo;
 	if (!top) return "";
-	return lo && h < lo ? `${fmtLeft(lo - h)} h left` : hi && h < hi ? "in window" : fmtLeft(h - top) === "0" ? "at rated life" : `${fmtLeft(h - top)} h over`;
+	return lo && h < lo ? `${fmtLeft(lo - h)} h to go` : hi && h < hi ? "in window" : fmtLeft(h - top) === "0" ? "at rated life" : `${fmtLeft(h - top)} h over`;
 }
 var rated = (g) => !!(lowOf(g) || highOf(g));
 var wearPct = (g) => {
@@ -1036,7 +1045,7 @@ function RuntimeProvider({ claude, children }) {
 				})).filter((r) => !r.deleted));
 				setStatus("ready");
 			}, (e) => {
-				setError(e.message);
+				setError("Couldn't load the wall: " + e.message);
 				setStatus(e.code === "revoked" ? "revoked" : "no-db");
 			}));
 		});
@@ -1160,7 +1169,7 @@ function RuntimeProvider({ claude, children }) {
 		clearTimeout(t.syncTimer);
 		writing.current.then(() => fireTask());
 	};
-	const queue = (id, fn, fresh = false) => {
+	const queue = (id, fn, fresh = false, what = "save") => {
 		const next = writing.current.then(async () => {
 			try {
 				const ref = db.current.collection("records").doc(id);
@@ -1187,7 +1196,7 @@ function RuntimeProvider({ claude, children }) {
 				setError("");
 				return !!patch;
 			} catch (e) {
-				setError("Couldn't save: " + msgOf(e));
+				setError("Couldn't " + what + ": " + msgOf(e));
 				return false;
 			}
 		});
@@ -1258,7 +1267,7 @@ function RuntimeProvider({ claude, children }) {
 		setGear(gearLive.current);
 		return gearWrite("delete", () => db.current.collection("gear").doc(id).delete());
 	};
-	const saveSetup = (id, doc) => {
+	const saveSetup = (id, doc, what = "save the setup") => {
 		setSetups((S) => S.some((x) => x.id === id) ? S.map((x) => x.id === id ? {
 			...doc,
 			id
@@ -1266,7 +1275,7 @@ function RuntimeProvider({ claude, children }) {
 			...doc,
 			id
 		}]);
-		return gearWrite("save the setup", () => db.current.collection("setups").doc(id).set(doc));
+		return gearWrite(what, () => db.current.collection("setups").doc(id).set(doc));
 	};
 	const deleteSetup = (id) => {
 		setSetups((S) => S.filter((x) => x.id !== id));
@@ -1294,7 +1303,13 @@ function RuntimeProvider({ claude, children }) {
 		},
 		update: (id, patch) => queue(id, () => patch),
 		mutate: (id, fn) => queue(id, fn, true),
-		remove: (id) => queue(id, (r) => r.discogsSync && r.discogsSync.rid ? { deleted: true } : "delete", true),
+		remove: (id) => {
+			let synced = false;
+			return queue(id, (r) => (synced = !!r.discogsSync?.rid) ? { deleted: true } : "delete", true, "remove it").then((ok) => {
+				if (ok && synced) setNotice("Removed. Taking it off Discogs too.");
+				return ok;
+			});
+		},
 		newId: () => db.current.collection("records").doc().id,
 		create,
 		upload,
@@ -1307,7 +1322,7 @@ function RuntimeProvider({ claude, children }) {
 		newDocId: (c) => db.current.collection(c).doc().id,
 		saveToken: async (token) => {
 			const ref = secret();
-			if (!ref) throw new Error("Sign in to claude.ai to save your token.");
+			if (!ref) throw Object.assign(/* @__PURE__ */ new Error("Sign in to claude.ai to save your token."), { code: "signed-out" });
 			await ref.set({
 				token,
 				savedAt: (/* @__PURE__ */ new Date()).toISOString()
@@ -1430,7 +1445,7 @@ function AddGear({ setup, type: first, onAdded, onCancel }) {
 			value: type,
 			onChange: pick,
 			options: GEAR_ORDER.map((k) => [k, GEAR_TYPES[k].label])
-		})] }), T ? /* @__PURE__ */ jsxs("form", {
+		})] }), T && /* @__PURE__ */ jsxs("form", {
 			onSubmit: add,
 			className: "flex flex-col gap-6",
 			children: [/* @__PURE__ */ jsxs(Fieldset, { children: [
@@ -1462,7 +1477,7 @@ function AddGear({ setup, type: first, onAdded, onCancel }) {
 							placeholder: "0 if it's new",
 							className: "font-mono placeholder:font-sans"
 						})] }),
-						!!T.ratedHigh && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Rated life from (h)" }), /* @__PURE__ */ jsx(Input, {
+						!!T.ratedHigh && /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Rated life from (h)" }), /* @__PURE__ */ jsx(Input, {
 							value: f.lo,
 							onChange: set("lo"),
 							inputMode: "numeric",
@@ -1482,7 +1497,7 @@ function AddGear({ setup, type: first, onAdded, onCancel }) {
 					children: [setup === "*" ? "Plays on any setup add hours to it." : "Plays on this setup add hours to it.", T.hint ? " " + T.hint : ""]
 				})
 			] }), /* @__PURE__ */ jsxs("div", {
-				className: "flex flex-wrap gap-2",
+				className: "flex flex-wrap gap-3",
 				children: [/* @__PURE__ */ jsx(Button, {
 					type: "submit",
 					disabled: busy,
@@ -1494,11 +1509,6 @@ function AddGear({ setup, type: first, onAdded, onCancel }) {
 					children: "Cancel"
 				})]
 			})]
-		}) : /* @__PURE__ */ jsx(Button, {
-			variant: "outline",
-			className: "self-start",
-			onClick: onCancel,
-			children: "Cancel"
 		})]
 	});
 }
@@ -1521,9 +1531,9 @@ function Confirm({ open, title, yes, no = "Keep it", calm, onYes, onClose }) {
 	});
 }
 // src/sheet/Facts.tsx
-function Facts({ rows }) {
+function Facts({ rows, labelCol }) {
 	return /* @__PURE__ */ jsx("dl", {
-		className: "grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm",
+		className: `grid ${labelCol ? "grid-cols-[5.5rem_1fr]" : "grid-cols-[auto_1fr]"} gap-x-4 gap-y-2 text-sm`,
 		children: rows.map(([k, v]) => /* @__PURE__ */ jsxs("div", {
 			className: "contents",
 			children: [/* @__PURE__ */ jsx("dt", {
@@ -1769,9 +1779,9 @@ function GearItem({ g, onOpen }) {
 					className: "text-foreground-muted text-sm",
 					children: S.msg
 				}),
-				canEdit && g.status !== "retired" && /* @__PURE__ */ jsxs("form", {
+				canEdit && /* @__PURE__ */ jsxs("form", {
 					onSubmit: addTime,
-					className: "flex flex-wrap gap-2",
+					className: "flex flex-wrap gap-3",
 					children: [/* @__PURE__ */ jsx(Input, {
 						"aria-label": "Minutes played off the wall",
 						value: mins,
@@ -1793,7 +1803,7 @@ function GearItem({ g, onOpen }) {
 				/* @__PURE__ */ jsx(FieldsetLegend, { children: "Log" }),
 				canEdit && /* @__PURE__ */ jsxs("form", {
 					onSubmit: addNote,
-					className: "flex flex-wrap gap-2",
+					className: "flex flex-wrap gap-3",
 					children: [/* @__PURE__ */ jsx(Input, {
 						"aria-label": "Log entry",
 						value: note,
@@ -1828,8 +1838,9 @@ function GearItem({ g, onOpen }) {
 						}), canEdit && /* @__PURE__ */ jsx(Button, {
 							size: "sm",
 							variant: "ghost",
+							className: "-me-4",
 							onClick: () => setDrop(i),
-							children: "Delete"
+							children: "Delete…"
 						})]
 					}, i))
 				}) : /* @__PURE__ */ jsx("p", {
@@ -1860,7 +1871,7 @@ function GearItem({ g, onOpen }) {
 			canEdit && g.status !== "retired" && /* @__PURE__ */ jsx(Button, {
 				className: "self-start",
 				onClick: () => setReplace(true),
-				children: "Replace with a new one"
+				children: "Replace with a new one…"
 			}),
 			/* @__PURE__ */ jsx(Confirm, {
 				open: replace,
@@ -2051,7 +2062,7 @@ function GearEdit({ g, onStatus, onGone }) {
 							}
 						}), "Track play hours"]
 					}),
-					f.tracks && /* @__PURE__ */ jsxs(Fragment, { children: [
+					f.tracks && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 						/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Rated life from (h)" }), /* @__PURE__ */ jsx(Input, {
 							value: f.lo,
 							onChange: text("lo"),
@@ -2077,7 +2088,7 @@ function GearEdit({ g, onStatus, onGone }) {
 				]
 			}),
 			/* @__PURE__ */ jsxs("div", {
-				className: "flex flex-wrap gap-2",
+				className: "flex flex-wrap gap-3",
 				children: [g.status === "retired" ? /* @__PURE__ */ jsx(Button, {
 					variant: "outline",
 					size: "sm",
@@ -2322,7 +2333,7 @@ function GearCard({ g, onOpen }) {
 	});
 }
 var Cards = ({ items, onOpen }) => /* @__PURE__ */ jsx("div", {
-	className: "grid gap-2 sm:grid-cols-2",
+	className: "grid gap-3 sm:grid-cols-2",
 	children: items.map((g) => /* @__PURE__ */ jsx(GearCard, {
 		g,
 		onOpen
@@ -2345,7 +2356,7 @@ function Root({ go, onRecord }) {
 			name: first ? "My setup" : "Setup " + (S.length + 1),
 			note: "",
 			added: Date.now()
-		})) return;
+		}, "add the setup")) return;
 		go(first ? {
 			k: "add",
 			setup: id,
@@ -2391,7 +2402,7 @@ function Root({ go, onRecord }) {
 						children: "No equipment in this setup yet."
 					}),
 					canEdit && /* @__PURE__ */ jsxs("div", {
-						className: "flex flex-wrap gap-2",
+						className: "flex flex-wrap gap-3",
 						children: [/* @__PURE__ */ jsx(Button, {
 							size: "sm",
 							variant: "outline",
@@ -2526,7 +2537,7 @@ function EquipmentSheet({ open, onClose, onRecord }) {
 				}),
 				/* @__PURE__ */ jsx(DrawerDescription, { children: head.d }),
 				view.k === "item" && g && canEdit && /* @__PURE__ */ jsxs("div", {
-					className: "flex flex-wrap items-center gap-2",
+					className: "flex flex-wrap items-center gap-3",
 					children: [/* @__PURE__ */ jsx(Button, {
 						size: "sm",
 						variant: editing ? "primary" : "outline",
@@ -2621,7 +2632,7 @@ function GearPill({ onOpen }) {
 					"aria-hidden": "true",
 					className: "size-full p-0.5",
 					children: [
-						p.gear && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("circle", {
+						p.gear && /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx("circle", {
 							cx: "12",
 							cy: "12",
 							r: "10.5",
@@ -3371,7 +3382,7 @@ var bgStyle = (bg) => bg.kind === "photo" ? {
 	"--dim": bg.dim + "%",
 	"--photo-pos": bg.pos
 } : void 0;
-var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, onOpen }) {
+var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, example, onOpen }) {
 	const tag = tagText ? {
 		text: tagText,
 		tone: tagTone
@@ -3423,6 +3434,10 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 				}), /* @__PURE__ */ jsxs("div", {
 					className: "cap on-photo min-w-0 px-0.5 pt-2.5",
 					children: [
+						example && /* @__PURE__ */ jsx("span", {
+							className: "bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase",
+							children: "Example"
+						}),
 						/* @__PURE__ */ jsx("div", {
 							className: "text-ink text-sm leading-tight font-semibold break-words",
 							children: title
@@ -3441,7 +3456,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 		})
 	});
 });
-function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare, tools, gear, below, welcome }) {
+function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear, below, welcome }) {
 	const [filter, setFilter] = useWallFilter();
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -3457,10 +3472,10 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 		setSearching(false);
 		searchBtn.current?.focus();
 	};
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("header", {
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs("header", {
 		className: `mb-8 flex flex-col gap-2 ${lowHang ? "max-sm:mb-3" : "max-sm:mb-4"}`,
 		children: [/* @__PURE__ */ jsxs("div", {
-			className: "flex items-start justify-between gap-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4",
+			className: "flex items-start justify-between gap-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4",
 			children: [/* @__PURE__ */ jsx("h1", {
 				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance break-words uppercase",
 				children: title
@@ -3468,7 +3483,7 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 				className: "flex shrink-0 items-center gap-2 max-sm:self-end",
 				children: [
 					gear,
-					/* @__PURE__ */ jsx(Tip, {
+					records.length > 0 && /* @__PURE__ */ jsx(Tip, {
 						label: "Search the wall",
 						children: /* @__PURE__ */ jsx(Button, {
 							ref: searchBtn,
@@ -3477,7 +3492,7 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 							"aria-label": "Search the wall",
 							"aria-expanded": searching,
 							"aria-controls": "wall-search",
-							className: ROUND,
+							className: "bg-wall/70 rounded-full before:rounded-full before:bg-transparent",
 							onClick: () => searching ? closeSearch() : setSearching(true),
 							children: /* @__PURE__ */ jsx(SearchIcon, {})
 						})
@@ -3529,6 +3544,7 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 									className: "text-ink font-medium",
 									children: n[k]
 								}),
+								" ",
 								/* @__PURE__ */ jsx("span", {
 									className: k === "own" ? "" : "max-sm:sr-only",
 									children: FLABEL[k]
@@ -3550,7 +3566,7 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 						value: query,
 						onChange: (e) => setQuery(e.target.value),
 						onKeyDown: (e) => e.key === "Escape" && closeSearch(),
-						className: "flex-1"
+						className: "flex-1 [&::-webkit-search-cancel-button]:appearance-none"
 					}), /* @__PURE__ */ jsx(Button, {
 						size: "sm",
 						variant: "outline",
@@ -3568,20 +3584,17 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 			})]
 		})]
 	}), !records.length ? welcome || /* @__PURE__ */ jsx("p", {
-		className: "on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm",
+		className: "on-photo text-ink-2 bg-wall/70 border-border-emphasis max-w-xl rounded-(--radius-xs) border border-dashed px-5 py-7 text-sm",
 		children: onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : "Nothing hanging yet."
-	}) : !list.length ? /* @__PURE__ */ jsxs("div", {
+	}) : !list.length ? /* @__PURE__ */ jsx("div", {
 		className: "on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm",
-		children: [/* @__PURE__ */ jsxs("span", { children: [
+		children: /* @__PURE__ */ jsxs("span", { children: [
 			"Nothing on the wall matches “",
 			q,
-			"”."
-		] }), /* @__PURE__ */ jsx(Button, {
-			size: "sm",
-			variant: "outline",
-			onClick: closeSearch,
-			children: "Clear the search"
-		})]
+			"”",
+			on.length ? " with this filter" : "",
+			"."
+		] })
 	}) : /* @__PURE__ */ jsx("ul", {
 		className: `rack ${lowHang ? "max-sm:pt-0" : ""}`,
 		"data-hang": hang,
@@ -3595,7 +3608,8 @@ function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare,
 			hue: hueOf(r),
 			tagText: tagOf(r)?.text ?? "",
 			tagTone: tagOf(r)?.tone ?? "paper",
-			looking: busy(r, discogsOn),
+			looking: busy(r),
+			example: !!r.example,
 			onOpen
 		}, r.id))
 	})] });
@@ -3855,6 +3869,14 @@ function HangingSection() {
 	})] });
 }
 // src/settings/SettingsSheet.tsx
+var day = (d) => {
+	const s = String(d || "");
+	const m = /^(\d{4}-\d\d-\d\d) (\d\d:\d\d) UTC$/.exec(s);
+	if (!m) return longDate(s.slice(0, 10));
+	const t = /* @__PURE__ */ new Date(`${m[1]}T${m[2]}Z`);
+	const pad = (n) => String(n).padStart(2, "0");
+	return longDate(`${t.getFullYear()}-${pad(t.getMonth() + 1)}-${pad(t.getDate())}`);
+};
 function useUpdateAvailable() {
 	const { canEdit, hasMcp, settings } = useRuntime();
 	return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, "1.0.0");
@@ -3894,7 +3916,7 @@ function DiscogsImport({ dz }) {
 		}), !hasMcp || !settings.taskId ? /* @__PURE__ */ jsx("p", {
 			className: "text-foreground-muted text-sm",
 			children: "Importing runs in the background, which isn't connected for this page. Open your own wall to import."
-		}) : /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("div", {
+		}) : /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs("div", {
 			className: "flex flex-wrap gap-3",
 			children: [/* @__PURE__ */ jsx(Button, {
 				size: "sm",
@@ -3911,7 +3933,7 @@ function DiscogsImport({ dz }) {
 		}), /* @__PURE__ */ jsxs("p", {
 			role: "status",
 			className: "text-foreground-muted text-sm empty:hidden",
-			children: [dz.importRequested ? stalled ? "This is taking longer than it should." : "This takes a few minutes. Records appear on the wall as they come in." : dz.importMsg || "", !dz.importRequested && dz.importedAt && /* @__PURE__ */ jsxs("span", {
+			children: [dz.importRequested ? stalled ? "This is taking longer than it should. Try again to restart it." : "This takes a few minutes. Records appear on the wall as they come in." : dz.importMsg || "", !dz.importRequested && dz.importedAt && /* @__PURE__ */ jsxs("span", {
 				className: "font-mono",
 				children: [
 					" (",
@@ -3966,7 +3988,8 @@ function DiscogsSection({ focus }) {
 			setStatus("");
 			fireTask({ asked: true });
 		} catch (e) {
-			setStatus("Couldn't save the token: " + (e.message || String(e)));
+			const x = e;
+			setStatus(x.code === "signed-out" ? x.message : "Couldn't save the token: " + (x.message || String(e)));
 		}
 	};
 	const remove = async () => {
@@ -4002,7 +4025,7 @@ function DiscogsSection({ focus }) {
 			autoFocus: focus
 		})] }),
 		dz.hasToken && /* @__PURE__ */ jsxs("div", {
-			className: "bg-wall flex flex-wrap items-center gap-2.5 rounded-(--radius-xs) p-3",
+			className: "bg-wall flex flex-wrap items-center gap-3 rounded-(--radius-xs) p-3",
 			children: [
 				/* @__PURE__ */ jsxs("span", {
 					className: "font-mono text-sm tracking-wider",
@@ -4025,8 +4048,8 @@ function DiscogsSection({ focus }) {
 					className: "text-foreground-muted text-xs",
 					children: [
 						"Saved ",
-						dz.savedAt,
-						dz.checkedAt ? " · checked " + dz.checkedAt : ""
+						day(dz.savedAt),
+						dz.checkedAt ? " · checked " + day(dz.checkedAt) : ""
 					]
 				})
 			]
@@ -4036,7 +4059,7 @@ function DiscogsSection({ focus }) {
 			children: dz.msg
 		}),
 		dz.hasToken && !replacing ? /* @__PURE__ */ jsxs("div", {
-			className: "flex flex-wrap gap-2",
+			className: "flex flex-wrap gap-3",
 			children: [
 				/* @__PURE__ */ jsx(Button, {
 					size: "sm",
@@ -4060,7 +4083,7 @@ function DiscogsSection({ focus }) {
 		}) : /* @__PURE__ */ jsxs(Field, { children: [
 			/* @__PURE__ */ jsx(FieldLabel, { children: "Personal access token" }),
 			/* @__PURE__ */ jsxs("div", {
-				className: "flex flex-wrap gap-2",
+				className: "flex flex-wrap gap-3",
 				children: [
 					/* @__PURE__ */ jsx(Input, {
 						type: show ? "text" : "password",
@@ -4228,7 +4251,7 @@ function SettingsSheet({ open, at, onClose }) {
 							]
 						})]
 					}),
-					canEdit && /* @__PURE__ */ jsxs(Fragment, { children: [
+					canEdit && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 						/* @__PURE__ */ jsx(PageSection, {}),
 						/* @__PURE__ */ jsx(BackgroundSection, {}),
 						/* @__PURE__ */ jsx(HangingSection, {}),
@@ -4261,7 +4284,7 @@ function SettingsSheet({ open, at, onClose }) {
 						}),
 						/* @__PURE__ */ jsx("p", {
 							className: "text-foreground-muted text-sm",
-							children: "Anyone you share this wall with can see everything on it, including prices, orders and notes. Only you and people you make Editors can change it."
+							children: "Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make Editors can change it."
 						}),
 						/* @__PURE__ */ jsxs("p", {
 							className: "text-foreground-muted font-mono text-xs",
@@ -4325,7 +4348,7 @@ function CoverButton({ hasCover, onUploaded, onStatus, disabled }) {
 		}
 		setBusy(false);
 	};
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Button, {
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Button, {
 		size: "sm",
 		variant: "outline",
 		disabled: busy || disabled,
@@ -4380,7 +4403,7 @@ function CopyFields({ c, ph, on, auto, focus }) {
 				value: c.budget,
 				onChange: (e) => on("budget", e.target.value),
 				inputMode: "decimal",
-				placeholder: "60",
+				placeholder: "e.g. 60",
 				startSlot: /* @__PURE__ */ jsx("span", {
 					"aria-hidden": "true",
 					children: "$"
@@ -4484,7 +4507,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 		children: "+ Add another copy"
 	});
 	const plural = (n, s) => (n > 1 ? "The copies you " : "The copy you ") + s;
-	return /* @__PURE__ */ jsxs(Fragment, { children: [
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [
 		wish ? /* @__PURE__ */ jsxs(Fieldset, { children: [
 			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(all.length, "want") }),
 			all.map((c, i) => block(c, i, i ? MORE : FIRST)),
@@ -4633,6 +4656,13 @@ function DiscogsFields({ r, form, change, connected, onConnect }) {
 	const id = form.discogsId ?? "";
 	const [draft, setDraft] = useState(null);
 	const [copied, setCopied] = useState("");
+	const [manual, setManual] = useState(false);
+	const manualBox = useRef(null);
+	useEffect(() => {
+		if (!manual) return;
+		manualBox.current?.focus();
+		manualBox.current?.select();
+	}, [manual]);
 	const bad = draft !== null;
 	const changed = id !== wantCopies(r)[0].discogsId;
 	const typed = (v) => {
@@ -4642,7 +4672,7 @@ function DiscogsFields({ r, form, change, connected, onConnect }) {
 	};
 	const sync = r.discogsSync || {};
 	const quiet = id === "" && !changed && !r.needsSync && sync.state !== "no-match" && sync.state !== "error";
-	const line = !connected ? /* @__PURE__ */ jsxs(Fragment, { children: [
+	const line = !connected ? /* @__PURE__ */ jsxs(Fragment$1, { children: [
 		"Connect Discogs in",
 		" ",
 		/* @__PURE__ */ jsx("button", {
@@ -4656,13 +4686,14 @@ function DiscogsFields({ r, form, change, connected, onConnect }) {
 	] }) : quiet ? "Leave it empty and a match is found for you." : syncLine(r, changed);
 	const own = kindOf$1(r) === "own";
 	const matrix = runJoin(runSides(form.matrix));
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs(Field, {
+	const runout = runoutText(matrix, (form.pressing ?? "").trim(), (form.catalog ?? "").trim());
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs(Field, {
 		className: "sm:col-span-2",
 		invalid: bad,
 		children: [
 			/* @__PURE__ */ jsx(FieldLabel, { children: "Release number" }),
 			/* @__PURE__ */ jsxs("div", {
-				className: "grid grid-cols-[minmax(0,1fr)_auto] items-center gap-4 sm:grid-cols-2",
+				className: `grid items-center gap-4 sm:grid-cols-2 ${id !== "" && !bad ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-1"}`,
 				children: [/* @__PURE__ */ jsx(Input, {
 					value: draft ?? String(id),
 					onChange: (e) => typed(e.target.value),
@@ -4684,22 +4715,38 @@ function DiscogsFields({ r, form, change, connected, onConnect }) {
 			}) : /* @__PURE__ */ jsx(FieldDescription, { children: line }),
 			!changed && !bad && generalMatch(r.discogsMatch) && /* @__PURE__ */ jsx(FieldDescription, { children: "This points at a general release of the album. Paste the number of your exact pressing when you know it." })
 		]
-	}), own && id !== "" && !bad && matrix && /* @__PURE__ */ jsxs("div", {
+	}), own && matrix && /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-wrap items-center gap-3 sm:col-span-2",
-		children: [/* @__PURE__ */ jsx(CopyButton, {
-			size: "sm",
-			variant: "outline",
-			label: "Copy runout for a Discogs submission",
-			copiedLabel: "Copied runout",
-			value: () => runoutText(matrix, (form.pressing ?? "").trim(), (form.catalog ?? "").trim()),
-			onCopy: () => setCopied("Copied. Paste it into the release's edit form on Discogs."),
-			onCopyError: () => setCopied("Couldn't copy here. Select the runout above and copy it."),
-			children: "Copy runout for a Discogs submission"
-		}), /* @__PURE__ */ jsx("span", {
-			role: "status",
-			className: "text-foreground-muted text-xs",
-			children: copied
-		})]
+		children: [
+			/* @__PURE__ */ jsx(CopyButton, {
+				size: "sm",
+				variant: "outline",
+				label: "Copy runout for a Discogs submission",
+				copiedLabel: "Copied runout",
+				value: () => runout,
+				onCopy: () => {
+					setManual(false);
+					setCopied("Copied. Paste it into the release's edit form on Discogs.");
+				},
+				onCopyError: () => {
+					setManual(true);
+					setCopied("Selected: copy it with your device's copy command");
+				},
+				children: "Copy runout for a Discogs submission"
+			}),
+			/* @__PURE__ */ jsx("span", {
+				role: "status",
+				className: "text-foreground-muted text-xs",
+				children: copied
+			}),
+			manual && /* @__PURE__ */ jsx(Textarea, {
+				readOnly: true,
+				"aria-label": "Runout for a Discogs submission",
+				value: runout,
+				ref: manualBox,
+				className: "w-full font-mono"
+			})
+		]
 	})] });
 }
 // src/sheet/EditForm.tsx
@@ -4747,7 +4794,8 @@ function Paid({ form, set, placeholder }) {
 	})] });
 }
 function ShopUrl({ form, set, placeholder }) {
-	const bad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl);
+	const [left, setLeft] = useState(false);
+	const bad = left && !!form.shopUrl?.trim() && !shopHref(form.shopUrl);
 	return /* @__PURE__ */ jsxs(Field, {
 		className: "sm:col-span-2",
 		invalid: bad,
@@ -4755,7 +4803,11 @@ function ShopUrl({ form, set, placeholder }) {
 			/* @__PURE__ */ jsx(FieldLabel, { children: "Shop website" }),
 			/* @__PURE__ */ jsx(Input, {
 				value: form.shopUrl ?? "",
-				onChange: (e) => set("shopUrl", e.target.value),
+				onChange: (e) => {
+					setLeft(false);
+					set("shopUrl", e.target.value);
+				},
+				onBlur: () => setLeft(true),
 				type: "url",
 				autoCapitalize: "off",
 				autoComplete: "off",
@@ -4823,7 +4875,7 @@ function OrderFields(p) {
 			/* @__PURE__ */ jsx(Text, {
 				k: "carrier",
 				label: "Carrier",
-				placeholder: "USPS, UPS, FedEx, DHL",
+				placeholder: "e.g. UPS",
 				...p
 			}),
 			/* @__PURE__ */ jsxs(Field, {
@@ -4980,7 +5032,7 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 					/* @__PURE__ */ jsx(Text, {
 						k: "runtime",
 						label: "Runtime (min)",
-						placeholder: "e.g. 46",
+						placeholder: r?.needsEnrich ? "Looking it up…" : "e.g. 46",
 						mono: true,
 						numeric: true,
 						...p
@@ -5004,7 +5056,7 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 				className: "grid gap-4 sm:grid-cols-2",
 				children: discogs
 			})] }),
-			!isNew && /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Button, {
+			!isNew && /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Button, {
 				variant: "outline",
 				size: "sm",
 				className: "self-start",
@@ -5018,6 +5070,41 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 				onClose: () => setConfirm(false)
 			})] })
 		]
+	});
+}
+// src/sheet/Links.tsx
+var link = "text-primary underline-offset-2 hover:underline";
+function LinkList({ links }) {
+	return /* @__PURE__ */ jsx("ul", {
+		className: "flex flex-col gap-2 text-sm",
+		children: links.map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
+			href: u,
+			target: "_blank",
+			rel: "noopener",
+			className: link,
+			children: [t, " ↗"]
+		}) }, t + u))
+	});
+}
+function Source({ name, href }) {
+	return href ? /* @__PURE__ */ jsxs("a", {
+		href,
+		target: "_blank",
+		rel: "noopener",
+		className: "text-primary whitespace-nowrap hover:underline",
+		children: [name, " ↗"]
+	}) : /* @__PURE__ */ jsx(Fragment$1, { children: name });
+}
+function Chevron({ className = "size-4" }) {
+	return /* @__PURE__ */ jsx("svg", {
+		viewBox: "0 0 24 24",
+		fill: "none",
+		stroke: "currentColor",
+		strokeWidth: "2",
+		strokeLinecap: "round",
+		"aria-hidden": "true",
+		className: `${className} transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none`,
+		children: /* @__PURE__ */ jsx("path", { d: "M6 9l6 6 6-6" })
 	});
 }
 // src/sheet/NewRecordSheet.tsx
@@ -5034,6 +5121,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 	const [coverStatus, setCoverStatus] = useState("");
 	const [uploading, setUploading] = useState(false);
 	const [hanging, setHanging] = useState(false);
+	const [details, setDetails] = useState(false);
 	const busy = useRef(false);
 	const album = useRef(null);
 	const id = useRef(null);
@@ -5045,6 +5133,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		setStatus("");
 		setCoverStatus("");
 		setHanging(false);
+		setDetails(false);
 		busy.current = false;
 		id.current = null;
 		clearError();
@@ -5081,6 +5170,24 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		if (doc.needsEnrich) fireTask();
 		onCreated(id.current);
 	};
+	const hangIt = /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-2",
+		children: [/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-wrap items-center gap-3",
+			children: [/* @__PURE__ */ jsx(Button, {
+				disabled: !kind || hanging || uploading,
+				onClick: hang,
+				children: hanging ? "Hanging…" : "Hang it"
+			}), /* @__PURE__ */ jsx("span", {
+				role: "status",
+				className: "text-foreground-muted text-sm",
+				children: status
+			})]
+		}), /* @__PURE__ */ jsx("p", {
+			className: "text-foreground-muted text-xs",
+			children: "The cover, year, label and tracklist are looked up for you."
+		})]
+	});
 	return /* @__PURE__ */ jsx(Drawer, {
 		side: "right",
 		open,
@@ -5133,71 +5240,50 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 							["wish", "I want it"]
 						]
 					})] }),
-					/* @__PURE__ */ jsxs("div", {
-						className: "flex flex-col gap-2",
-						children: [/* @__PURE__ */ jsxs("div", {
-							className: "flex flex-wrap items-center gap-3",
-							children: [/* @__PURE__ */ jsx(Button, {
-								disabled: !kind || hanging || uploading,
-								onClick: hang,
-								children: hanging ? "Hanging…" : "Hang it"
-							}), /* @__PURE__ */ jsx("span", {
-								role: "status",
+					!details && hangIt,
+					/* @__PURE__ */ jsxs(Collapsible, {
+						open: details,
+						onOpenChange: setDetails,
+						children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+							className: "group text-foreground-intense flex items-center gap-1.5 py-2 text-sm font-medium underline-offset-2 hover:underline",
+							children: ["Add details now", /* @__PURE__ */ jsx(Chevron, {})]
+						}), /* @__PURE__ */ jsx(CollapsibleContent, {
+							className: "flex flex-col gap-6 pt-4",
+							children: kind ? /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(EditForm, {
+								form,
+								kind,
+								set,
+								change,
+								title: form.title,
+								focusWhy: false,
+								onStatus: null,
+								onRemove: () => {},
+								isNew: true
+							}), /* @__PURE__ */ jsxs("div", {
+								className: "flex flex-wrap items-center gap-3",
+								children: [/* @__PURE__ */ jsx(CoverButton, {
+									hasCover: !!cover,
+									onStatus: (m) => {
+										setCoverStatus(m);
+										setUploading(m === "Uploading cover…");
+									},
+									onUploaded: (a) => {
+										setCover(a);
+										setUploading(false);
+										setCoverStatus("Cover ready. It'll hang with the record.");
+									}
+								}), /* @__PURE__ */ jsx("span", {
+									role: "status",
+									className: "text-foreground-muted text-sm",
+									children: coverStatus
+								})]
+							})] }) : /* @__PURE__ */ jsx("p", {
 								className: "text-foreground-muted text-sm",
-								children: status
-							})]
-						}), /* @__PURE__ */ jsx("p", {
-							className: "text-foreground-muted text-xs",
-							children: "The cover, year, label and tracklist are looked up for you."
+								children: "Choose what it is first."
+							})
 						})]
 					}),
-					/* @__PURE__ */ jsxs(Collapsible, { children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
-						className: "group text-foreground-intense flex items-center gap-1.5 py-2 text-sm font-medium underline-offset-2 hover:underline",
-						children: ["Add details now", /* @__PURE__ */ jsx("svg", {
-							viewBox: "0 0 24 24",
-							fill: "none",
-							stroke: "currentColor",
-							strokeWidth: "2",
-							strokeLinecap: "round",
-							"aria-hidden": "true",
-							className: "size-4 transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none",
-							children: /* @__PURE__ */ jsx("path", { d: "M6 9l6 6 6-6" })
-						})]
-					}), /* @__PURE__ */ jsx(CollapsibleContent, {
-						className: "flex flex-col gap-6 pt-4",
-						children: kind ? /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(EditForm, {
-							form,
-							kind,
-							set,
-							change,
-							title: form.title,
-							focusWhy: false,
-							onStatus: null,
-							onRemove: () => {},
-							isNew: true
-						}), /* @__PURE__ */ jsxs("div", {
-							className: "flex flex-wrap items-center gap-3",
-							children: [/* @__PURE__ */ jsx(CoverButton, {
-								hasCover: !!cover,
-								onStatus: (m) => {
-									setCoverStatus(m);
-									setUploading(m === "Uploading cover…");
-								},
-								onUploaded: (a) => {
-									setCover(a);
-									setUploading(false);
-									setCoverStatus("Cover ready. It'll hang with the record.");
-								}
-							}), /* @__PURE__ */ jsx("span", {
-								role: "status",
-								className: "text-foreground-muted text-sm",
-								children: coverStatus
-							})]
-						})] }) : /* @__PURE__ */ jsx("p", {
-							className: "text-foreground-muted text-sm",
-							children: "Choose what it is first."
-						})
-					})] })
+					details && hangIt
 				]
 			})]
 		})
@@ -5239,8 +5325,11 @@ function deleteNote(r, ref) {
 function writtenNotes(r, isPlay) {
 	return notesOf(r).map((n, i) => ({
 		n,
+		i
+	})).filter((x) => x.n && typeof x.n === "object" && !isPlay(x.n)).map(({ n, i }) => ({
+		n,
 		ref: refOf(n, i)
-	})).filter((x) => x.n && typeof x.n === "object" && !isPlay(x.n)).reverse();
+	})).reverse();
 }
 // src/model/status.ts
 function movePatch(r, to, det, ci) {
@@ -5297,14 +5386,18 @@ var pressRow = (c) => c.pressing ? [["Pressing", /* @__PURE__ */ jsx("span", {
 	className: "whitespace-pre-line",
 	children: c.pressing
 })]] : [];
-var labelRow = (c, label) => label || c.catalog ? [["Label", /* @__PURE__ */ jsxs(Fragment, { children: [label, c.catalog && /* @__PURE__ */ jsxs("span", {
+var labelRow = (c, label) => label || c.catalog ? [["Label", /* @__PURE__ */ jsxs(Fragment$1, { children: [label, c.catalog && /* @__PURE__ */ jsxs("span", {
 	className: "text-foreground-muted",
 	children: [label ? " · " : "", c.catalog]
 })] })]] : [];
 var budgetRow = (c) => c.budget ? [["Budget", "Up to $" + c.budget]] : [];
 function CopiesView({ r, onEditCopy }) {
 	const L = stillCopies(r);
-	if (!L.length) return null;
+	const none = onEditCopy && kindOf$1(r) === "wish" ? /* @__PURE__ */ jsx("p", {
+		className: "text-foreground-muted text-sm",
+		children: "No copies yet. Add the pressing you're after in Edit."
+	}) : null;
+	if (!L.length) return none;
 	let body;
 	if (L.length === 1 && kindOf$1(r) === "wish") {
 		const [c, i] = L[0];
@@ -5313,7 +5406,7 @@ function CopiesView({ r, onEditCopy }) {
 			...labelRow(c, copyLabelShown(r, c, i) ? c.label : ""),
 			...budgetRow(c)
 		];
-		if (!rows.length && !c.name) return null;
+		if (!rows.length && !c.name) return none;
 		body = /* @__PURE__ */ jsxs("div", {
 			className: "flex flex-col gap-2",
 			children: [c.name && /* @__PURE__ */ jsx("h4", {
@@ -5396,7 +5489,7 @@ function CopyPicker({ r, to, onPick, onCancel }) {
 			/* @__PURE__ */ jsx(Button, {
 				variant: "ghost",
 				size: "sm",
-				className: "-ms-3 self-start",
+				className: "-ms-4 self-start",
 				onClick: onCancel,
 				children: "Cancel"
 			})
@@ -5407,7 +5500,7 @@ function CopyPicker({ r, to, onPick, onCancel }) {
 var ICON = {
 	trophy: /* @__PURE__ */ jsx("path", { d: "M8 4h8v4a4 4 0 0 1-8 0zM8 6H5a3 3 0 0 0 3 3M16 6h3a3 3 0 0 1-3 3M12 12v4M8 20h8M10 16h4v4h-4z" }),
 	flame: /* @__PURE__ */ jsx("path", { d: "M12 3c1 4 5 5.5 5 10a5 5 0 0 1-10 0c0-2.5 1.5-4 2.5-5 .3 2 1.5 3 2.5 3-1-3 0-5.5 0-8z" }),
-	disc: /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("circle", {
+	disc: /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx("circle", {
 		cx: "12",
 		cy: "12",
 		r: "8"
@@ -5447,6 +5540,65 @@ function Badges({ r, records }) {
 			}), b.name]
 		}, b.name))
 	});
+}
+// src/model/artist.ts
+var LINK_KINDS = {
+	website: "Website",
+	instagram: "Instagram",
+	youtube: "YouTube",
+	spotify: "Spotify",
+	bandcamp: "Bandcamp",
+	applemusic: "Apple Music",
+	soundcloud: "SoundCloud",
+	tiktok: "TikTok",
+	x: "X",
+	facebook: "Facebook"
+};
+var ORDER = Object.keys(LINK_KINDS);
+function artistOf(r, artists) {
+	if (!r.artistRef || r.aboutBlocked) return null;
+	const A = artists.find((a) => a.id === r.artistRef);
+	if (!A) return null;
+	const links = (Array.isArray(A.links) ? A.links : []).map((l) => ({
+		k: String(l?.kind ?? ""),
+		u: okUrl(l?.url)
+	})).filter((l) => l.u && Object.hasOwn(LINK_KINDS, l.k)).filter((l, i, a) => a.findIndex((x) => x.k === l.k) === i).sort((a, b) => ORDER.indexOf(a.k) - ORDER.indexOf(b.k)).map((l) => [LINK_KINDS[l.k], l.u]);
+	const summary = typeof A.summary === "string" ? A.summary.trim() : "";
+	if (!summary && !links.length) return null;
+	return {
+		name: typeof A.name === "string" && A.name || r.artist || "",
+		summary,
+		credit: A.source === "claude" ? "claude" : A.source === "discogs" ? "discogs" : "wikipedia",
+		wiki: okUrl(A.wiki),
+		links
+	};
+}
+// src/model/orders.ts
+function trackUrl(carrier, n) {
+	const num = String(n || "").trim();
+	if (!num) return "";
+	if (/^https?:\/\//i.test(num)) try {
+		const u = new URL(num);
+		if (/^https?:$/.test(u.protocol)) return u.href;
+	} catch {}
+	const q = encodeURIComponent(num);
+	const c = String(carrier || "").toLowerCase();
+	if (c.includes("usps")) return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + q;
+	if (c.includes("ups")) return "https://www.ups.com/track?tracknum=" + q;
+	if (c.includes("fedex")) return "https://www.fedex.com/fedextrack/?trknbr=" + q;
+	if (c.includes("dhl")) return "https://www.dhl.com/us-en/home/tracking.html?tracking-id=" + q;
+	return "https://www.google.com/search?q=" + encodeURIComponent((c ? c + " " : "") + "tracking " + num);
+}
+function discogsLinks(r) {
+	const q = encodeURIComponent(`${r.artist} ${r.title}`);
+	const ord = kindOf$1(r) === "ordered";
+	const id = r.discogsId ? encodeURIComponent(String(r.discogsId)) : "";
+	const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`;
+	return [
+		id ? [ord ? "The edition you ordered" : "Your pressing", `https://www.discogs.com/release/${id}`] : [ord ? "Find the edition" : "Find your pressing", search],
+		id ? ["What it sells for", `https://www.discogs.com/sell/history/${id}`] : ["Past sales (Popsike)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+		["Other pressings", search]
+	].filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i);
 }
 // src/model/plays.ts
 var sideOf = (pos) => (/^([A-Z])/.exec(String(pos || "")) || [])[1] || "";
@@ -5595,6 +5747,7 @@ function LogCard({ r, onLogged }) {
 						value: t.pos,
 						className: "mt-0.5"
 					}), /* @__PURE__ */ jsxs("span", { children: [
+						trackNum(t.pos, sd),
 						t.title,
 						" ",
 						t.dur && /* @__PURE__ */ jsx("span", {
@@ -5659,18 +5812,20 @@ function JournalEditor({ r, p, j, onDone }) {
 	return /* @__PURE__ */ jsxs("div", {
 		className: "bg-background-muted flex flex-col gap-3 rounded-md p-3",
 		children: [
-			/* @__PURE__ */ jsx("div", {
-				className: "text-foreground text-sm",
-				children: [
-					p.date,
-					p.what,
-					p.setup
-				].filter(Boolean).join(" · ")
-			}),
-			j.fresh && j.msg && /* @__PURE__ */ jsx("p", {
-				role: "status",
-				className: "text-foreground-muted -mt-2 text-xs",
-				children: j.msg
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-2",
+				children: [/* @__PURE__ */ jsx("div", {
+					className: "text-foreground text-sm",
+					children: [
+						p.date,
+						p.what,
+						p.setup
+					].filter(Boolean).join(" · ")
+				}), j.fresh && j.msg && /* @__PURE__ */ jsx("p", {
+					role: "status",
+					className: "text-foreground-muted text-xs",
+					children: j.msg
+				})]
 			}),
 			vibe ? /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-2",
@@ -5713,7 +5868,7 @@ function JournalEditor({ r, p, j, onDone }) {
 				onValueChange: (d) => setDate(fromDate(d) || date)
 			})] }),
 			/* @__PURE__ */ jsxs("div", {
-				className: "flex flex-wrap gap-2",
+				className: "flex flex-wrap gap-3",
 				children: [
 					/* @__PURE__ */ jsx(Button, {
 						size: "sm",
@@ -5772,6 +5927,10 @@ function StatsRow({ r }) {
 		}, k))
 	});
 }
+var trackNum = (pos, side) => {
+	const n = side ? String(pos || "").replace(/^[A-Z]+/, "") : String(pos || "");
+	return n ? n + " - " : "";
+};
 function Listening({ r }) {
 	const { canEdit } = useRuntime();
 	const [journal, keepJournal] = useState(() => journals.get(r.id) ?? null);
@@ -5834,13 +5993,17 @@ function Listening({ r }) {
 								children: [/* @__PURE__ */ jsxs("div", {
 									className: "min-w-0",
 									children: [
-										/* @__PURE__ */ jsx("div", {
+										/* @__PURE__ */ jsxs("div", {
 											className: "text-foreground",
-											children: [
+											children: [/* @__PURE__ */ jsx("span", {
+												"aria-hidden": "true",
+												className: "text-foreground-muted me-1.5 text-xs",
+												children: p.icon
+											}), [
 												p.date,
 												p.what,
 												p.setup
-											].filter(Boolean).join(" · ")
+											].filter(Boolean).join(" · ")]
 										}),
 										p.vibe > 0 && /* @__PURE__ */ jsx("div", {
 											className: "text-foreground-muted",
@@ -5898,7 +6061,7 @@ function NotesTab({ r }) {
 		className: "flex flex-col gap-6",
 		children: [
 			canEdit && /* @__PURE__ */ jsxs("form", {
-				className: "flex flex-col gap-2",
+				className: "flex flex-col gap-4",
 				onSubmit: (e) => {
 					e.preventDefault();
 					add();
@@ -5946,7 +6109,7 @@ function NotesTab({ r }) {
 							}),
 							autoFocus: true
 						}), /* @__PURE__ */ jsxs("div", {
-							className: "flex flex-wrap gap-2",
+							className: "flex flex-wrap gap-3",
 							children: [
 								/* @__PURE__ */ jsx(Button, {
 									size: "sm",
@@ -5994,43 +6157,15 @@ function NotesTab({ r }) {
 		]
 	});
 }
-// src/model/orders.ts
-function trackUrl(carrier, n) {
-	const num = String(n || "").trim();
-	if (!num) return "";
-	if (/^https?:\/\//i.test(num)) try {
-		const u = new URL(num);
-		if (/^https?:$/.test(u.protocol)) return u.href;
-	} catch {}
-	const q = encodeURIComponent(num);
-	const c = String(carrier || "").toLowerCase();
-	if (c.includes("usps")) return "https://tools.usps.com/go/TrackConfirmAction?tLabels=" + q;
-	if (c.includes("ups")) return "https://www.ups.com/track?tracknum=" + q;
-	if (c.includes("fedex")) return "https://www.fedex.com/fedextrack/?trknbr=" + q;
-	if (c.includes("dhl")) return "https://www.dhl.com/us-en/home/tracking.html?tracking-id=" + q;
-	return "https://www.google.com/search?q=" + encodeURIComponent((c ? c + " " : "") + "tracking " + num);
-}
-function discogsLinks(r) {
-	const q = encodeURIComponent(`${r.artist} ${r.title}`);
-	const ord = kindOf$1(r) === "ordered";
-	const id = r.discogsId ? encodeURIComponent(String(r.discogsId)) : "";
-	const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`;
-	return [
-		id ? [ord ? "The edition you ordered" : "Your pressing", `https://www.discogs.com/release/${id}`] : [ord ? "Find the edition" : "Find your pressing", search],
-		id ? ["What it sells for", `https://www.discogs.com/sell/history/${id}`] : ["Past sales (Popsike)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
-		["Other pressings", search]
-	].filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i);
-}
 // src/sheet/OrderCard.tsx
-var link$1 = "text-primary underline-offset-2 hover:underline";
 function Shop({ r }) {
 	const href = shopHref(r.shopUrl);
-	if (!href) return /* @__PURE__ */ jsx(Fragment, { children: r.shop });
+	if (!href) return /* @__PURE__ */ jsx(Fragment$1, { children: r.shop });
 	return /* @__PURE__ */ jsxs("a", {
 		href,
 		target: "_blank",
 		rel: "noopener",
-		className: link$1,
+		className: link,
 		children: [r.shop || new URL(href).hostname.replace(/^www\./, ""), " ↗"]
 	});
 }
@@ -6039,14 +6174,14 @@ function OrderCard({ r }) {
 	const first = c.pressing.split("\n")[0].trim();
 	const title = c.name || first || "Your order";
 	const track = trackUrl(r.carrier, r.tracking);
-	const rows = [["Status", /* @__PURE__ */ jsxs(Fragment, { children: [
+	const rows = [["Status", /* @__PURE__ */ jsxs(Fragment$1, { children: [
 		OSTAT[orderStatusOf(r)],
 		r.eta ? ", expected " + playDate(r.eta) : "",
-		track && /* @__PURE__ */ jsxs(Fragment, { children: [" · ", /* @__PURE__ */ jsx("a", {
+		track && /* @__PURE__ */ jsxs(Fragment$1, { children: [" · ", /* @__PURE__ */ jsx("a", {
 			href: track,
 			target: "_blank",
 			rel: "noopener",
-			className: `${link$1} whitespace-nowrap`,
+			className: `text-primary underline-offset-2 hover:underline whitespace-nowrap`,
 			children: "Track ↗"
 		})] })
 	] })]];
@@ -6054,7 +6189,7 @@ function OrderCard({ r }) {
 		className: "whitespace-pre-line",
 		children: c.pressing
 	})]);
-	if (c.label || c.catalog) rows.push(["Label", /* @__PURE__ */ jsxs(Fragment, { children: [c.label, c.catalog && /* @__PURE__ */ jsxs("span", {
+	if (c.label || c.catalog) rows.push(["Label", /* @__PURE__ */ jsxs(Fragment$1, { children: [c.label, c.catalog && /* @__PURE__ */ jsxs("span", {
 		className: "text-foreground-muted",
 		children: [c.label ? " · " : "", c.catalog]
 	})] })]);
@@ -6074,15 +6209,9 @@ function OrderCard({ r }) {
 				children: title
 			}),
 			/* @__PURE__ */ jsx(Facts, { rows }),
-			/* @__PURE__ */ jsx("ul", {
-				className: "mt-1 flex flex-col gap-2 text-sm",
-				children: discogsLinks(r).map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
-					href: u,
-					target: "_blank",
-					rel: "noopener",
-					className: link$1,
-					children: [t, " ↗"]
-				}) }, u))
+			/* @__PURE__ */ jsx("div", {
+				className: "mt-1",
+				children: /* @__PURE__ */ jsx(LinkList, { links: discogsLinks(r) })
 			})
 		]
 	});
@@ -6190,7 +6319,6 @@ function searchLinks(r) {
 	];
 }
 // src/sheet/ResearchTab.tsx
-var link = "text-primary underline-offset-2 hover:underline";
 function useCopy() {
 	const [copied, setCopied] = useState(null);
 	const copy = async (key, text, done) => {
@@ -6214,7 +6342,7 @@ function useCopy() {
 	};
 }
 function CopyStatus({ c }) {
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("span", {
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx("span", {
 		role: "status",
 		className: "text-foreground-muted text-xs",
 		children: c?.msg
@@ -6243,7 +6371,7 @@ var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
 	className: "text-foreground flex list-disc flex-col gap-1 ps-5 text-sm",
 	children: items.map((x, i) => /* @__PURE__ */ jsx("li", { children: x }, i))
 });
-function ResearchTab({ r, onEditCopy, want, setWant }) {
+function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 	const { canEdit, settings, mutate } = useRuntime();
 	const k = kindOf$1(r);
 	const wish = k === "wish";
@@ -6278,7 +6406,7 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 	const pressings = (e, key) => {
 		const L = strList(e.pressings);
 		if (!wish || !canEdit) return /* @__PURE__ */ jsx(Bullets, { items: L });
-		return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Bullets, { items: L.map((x) => {
+		return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Bullets, { items: L.map((x) => {
 			const p = pressOf(x);
 			return /* @__PURE__ */ jsxs("span", {
 				className: "flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1",
@@ -6379,12 +6507,12 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 							href: s.url,
 							target: "_blank",
 							rel: "noopener",
-							className: link,
+							className: "text-primary underline-offset-2 hover:underline",
 							children: [s.title, " ↗"]
 						})) })
 					}),
 					canEdit && /* @__PURE__ */ jsxs("div", {
-						className: "-ms-3 flex flex-wrap items-center gap-1",
+						className: "-ms-4 flex flex-wrap items-center gap-1",
 						children: [
 							/* @__PURE__ */ jsx(Button, {
 								size: "sm",
@@ -6401,7 +6529,7 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 							/* @__PURE__ */ jsx(Button, {
 								size: "sm",
 								variant: "ghost",
-								className: "text-error-emphasis ms-auto",
+								className: "text-error-emphasis -me-4 ms-auto",
 								onClick: () => setDel(key),
 								children: "Remove this research"
 							}),
@@ -6420,7 +6548,7 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 				onEditCopy: canEdit ? onEditCopy : void 0
 			}),
 			(canEdit || items.length > 0) && /* @__PURE__ */ jsxs(Fieldset, { children: [
-				!wish && still && /* @__PURE__ */ jsx(FieldsetLegend, { children: "Research" }),
+				(lone || !wish && still) && /* @__PURE__ */ jsx(FieldsetLegend, { children: "Research" }),
 				canEdit && /* @__PURE__ */ jsxs("div", {
 					className: "flex flex-col gap-3",
 					children: [/* @__PURE__ */ jsx("p", {
@@ -6444,16 +6572,7 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 					children: items.map(entry)
 				})
 			] }),
-			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx("ul", {
-				className: "flex flex-col gap-2 text-sm",
-				children: searchLinks(r).map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
-					href: u,
-					target: "_blank",
-					rel: "noopener",
-					className: link,
-					children: [t, " ↗"]
-				}) }, t))
-			})] }),
+			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx(LinkList, { links: searchLinks(r) })] }),
 			/* @__PURE__ */ jsx(Confirm, {
 				open: del !== null,
 				title: "Remove this research for good?",
@@ -6542,7 +6661,7 @@ function StatusActions({ r, onMoved }) {
 				})] })]
 			}),
 			/* @__PURE__ */ jsxs("div", {
-				className: "flex gap-2",
+				className: "flex gap-3",
 				children: [/* @__PURE__ */ jsx(Button, {
 					type: "submit",
 					size: "sm",
@@ -6559,12 +6678,12 @@ function StatusActions({ r, onMoved }) {
 		] })
 	});
 	return /* @__PURE__ */ jsx("div", {
-		className: "flex flex-wrap gap-2",
+		className: "flex flex-wrap gap-3",
 		children: k === "ordered" ? /* @__PURE__ */ jsx(Button, {
 			disabled: busy,
 			onClick: () => move("own"),
 			children: "It arrived"
-		}) : /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx(Button, {
+		}) : /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Button, {
 			disabled: busy,
 			onClick: () => start("ordered"),
 			children: "Ordered it"
@@ -6602,10 +6721,19 @@ function copyFacts(r) {
 	const g = gradeText(r);
 	if (g) f.push(["Grade", g]);
 	const runs = runParts(r.matrix);
-	if (runs.length) f.push(["Runout", runs.map((x) => /* @__PURE__ */ jsx("div", {
-		className: "font-mono text-xs",
-		children: x
-	}, x))]);
+	if (runs.length) f.push(["Runout", /* @__PURE__ */ jsxs(Collapsible, { children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+		className: "group text-foreground inline-flex items-center gap-1 text-start underline decoration-dotted underline-offset-2",
+		children: [/* @__PURE__ */ jsxs("span", { children: [runs.length > 1 ? runs.length + " sides" : "Show", r.catalog && /* @__PURE__ */ jsxs("span", {
+			className: "text-foreground-muted",
+			children: [" · Cat. ", r.catalog]
+		})] }), /* @__PURE__ */ jsx(Chevron, { className: "size-3.5 shrink-0" })]
+	}), /* @__PURE__ */ jsx(CollapsibleContent, {
+		className: "pt-1",
+		children: runs.map((x) => /* @__PURE__ */ jsx("div", {
+			className: "font-mono text-xs",
+			children: x
+		}, x))
+	})] })]);
 	return f;
 }
 function Tracks({ r }) {
@@ -6613,55 +6741,73 @@ function Tracks({ r }) {
 	const [all, setAll] = useState(false);
 	if (!T.length) return null;
 	const shown = all || T.length <= 12 ? T : T.slice(0, 8);
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("ol", {
-		className: "flex flex-col gap-1 text-sm",
-		children: shown.map((t, i) => /* @__PURE__ */ jsxs("li", {
-			className: "grid grid-cols-[2.5rem_1fr_auto] gap-2",
-			children: [
-				/* @__PURE__ */ jsx("span", {
-					className: "text-foreground-muted font-mono text-xs leading-5",
-					children: t.pos
-				}),
-				/* @__PURE__ */ jsx("span", {
-					className: "text-foreground",
-					children: t.title
-				}),
-				/* @__PURE__ */ jsx("span", {
-					className: "text-foreground-muted font-mono text-xs leading-5",
-					children: t.dur
-				})
-			]
-		}, i))
-	}), shown.length < T.length && /* @__PURE__ */ jsxs(Button, {
-		variant: "ghost",
-		size: "sm",
-		className: "self-start",
-		onClick: () => setAll(true),
-		children: [
-			"Show all ",
-			T.length,
-			" tracks"
-		]
-	})] });
-}
-function Summary({ r }) {
-	const [open, setOpen] = useState(false);
-	if (r.aboutBlocked) return null;
+	const sided = T.every((t) => sideOf(t.pos));
+	const sideTime = (s) => {
+		const n = T.filter((t) => sideOf(t.pos) === s).reduce((n, t) => n + trackSecs(t.dur), 0);
+		return n ? ` · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` : "";
+	};
 	const ab = r.about || {};
-	if (!ab.summary) return aboutPending(r) ? null : r.aboutAt ? /* @__PURE__ */ jsx("p", {
-		className: "text-foreground-muted text-xs",
-		children: "Wikipedia has nothing on this album."
-	}) : null;
-	const txt = String(ab.summary).trim();
+	const src = okUrl(ab.tracksUrl);
+	const srcName = ab.tracksSource === "discogs" ? "your Discogs pressing" : "MusicBrainz";
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [
+		/* @__PURE__ */ jsx("ol", {
+			className: "flex flex-col gap-1 text-sm",
+			children: shown.map((t, i) => /* @__PURE__ */ jsxs(Fragment, { children: [sided && sideOf(t.pos) !== sideOf(shown[i - 1]?.pos) && /* @__PURE__ */ jsxs("li", {
+				role: "presentation",
+				className: `text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? "pt-3" : ""}`,
+				children: [
+					"Side ",
+					sideOf(t.pos),
+					sideTime(sideOf(t.pos))
+				]
+			}), /* @__PURE__ */ jsxs("li", {
+				className: "grid grid-cols-[2.5rem_1fr_auto] gap-2",
+				children: [
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted font-mono text-xs leading-5",
+						children: t.pos
+					}),
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground",
+						children: t.title
+					}),
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted font-mono text-xs leading-5",
+						children: t.dur
+					})
+				]
+			})] }, i))
+		}),
+		shown.length < T.length && /* @__PURE__ */ jsxs(Button, {
+			variant: "ghost",
+			size: "sm",
+			className: "-ms-4 self-start",
+			onClick: () => setAll(true),
+			children: [
+				"Show all ",
+				T.length,
+				" tracks"
+			]
+		}),
+		/* @__PURE__ */ jsxs("p", {
+			className: "text-foreground-muted text-xs",
+			children: ["From ", /* @__PURE__ */ jsx(Source, {
+				name: srcName,
+				href: src
+			})]
+		})
+	] });
+}
+function Blurb({ text, clampAt, credit }) {
+	const [open, setOpen] = useState(false);
+	const txt = text.trim();
 	const k = txt.search(/\n\s*\n/);
 	const lede = k < 0 ? txt : txt.slice(0, k).trim();
 	const rest = k < 0 ? "" : txt.slice(k).trim();
-	const long = rest ? true : txt.length > 220;
-	const wiki = okUrl(ab.wiki);
-	const via = typeof ab.via === "string" ? ab.via : "";
+	const long = !!rest || txt.length > clampAt;
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-1",
-		children: [rest ? /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("p", {
+		children: [rest ? /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx("p", {
 			className: "text-foreground text-sm text-pretty",
 			children: lede
 		}), open && /* @__PURE__ */ jsx("p", {
@@ -6675,35 +6821,84 @@ function Summary({ r }) {
 			children: [long && /* @__PURE__ */ jsx(Button, {
 				size: "sm",
 				variant: "ghost",
-				className: "-ms-3",
+				className: "-ms-4 -me-4",
 				"aria-expanded": open,
 				onClick: () => setOpen(!open),
 				children: open ? "Less" : "More"
-			}), /* @__PURE__ */ jsxs("span", {
+			}), /* @__PURE__ */ jsx("span", {
 				className: "text-foreground-muted text-xs",
-				children: ["Summary by Claude", wiki && /* @__PURE__ */ jsxs(Fragment, { children: [
-					" · ",
-					via ? "from " : "",
-					/* @__PURE__ */ jsxs("a", {
-						href: wiki,
-						target: "_blank",
-						rel: "noopener",
-						className: "text-primary whitespace-nowrap hover:underline",
-						children: [via ? via + " on " : "", "Wikipedia ↗"]
-					})
-				] })]
+				children: credit
 			})]
 		})]
 	});
 }
-function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
-	const { canEdit } = useRuntime();
+function Summary({ r }) {
+	if (r.aboutBlocked) return null;
+	const ab = r.about || {};
+	if (!ab.summary) return aboutPending(r) ? null : r.aboutAt ? /* @__PURE__ */ jsx("p", {
+		className: "text-foreground-muted text-xs",
+		children: "Wikipedia has nothing on this album."
+	}) : null;
+	const wiki = okUrl(ab.wiki);
+	const via = typeof ab.via === "string" ? ab.via : "";
+	return /* @__PURE__ */ jsx(Blurb, {
+		text: String(ab.summary),
+		clampAt: 220,
+		credit: /* @__PURE__ */ jsxs(Fragment$1, { children: ["Summary by Claude", wiki && /* @__PURE__ */ jsxs(Fragment$1, { children: [
+			" · ",
+			via ? "from " : "",
+			/* @__PURE__ */ jsx(Source, {
+				name: (via ? via + " on " : "") + "Wikipedia",
+				href: wiki
+			})
+		] })] })
+	});
+}
+function ArtistAbout({ A }) {
+	const [all, setAll] = useState(false);
+	const src = A.credit === "discogs" ? "Discogs" : "Wikipedia";
+	const credit = A.credit === "claude" ? /* @__PURE__ */ jsxs(Fragment$1, { children: ["Summary by Claude", A.wiki && /* @__PURE__ */ jsxs(Fragment$1, { children: [" · ", /* @__PURE__ */ jsx(Source, {
+		name: "Wikipedia",
+		href: A.wiki
+	})] })] }) : /* @__PURE__ */ jsxs(Fragment$1, { children: ["From ", /* @__PURE__ */ jsx(Source, {
+		name: src,
+		href: A.wiki
+	})] });
+	const shown = all ? A.links : A.links.slice(0, 5);
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-2",
+		children: [/* @__PURE__ */ jsx("h4", {
+			className: "text-foreground-intense text-sm font-medium",
+			children: A.name
+		}), A.summary && /* @__PURE__ */ jsx(Blurb, {
+			text: A.summary,
+			clampAt: 180,
+			credit
+		})]
+	}), A.links.length > 0 && /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-1",
+		children: [/* @__PURE__ */ jsx(LinkList, { links: shown }), shown.length < A.links.length && /* @__PURE__ */ jsxs(Button, {
+			variant: "ghost",
+			size: "sm",
+			className: "-ms-4 self-start",
+			onClick: () => setAll(true),
+			children: [
+				"Show all ",
+				A.links.length,
+				" links"
+			]
+		})]
+	})] });
+}
+function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, setTab }) {
+	const { canEdit, artists } = useRuntime();
 	const k = kindOf$1(r);
 	const own = k === "own";
 	const info = keyInfo(r);
 	const copy = copyFacts(r);
 	const hasTracks = recordTracks(r).length > 0;
-	const about = info.length > 0 || copy.length > 0 || hasTracks;
+	const artist = artistOf(r, artists);
+	const about = info.length > 0 || copy.length > 0 || hasTracks || !!artist;
 	const notesN = noteCount(r);
 	const notes = canEdit || notesN > 0;
 	const research = hasResearch(r, canEdit);
@@ -6714,7 +6909,8 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 		...notes ? ["notes"] : [],
 		...about ? ["about"] : []
 	];
-	const titled = (name, node) => tabs.length === 1 ? /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: name }), node] }) : node;
+	const lone = tabs.length === 1;
+	const titled = (name, node) => lone ? /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: name }), node] }) : node;
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-6",
 		children: [
@@ -6742,11 +6938,14 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 				children: msg
 			}),
 			tabs.length > 0 && /* @__PURE__ */ jsxs(Tabs, {
-				defaultValue: tabs[0],
+				value: tabs.includes(tab) ? tab : tabs[0],
+				onValueChange: (v) => setTab(String(v)),
 				children: [
 					tabs.length > 1 && /* @__PURE__ */ jsxs(TabsList, {
 						variant: "line",
 						size: "sm",
+						activateOnFocus: true,
+						className: "mb-4",
 						children: [
 							own && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "listening",
@@ -6762,10 +6961,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 							}),
 							notes && /* @__PURE__ */ jsxs(TabsTrigger, {
 								value: "notes",
-								children: ["Notes", notesN > 0 && /* @__PURE__ */ jsx("span", {
-									className: "text-foreground-muted ms-1",
+								children: ["Notes", notesN > 0 && /* @__PURE__ */ jsxs(Fragment$1, { children: [" ", /* @__PURE__ */ jsx("span", {
+									className: "text-foreground-muted",
 									children: notesN
-								})]
+								})] })]
 							}),
 							about && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "about",
@@ -6775,40 +6974,51 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 					}),
 					own && /* @__PURE__ */ jsx(TabsContent, {
 						value: "listening",
-						className: "pt-4",
 						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
 					}),
 					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
 						value: "order",
-						className: "pt-4",
 						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, { r }))
 					}),
 					research && /* @__PURE__ */ jsx(TabsContent, {
 						value: "research",
-						className: "pt-4",
 						children: /* @__PURE__ */ jsx(ResearchTab, {
 							r,
 							onEditCopy,
 							want,
-							setWant
+							setWant,
+							lone
 						})
 					}),
 					notes && /* @__PURE__ */ jsx(TabsContent, {
 						value: "notes",
-						className: "pt-4",
 						children: titled("Notes", /* @__PURE__ */ jsx(NotesTab, { r }))
 					}),
 					about && /* @__PURE__ */ jsxs(TabsContent, {
 						value: "about",
-						className: "flex flex-col gap-6 pt-4",
+						className: "flex flex-col gap-8",
 						children: [
-							info.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }), /* @__PURE__ */ jsx(Facts, { rows: info })] }),
-							copy.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your copy" }), /* @__PURE__ */ jsx(Facts, { rows: copy })] }),
-							hasTracks && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Tracklist" }), /* @__PURE__ */ jsx(Tracks, { r })] })
+							info.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }), /* @__PURE__ */ jsx(Facts, {
+								labelCol: true,
+								rows: info.map(([k, v]) => [k, /* @__PURE__ */ jsx("span", {
+									className: "whitespace-pre-line",
+									children: v
+								})])
+							})] }),
+							copy.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [
+								/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your copy" }),
+								/* @__PURE__ */ jsx(Facts, {
+									labelCol: true,
+									rows: copy
+								}),
+								/* @__PURE__ */ jsx(LinkList, { links: discogsLinks(r) })
+							] }),
+							hasTracks && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Tracklist" }), /* @__PURE__ */ jsx(Tracks, { r })] }),
+							artist && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the artist" }), /* @__PURE__ */ jsx(ArtistAbout, { A: artist }, r.id)] })
 						]
 					})
 				]
-			}, "tabs" + r.id + k)
+			})
 		]
 	});
 }
@@ -6839,13 +7049,13 @@ function useAutosave(r, editing) {
 			const f = toForm(r);
 			baseline.current = f;
 			setForm(f);
-			setSaved("");
 		} else setForm(null);
 	}, [
 		editing,
 		r?.id,
 		kind
 	]);
+	useEffect(() => setSaved(""), [editing, r?.id]);
 	useEffect(() => {
 		if (!editing || !r || !baseline.current || latest.current.form !== baseline.current) return;
 		const f = toForm(r);
@@ -6900,6 +7110,16 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 	const [focusCopy, setFocusCopy] = useState(null);
 	const [want, setWant] = useState(null);
 	const [msg, setMsg] = useState("");
+	const [tabAt, setTabAt] = useState({
+		at: "",
+		tab: ""
+	});
+	const at = r ? r.id + ":" + kindOf$1(r) : "";
+	const tab = tabAt.at === at ? tabAt.tab : "";
+	const setTab = (t) => setTabAt({
+		at,
+		tab: t
+	});
 	const [pick, setPick] = useState(null);
 	const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit);
 	useEffect(() => {
@@ -6907,6 +7127,10 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		setPick(null);
 		setWant(null);
 		setMsg("");
+		setTabAt({
+			at: "",
+			tab: ""
+		});
 		clearError(true);
 	}, [id]);
 	const moveTo = (to, ci) => {
@@ -6941,14 +7165,14 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		r.year,
 		r.runtime ? r.runtime + " min" : ""
 	].filter(Boolean).join(" · ") : "";
-	const status = r ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === "ok") ? "Waiting to sync…" : "") : "";
+	const status = r && canEdit ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === "ok") ? "Waiting to sync…" : "") : "";
 	return /* @__PURE__ */ jsx(Drawer, {
 		side: "right",
 		open: !!r,
 		onOpenChange: (o) => !o && close(),
 		children: /* @__PURE__ */ jsx(DrawerContent, {
 			className: "w-full sm:max-w-xl",
-			children: r && /* @__PURE__ */ jsxs(Fragment, { children: [
+			children: r && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 				onBack && /* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					variant: "ghost",
@@ -7029,7 +7253,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 							children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
 						}),
 						editing && /* @__PURE__ */ jsxs("div", {
-							className: "mb-6 flex flex-wrap items-center gap-2",
+							className: "mb-6 flex flex-wrap items-center gap-3",
 							children: [
 								/* @__PURE__ */ jsx(CoverButton, {
 									hasCover: !!r.coverAsset,
@@ -7089,6 +7313,8 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 							},
 							want,
 							setWant,
+							tab,
+							setTab,
 							onEditCopy: (ci) => {
 								setFocusCopy(ci);
 								setEditing(true);
@@ -7971,7 +8197,7 @@ function ShareSheet({ shown, onClose }) {
 						className: "text-foreground-muted text-sm",
 						children: "Couldn't draw the picture here."
 					}),
-					ready && /* @__PURE__ */ jsxs(Fragment, { children: [
+					ready && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 						/* @__PURE__ */ jsxs("div", {
 							className: "flex flex-col gap-2",
 							children: [/* @__PURE__ */ jsxs("div", {
@@ -8155,8 +8381,9 @@ function App() {
 	const [fromEquip, setFromEquip] = useState(false);
 	const update = useUpdateAvailable();
 	const discogsOn = settings.discogs?.status === "ok";
-	const looking = records.filter((r) => busy(r, discogsOn)).length;
-	const lookupNews = useLookupNews(canEdit ? looking : 0);
+	const isBusy = (r) => canEdit && busy(r, discogsOn);
+	const looking = records.filter(isBusy).length;
+	const lookupNews = useLookupNews(looking);
 	return /* @__PURE__ */ jsxs("main", {
 		className: `mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === "photo" ? "photo-bg" : ""}`,
 		children: [
@@ -8184,12 +8411,12 @@ function App() {
 					records,
 					title: site.title,
 					hang: site.hang,
-					discogsOn,
+					busy: isBusy,
 					onOpen: setOpenId,
 					onAdd: canEdit ? () => setAdding(true) : void 0,
 					onShare: hasDownloads ? setSharing : void 0,
-					below: canEdit && looking > 0 && /* @__PURE__ */ jsxs("span", {
-						className: "text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono text-[0.8125rem] max-sm:h-auto",
+					below: looking > 0 && /* @__PURE__ */ jsxs("span", {
+						className: "text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono max-sm:px-0 text-[0.8125rem] max-sm:h-auto",
 						children: [/* @__PURE__ */ jsx("span", {
 							"aria-hidden": "true",
 							className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
@@ -8215,7 +8442,7 @@ function App() {
 						onImport: () => setSettingsOpen("import")
 					}),
 					gear: gearPillShown(gear, canEdit) && /* @__PURE__ */ jsx(GearPill, { onOpen: () => setEquipOpen(true) }),
-					tools: /* @__PURE__ */ jsx(Fragment, { children: canEdit && /* @__PURE__ */ jsxs("span", {
+					tools: /* @__PURE__ */ jsx(Fragment$1, { children: canEdit && /* @__PURE__ */ jsxs("span", {
 						className: "relative",
 						children: [/* @__PURE__ */ jsx(Tip, {
 							label: update ? "Settings (update available)" : "Settings",
@@ -9467,12 +9694,12 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-inline-start: calc(var(--spacing) * -3);
   }
 
-  .-ms-\[0\.045em\] {
-    margin-inline-start: -.045em;
+  .-ms-4 {
+    margin-inline-start: calc(var(--spacing) * -4);
   }
 
-  .ms-1 {
-    margin-inline-start: var(--spacing);
+  .-ms-\[0\.045em\] {
+    margin-inline-start: -.045em;
   }
 
   .ms-1\.5 {
@@ -9495,8 +9722,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-inline-end: calc(var(--spacing) * -3);
   }
 
+  .-me-4 {
+    margin-inline-end: calc(var(--spacing) * -4);
+  }
+
   .me-0\.5 {
     margin-inline-end: calc(var(--spacing) * .5);
+  }
+
+  .me-1\.5 {
+    margin-inline-end: calc(var(--spacing) * 1.5);
   }
 
   .me-2 {
@@ -9509,10 +9744,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .-mt-1 {
     margin-top: calc(var(--spacing) * -1);
-  }
-
-  .-mt-2 {
-    margin-top: calc(var(--spacing) * -2);
   }
 
   .mt-0\.5 {
@@ -10088,6 +10319,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     grid-template-columns: 3.5rem minmax(0, 1fr);
   }
 
+  .grid-cols-\[5\.5rem_1fr\] {
+    grid-template-columns: 5.5rem 1fr;
+  }
+
   .grid-cols-\[auto_1fr\] {
     grid-template-columns: auto 1fr;
   }
@@ -10184,10 +10419,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     gap: calc(var(--spacing) * 2);
   }
 
-  .gap-2\.5 {
-    gap: calc(var(--spacing) * 2.5);
-  }
-
   .gap-3 {
     gap: calc(var(--spacing) * 3);
   }
@@ -10198,10 +10429,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .gap-4 {
     gap: calc(var(--spacing) * 4);
-  }
-
-  .gap-5 {
-    gap: calc(var(--spacing) * 5);
   }
 
   .gap-6 {
@@ -10432,6 +10659,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .border-border {
     border-color: var(--border);
+  }
+
+  .border-border-emphasis {
+    border-color: var(--border-emphasis);
   }
 
   .border-border-muted {
@@ -10816,6 +11047,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .py-0\.5 {
     padding-block: calc(var(--spacing) * .5);
+  }
+
+  .py-1 {
+    padding-block: var(--spacing);
   }
 
   .py-1\.5 {
@@ -11264,6 +11499,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .tabular-nums {
     --tw-numeric-spacing: tabular-nums;
     font-variant-numeric: var(--tw-ordinal, ) var(--tw-slashed-zero, ) var(--tw-numeric-figure, ) var(--tw-numeric-spacing, ) var(--tw-numeric-fraction, );
+  }
+
+  .underline {
+    text-decoration-line: underline;
+  }
+
+  .decoration-dotted {
+    text-decoration-style: dotted;
   }
 
   .underline-offset-2 {
@@ -13779,6 +14022,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       align-self: flex-end;
     }
 
+    .max-sm\:px-0 {
+      padding-inline: 0;
+    }
+
     .max-sm\:pt-0 {
       padding-top: 0;
     }
@@ -14018,6 +14265,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .\[\&_svg\:not\(\[class\*\=\'stroke-\'\]\)\]\:stroke-\[1\.85\] svg:not([class*="stroke-"]) {
     stroke-width: 1.85px;
+  }
+
+  .\[\&\:\:-webkit-search-cancel-button\]\:appearance-none::-webkit-search-cancel-button {
+    appearance: none;
   }
 
   .\[a\,button\]\:transform-gpu:is(a, button) {
@@ -15112,6 +15363,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 body {
   background-color: var(--wall);
   color: var(--ink);
+}
+
+@media (hover: none) {
+  * {
+    scrollbar-width: none;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 @property --tw-translate-x {
