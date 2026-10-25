@@ -2771,7 +2771,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 		children: /* @__PURE__ */ jsxs("div", {
 			className: "hanger",
 			children: [/* @__PURE__ */ jsx("span", {
-				className: "ring",
+				className: "hook",
 				"aria-hidden": "true"
 			}), /* @__PURE__ */ jsxs("button", {
 				type: "button",
@@ -3051,11 +3051,19 @@ function BackgroundSection() {
 		const k = kindOf(key);
 		return k !== "pattern" && k !== kindOf(current) ? { dim: DEFAULT_DIM[k] } : {};
 	};
+	const before = (key) => key.startsWith("photo:") && !isUpload ? { bgBefore: {
+		preset: current.slice(7),
+		...typeof settings.dim === "number" ? { dim: settings.dim } : {}
+	} } : {};
+	const prev = settings.bgBefore || {};
+	const back = "preset:" + presetOf(prev);
+	const backName = BACKGROUNDS.find(([k]) => "preset:" + k === back)[1];
 	const pick = (key) => {
 		if (!key || key === current) return;
 		saveSettings({
 			bg: bgOf(key),
-			...dimFor(key)
+			...dimFor(key),
+			...before(key)
 		});
 	};
 	const [busy, setBusy] = useState(false);
@@ -3076,7 +3084,8 @@ function BackgroundSection() {
 					kind: "photo",
 					assetId: id
 				},
-				...dimFor("photo:" + id)
+				...dimFor("photo:" + id),
+				...before("photo:" + id)
 			});
 			setStatus("");
 		} catch (e) {
@@ -3086,7 +3095,7 @@ function BackgroundSection() {
 	};
 	const remove = async (id) => {
 		const patch = { uploads: uploads.filter((u) => u.id !== id) };
-		if (current === "photo:" + id) Object.assign(patch, { bg: bgOf("preset:listening") }, dimFor("preset:listening"));
+		if (current === "photo:" + id) Object.assign(patch, { bg: bgOf(back) }, typeof prev.dim === "number" && kindOf(back) === "stock" ? { dim: prev.dim } : dimFor(back));
 		if (await saveSettings(patch)) deleteAsset(id);
 	};
 	const removingCurrent = removing !== null && current === "photo:" + removing;
@@ -3178,7 +3187,7 @@ function BackgroundSection() {
 		dragging !== null && createPortal(/* @__PURE__ */ jsx(WallBackground, { bg: look(current, dragging) }), document.body),
 		/* @__PURE__ */ jsx(Confirm, {
 			open: removing !== null,
-			title: "Remove this background for good?" + (removingCurrent ? " The wall goes back to the Listening room." : ""),
+			title: "Remove this background for good?" + (removingCurrent ? ` The wall goes back to ${backName}.` : ""),
 			yes: "Remove",
 			onYes: () => removing && remove(removing),
 			onClose: () => setRemoving(null)
@@ -3204,7 +3213,7 @@ function HangingSection() {
 						className: "slot block",
 						children: /* @__PURE__ */ jsxs("span", {
 							className: "hanger block",
-							children: [/* @__PURE__ */ jsx("span", { className: "ring" }), /* @__PURE__ */ jsx("span", {
+							children: [/* @__PURE__ */ jsx("span", { className: "hook" }), /* @__PURE__ */ jsx("span", {
 								className: "sleeve-box mx-auto block w-24",
 								children: /* @__PURE__ */ jsx("span", { className: "sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" })
 							})]
@@ -6961,13 +6970,13 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
-  .ring {
+  .hook {
     z-index: 3;
     position: absolute;
     left: 50%;
   }
 
-  .rack[data-hang="barn"] .ring {
+  .rack[data-hang="barn"] .hook {
     border: 4px solid var(--iron);
     border-top-color: var(--iron-hi);
     border-left-color: var(--iron-mid);
@@ -6979,7 +6988,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     top: -.875rem;
   }
 
-  .rack[data-hang="barn"] .ring:after {
+  .rack[data-hang="barn"] .hook:after {
     content: "";
     border-radius: var(--radius-4xs);
     background: radial-gradient(circle at 50% 50%, var(--iron-hi) 0 1.2px, transparent 1.8px), linear-gradient(var(--bracket), var(--bracket-2));
@@ -7020,19 +7029,19 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transform-origin: 50% -1.25rem;
   }
 
-  .rack[data-hang="peg"] .ring {
+  .rack[data-hang="peg"] .hook {
     background: radial-gradient(circle at 36% 32%, var(--peg) 0 8%, var(--peg-2) 30%, var(--peg-3) 62%, var(--peg-rail-4));
     width: 1rem;
     height: 1rem;
     box-shadow: 0 3px 4px var(--shade), inset 0 0 0 1.5px var(--shade);
     border-radius: 50%;
     margin-left: -.5rem;
-    top: -1.4375rem;
+    top: -1.75rem;
     left: 50%;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="peg"] .ring {
+    .rack[data-hang="peg"] .hook {
       box-shadow: 0 3px 4px color-mix(in srgb, var(--shade) 50%, transparent), inset 0 0 0 1.5px color-mix(in srgb, var(--shade) 35%, transparent);
     }
   }
@@ -7043,9 +7052,9 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     pointer-events: none;
     background: var(--yarn);
     inset-inline: 10%;
-    height: 1.25rem;
+    height: 1.375rem;
     position: absolute;
-    top: -1.125rem;
+    top: -1.25rem;
     -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
     mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
   }
@@ -7083,34 +7092,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
-  .rack[data-hang="cork"] .slot:nth-child(3n+1) {
-    --tx: -8px;
-    --la: -58deg;
-    --ll: 5px;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(3n+2) {
-    --tx: 5px;
-    --la: 52deg;
-    --ll: 5px;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(3n) {
-    --tx: -2px;
-    --la: -80deg;
-    --ll: 6px;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(4n) {
-    --tx: 10px;
-    --la: 70deg;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(7n+3) {
-    --la: 100deg;
-    --ll: 4px;
-  }
-
   .rack[data-hang="cork"] .slot:nth-child(5n+1) {
     --pin: var(--pin-1);
   }
@@ -7131,6 +7112,18 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --pin: var(--pin-5);
   }
 
+  .rack[data-hang="cork"] .slot:nth-child(3n+1) {
+    --tx: -8px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+2) {
+    --tx: 5px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(4n) {
+    --tx: 10px;
+  }
+
   .rack[data-hang="cork"] .hanger {
     transform-origin: calc(50% + var(--tx, 0px)) -.375rem;
   }
@@ -7143,78 +7136,20 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transform: rotate(1.3deg);
   }
 
-  .rack[data-hang="cork"] .ring {
+  .rack[data-hang="cork"] .hook {
     width: 13px;
     height: 13px;
     transform: translateX(var(--tx, 0px));
-    background: radial-gradient(circle at 40% 35%, var(--pin), var(--pin) 45%, var(--pin));
+    background: var(--pin);
+    box-shadow: inset 0 0 0 1.5px var(--pin), inset 0 0 0 3px var(--pin), 1px 2px 2px var(--shade);
     border-radius: 50%;
     margin-left: -6.5px;
-    top: -.8125rem;
-    left: 50%;
+    top: -.375rem;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .ring {
-      background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
-    }
-  }
-
-  .rack[data-hang="cork"] .ring {
-    box-shadow: 1px 2px 2px var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .ring {
-      box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
-    }
-  }
-
-  .rack[data-hang="cork"] .ring:before, .rack[data-hang="cork"] .ring:after {
-    content: "";
-    position: absolute;
-  }
-
-  .rack[data-hang="cork"] .ring:before {
-    width: 6px;
-    height: var(--ll, 7px);
-    transform-origin: 50% 100%;
-    transform: rotate(var(--la, 0deg));
-    background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin));
-    margin-left: -3px;
-    bottom: 50%;
-    left: 50%;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .ring:before {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
-    }
-  }
-
-  .rack[data-hang="cork"] .ring:after {
-    width: 11px;
-    height: 11px;
-    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
-    background: radial-gradient(circle at 35% 30%, var(--pin) 0 14%, var(--pin) 50%, var(--pin));
-    border-radius: 50%;
-    top: 1px;
-    left: 1px;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .ring:after {
-      background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
-    }
-  }
-
-  .rack[data-hang="cork"] .ring:after {
-    box-shadow: 2px 4px 4px var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .ring:after {
-      box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
+    .rack[data-hang="cork"] .hook {
+      box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pin) 70%, var(--shade)), inset 0 0 0 3px color-mix(in srgb, var(--pin) 82%, var(--gleam)), 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
     }
   }
 
@@ -7226,10 +7161,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .rack[data-hang="float"] .slot {
     padding: 1rem 0 0;
-  }
-
-  .rack[data-hang="float"] .ring {
-    display: none;
   }
 
   .rack[data-hang="float"] .slot:nth-child(n) .hanger {
