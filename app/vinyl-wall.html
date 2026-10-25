@@ -8642,13 +8642,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 @layer base {
   @supports (not ((-webkit-appearance: -apple-pay-button))) or (contain-intrinsic-size: 1px) {
     ::placeholder {
-      color: currentColor;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      ::placeholder {
-        color: color-mix(in oklab, currentcolor 50%, transparent);
-      }
+      color: color-mix(in oklab, currentcolor 50%, transparent);
     }
   }
 
@@ -8694,6 +8688,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   a {
     color: inherit;
+    -webkit-text-decoration: inherit;
+    -webkit-text-decoration: inherit;
     -webkit-text-decoration: inherit;
     -webkit-text-decoration: inherit;
     -webkit-text-decoration: inherit;
@@ -8802,13 +8798,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   @supports (not ((-webkit-appearance: -apple-pay-button))) or (contain-intrinsic-size: 1px) {
     ::placeholder {
-      color: currentColor;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      ::placeholder {
-        color: color-mix(in oklab, currentcolor 50%, transparent);
-      }
+      color: color-mix(in oklab, currentcolor 50%, transparent);
     }
   }
 
@@ -8937,57 +8927,17 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .rack[data-hang="barn"] .slot:before {
     content: "";
-    --dark: var(--shade);
-    inset-inline: 0;
+    --dark: color-mix(in srgb, var(--shade) 45%, transparent);
+    --stain: color-mix(in srgb, var(--rust) 55%, transparent);
+    --stain-2: color-mix(in srgb, var(--rust) 18%, transparent);
+    background: radial-gradient(circle at .75rem 52%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(circle at calc(100% - .75rem) 48%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(ellipse 13px 4px at var(--knot, 64%) 58%, var(--nail), var(--nail) 60%, transparent 75%), linear-gradient(180deg, transparent 34%, var(--dark) 34% 39%, transparent 39%) var(--crack, 22%) 0 / var(--crack-w, 38%) 100% no-repeat, repeating-linear-gradient(90deg, var(--gleam) 0 31px, var(--shade) 31px 37px, transparent 37px 73px, var(--shade) 73px 76px, transparent 76px 109px), repeating-linear-gradient(180deg, var(--shade) 0 1px, transparent 1px 3px, var(--gleam) 3px 4px, transparent 4px 6px), linear-gradient(var(--plank), var(--plank-2) 48%, var(--plank-3));
+    background: radial-gradient(circle at .75rem 52%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(circle at calc(100% - .75rem) 48%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(ellipse 13px 4px at var(--knot, 64%) 58%, color-mix(in srgb, var(--nail) 70%, transparent), color-mix(in srgb, var(--nail) 25%, transparent) 60%, transparent 75%), linear-gradient(180deg, transparent 34%, var(--dark) 34% 39%, transparent 39%) var(--crack, 22%) 0 / var(--crack-w, 38%) 100% no-repeat, repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 31px, color-mix(in srgb, var(--shade) 9%, transparent) 31px 37px, transparent 37px 73px, color-mix(in srgb, var(--shade) 5%, transparent) 73px 76px, transparent 76px 109px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 16%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px), linear-gradient(var(--plank), var(--plank-2) 48%, var(--plank-3));
     height: 1.3125rem;
+    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 -2px 0 var(--shade);
+    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 -2px 0 color-mix(in srgb, var(--shade) 40%, transparent);
+    inset-inline: 0;
     position: absolute;
     top: .1875rem;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="barn"] .slot:before {
-      --dark: color-mix(in srgb, var(--shade) 45%, transparent);
-    }
-  }
-
-  .rack[data-hang="barn"] .slot:before {
-    --stain: var(--rust);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="barn"] .slot:before {
-      --stain: color-mix(in srgb, var(--rust) 55%, transparent);
-    }
-  }
-
-  .rack[data-hang="barn"] .slot:before {
-    --stain-2: var(--rust);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="barn"] .slot:before {
-      --stain-2: color-mix(in srgb, var(--rust) 18%, transparent);
-    }
-  }
-
-  .rack[data-hang="barn"] .slot:before {
-    background: radial-gradient(circle at .75rem 52%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(circle at calc(100% - .75rem) 48%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(ellipse 13px 4px at var(--knot, 64%) 58%, var(--nail), var(--nail) 60%, transparent 75%), linear-gradient(180deg, transparent 34%, var(--dark) 34% 39%, transparent 39%) var(--crack, 22%) 0 / var(--crack-w, 38%) 100% no-repeat, repeating-linear-gradient(90deg, var(--gleam) 0 31px, var(--shade) 31px 37px, transparent 37px 73px, var(--shade) 73px 76px, transparent 76px 109px), repeating-linear-gradient(180deg, var(--shade) 0 1px, transparent 1px 3px, var(--gleam) 3px 4px, transparent 4px 6px), linear-gradient(var(--plank), var(--plank-2) 48%, var(--plank-3));
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="barn"] .slot:before {
-      background: radial-gradient(circle at .75rem 52%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(circle at calc(100% - .75rem) 48%, var(--nail) 0 1.8px, var(--stain) 2.4px, var(--stain-2) 4.5px, transparent 6px), radial-gradient(ellipse 13px 4px at var(--knot, 64%) 58%, color-mix(in srgb, var(--nail) 70%, transparent), color-mix(in srgb, var(--nail) 25%, transparent) 60%, transparent 75%), linear-gradient(180deg, transparent 34%, var(--dark) 34% 39%, transparent 39%) var(--crack, 22%) 0 / var(--crack-w, 38%) 100% no-repeat, repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 31px, color-mix(in srgb, var(--shade) 9%, transparent) 31px 37px, transparent 37px 73px, color-mix(in srgb, var(--shade) 5%, transparent) 73px 76px, transparent 76px 109px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 16%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px), linear-gradient(var(--plank), var(--plank-2) 48%, var(--plank-3));
-    }
-  }
-
-  .rack[data-hang="barn"] .slot:before {
-    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 -2px 0 var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="barn"] .slot:before {
-      box-shadow: 0 5px 9px var(--shadow-tone), inset 0 -2px 0 color-mix(in srgb, var(--shade) 40%, transparent);
-    }
   }
 
   .rack[data-hang="barn"] .slot:nth-child(3n+2):before {
@@ -9064,26 +9014,13 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .rack[data-hang="peg"] .slot:before {
     content: "";
     background: repeating-linear-gradient(90deg, var(--gleam) 0 23px, var(--shade) 23px 25px, transparent 25px 61px, var(--shade) 61px 63px, transparent 63px 97px), repeating-linear-gradient(180deg, var(--shade) 0 1px, transparent 1px 3px, var(--gleam) 3px 4px, transparent 4px 6px), linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
-    inset-inline: 0;
+    background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 23px, color-mix(in srgb, var(--shade) 14%, transparent) 23px 25px, transparent 25px 61px, color-mix(in srgb, var(--shade) 8%, transparent) 61px 63px, transparent 63px 97px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 20%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px), linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
     height: 1rem;
+    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -2px 0 var(--shade);
+    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 12%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--shade) 45%, transparent);
+    inset-inline: 0;
     position: absolute;
     top: .125rem;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="peg"] .slot:before {
-      background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 23px, color-mix(in srgb, var(--shade) 14%, transparent) 23px 25px, transparent 25px 61px, color-mix(in srgb, var(--shade) 8%, transparent) 61px 63px, transparent 63px 97px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 20%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px), linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
-    }
-  }
-
-  .rack[data-hang="peg"] .slot:before {
-    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -2px 0 var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="peg"] .slot:before {
-      box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 12%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--shade) 45%, transparent);
-    }
   }
 
   .rack[data-hang="peg"] .hanger {
@@ -9095,16 +9032,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     width: 1rem;
     height: 1rem;
     box-shadow: 0 3px 4px var(--shade), inset 0 0 0 1.5px var(--shade);
+    box-shadow: 0 3px 4px color-mix(in srgb, var(--shade) 50%, transparent), inset 0 0 0 1.5px color-mix(in srgb, var(--shade) 35%, transparent);
     border-radius: 50%;
     margin-left: -.5rem;
     top: -1.75rem;
     left: 50%;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="peg"] .hook {
-      box-shadow: 0 3px 4px color-mix(in srgb, var(--shade) 50%, transparent), inset 0 0 0 1.5px color-mix(in srgb, var(--shade) 35%, transparent);
-    }
   }
 
   .rack[data-hang="peg"] .hanger:before, .rack[data-hang="peg"] .hanger:after {
@@ -9130,27 +9062,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     content: "";
     background-color: var(--cork);
     background-image: var(--cork-grain, none), linear-gradient(var(--gleam), var(--shade));
-    inset-inline: 0;
+    background-image: var(--cork-grain, none), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     height: 1.1875rem;
+    box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -1px 0 var(--shade);
+    box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
+    inset-inline: 0;
+    background-size: 160px 60px, auto;
     position: absolute;
     top: 1.0625rem;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .slot:before {
-      background-image: var(--cork-grain, none), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
-    }
-  }
-
-  .rack[data-hang="cork"] .slot:before {
-    box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -1px 0 var(--shade);
-    background-size: 160px 60px, auto;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .slot:before {
-      box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
-    }
   }
 
   .rack[data-hang="cork"] .slot:nth-child(3n+1) {
@@ -9218,25 +9137,12 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: 13px;
     transform: translateX(var(--tx, 0px));
     background: radial-gradient(circle at 40% 35%, var(--pin), var(--pin) 45%, var(--pin));
+    background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
+    box-shadow: 1px 2px 2px var(--shade);
+    box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
     border-radius: 50%;
     margin-left: -6.5px;
     top: -.8125rem;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook {
-      background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
-    }
-  }
-
-  .rack[data-hang="cork"] .hook {
-    box-shadow: 1px 2px 2px var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook {
-      box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
-    }
   }
 
   .rack[data-hang="cork"] .hook:before, .rack[data-hang="cork"] .hook:after {
@@ -9250,15 +9156,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transform-origin: 50% 100%;
     transform: rotate(var(--la, 0deg));
     background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
     margin-left: -3px;
     bottom: 50%;
     left: 50%;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook:before {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
-    }
   }
 
   .rack[data-hang="cork"] .hook:after {
@@ -9266,25 +9167,12 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: 11px;
     transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
     background: radial-gradient(circle at 35% 30%, var(--pin) 0 14%, var(--pin) 50%, var(--pin));
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
+    box-shadow: 2px 4px 4px var(--shade);
+    box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
     border-radius: 50%;
     top: 1px;
     left: 1px;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook:after {
-      background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
-    }
-  }
-
-  .rack[data-hang="cork"] .hook:after {
-    box-shadow: 2px 4px 4px var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook:after {
-      box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
-    }
   }
 
   .rack[data-hang="float"] {
@@ -9303,12 +9191,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .rack[data-hang="float"] .sleeve-face {
     box-shadow: inset 0 1px 0 var(--gleam), 0 3px 0 var(--shade), 0 46px 58px -20px var(--shade), 0 22px 30px -10px var(--shade), 0 2px 4px var(--shadow-tone);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="float"] .sleeve-face {
-      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gleam) 22%, transparent), 0 3px 0 color-mix(in srgb, var(--shade) 32%, transparent), 0 46px 58px -20px color-mix(in srgb, var(--shade) 78%, transparent), 0 22px 30px -10px color-mix(in srgb, var(--shade) 42%, transparent), 0 2px 4px var(--shadow-tone);
-    }
+    box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gleam) 22%, transparent), 0 3px 0 color-mix(in srgb, var(--shade) 32%, transparent), 0 46px 58px -20px color-mix(in srgb, var(--shade) 78%, transparent), 0 22px 30px -10px color-mix(in srgb, var(--shade) 42%, transparent), 0 2px 4px var(--shadow-tone);
   }
 
   .rack[data-hang="float"] .cap {
@@ -9331,13 +9214,13 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   @media (hover: hover) {
     .slot:hover .disc {
-      transform: translateX(28%);
+      transform: translate(28%);
     }
   }
 
   @media (hover: none) {
     .disc {
-      transform: translateX(9%);
+      transform: translate(9%);
     }
   }
 
@@ -9369,30 +9252,13 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-photo {
     background-image: linear-gradient(var(--wall), var(--wall)), var(--photo);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-photo {
-      background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)), var(--photo);
-    }
-  }
-
-  .bg-photo {
+    background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)), var(--photo);
     background-size: cover;
     background-position: var(--photo-pos, center);
   }
 
   .photo-bg .on-photo {
-    --ink-2: var(--ink-2);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .photo-bg .on-photo {
-      --ink-2: color-mix(in oklch, var(--ink-2) 55%, var(--ink));
-    }
-  }
-
-  .photo-bg .on-photo {
+    --ink-2: color-mix(in oklch, var(--ink-2) 55%, var(--ink));
     text-shadow: 0 0 2px var(--wall), 0 0 8px var(--wall), 0 0 14px var(--wall);
   }
 
@@ -9408,35 +9274,17 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-grooves {
     background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, var(--wall-2) 3px 4px);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-grooves {
-      background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, color-mix(in srgb, var(--wall-2) 80%, var(--line)) 3px 4px);
-    }
+    background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, color-mix(in srgb, var(--wall-2) 80%, var(--line)) 3px 4px);
   }
 
   .bg-walnut {
     background-image: repeating-linear-gradient(90deg, transparent 0 178px, var(--rail) 178px 180px), repeating-linear-gradient(90deg, var(--rail) 0 4px, var(--rail) 4px 6px, var(--rail) 6px 13px, var(--rail) 13px 15px);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-walnut {
-      background-image: repeating-linear-gradient(90deg, transparent 0 178px, color-mix(in srgb, var(--rail) 45%, var(--wall)) 178px 180px), repeating-linear-gradient(90deg, color-mix(in srgb, var(--rail) 22%, var(--wall)) 0 4px, color-mix(in srgb, var(--rail) 32%, var(--wall)) 4px 6px, color-mix(in srgb, var(--rail) 18%, var(--wall)) 6px 13px, color-mix(in srgb, var(--rail) 27%, var(--wall)) 13px 15px);
-    }
+    background-image: repeating-linear-gradient(90deg, transparent 0 178px, color-mix(in srgb, var(--rail) 45%, var(--wall)) 178px 180px), repeating-linear-gradient(90deg, color-mix(in srgb, var(--rail) 22%, var(--wall)) 0 4px, color-mix(in srgb, var(--rail) 32%, var(--wall)) 4px 6px, color-mix(in srgb, var(--rail) 18%, var(--wall)) 6px 13px, color-mix(in srgb, var(--rail) 27%, var(--wall)) 13px 15px);
   }
 
   .bg-foam {
     background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, var(--wall-2) 72%);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-foam {
-      background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, color-mix(in srgb, var(--wall-2) 70%, var(--line)) 72%);
-    }
-  }
-
-  .bg-foam {
+    background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, color-mix(in srgb, var(--wall-2) 70%, var(--line)) 72%);
     background-size: 34px 34px;
   }
 
@@ -9446,12 +9294,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-spines {
     background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, var(--line) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-spines {
-      background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, color-mix(in srgb, var(--line) 70%, var(--wall)) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
-    }
+    background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, color-mix(in srgb, var(--line) 70%, var(--wall)) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
   }
 
   .bg-felt {
@@ -9461,15 +9304,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-grille {
     background-image: radial-gradient(circle, var(--ink) 1.5px, transparent 2px), radial-gradient(circle, var(--ink) 1.5px, transparent 2px), linear-gradient(var(--wall-2), var(--wall-2));
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-grille {
-      background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), linear-gradient(color-mix(in srgb, var(--wall-2) 60%, var(--wall)), color-mix(in srgb, var(--wall-2) 60%, var(--wall)));
-    }
-  }
-
-  .bg-grille {
+    background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), linear-gradient(color-mix(in srgb, var(--wall-2) 60%, var(--wall)), color-mix(in srgb, var(--wall-2) 60%, var(--wall)));
     background-position: 0 0, 4.5px 4.5px, 0 0;
     background-size: 9px 9px, 9px 9px, auto;
   }
@@ -9640,31 +9475,31 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     width: 100%;
   }
 
-  @media (min-width: 40rem) {
+  @media (width >= 40rem) {
     .container {
       max-width: 40rem;
     }
   }
 
-  @media (min-width: 48rem) {
+  @media (width >= 48rem) {
     .container {
       max-width: 48rem;
     }
   }
 
-  @media (min-width: 64rem) {
+  @media (width >= 64rem) {
     .container {
       max-width: 64rem;
     }
   }
 
-  @media (min-width: 80rem) {
+  @media (width >= 80rem) {
     .container {
       max-width: 80rem;
     }
   }
 
-  @media (min-width: 96rem) {
+  @media (width >= 96rem) {
     .container {
       max-width: 96rem;
     }
@@ -10197,7 +10032,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .origin-center {
-    transform-origin: center;
+    transform-origin: 50%;
   }
 
   .origin-left {
@@ -10719,32 +10554,17 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .border-white\/15 {
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .border-white\/15 {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .bg-\[color-mix\(in_oklch\,var\(--m1\)_16\%\,transparent\)\] {
     background-color: var(--m1);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-\[color-mix\(in_oklch\,var\(--m1\)_16\%\,transparent\)\] {
-      background-color: color-mix(in oklch,var(--m1) 16%,transparent);
-    }
+    background-color: color-mix(in oklch,var(--m1) 16%,transparent);
   }
 
   .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
     background-color: var(--sheet);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
-      background-color: color-mix(in oklch,var(--sheet) 88%,transparent);
-    }
+    background-color: color-mix(in oklch,var(--sheet) 88%,transparent);
   }
 
   .bg-background {
@@ -10769,12 +10589,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-black\/30 {
     background-color: #0000004d;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-black\/30 {
-      background-color: color-mix(in oklab, var(--color-black) 30%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-black) 30%, transparent);
   }
 
   .bg-border {
@@ -10823,12 +10638,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-ink\/70 {
     background-color: var(--ink);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-ink\/70 {
-      background-color: color-mix(in oklab, var(--ink) 70%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--ink) 70%, transparent);
   }
 
   .bg-paper {
@@ -10883,10 +10693,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-color: var(--wall);
   }
 
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-wall\/70 {
-      background-color: color-mix(in oklab, var(--wall) 70%, transparent);
-    }
+  .bg-wall\/70 {
+    background-color: color-mix(in oklab, var(--wall) 70%, transparent);
   }
 
   .bg-want {
@@ -10911,22 +10719,12 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-white\/10 {
     background-color: #ffffff1a;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-white\/10 {
-      background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
   }
 
   .bg-\[linear-gradient\(150deg\,var\(--accent\)\,color-mix\(in_oklch\,var\(--accent\)_45\%\,var\(--shade\)\)\)\] {
     background-image: linear-gradient(150deg,var(--accent),var(--accent));
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-\[linear-gradient\(150deg\,var\(--accent\)\,color-mix\(in_oklch\,var\(--accent\)_45\%\,var\(--shade\)\)\)\] {
-      background-image: linear-gradient(150deg,var(--accent),color-mix(in oklch,var(--accent) 45%,var(--shade)));
-    }
+    background-image: linear-gradient(150deg,var(--accent),color-mix(in oklch,var(--accent) 45%,var(--shade)));
   }
 
   .bg-\[radial-gradient\(circle_at_35\%_30\%\,var\(--m1\)\,var\(--m2\)_75\%\)\] {
@@ -11577,16 +11375,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
-    --tw-shadow: inset 0 0 0 1.5px var(--tw-shadow-color, var(--gleam));
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
-      --tw-shadow: inset 0 0 0 1.5px var(--tw-shadow-color, color-mix(in oklch,var(--gleam) 40%,transparent));
-    }
-  }
-
-  .shadow-\[inset_0_0_0_1\.5px_color-mix\(in_oklch\,var\(--gleam\)_40\%\,transparent\)\] {
+    --tw-shadow: inset 0 0 0 1.5px var(--tw-shadow-color, color-mix(in oklch,var(--gleam) 40%,transparent));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
@@ -11625,13 +11414,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .ring-black\/20 {
-    --tw-ring-color: #0003;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .ring-black\/20 {
-      --tw-ring-color: color-mix(in oklab, var(--color-black) 20%, transparent);
-    }
+    --tw-ring-color: color-mix(in oklab, var(--color-black) 20%, transparent);
   }
 
   .ring-border {
@@ -11639,13 +11422,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .inset-ring-black\/20 {
-    --tw-inset-ring-color: #0003;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .inset-ring-black\/20 {
-      --tw-inset-ring-color: color-mix(in oklab, var(--color-black) 20%, transparent);
-    }
+    --tw-inset-ring-color: color-mix(in oklab, var(--color-black) 20%, transparent);
   }
 
   .outline-hidden {
@@ -12338,12 +12115,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .before\:border-white\/10:before {
     content: var(--tw-content);
     border-color: #ffffff1a;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .before\:border-white\/10:before {
-      border-color: color-mix(in oklab, var(--color-white) 10%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 10%, transparent);
   }
 
   .before\:bg-background:before {
@@ -12369,12 +12141,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .before\:bg-white\/10:before {
     content: var(--tw-content);
     background-color: #ffffff1a;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .before\:bg-white\/10:before {
-      background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
   }
 
   .before\:bg-\[radial-gradient\(138\.15\%_78\.13\%_at_52\.05\%_50\%\,var\(--error\)_0\%\,var\(--error-muted\)_95\%\)\]:before {
@@ -12513,12 +12280,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     .hover\:before\:border-white\/15:hover:before {
       content: var(--tw-content);
       border-color: #ffffff26;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      .hover\:before\:border-white\/15:hover:before {
-        border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-      }
+      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
     }
 
     .hover\:before\:bg-background-muted:hover:before {
@@ -12539,12 +12301,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     .hover\:before\:bg-white\/15:hover:before {
       content: var(--tw-content);
       background-color: #ffffff26;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      .hover\:before\:bg-white\/15:hover:before {
-        background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-      }
+      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
     }
 
     .hover\:before\:opacity-100:hover:before {
@@ -12925,12 +12682,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-active\:before\:border-white\/15[data-active]:before {
     content: var(--tw-content);
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-active\:before\:border-white\/15[data-active]:before {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-active\:before\:bg-background-subtle[data-active]:before {
@@ -12941,12 +12693,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-active\:before\:bg-white\/15[data-active]:before {
     content: var(--tw-content);
     background-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-active\:before\:bg-white\/15[data-active]:before {
-      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-checked\:border-transparent[data-checked] {
@@ -13008,11 +12755,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .data-ending-style\:\[transform\:translateX\(calc\(-100\%-0\.5rem\)\)\][data-ending-style] {
-    transform: translateX(calc(-100% - .5rem));
+    transform: translate(calc(-100% - .5rem));
   }
 
   .data-ending-style\:\[transform\:translateX\(calc\(100\%\+0\.5rem\)\)\][data-ending-style] {
-    transform: translateX(calc(100% + .5rem));
+    transform: translate(calc(100% + .5rem));
   }
 
   .data-ending-style\:\[transform\:translateY\(calc\(-100\%-0\.5rem\)\)\][data-ending-style] {
@@ -13029,22 +12776,12 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .data-expanded\:border-white\/15[data-expanded] {
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-expanded\:border-white\/15[data-expanded] {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-expanded\:bg-white\/10[data-expanded] {
     background-color: #ffffff1a;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-expanded\:bg-white\/10[data-expanded] {
-      background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
   }
 
   .data-expanded\:p-1\.5[data-expanded] {
@@ -13174,7 +12911,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .data-nested\:backdrop-blur-none[data-nested] {
-    --tw-backdrop-blur:  ;
+    --tw-backdrop-blur: ;
     -webkit-backdrop-filter: var(--tw-backdrop-blur, ) var(--tw-backdrop-brightness, ) var(--tw-backdrop-contrast, ) var(--tw-backdrop-grayscale, ) var(--tw-backdrop-hue-rotate, ) var(--tw-backdrop-invert, ) var(--tw-backdrop-opacity, ) var(--tw-backdrop-saturate, ) var(--tw-backdrop-sepia, );
     backdrop-filter: var(--tw-backdrop-blur, ) var(--tw-backdrop-brightness, ) var(--tw-backdrop-contrast, ) var(--tw-backdrop-grayscale, ) var(--tw-backdrop-hue-rotate, ) var(--tw-backdrop-invert, ) var(--tw-backdrop-opacity, ) var(--tw-backdrop-saturate, ) var(--tw-backdrop-sepia, );
   }
@@ -13250,12 +12987,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-popup-open\:before\:border-white\/15[data-popup-open]:before {
     content: var(--tw-content);
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-popup-open\:before\:border-white\/15[data-popup-open]:before {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-popup-open\:before\:bg-background-muted[data-popup-open]:before {
@@ -13276,12 +13008,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-popup-open\:before\:bg-white\/15[data-popup-open]:before {
     content: var(--tw-content);
     background-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-popup-open\:before\:bg-white\/15[data-popup-open]:before {
-      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-popup-open\:before\:opacity-100[data-popup-open]:before {
@@ -13347,12 +13074,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-pressed\:before\:border-white\/15[data-pressed]:before {
     content: var(--tw-content);
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-pressed\:before\:border-white\/15[data-pressed]:before {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-pressed\:before\:bg-background-muted[data-pressed]:before {
@@ -13373,12 +13095,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-pressed\:before\:bg-white\/15[data-pressed]:before {
     content: var(--tw-content);
     background-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .data-pressed\:before\:bg-white\/15[data-pressed]:before {
-      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .data-pressed\:before\:opacity-100[data-pressed]:before {
@@ -13403,11 +13120,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .data-starting-style\:\[transform\:translateX\(calc\(-100\%-0\.5rem\)\)\][data-starting-style] {
-    transform: translateX(calc(-100% - .5rem));
+    transform: translate(calc(-100% - .5rem));
   }
 
   .data-starting-style\:\[transform\:translateX\(calc\(100\%\+0\.5rem\)\)\][data-starting-style] {
-    transform: translateX(calc(100% + .5rem));
+    transform: translate(calc(100% + .5rem));
   }
 
   .data-starting-style\:\[transform\:translateY\(calc\(-100\%-0\.5rem\)\)\][data-starting-style] {
@@ -13985,7 +13702,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transition-property: none;
   }
 
-  @media not all and (min-width: 40rem) {
+  @media not all and (width >= 40rem) {
     .max-sm\:sr-only {
       clip-path: inset(50%);
       white-space: nowrap;
@@ -14035,7 +13752,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
-  @media (min-width: 40rem) {
+  @media (width >= 40rem) {
     .sm\:col-span-2 {
       grid-column: span 2 / span 2;
     }
@@ -14139,7 +13856,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
-  @container (min-width: 460px) {
+  @container (width >= 460px) {
     .\@min-\[460px\]\:group-data-\[layout\=inline\]\/alert\:my-0:is(:where(.group\/alert)[data-layout="inline"] *) {
       margin-block: 0;
     }
@@ -14182,26 +13899,26 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
-  .data-\[orientation\=horizontal\]\:ltr\:translate-x-\(--active-tab-left\)[data-orientation="horizontal"]:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+  .data-\[orientation\=horizontal\]\:ltr\:translate-x-\(--active-tab-left\)[data-orientation="horizontal"]:where(:not(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)), [dir="ltr"], [dir="ltr"] *) {
     --tw-translate-x: var(--active-tab-left);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
-  .data-\[orientation\=vertical\]\:ltr\:origin-left[data-orientation="vertical"]:where(:dir(ltr), [dir="ltr"], [dir="ltr"] *) {
+  .data-\[orientation\=vertical\]\:ltr\:origin-left[data-orientation="vertical"]:where(:not(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)), [dir="ltr"], [dir="ltr"] *) {
     transform-origin: 0;
   }
 
-  .rtl\:translate-x-1\/2:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+  .rtl\:translate-x-1\/2:where(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)), [dir="rtl"], [dir="rtl"] *) {
     --tw-translate-x: calc(1 / 2 * 100%);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
-  .data-\[orientation\=horizontal\]\:rtl\:-translate-x-\(--active-tab-right\)[data-orientation="horizontal"]:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+  .data-\[orientation\=horizontal\]\:rtl\:-translate-x-\(--active-tab-right\)[data-orientation="horizontal"]:where(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)), [dir="rtl"], [dir="rtl"] *) {
     --tw-translate-x: calc(var(--active-tab-right) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
 
-  .data-\[orientation\=vertical\]\:rtl\:origin-right[data-orientation="vertical"]:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
+  .data-\[orientation\=vertical\]\:rtl\:origin-right[data-orientation="vertical"]:where(:is(:lang(ae), :lang(ar), :lang(arc), :lang(bcc), :lang(bqi), :lang(ckb), :lang(dv), :lang(fa), :lang(glk), :lang(he), :lang(ku), :lang(mzn), :lang(nqo), :lang(pnb), :lang(ps), :lang(sd), :lang(ug), :lang(ur), :lang(yi)), [dir="rtl"], [dir="rtl"] *) {
     transform-origin: 100%;
   }
 
@@ -14376,12 +14093,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     .\[a\,button\]\:hover\:before\:border-white\/15:is(a, button):hover:before {
       content: var(--tw-content);
       border-color: #ffffff26;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      .\[a\,button\]\:hover\:before\:border-white\/15:is(a, button):hover:before {
-        border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-      }
+      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
     }
 
     .\[a\,button\]\:hover\:before\:bg-background-subtle:is(a, button):hover:before {
@@ -14397,12 +14109,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     .\[a\,button\]\:hover\:before\:bg-white\/15:is(a, button):hover:before {
       content: var(--tw-content);
       background-color: #ffffff26;
-    }
-
-    @supports (color: color-mix(in lab, red, red)) {
-      .\[a\,button\]\:hover\:before\:bg-white\/15:is(a, button):hover:before {
-        background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-      }
+      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
     }
 
     .\[a\,button\]\:hover\:before\:opacity-100:is(a, button):hover:before {
@@ -14447,12 +14154,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .\[a\,button\]\:data-popup-open\:before\:border-white\/15:is(a, button)[data-popup-open]:before {
     content: var(--tw-content);
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .\[a\,button\]\:data-popup-open\:before\:border-white\/15:is(a, button)[data-popup-open]:before {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .\[a\,button\]\:data-popup-open\:before\:bg-background-subtle:is(a, button)[data-popup-open]:before {
@@ -14468,12 +14170,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .\[a\,button\]\:data-popup-open\:before\:bg-white\/15:is(a, button)[data-popup-open]:before {
     content: var(--tw-content);
     background-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .\[a\,button\]\:data-popup-open\:before\:bg-white\/15:is(a, button)[data-popup-open]:before {
-      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .\[a\,button\]\:data-popup-open\:before\:opacity-100:is(a, button)[data-popup-open]:before {
@@ -14498,12 +14195,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .\[a\,button\]\:data-pressed\:before\:border-white\/15:is(a, button)[data-pressed]:before {
     content: var(--tw-content);
     border-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .\[a\,button\]\:data-pressed\:before\:border-white\/15:is(a, button)[data-pressed]:before {
-      border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    border-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .\[a\,button\]\:data-pressed\:before\:bg-background-subtle:is(a, button)[data-pressed]:before {
@@ -14519,12 +14211,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .\[a\,button\]\:data-pressed\:before\:bg-white\/15:is(a, button)[data-pressed]:before {
     content: var(--tw-content);
     background-color: #ffffff26;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .\[a\,button\]\:data-pressed\:before\:bg-white\/15:is(a, button)[data-pressed]:before {
-      background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
-    }
+    background-color: color-mix(in oklab, var(--color-white) 15%, transparent);
   }
 
   .\[a\,button\]\:data-pressed\:before\:opacity-100:is(a, button)[data-pressed]:before {
@@ -14783,7 +14470,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 @keyframes ping-paced {
-  25%, 100% {
+  25%, to {
     opacity: 0;
     transform: scale(2.2);
   }
@@ -14804,8 +14491,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 @keyframes skeleton-shimmer {
-  100% {
-    transform: translateX(100%);
+  to {
+    transform: translate(100%);
   }
 }
 
@@ -14814,7 +14501,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 @keyframes toast-progress {
-  from {
+  0% {
     transform: scaleX(1);
   }
 
@@ -14825,19 +14512,19 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
 @keyframes shake {
   10%, 90% {
-    transform: translate3d(-1px, 0, 0);
+    transform: translate(-1px);
   }
 
   20%, 80% {
-    transform: translate3d(2px, 0, 0);
+    transform: translate(2px);
   }
 
   30%, 50%, 70% {
-    transform: translate3d(-4px, 0, 0);
+    transform: translate(-4px);
   }
 
   40%, 60% {
-    transform: translate3d(4px, 0, 0);
+    transform: translate(4px);
   }
 }
 
@@ -14860,7 +14547,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 }
 
 @keyframes gradient-glow-pulse {
-  0%, 100% {
+  0%, to {
     transform: scale(.94);
   }
 
@@ -14964,398 +14651,68 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
 :root, .light, .dark {
   --foreground-intense: var(--ink);
-  --foreground-emphasis: var(--ink);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --foreground-emphasis: color-mix(in oklch, var(--ink) 85%, var(--ink-2));
-  }
-}
-
-:root, .light, .dark {
-  --foreground-strong: var(--ink);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --foreground-strong: color-mix(in oklch, var(--ink) 60%, var(--ink-2));
-  }
-}
-
-:root, .light, .dark {
-  --foreground: var(--ink);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --foreground: color-mix(in oklch, var(--ink) 35%, var(--ink-2));
-  }
-}
-
-:root, .light, .dark {
+  --foreground-emphasis: color-mix(in oklch, var(--ink) 85%, var(--ink-2));
+  --foreground-strong: color-mix(in oklch, var(--ink) 60%, var(--ink-2));
+  --foreground: color-mix(in oklch, var(--ink) 35%, var(--ink-2));
   --foreground-muted: var(--ink-2);
-  --foreground-subtle: var(--ink-2);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --foreground-subtle: color-mix(in oklch, var(--ink-2) 60%, var(--wall));
-  }
-}
-
-:root, .light, .dark {
+  --foreground-subtle: color-mix(in oklch, var(--ink-2) 60%, var(--wall));
   --foreground-inverse: var(--sheet);
   --background: var(--sheet);
-  --background-subtle: var(--sheet);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --background-subtle: color-mix(in oklch, var(--sheet) 50%, var(--wall));
-  }
-}
-
-:root, .light, .dark {
+  --background-subtle: color-mix(in oklch, var(--sheet) 50%, var(--wall));
   --background-muted: var(--wall);
   --background-strong: var(--wall-2);
   --background-inverse: var(--ink);
   --border: var(--line);
-  --border-muted: var(--line);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --border-strong: var(--line);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
-  }
-}
-
-:root, .light, .dark {
+  --border-muted: color-mix(in oklch, var(--line) 50%, var(--sheet));
+  --border-strong: color-mix(in oklch, var(--line) 70%, var(--ink-2));
   --border-emphasis: var(--ink-2);
   --border-intense: var(--ink);
   --border-inverse: var(--ink);
   --border-overlay: var(--line);
   --primary: var(--accent);
   --primary-foreground: var(--accent-ink);
-  --primary-subtle: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --primary-subtle: color-mix(in oklch, var(--accent) 10%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --primary-soft: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --primary-soft: color-mix(in oklch, var(--accent) 20%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --primary-muted: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --primary-muted: color-mix(in oklch, var(--accent) 70%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --primary-strong: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --primary-strong: color-mix(in oklch, var(--accent) 80%, var(--ink));
-  }
-}
-
-:root, .light, .dark {
-  --secondary: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary: color-mix(in oklch, var(--someday) 35%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --primary-subtle: color-mix(in oklch, var(--accent) 10%, var(--sheet));
+  --primary-soft: color-mix(in oklch, var(--accent) 20%, var(--sheet));
+  --primary-muted: color-mix(in oklch, var(--accent) 70%, var(--sheet));
+  --primary-strong: color-mix(in oklch, var(--accent) 80%, var(--ink));
+  --secondary: color-mix(in oklch, var(--someday) 35%, var(--sheet));
   --secondary-foreground: var(--ink);
-  --secondary-subtle: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary-subtle: color-mix(in oklch, var(--someday) 10%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --secondary-soft: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary-soft: color-mix(in oklch, var(--someday) 20%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --secondary-muted: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary-muted: color-mix(in oklch, var(--someday) 25%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --secondary-strong: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary-strong: color-mix(in oklch, var(--someday) 60%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --secondary-subtle: color-mix(in oklch, var(--someday) 10%, transparent);
+  --secondary-soft: color-mix(in oklch, var(--someday) 20%, transparent);
+  --secondary-muted: color-mix(in oklch, var(--someday) 25%, var(--sheet));
+  --secondary-strong: color-mix(in oklch, var(--someday) 60%, var(--sheet));
   --secondary-emphasis: var(--someday);
-  --secondary-intense: var(--someday);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --secondary-intense: color-mix(in oklch, var(--someday) 80%, var(--ink));
-  }
-}
-
-:root, .light, .dark {
-  --error: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error: color-mix(in oklch, var(--want) 45%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --secondary-intense: color-mix(in oklch, var(--someday) 80%, var(--ink));
+  --error: color-mix(in oklch, var(--want) 45%, var(--sheet));
   --error-foreground: var(--ink);
-  --error-subtle: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error-subtle: color-mix(in oklch, var(--want) 10%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --error-soft: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error-soft: color-mix(in oklch, var(--want) 20%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --error-muted: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error-muted: color-mix(in oklch, var(--want) 25%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --error-strong: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error-strong: color-mix(in oklch, var(--want) 70%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --error-subtle: color-mix(in oklch, var(--want) 10%, transparent);
+  --error-soft: color-mix(in oklch, var(--want) 20%, transparent);
+  --error-muted: color-mix(in oklch, var(--want) 25%, var(--sheet));
+  --error-strong: color-mix(in oklch, var(--want) 70%, var(--sheet));
   --error-emphasis: var(--want);
-  --error-intense: var(--want);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --error-intense: color-mix(in oklch, var(--want) 80%, var(--ink));
-  }
-}
-
-:root, .light, .dark {
-  --warning: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning: color-mix(in oklch, var(--brass) 45%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --error-intense: color-mix(in oklch, var(--want) 80%, var(--ink));
+  --warning: color-mix(in oklch, var(--brass) 45%, var(--sheet));
   --warning-foreground: var(--ink);
-  --warning-subtle: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning-subtle: color-mix(in oklch, var(--brass) 10%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --warning-soft: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning-soft: color-mix(in oklch, var(--brass) 20%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --warning-muted: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning-muted: color-mix(in oklch, var(--brass) 25%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --warning-strong: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning-strong: color-mix(in oklch, var(--brass) 70%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --warning-subtle: color-mix(in oklch, var(--brass) 10%, transparent);
+  --warning-soft: color-mix(in oklch, var(--brass) 20%, transparent);
+  --warning-muted: color-mix(in oklch, var(--brass) 25%, var(--sheet));
+  --warning-strong: color-mix(in oklch, var(--brass) 70%, var(--sheet));
   --warning-emphasis: var(--brass);
-  --warning-intense: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --warning-intense: color-mix(in oklch, var(--brass) 80%, var(--ink));
-  }
-}
-
-:root, .light, .dark {
-  --success: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success: color-mix(in oklch, var(--accent) 40%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --warning-intense: color-mix(in oklch, var(--brass) 80%, var(--ink));
+  --success: color-mix(in oklch, var(--accent) 40%, var(--sheet));
   --success-foreground: var(--ink);
-  --success-subtle: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success-subtle: color-mix(in oklch, var(--accent) 10%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --success-soft: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success-soft: color-mix(in oklch, var(--accent) 20%, transparent);
-  }
-}
-
-:root, .light, .dark {
-  --success-muted: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success-muted: color-mix(in oklch, var(--accent) 25%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
-  --success-strong: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success-strong: color-mix(in oklch, var(--accent) 60%, var(--sheet));
-  }
-}
-
-:root, .light, .dark {
+  --success-subtle: color-mix(in oklch, var(--accent) 10%, transparent);
+  --success-soft: color-mix(in oklch, var(--accent) 20%, transparent);
+  --success-muted: color-mix(in oklch, var(--accent) 25%, var(--sheet));
+  --success-strong: color-mix(in oklch, var(--accent) 60%, var(--sheet));
   --success-emphasis: var(--accent);
-  --success-intense: var(--accent);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --success-intense: color-mix(in oklch, var(--accent) 80%, var(--ink));
-  }
-}
-
-:root, .light, .dark {
+  --success-intense: color-mix(in oklch, var(--accent) 80%, var(--ink));
   --focus-ring: var(--brass);
-  --focus-ring-input: var(--brass);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --focus-ring-input: color-mix(in oklch, var(--brass) 40%, transparent);
-  }
-}
-
-:root, .light, .dark {
+  --focus-ring-input: color-mix(in oklch, var(--brass) 40%, transparent);
   --focus-ring-primary: var(--brass);
   --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
-  --shadow-tone: var(--shade);
-}
-
-@supports (color: color-mix(in lab, red, red)) {
-  :root, .light, .dark {
-    --shadow-tone: color-mix(in oklch, var(--shade) var(--shade-alpha), transparent);
-  }
+  --shadow-tone: color-mix(in oklch, var(--shade) var(--shade-alpha), transparent);
 }
 
 @keyframes pulse-dot {

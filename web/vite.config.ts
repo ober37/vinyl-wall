@@ -12,6 +12,7 @@ const versionMeta = () => ({
   transformIndexHtml: () => [{ tag: 'meta', attrs: { name: 'vinyl-wall-version', content: VERSION }, injectTo: 'head-prepend' as const }],
 })
 import { resolve } from 'node:path'
+import { transform } from 'lightningcss'
 import { viteSingleFile } from 'vite-plugin-singlefile'
 import { getThemeScript } from '@appica/ui-react/providers/theme-provider'
 import { THEME_KEY } from './src/theme-key'
@@ -49,6 +50,26 @@ const cdn = () => ({
     { tag: 'script', attrs: { type: 'importmap' }, children: JSON.stringify(lock.importMap), injectTo: 'head-prepend' as const },
   ],
 })
+// Tailwind writes every colour-mix() twice: a plain colour for browsers without it, then the real one inside
+// @supports. The page already needs a browser with oklch(), and the Claude apps' browsers all have color-mix(), so keep
+// only the real one: unwrap the @supports and let Lightning CSS drop each declaration it overrides (minify), then print
+// it readable again
+const supportsColorMix = /@supports\s*\(color:\s*color-mix\(in lab,\s*red,\s*red\)\)\s*\{/
+const modern = { safari: (16 << 16) | (4 << 8), chrome: 111 << 16, firefox: 128 << 16 }
+const noColorFallbacks = () => ({
+  name: 'no-color-fallbacks',
+  apply: 'build' as const,
+  transform(code: string, id: string) {
+    if (!id.endsWith('.css') || !supportsColorMix.test(code)) return
+    for (let m; (m = supportsColorMix.exec(code)); ) {
+      let depth = 1, end = m.index + m[0].length
+      for (; depth; end++) depth += code[end] === '{' ? 1 : code[end] === '}' ? -1 : 0
+      code = code.slice(0, m.index) + code.slice(m.index + m[0].length, end - 1) + code.slice(end)
+    }
+    const minified = transform({ filename: id, code: Buffer.from(code), minify: true, targets: modern }).code
+    return { code: transform({ filename: id, code: minified, targets: modern }).code.toString(), map: null }
+  },
+})
 const external = (id: string) => {
   if (!/^(react|react-dom|@appica\/ui-react)(\/|$)/.test(id)) return false
   if (!(id in lock.importMap.imports)) throw new Error(`${id} isn't in cdn-lock.json: run npm run cdn:lock`)
@@ -57,10 +78,10 @@ const external = (id: string) => {
 
 export default defineConfig(({ command }) =>
   process.env.BUNDLE || command === 'serve'
-    ? { define, plugins: [react(), tailwindcss(), themeScript(), versionMeta(), backgrounds(), viteSingleFile()] }
+    ? { define, plugins: [react(), tailwindcss(), noColorFallbacks(), themeScript(), versionMeta(), backgrounds(), viteSingleFile()] }
     : {
         define,
-        plugins: [react(), tailwindcss(), themeScript(), versionMeta(), cdn(), viteSingleFile()],
+        plugins: [react(), tailwindcss(), noColorFallbacks(), themeScript(), versionMeta(), cdn(), viteSingleFile()],
         build: { minify: false, rollupOptions: { external } },
       },
 )
