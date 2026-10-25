@@ -1051,14 +1051,14 @@ function RuntimeProvider({ claude, children }) {
 		settingsWriting.current = next;
 		return next;
 	};
-	const fireTask = (now) => {
+	const fireTask = (how) => {
 		const t = task.current;
-		if (now === true) {
+		if (how?.now) {
 			t.lastFire = 0;
 			clearTimeout(t.fireTimer);
 		}
 		const { settings: s, records: recs } = live.current;
-		if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.");
+		if (!mcp.current) return how?.asked && setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.");
 		if (runActive(s)) {
 			t.afterRun = true;
 			return;
@@ -1072,7 +1072,7 @@ function RuntimeProvider({ claude, children }) {
 		t.lastFire = Date.now();
 		if (!s.taskId) {
 			t.lastFire = 0;
-			return setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
+			return how?.asked && setNotice("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.");
 		}
 		saveSettings({ run: { startedMs: Date.now() } });
 		mcp.current.callTool("Claude Code Remote", "fire_trigger", {
@@ -3249,7 +3249,10 @@ function DiscogsImport({ dz }) {
 	const ask = () => saveSettings({ discogs: {
 		importRequested: true,
 		importRequestedAt: Date.now()
-	} }).then(() => fireTask(true));
+	} }).then(() => fireTask({
+		now: true,
+		asked: true
+	}));
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-3",
 		children: [/* @__PURE__ */ jsxs("div", {
@@ -3334,7 +3337,7 @@ function DiscogsSection({ focus }) {
 				checkedAt: ""
 			} });
 			setStatus("");
-			fireTask();
+			fireTask({ asked: true });
 		} catch (e) {
 			setStatus("Couldn't save the token: " + (e.message || String(e)));
 		}
@@ -3417,7 +3420,7 @@ function DiscogsSection({ focus }) {
 				/* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					variant: "outline",
-					onClick: () => saveSettings({ discogs: { status: "pending" } }).then(() => fireTask()),
+					onClick: () => saveSettings({ discogs: { status: "pending" } }).then(() => fireTask({ asked: true })),
 					children: "Check again"
 				}),
 				/* @__PURE__ */ jsx(Button, {
@@ -6048,7 +6051,7 @@ function RecordSheet({ id, onClose, onBack }) {
 	};
 	const enrich = () => {
 		if (!r) return;
-		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask());
+		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }));
 	};
 	const k = r ? kindOf$1(r) : "own";
 	const by = r ? [
@@ -7137,20 +7140,82 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .rack[data-hang="cork"] .hook {
-    width: 13px;
-    height: 13px;
-    transform: translateX(var(--tx, 0px));
-    background: var(--pin);
-    box-shadow: inset 0 0 0 1.5px var(--pin), inset 0 0 0 3px var(--pin), 1px 2px 2px var(--shade);
-    border-radius: 50%;
-    margin-left: -6.5px;
+    width: 6px;
+    height: 8px;
+    transform: translateX(var(--tx, 0px)) rotate(var(--lean, 0deg));
+    transform-origin: 50% 100%;
+    background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin) 60%, var(--pin));
+    border-radius: 0 0 2px 2px;
+    margin-left: -3px;
     top: -.375rem;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .hook {
-      box-shadow: inset 0 0 0 1.5px color-mix(in srgb, var(--pin) 70%, var(--shade)), inset 0 0 0 3px color-mix(in srgb, var(--pin) 82%, var(--gleam)), 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 60%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 70%, var(--gleam)) 60%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
     }
+  }
+
+  .rack[data-hang="cork"] .hook:before, .rack[data-hang="cork"] .hook:after {
+    content: "";
+    border-radius: 50%;
+    position: absolute;
+  }
+
+  .rack[data-hang="cork"] .hook:before {
+    background: radial-gradient(ellipse at 40% 35%, var(--pin), var(--pin) 60%);
+    width: 14px;
+    height: 8px;
+    margin-left: -7px;
+    top: -4px;
+    left: 50%;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .hook:before {
+      background: radial-gradient(ellipse at 40% 35%, color-mix(in srgb, var(--pin) 72%, var(--gleam)), var(--pin) 60%);
+    }
+  }
+
+  .rack[data-hang="cork"] .hook:before {
+    box-shadow: inset 0 -1.5px 0 var(--pin), 0 1px 1px var(--shade);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .hook:before {
+      box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--pin) 60%, var(--shade)), 0 1px 1px color-mix(in srgb, var(--shade) 35%, transparent);
+    }
+  }
+
+  .rack[data-hang="cork"] .hook:after {
+    z-index: -1;
+    background: var(--shade);
+    width: 12px;
+    height: 5px;
+    bottom: -3px;
+    left: 40%;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .hook:after {
+      background: color-mix(in srgb, var(--shade) 40%, transparent);
+    }
+  }
+
+  .rack[data-hang="cork"] .hook:after {
+    filter: blur(1.5px);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+1) .hook {
+    --lean: -9deg;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+2) .hook {
+    --lean: 7deg;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(4n) .hook {
+    --lean: 12deg;
   }
 
   .rack[data-hang="float"] {
