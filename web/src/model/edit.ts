@@ -26,6 +26,8 @@ export type Form = {
   // wanted and ordered records: the first copy's own fields (label, catalog and pressing above too)
   copyName?: string
   budget?: string
+  // wanted records: the first copy's links, a line each while editing
+  buyLinks?: string[]
   // wanted records: 1 Top, 2 Want, 3 Someday
   priority?: string
   // ordered records: the order (paid, shop and shopUrl above too); orderNotes only when an older record has some
@@ -54,6 +56,8 @@ export function withSync(patch: Record<string, unknown>) {
 }
 
 const s = (v: unknown) => (v === undefined || v === null ? '' : String(v))
+// a copy's links as stored: blank lines gone, each address made linkable when it can be
+const tidyLinks = (L: string[]) => L.map((u) => u.trim()).filter(Boolean).map((u) => shopHref(u) || u)
 
 export function toForm(r: Rec): Form {
   const f: Form = { title: s(r.title), artist: s(r.artist), why: s(r.why), year: s(r.year), runtime: s(r.runtime) }
@@ -76,7 +80,7 @@ export function toForm(r: Rec): Form {
     })
     if (r.orderNotes) f.orderNotes = s(r.orderNotes)
   }
-  if (k === 'wish') f.priority = String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2)
+  if (k === 'wish') Object.assign(f, { priority: String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2), buyLinks: c0.buyLinks })
   if (k === 'own')
     Object.assign(f, {
       label: s(r.label),
@@ -94,16 +98,18 @@ export function toForm(r: Rec): Form {
   return f
 }
 
-// the form as stored values: trimmed, runtime a number or "", paid without its "$", the shop's address made linkable,
-// priority a number
+// the form as stored values: trimmed, runtime a number or "", paid without its "$", the shop's and copies' addresses made
+// linkable, priority a number
 export function stored(f: Form): Record<string, unknown> {
   const o: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(f)) if (typeof v === 'string') o[k] = k === 'why' || k === 'orderNotes' ? v : v.trim()
   if (f.discogsId !== undefined) o.discogsId = f.discogsId
   if (f.priority !== undefined) o.priority = +f.priority || 2
+  if (f.buyLinks) o.buyLinks = tidyLinks(f.buyLinks)
   if (f.moreCopies)
     o.moreCopies = f.moreCopies.map((c) => ({
       name: c.name.trim(), pressing: c.pressing.trim(), label: c.label.trim(), catalog: c.catalog.trim(), budget: c.budget.trim(), discogsId: c.discogsId,
+      buyLinks: tidyLinks(c.buyLinks),
     }))
   const n = parseInt(f.runtime, 10)
   o.runtime = isNaN(n) ? '' : n

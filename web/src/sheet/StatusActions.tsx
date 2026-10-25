@@ -4,8 +4,8 @@ import { Field, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
-import { pickable } from '../model/copies'
-import { movePatch } from '../model/status'
+import { buyHosts, pickable } from '../model/copies'
+import { movedCopy, movePatch } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
 
@@ -18,11 +18,12 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
   const [ci, setCi] = useState(0)
   const [paid, setPaid] = useState('')
   const [shop, setShop] = useState('')
+  const [url, setUrl] = useState('')
   const [busy, setBusy] = useState(false)
   const k = kindOf(r)
   if (k === 'own') return null
 
-  const move = async (to: 'ordered' | 'own', det?: { paid: string; shop: string }) => {
+  const move = async (to: 'ordered' | 'own', det?: { paid: string; shop: string; shopUrl?: string }) => {
     setBusy(true)
     let msg = ''
     const ok = await mutate(r.id, (latest) => {
@@ -38,6 +39,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     setPick(null)
     setPaid(String(r.paid || ''))
     setShop(String(r.shop || ''))
+    setUrl('')
     setAsk(to)
   }
   const start = (to: 'ordered' | 'own') => {
@@ -59,12 +61,14 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
       />
     )
 
-  if (ask)
+  if (ask) {
+    // a copy sold in several places asks which one it came from; one with a single link uses it without asking
+    const hosts = k === 'wish' ? buyHosts(movedCopy(r, ci).buyLinks) : []
     return (
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          move(ask, { paid: paid.trim().replace(/^\$\s*/, ''), shop: shop.trim() })
+          move(ask, { paid: paid.trim().replace(/^\$\s*/, ''), shop: shop.trim(), ...(url ? { shopUrl: url } : {}) })
         }}
       >
         <Fieldset>
@@ -79,6 +83,32 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
               <Input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="e.g. Rough Trade" />
             </Field>
           </div>
+          {hosts.length > 1 && (
+            <div role="group" aria-labelledby="fromQ" className="flex flex-col gap-2">
+              <p id="fromQ" className="text-foreground-muted text-sm">
+                From one of these?
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {hosts.map(([h, u], i) => (
+                  <Button
+                    key={u + i}
+                    type="button"
+                    size="sm"
+                    variant={url === u ? 'primary' : 'outline'}
+                    aria-pressed={url === u}
+                    title={u}
+                    onClick={() => {
+                      const on = url !== u
+                      setUrl(on ? u : '')
+                      if (on && !shop.trim()) setShop(h.replace(/ \(\d+\)$/, ''))
+                    }}
+                  >
+                    {h}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="flex gap-3">
             <Button type="submit" size="sm" disabled={busy}>
               Save
@@ -90,6 +120,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
         </Fieldset>
       </form>
     )
+  }
 
   return (
     <div className="flex flex-wrap gap-3">

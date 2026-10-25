@@ -78,13 +78,13 @@ describe('patchFor', () => {
     expect(patchFor(wish, f, { ...f, priority: '3' })).toEqual({ priority: 3 })
     expect(withSync(patchFor(wish, f, { ...f, label: 'EMI' }))).toEqual({ label: 'EMI' })
     expect(withSync(patchFor(wish, f, { ...f, budget: ' 40 ' }))).toEqual({ budget: '40', needsSync: true })
-    const more = [{ name: 'x ', pressing: '', label: '', catalog: '', budget: '', discogsId: '' as const }]
+    const more = [{ name: 'x ', pressing: '', label: '', catalog: '', budget: '', discogsId: '' as const, buyLinks: [] }]
     expect(patchFor(wish, f, { ...f, moreCopies: more })).toEqual({ moreCopies: [{ ...more[0], name: 'x' }] })
   })
 
   it("gives an owned record's form only the copies it still wants", () => {
     const f = toForm({ ...owned, moreCopies: [{ name: 'UK', discogsId: 5 }, null] })
-    expect(f.moreCopies).toEqual([{ name: 'UK', pressing: '', label: '', catalog: '', budget: '', discogsId: 5 }])
+    expect(f.moreCopies).toEqual([{ name: 'UK', pressing: '', label: '', catalog: '', budget: '', discogsId: 5, buyLinks: [] }])
     expect(f).not.toHaveProperty('priority')
     expect(f).not.toHaveProperty('copyName')
   })

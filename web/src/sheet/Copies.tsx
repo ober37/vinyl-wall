@@ -1,9 +1,10 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
-import { copiesLegend, copyLabelShown, copyTitle, pickable, stillCopies, type Copy } from '../model/copies'
+import { buyHosts, copiesLegend, copyLabelShown, copyTitle, pickable, stillCopies, type Copy } from '../model/copies'
 import { kindOf, type Rec } from '../model/record'
 import { Facts } from './Facts'
+import { LinkList } from './Links'
 
 type Row = [string, React.ReactNode]
 const pressRow = (c: Copy): Row[] => (c.pressing ? [['Pressing', <span className="whitespace-pre-line">{c.pressing}</span>]] : [])
@@ -12,6 +13,11 @@ const labelRow = (c: Copy, label: string): Row[] =>
     ? [['Label', <>{label}{c.catalog && <span className="text-foreground-muted">{label ? ' · ' : ''}{c.catalog}</span>}</>]]
     : []
 const budgetRow = (c: Copy): Row[] => (c.budget ? [['Budget', 'Up to $' + c.budget]] : [])
+// where to buy it: each link by its site, one a line, opening in a new tab
+const buyRow = (c: Copy): Row[] => {
+  const L = buyHosts(c.buyLinks)
+  return L.length ? [['Where to buy', <LinkList links={L} />]] : []
+}
 
 // The copies a record hunts, as production's wantCopyHTML shows them: one copy on a hunt is an open card (name, pressing,
 // label, budget); several, or the copies an owned or ordered record still wants, are folded rows under each copy's title.
@@ -24,7 +30,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
   let body: React.ReactNode
   if (L.length === 1 && kindOf(r) === 'wish') {
     const [c, i] = L[0]
-    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...budgetRow(c)]
+    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...budgetRow(c), ...buyRow(c)]
     if (!rows.length && !c.name) return none
     body = (
       <div className="flex flex-col gap-2">
@@ -36,7 +42,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
     body = (
       <Accordion variant="flush" multiple>
         {L.map(([c, i]) => {
-          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...budgetRow(c)]
+          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...budgetRow(c), ...buyRow(c)]
           return (
             <AccordionItem key={i} value={String(i)}>
               <AccordionTrigger className="text-foreground text-sm font-medium">

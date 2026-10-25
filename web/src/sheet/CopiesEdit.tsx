@@ -1,12 +1,12 @@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
-import { Field, FieldLabel } from '@appica/ui-react/field'
+import { Field, FieldDescription, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { copyHas, copyTitle, emptyCopy, type Copy } from '../model/copies'
 import type { Form } from '../model/edit'
-import type { Kind } from '../model/record'
+import { shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
 
 type Ph = { name: string; pressing: string; label: string; catalog: string }
@@ -16,13 +16,39 @@ const MORE: Ph = { name: 'e.g. UK first', pressing: 'e.g. 1969 UK Apple first pr
 
 const AutoMark = () => <span className="text-primary ms-1.5 font-mono text-[0.625rem] tracking-wider uppercase">auto-filled</span>
 
-// one copy's fields: Name and Budget, Pressing across, Label and Catalog no.
-function CopyFields({ c, ph, on, auto, focus }: {
+// a copy's links, one a line. A line that won't link is said once the box is left, not while it's still being typed
+function BuyLinks({ c, on }: { c: Copy; on: (v: string) => void }) {
+  const [left, setLeft] = useState(false)
+  const bad = left ? c.buyLinks.find((u) => u.trim() && !shopHref(u))?.trim() : undefined
+  return (
+    <Field className="sm:col-span-2" invalid={!!bad}>
+      <FieldLabel>Where to buy</FieldLabel>
+      <Textarea
+        rows={2}
+        value={c.buyLinks.join('\n')}
+        onChange={(e) => {
+          setLeft(false)
+          on(e.target.value)
+        }}
+        onBlur={() => setLeft(true)}
+        className="field-sizing-content"
+        autoCapitalize="off"
+        autoComplete="off"
+        placeholder="One link per line, e.g. https://www.roughtrade.com/…"
+      />
+      {bad && <FieldDescription>“{bad}” isn't a web address, so it won't link</FieldDescription>}
+    </Field>
+  )
+}
+
+// one copy's fields: Name and Budget, Pressing across, Label and Catalog no., then where to buy it (not on the copy ordered)
+function CopyFields({ c, ph, on, auto, focus, links }: {
   c: Copy
   ph: Ph
   on: (k: keyof Copy, v: string) => void
   auto?: string[]
   focus?: boolean
+  links?: boolean
 }) {
   const text = (k: 'name' | 'label' | 'catalog', label: string, mono = false) => (
     <Field>
@@ -53,15 +79,17 @@ function CopyFields({ c, ph, on, auto, focus }: {
       </Field>
       {text('label', 'Label')}
       {text('catalog', 'Catalog no.', true)}
+      {links && <BuyLinks c={c} on={(v) => on('buyLinks', v)} />}
     </div>
   )
 }
 
 const FLAT: Record<keyof Copy, keyof Form> = {
-  name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId',
+  name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks',
 }
 export const firstOf = (f: Form): Copy => ({
   name: f.copyName ?? '', pressing: f.pressing ?? '', label: f.label ?? '', catalog: f.catalog ?? '', budget: f.budget ?? '', discogsId: f.discogsId ?? '',
+  buyLinks: f.buyLinks ?? [],
 })
 const asFlat = (c: Copy): Partial<Form> => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k as keyof Copy], v]))
 
@@ -85,8 +113,10 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
   const all = isNew ? [firstOf(form)] : [firstOf(form), ...more]
   const focus = added ?? focusCopy ?? null
 
-  const setFirst = (k: keyof Copy, v: string) => change({ [FLAT[k]]: v })
-  const setMore = (i: number, k: keyof Copy, v: string) => change({ moreCopies: more.map((c, j) => (j === i - 1 ? { ...c, [k]: v } : c)) })
+  // the links box's text is kept a line each, blank lines too, so typing a new line works
+  const val = (k: keyof Copy, v: string) => (k === 'buyLinks' ? v.split('\n') : v)
+  const setFirst = (k: keyof Copy, v: string) => change({ [FLAT[k]]: val(k, v) })
+  const setMore = (i: number, k: keyof Copy, v: string) => change({ moreCopies: more.map((c, j) => (j === i - 1 ? { ...c, [k]: val(k, v) } : c)) })
   const add = () => {
     setAdded(more.length + 1)
     change({ moreCopies: [...more, emptyCopy()] }, true)
@@ -115,6 +145,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
         on={(k, v) => (i === 0 ? setFirst(k, v) : setMore(i, k, v))}
         auto={i === 0 ? auto : undefined}
         focus={focus === i}
+        links
       />
     )
     // several copies: each under its own title, with Remove beside it
