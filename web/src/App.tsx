@@ -84,8 +84,7 @@ export function App() {
                   className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem]"
                 >
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                  {/* on phones just the dot and the count, as the other chips drop their words */}
-                  <span className="max-sm:sr-only">Looking up</span> {looking}
+                  Looking up {looking}
                 </span>
               )
             }
