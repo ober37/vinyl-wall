@@ -1,6 +1,6 @@
 /* The rack: what appica has no component for (the four hanging styles, a record behind each sleeve, a hang tag, the
    pattern backgrounds), ported from production's CSS. Colours come only from theme.css tokens; the multi-layer gradients
-   can't be utilities. The noise textures (cork, felt) are SVG alpha noise laid over a token colour. */
+   can't be utilities. The noise textures (cork's brown flecks, felt's grey) keep production's own SVG noise. */
 
 @layer components {
   /* each row draws its own plank through the tops of its slots */
@@ -153,8 +153,8 @@
     background: var(--yarn-2);
   }
 
-  /* Cork: a cork strip behind the top of each row and a flat coloured thumbtack holding each sleeve, a little off
-     centre (a fixed pattern, so it doesn't change between redraws) */
+  /* Cork: a cork strip behind the top of each row and a coloured push pin above each sleeve, each leaning its own way
+     (a fixed pattern, so it doesn't change between redraws). --la is the lean, --ll how far the cap sits from the base */
   .rack[data-hang='cork'] .slot::before {
     content: '';
     position: absolute;
@@ -163,7 +163,7 @@
     height: 1.1875rem;
     background-color: var(--cork);
     background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .28 0 0 0 0 .15 0 0 0 0 .06 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
       linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     background-size: 160px 60px, auto;
     box-shadow:
@@ -171,14 +171,16 @@
       inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent),
       inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
   }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 1) { --tx: -8px; --la: -58deg; --ll: 5px; }
+  .rack[data-hang='cork'] .slot:nth-child(3n + 2) { --tx: 5px; --la: 52deg; --ll: 5px; }
+  .rack[data-hang='cork'] .slot:nth-child(3n) { --tx: -2px; --la: -80deg; --ll: 6px; }
+  .rack[data-hang='cork'] .slot:nth-child(4n) { --tx: 10px; --la: 70deg; }
+  .rack[data-hang='cork'] .slot:nth-child(7n + 3) { --la: 100deg; --ll: 4px; }
   .rack[data-hang='cork'] .slot:nth-child(5n + 1) { --pin: var(--pin-1); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 2) { --pin: var(--pin-2); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 3) { --pin: var(--pin-3); }
   .rack[data-hang='cork'] .slot:nth-child(5n + 4) { --pin: var(--pin-4); }
   .rack[data-hang='cork'] .slot:nth-child(5n) { --pin: var(--pin-5); }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 1) { --tx: -8px; }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 2) { --tx: 5px; }
-  .rack[data-hang='cork'] .slot:nth-child(4n) { --tx: 10px; }
   .rack[data-hang='cork'] .hanger {
     transform-origin: calc(50% + var(--tx, 0px)) -0.375rem;
   }
@@ -188,47 +190,41 @@
   .rack[data-hang='cork'] .slot:nth-child(even) .hanger {
     transform: rotate(1.3deg);
   }
-  /* a push pin seen from a little above: a flat round cap on a short body, its point in the middle of the cork, with
-     its shadow on the board; each leans its own way (--lean) */
   .rack[data-hang='cork'] .hook {
-    top: -0.375rem;
-    width: 6px;
-    height: 8px;
-    margin-left: -3px;
-    border-radius: 0 0 2px 2px;
-    transform: translateX(var(--tx, 0px)) rotate(var(--lean, 0deg));
-    transform-origin: 50% 100%;
-    background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 60%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 70%, var(--gleam)) 60%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
+    top: -0.8125rem;
+    width: 13px;
+    height: 13px;
+    margin-left: -6.5px;
+    border-radius: 50%;
+    transform: translateX(var(--tx, 0px));
+    background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
+    box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
   }
   .rack[data-hang='cork'] .hook::before,
   .rack[data-hang='cork'] .hook::after {
     content: '';
     position: absolute;
-    border-radius: 50%;
   }
   .rack[data-hang='cork'] .hook::before {
     left: 50%;
-    top: -4px;
-    width: 14px;
-    height: 8px;
-    margin-left: -7px;
-    background: radial-gradient(ellipse at 40% 35%, color-mix(in srgb, var(--pin) 72%, var(--gleam)), var(--pin) 60%);
-    box-shadow:
-      inset 0 -1.5px 0 color-mix(in srgb, var(--pin) 60%, var(--shade)),
-      0 1px 1px color-mix(in srgb, var(--shade) 35%, transparent);
+    bottom: 50%;
+    width: 6px;
+    margin-left: -3px;
+    height: var(--ll, 7px);
+    transform-origin: 50% 100%;
+    transform: rotate(var(--la, 0deg));
+    background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
   }
   .rack[data-hang='cork'] .hook::after {
-    z-index: -1;
-    left: 40%;
-    bottom: -3px;
-    width: 12px;
-    height: 5px;
-    background: color-mix(in srgb, var(--shade) 40%, transparent);
-    filter: blur(1.5px);
+    left: 1px;
+    top: 1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
+    background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
+    box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
   }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 1) .hook { --lean: -9deg; }
-  .rack[data-hang='cork'] .slot:nth-child(3n + 2) .hook { --lean: 7deg; }
-  .rack[data-hang='cork'] .slot:nth-child(4n) .hook { --lean: 12deg; }
 
   /* Floating: no rail or ring; each sleeve sits straight, a little off the wall, on a soft deep shadow */
   /* no rail to trim, so a hang tag may reach into the page's gutter; columns as narrow as the railed styles', so
