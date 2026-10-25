@@ -175,7 +175,7 @@ export function EquipmentSheet({ open, onClose, onRecord }: { open: boolean; onC
   return (
     <Drawer side="right" open={open} onOpenChange={(o) => !o && onClose()}>
       <DrawerContent className="w-full sm:max-w-xl">
-        <DrawerHeader className="gap-1">
+        <DrawerHeader>
           {view.k !== 'root' && (
             <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={back}>
               ‹ All gear
@@ -186,7 +186,7 @@ export function EquipmentSheet({ open, onClose, onRecord }: { open: boolean; onC
           </DrawerTitle>
           <DrawerDescription>{head.d}</DrawerDescription>
           {view.k === 'item' && g && canEdit && (
-            <div className="mt-1 flex flex-wrap items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <Button size="sm" variant={editing ? 'primary' : 'outline'} onClick={() => setEditing(!editing)}>
                 {editing ? 'Done' : 'Edit'}
               </Button>

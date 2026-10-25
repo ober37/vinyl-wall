@@ -138,7 +138,7 @@ function DiscogsSection() {
               Save token
             </Button>
             {replacing && (
-              <Button size="sm" variant="ghost" onClick={() => setReplacing(false)}>
+              <Button size="sm" variant="outline" onClick={() => setReplacing(false)}>
                 Cancel
               </Button>
             )}

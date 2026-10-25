@@ -161,7 +161,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
       node
     )
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-col gap-6">
       <Summary key={r.id} r={r} />
       {r.why ? (
         <blockquote className="border-primary text-foreground-intense border-s-2 ps-4 text-base italic">{r.why}</blockquote>

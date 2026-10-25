@@ -37,7 +37,7 @@ export function NotesTab({ r }: { r: Rec }) {
   const drop = () => edit && mutate(r.id, (latest) => ({ notes: deleteNote(latest, edit.ref) ?? gone() })).then((ok) => ok && setEdit(null))
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-6">
       {canEdit && (
         <form
           className="flex flex-col gap-2"
