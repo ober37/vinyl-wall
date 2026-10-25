@@ -4,6 +4,7 @@ import { Button } from '@appica/ui-react/button'
 import { CopyButton } from '@appica/ui-react/copy-button'
 import { Field, FieldLabel, FieldDescription, FieldError } from '@appica/ui-react/field'
 import { Input } from '@appica/ui-react/input'
+import { Textarea } from '@appica/ui-react/textarea'
 import { useId, useState } from 'react'
 import { wantCopies } from '../model/copies'
 import { generalMatch, releaseOf, runJoin, runoutText, runSides, syncLine, type Sync } from '../model/discogs'
@@ -78,6 +79,7 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
   // what's typed while it isn't a release; otherwise the field shows the number (a pasted link becomes it at once)
   const [draft, setDraft] = useState<string | null>(null)
   const [copied, setCopied] = useState('')
+  const [manual, setManual] = useState('')
   const bad = draft !== null
   const changed = id !== wantCopies(r)[0].discogsId
   const typed = (v: string) => {
@@ -132,7 +134,7 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
           <FieldDescription>This points at a general release of the album. Paste the number of your exact pressing when you know it.</FieldDescription>
         )}
       </Field>
-      {own && id !== '' && !bad && matrix && (
+      {own && matrix && (
         <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
           <CopyButton
             size="sm"
@@ -141,13 +143,20 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
             copiedLabel="Copied runout"
             value={() => runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim())}
             onCopy={() => setCopied("Copied. Paste it into the release's edit form on Discogs.")}
-            onCopyError={() => setCopied("Couldn't copy here. Select the runout above and copy it.")}
+            onCopyError={() => {
+              setManual(runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim()))
+              setCopied("Selected: copy it with your device's copy command")
+            }}
           >
             Copy runout for a Discogs submission
           </CopyButton>
           <span role="status" className="text-foreground-muted text-xs">
             {copied}
           </span>
+          {/* the clipboard is blocked here: the text, selected, to copy by hand */}
+          {manual && (
+            <Textarea readOnly aria-label="Runout for a Discogs submission" value={manual} ref={(el) => el?.select()} className="w-full font-mono" />
+          )}
         </div>
       )}
     </>

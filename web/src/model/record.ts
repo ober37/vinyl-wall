@@ -219,7 +219,12 @@ export function keyInfo(r: Rec): [string, string][] {
   const cat = k !== 'wish' && !(r.matrix && k !== 'ordered') ? r.catalog : ''
   if (lab || cat) f.push(['Label', [lab, cat].filter(Boolean).join(' · ')])
   if (list(ab.producers)) f.push(['Producer', list(ab.producers)])
-  if (ab.recorded) f.push(['Recorded', String(ab.recorded)])
+  // the place, then the dates on their own line (split at the last " · ")
+  if (ab.recorded) {
+    const t = String(ab.recorded)
+    const i = t.lastIndexOf(' · ')
+    f.push(['Recorded', i < 0 ? t : t.slice(0, i) + '\n' + t.slice(i + 3)])
+  }
   if (list(ab.genres)) f.push(['Genre', list(ab.genres)])
   return f
 }

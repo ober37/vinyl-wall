@@ -71,7 +71,7 @@ export const bgStyle = (bg: Background) =>
   bg.kind === 'photo' ? ({ '--photo': `url("${bg.url}")`, '--dim': bg.dim + '%', '--photo-pos': bg.pos } as CSSProperties) : undefined
 
 // One sleeve. Takes only plain values, so a snapshot that didn't change this record leaves it (and its cover) alone.
-const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, onOpen }: {
+const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, example, onOpen }: {
   id: string
   title: string
   artist: string
@@ -82,6 +82,8 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   tagTone: Tag['tone']
   // waiting on the background task for its cover, details or album info
   looking: boolean
+  // one of the records a new wall starts with
+  example: boolean
   onOpen: (id: string) => void
 }) {
   const tag = tagText ? { text: tagText, tone: tagTone } : null
@@ -101,6 +103,11 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
           <div className="sleeve-box transition-transform group-active:scale-[0.975]">
             <div className="disc" style={{ '--disc-label': `hsl(${hue} 60% 45%)` } as CSSProperties} />
             <Face title={title} artist={artist} hue={hue} cover={cover} className="sleeve-face" />
+            {example && (
+              <span className="bg-paper text-paper-ink absolute start-1.5 top-1.5 z-4 rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase">
+                Example
+              </span>
+            )}
             {looking && (
               // a brass dot in the corner nothing else uses, ringed so it shows on any cover
               <span
@@ -302,6 +309,7 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
               tagText={tagOf(r)?.text ?? ''}
               tagTone={tagOf(r)?.tone ?? 'paper'}
               looking={busy(r, discogsOn)}
+              example={!!r.example}
               onOpen={onOpen}
             />
           ))}

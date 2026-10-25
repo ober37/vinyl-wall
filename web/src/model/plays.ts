@@ -7,7 +7,7 @@ export { VIBES, vibeOf } from './record'
 export type PlayKind = 'full' | 'side' | 'tracks'
 
 export const sideOf = (pos: unknown) => (/^([A-Z])/.exec(String(pos || '')) || [])[1] || ''
-const trackSecs = (dur: unknown) => {
+export const trackSecs = (dur: unknown) => {
   const m = /^(\d+):(\d\d)$/.exec(String(dur || ''))
   return m ? +m[1] * 60 + +m[2] : 0
 }
