@@ -713,6 +713,8 @@ function pendingWork(records, s) {
 	const w = pendingParts(records, s, false);
 	return "Started from the wall. Waiting now: " + (w.length ? w.join("; ") + ". Run only these parts, in the usual order." : "nothing specific; run every part and do whatever is pending.");
 }
+var syncing = (r, discogsOn) => discogsOn && r.needsSync === true && !r.example && !r.deleted;
+var busy = (r, discogsOn) => lookingUp(r) || syncing(r, discogsOn);
 function lookupStatus(r) {
 	if (r.needsEnrich) return r.coverAsset ? "Looking up details…" : "Looking up the cover and details…";
 	return aboutPending(r) ? "Looking up the album…" : "";
@@ -756,7 +758,7 @@ var SYNCED = /* @__PURE__ */ new Set([
 function withSync(patch) {
 	const p = "discogsId" in patch && !("discogsMatch" in patch) ? {
 		...patch,
-		discogsMatch: ""
+		discogsMatch: patch.discogsId === "" ? "" : "set by you"
 	} : patch;
 	return Object.keys(p).some((k) => SYNCED.has(k)) ? {
 		...p,
@@ -2848,7 +2850,7 @@ function importable(d) {
 		id: "",
 		moreCopies: r.moreCopies
 	}).slice(1);
-	r.needsSync = true;
+	r.needsSync = "check";
 	return r;
 }
 var fileImage = (p, id) => typeof id === "string" && Object.hasOwn(p.covers, id) && /^data:image\/(jpeg|png|webp);base64,/.test(p.covers[id]) ? p.covers[id] : null;
@@ -3439,7 +3441,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 		})
 	});
 });
-function Wall({ records, title, hang, onOpen, onAdd, onShare, tools, gear, below, welcome }) {
+function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, onShare, tools, gear, below, welcome }) {
 	const [filter, setFilter] = useWallFilter();
 	const [searching, setSearching] = useState(false);
 	const [query, setQuery] = useState("");
@@ -3593,7 +3595,7 @@ function Wall({ records, title, hang, onOpen, onAdd, onShare, tools, gear, below
 			hue: hueOf(r),
 			tagText: tagOf(r)?.text ?? "",
 			tagTone: tagOf(r)?.tone ?? "paper",
-			looking: lookingUp(r),
+			looking: busy(r, discogsOn),
 			onOpen
 		}, r.id))
 	})] });
@@ -6939,6 +6941,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		r.year,
 		r.runtime ? r.runtime + " min" : ""
 	].filter(Boolean).join(" · ") : "";
+	const status = r ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === "ok") ? "Waiting to sync…" : "") : "";
 	return /* @__PURE__ */ jsx(Drawer, {
 		side: "right",
 		open: !!r,
@@ -7003,13 +7006,13 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 								r,
 								records
 							}),
-							lookupStatus(r) && /* @__PURE__ */ jsxs("p", {
+							status && /* @__PURE__ */ jsxs("p", {
 								role: "status",
 								className: "text-foreground-muted mt-1 flex items-center gap-2 text-xs",
 								children: [/* @__PURE__ */ jsx("span", {
 									"aria-hidden": "true",
 									className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
-								}), lookupStatus(r)]
+								}), status]
 							})
 						]
 					})]
@@ -8151,7 +8154,8 @@ function App() {
 	const [sharing, setSharing] = useState(null);
 	const [fromEquip, setFromEquip] = useState(false);
 	const update = useUpdateAvailable();
-	const looking = records.filter(lookingUp).length;
+	const discogsOn = settings.discogs?.status === "ok";
+	const looking = records.filter((r) => busy(r, discogsOn)).length;
 	const lookupNews = useLookupNews(canEdit ? looking : 0);
 	return /* @__PURE__ */ jsxs("main", {
 		className: `mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === "photo" ? "photo-bg" : ""}`,
@@ -8180,6 +8184,7 @@ function App() {
 					records,
 					title: site.title,
 					hang: site.hang,
+					discogsOn,
 					onOpen: setOpenId,
 					onAdd: canEdit ? () => setAdding(true) : void 0,
 					onShare: hasDownloads ? setSharing : void 0,
@@ -8196,7 +8201,7 @@ function App() {
 						]
 					}),
 					welcome: canEdit && settingsLoaded && !settings.welcomeDismissed && /* @__PURE__ */ jsx(Welcome, {
-						discogsDone: settings.discogs?.status === "ok",
+						discogsDone: discogsOn,
 						gearDone: gear.some((g) => !g.example),
 						onAdd: () => setAdding(true),
 						onDiscogs: () => setSettingsOpen("discogs"),
