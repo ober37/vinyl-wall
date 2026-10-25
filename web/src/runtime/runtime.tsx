@@ -185,7 +185,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
             setStatus('ready')
           },
           (e) => {
-            setError(e.message)
+            setError("Couldn't load the wall: " + e.message)
             setStatus(e.code === 'revoked' ? 'revoked' : 'no-db')
           },
         ),
@@ -454,8 +454,14 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       },
       update: (id, patch) => queue(id, () => patch),
       mutate: (id, fn) => queue(id, fn, true),
-      remove: (id) =>
-        queue(id, (r) => (r.discogsSync && (r.discogsSync as { rid?: unknown }).rid ? { deleted: true } : 'delete'), true),
+      remove: (id) => {
+        // a record on Discogs is marked, so the task can take it off there too
+        let synced = false
+        return queue(id, (r) => ((synced = !!(r.discogsSync as { rid?: unknown } | undefined)?.rid) ? { deleted: true } : 'delete'), true).then((ok) => {
+          if (ok && synced) setNotice('Removed. Taking it off Discogs too.')
+          return ok
+        })
+      },
       newId: () => db.current!.collection('records').doc().id,
       create,
       upload,

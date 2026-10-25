@@ -75,7 +75,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
           </div>
           <Gauge g={g} />
           {S.msg && <p className="text-foreground-muted text-sm">{S.msg}</p>}
-          {canEdit && g.status !== 'retired' && (
+          {canEdit && (
             <form onSubmit={addTime} className="flex flex-wrap gap-2">
               <Input
                 aria-label="Minutes played off the wall"

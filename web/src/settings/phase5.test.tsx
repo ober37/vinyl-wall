@@ -134,7 +134,7 @@ describe('Settings: Discogs import and help', () => {
   it('offers Try again when an import has waited over ten minutes', async () => {
     const { user } = setup({ discogs: { ...verified.discogs, importRequested: true, importRequestedAt: Date.now() - 11 * 60000 } })
     const sheet = await openSettings(user)
-    expect(within(sheet).getByText('This is taking longer than it should.')).toBeTruthy()
+    expect(within(sheet).getByText('This is taking longer than it should. Try again to restart it.')).toBeTruthy()
     expect(within(sheet).getByRole('button', { name: 'Try again' })).toBeTruthy()
   })
 

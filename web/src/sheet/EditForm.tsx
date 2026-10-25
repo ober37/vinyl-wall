@@ -291,7 +291,7 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
         <FieldsetLegend>About the album</FieldsetLegend>
         <div className="grid gap-4 sm:grid-cols-2">
           <Text k="year" label="Year" placeholder="e.g. 1959" mono numeric {...p} />
-          <Text k="runtime" label="Runtime (min)" placeholder="e.g. 46" mono numeric {...p} />
+          <Text k="runtime" label="Runtime (min)" placeholder={r?.needsEnrich ? 'Looking it up…' : 'e.g. 46'} mono numeric {...p} />
           {own && <Text k="label" label="Label" placeholder="e.g. Columbia" {...p} />}
           {own && <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />}
         </div>

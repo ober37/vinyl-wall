@@ -179,20 +179,22 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
           <TipGroup>
             <div className="flex shrink-0 items-center gap-2 max-sm:self-end">
               {gear}
-              <Tip label="Search the wall">
-                <Button
-                  ref={searchBtn}
-                  size="icon-md"
-                  variant="outline"
-                  aria-label="Search the wall"
-                  aria-expanded={searching}
-                  aria-controls="wall-search"
-                  className={ROUND}
-                  onClick={() => (searching ? closeSearch() : setSearching(true))}
-                >
-                  <SearchIcon />
-                </Button>
-              </Tip>
+              {records.length > 0 && (
+                <Tip label="Search the wall">
+                  <Button
+                    ref={searchBtn}
+                    size="icon-md"
+                    variant="outline"
+                    aria-label="Search the wall"
+                    aria-expanded={searching}
+                    aria-controls="wall-search"
+                    className={ROUND}
+                    onClick={() => (searching ? closeSearch() : setSearching(true))}
+                  >
+                    <SearchIcon />
+                  </Button>
+                </Tip>
+              )}
               {onShare && list.length > 0 && (
                 <Tip label="Share your wall">
                   <Button
@@ -281,7 +283,7 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
         )
       ) : !list.length ? (
         <div className="on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm">
-          <span>Nothing on the wall matches “{q}”.</span>
+          <span>Nothing on the wall matches “{q}”{on.length ? ' with this filter' : ''}.</span>
           <Button size="sm" variant="outline" onClick={closeSearch}>
             Clear the search
           </Button>

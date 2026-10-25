@@ -72,11 +72,11 @@ export function gState(g: Gear): { tone: Tone; label: string; msg: string } {
   return { tone: '', label: 'Healthy', msg: `About ${Math.round((lo || top) - h)} h until the ${lo || top} h mark.` }
 }
 export const fmtLeft = (x: number) => (Math.abs(x - Math.round(x)) < 0.05 ? String(Math.round(x)) : fmtH(x))
-// how far a tracked part is from its rating: hours left until the lower one, then in the window, then over
+// how far a tracked part is from its rating: hours to go until the lower one, then in the window, then over
 export function wearLeft(g: Gear) {
   const h = gHours(g), lo = lowOf(g), hi = highOf(g), top = hi || lo
   if (!top) return ''
-  return lo && h < lo ? `${fmtLeft(lo - h)} h left` : hi && h < hi ? 'in window' : fmtLeft(h - top) === '0' ? 'at rated life' : `${fmtLeft(h - top)} h over`
+  return lo && h < lo ? `${fmtLeft(lo - h)} h to go` : hi && h < hi ? 'in window' : fmtLeft(h - top) === '0' ? 'at rated life' : `${fmtLeft(h - top)} h over`
 }
 export const rated = (g: Gear) => !!(lowOf(g) || highOf(g))
 // the card meter fills toward the lower rating, which is where the warnings are measured

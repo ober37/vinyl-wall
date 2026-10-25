@@ -268,7 +268,12 @@ export function Listening({ r }: { r: Rec }) {
                       ) : (
                         <div className="flex items-start justify-between gap-2">
                           <div className="min-w-0">
-                            <div className="text-foreground">{[p.date, p.what, p.setup].filter(Boolean).join(' · ')}</div>
+                            <div className="text-foreground">
+                              <span aria-hidden="true" className="text-foreground-muted me-1.5 text-xs">
+                                {p.icon}
+                              </span>
+                              {[p.date, p.what, p.setup].filter(Boolean).join(' · ')}
+                            </div>
                             {p.vibe > 0 && <div className="text-foreground-muted">{VIBES[p.vibe - 1]}</div>}
                             {p.thoughts && (
                               <p className="text-foreground-muted mt-1 break-words whitespace-pre-line">

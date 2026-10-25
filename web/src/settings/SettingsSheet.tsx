@@ -75,7 +75,7 @@ function DiscogsImport({ dz }: { dz: Discogs }) {
           <p role="status" className="text-foreground-muted text-sm empty:hidden">
             {dz.importRequested
               ? stalled
-                ? 'This is taking longer than it should.'
+                ? 'This is taking longer than it should. Try again to restart it.'
                 : 'This takes a few minutes. Records appear on the wall as they come in.'
               : dz.importMsg || ''}
             {!dz.importRequested && dz.importedAt && <span className="font-mono"> ({dz.importedAt})</span>}

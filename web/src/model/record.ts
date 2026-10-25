@@ -144,6 +144,8 @@ export type Play = {
   day: string
   date: string
   what: string
+  // ● a whole album, ◐ a side, ◔ tracks
+  icon: string
   setup: string
   min: number
   vibe: number
@@ -179,6 +181,7 @@ export function playMonths(r: Rec): PlayMonth[] {
       day: d,
       date: d ? playDate(d) : '',
       what,
+      icon: /^Played the whole album/.test(t) ? '●' : /^Played one side/.test(t) ? '◐' : '◔',
       setup: (/ on (.+?) \(~\d+ min\)/.exec(t) || [])[1] || '',
       min: +m[3] || 0,
       vibe: vibeOf(n),
