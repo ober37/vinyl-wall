@@ -7071,7 +7071,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .rack[data-hang="cork"] .slot:before {
     content: "";
     background-color: var(--cork);
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(var(--gleam), var(--shade));
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .28 0 0 0 0 .15 0 0 0 0 .06 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(var(--gleam), var(--shade));
     inset-inline: 0;
     height: 1.1875rem;
     position: absolute;
@@ -7080,7 +7080,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .slot:before {
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .28 0 0 0 0 .15 0 0 0 0 .06 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     }
   }
 
@@ -7093,6 +7093,34 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     .rack[data-hang="cork"] .slot:before {
       box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
     }
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+1) {
+    --tx: -8px;
+    --la: -58deg;
+    --ll: 5px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+2) {
+    --tx: 5px;
+    --la: 52deg;
+    --ll: 5px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n) {
+    --tx: -2px;
+    --la: -80deg;
+    --ll: 6px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(4n) {
+    --tx: 10px;
+    --la: 70deg;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(7n+3) {
+    --la: 100deg;
+    --ll: 4px;
   }
 
   .rack[data-hang="cork"] .slot:nth-child(5n+1) {
@@ -7115,18 +7143,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --pin: var(--pin-5);
   }
 
-  .rack[data-hang="cork"] .slot:nth-child(3n+1) {
-    --tx: -8px;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(3n+2) {
-    --tx: 5px;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(4n) {
-    --tx: 10px;
-  }
-
   .rack[data-hang="cork"] .hanger {
     transform-origin: calc(50% + var(--tx, 0px)) -.375rem;
   }
@@ -7140,82 +7156,77 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .rack[data-hang="cork"] .hook {
-    width: 6px;
-    height: 8px;
-    transform: translateX(var(--tx, 0px)) rotate(var(--lean, 0deg));
-    transform-origin: 50% 100%;
-    background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin) 60%, var(--pin));
-    border-radius: 0 0 2px 2px;
-    margin-left: -3px;
-    top: -.375rem;
+    width: 13px;
+    height: 13px;
+    transform: translateX(var(--tx, 0px));
+    background: radial-gradient(circle at 40% 35%, var(--pin), var(--pin) 45%, var(--pin));
+    border-radius: 50%;
+    margin-left: -6.5px;
+    top: -.8125rem;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .hook {
-      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 60%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 70%, var(--gleam)) 60%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
+      background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
+    }
+  }
+
+  .rack[data-hang="cork"] .hook {
+    box-shadow: 1px 2px 2px var(--shade);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .hook {
+      box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
     }
   }
 
   .rack[data-hang="cork"] .hook:before, .rack[data-hang="cork"] .hook:after {
     content: "";
-    border-radius: 50%;
     position: absolute;
   }
 
   .rack[data-hang="cork"] .hook:before {
-    background: radial-gradient(ellipse at 40% 35%, var(--pin), var(--pin) 60%);
-    width: 14px;
-    height: 8px;
-    margin-left: -7px;
-    top: -4px;
+    width: 6px;
+    height: var(--ll, 7px);
+    transform-origin: 50% 100%;
+    transform: rotate(var(--la, 0deg));
+    background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin));
+    margin-left: -3px;
+    bottom: 50%;
     left: 50%;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .hook:before {
-      background: radial-gradient(ellipse at 40% 35%, color-mix(in srgb, var(--pin) 72%, var(--gleam)), var(--pin) 60%);
-    }
-  }
-
-  .rack[data-hang="cork"] .hook:before {
-    box-shadow: inset 0 -1.5px 0 var(--pin), 0 1px 1px var(--shade);
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .rack[data-hang="cork"] .hook:before {
-      box-shadow: inset 0 -1.5px 0 color-mix(in srgb, var(--pin) 60%, var(--shade)), 0 1px 1px color-mix(in srgb, var(--shade) 35%, transparent);
+      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
     }
   }
 
   .rack[data-hang="cork"] .hook:after {
-    z-index: -1;
-    background: var(--shade);
-    width: 12px;
-    height: 5px;
-    bottom: -3px;
-    left: 40%;
+    width: 11px;
+    height: 11px;
+    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
+    background: radial-gradient(circle at 35% 30%, var(--pin) 0 14%, var(--pin) 50%, var(--pin));
+    border-radius: 50%;
+    top: 1px;
+    left: 1px;
   }
 
   @supports (color: color-mix(in lab, red, red)) {
     .rack[data-hang="cork"] .hook:after {
-      background: color-mix(in srgb, var(--shade) 40%, transparent);
+      background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
     }
   }
 
   .rack[data-hang="cork"] .hook:after {
-    filter: blur(1.5px);
+    box-shadow: 2px 4px 4px var(--shade);
   }
 
-  .rack[data-hang="cork"] .slot:nth-child(3n+1) .hook {
-    --lean: -9deg;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(3n+2) .hook {
-    --lean: 7deg;
-  }
-
-  .rack[data-hang="cork"] .slot:nth-child(4n) .hook {
-    --lean: 12deg;
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .hook:after {
+      box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
+    }
   }
 
   .rack[data-hang="float"] {
