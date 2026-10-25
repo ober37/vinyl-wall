@@ -60,13 +60,13 @@ import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogFooter, A
 import { Badge } from "@appica/ui-react/badge";
 import { Meter, MeterProgress } from "@appica/ui-react/meter";
 import { CopyButton } from "@appica/ui-react/copy-button";
+import { createPortal } from "react-dom";
+import { Slider } from "@appica/ui-react/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@appica/ui-react/collapsible";
 import { Form } from "@appica/ui-react/form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@appica/ui-react/accordion";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@appica/ui-react/tabs";
 import { CheckboxGroup } from "@appica/ui-react/checkbox-group";
-import { Slider } from "@appica/ui-react/slider";
-import { BackgroundPattern } from "@appica/ui-react/background-pattern";
 // \0vite/modulepreload-polyfill.js
 (function polyfill() {
 	const relList = document.createElement("link").relList;
@@ -130,6 +130,7 @@ var Boundary = class extends Component {
 	}
 };
 // src/wall/Tip.tsx
+var ROUND = "bg-wall/70 rounded-full before:rounded-full before:bg-transparent";
 var TipGroup = ({ children }) => /* @__PURE__ */ jsx(TooltipProvider, {
 	delay: 150,
 	children
@@ -138,16 +139,16 @@ function Tip({ label, children }) {
 	return /* @__PURE__ */ jsxs(Tooltip, { children: [/* @__PURE__ */ jsx(TooltipTrigger, { render: children }), /* @__PURE__ */ jsx(TooltipContent, { children: label })] });
 }
 // src/model/record.ts
-var kindOf = (r) => r.status === "wish" ? "wish" : r.status === "ordered" ? "ordered" : "own";
+var kindOf$1 = (r) => r.status === "wish" ? "wish" : r.status === "ordered" ? "ordered" : "own";
 var KIND_LABEL = {
 	own: "Owned",
 	ordered: "Ordered",
 	wish: "Wanted"
 };
 function wallOrder(records) {
-	const ord = records.filter((r) => kindOf(r) === "ordered").sort((a, b) => (a.eta || "9999").localeCompare(b.eta || "9999"));
-	const own = records.filter((r) => kindOf(r) === "own").sort((a, b) => (a.added || 0) - (b.added || 0));
-	const wish = records.filter((r) => kindOf(r) === "wish").sort((a, b) => (a.priority || 2) - (b.priority || 2) || (a.added || 0) - (b.added || 0));
+	const ord = records.filter((r) => kindOf$1(r) === "ordered").sort((a, b) => (a.eta || "9999").localeCompare(b.eta || "9999"));
+	const own = records.filter((r) => kindOf$1(r) === "own").sort((a, b) => (a.added || 0) - (b.added || 0));
+	const wish = records.filter((r) => kindOf$1(r) === "wish").sort((a, b) => (a.priority || 2) - (b.priority || 2) || (a.added || 0) - (b.added || 0));
 	return [
 		...own,
 		...ord,
@@ -293,7 +294,7 @@ function keyInfo(r) {
 	const list = (a) => Array.isArray(a) ? a.filter(Boolean).map(String).join(", ") : "";
 	const f = [];
 	if (ab.released) f.push(["Released", longDate(ab.released)]);
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	const lab = ab.label || (k !== "wish" ? r.label : "");
 	const cat = k !== "wish" && !(r.matrix && k !== "ordered") ? r.catalog : "";
 	if (lab || cat) f.push(["Label", [lab, cat].filter(Boolean).join(" · ")]);
@@ -316,7 +317,7 @@ var OSTAT = {
 };
 var orderStatusOf = (r) => Object.hasOwn(OSTAT, String(r.orderStatus)) ? String(r.orderStatus) : "ordered";
 function tagOf(r) {
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	if (k === "ordered") return {
 		text: OSTAT[orderStatusOf(r)] + (r.eta ? " · " + shortDate(r.eta) : ""),
 		tone: "ship"
@@ -664,14 +665,14 @@ function firstCopyChosen(r) {
 }
 function stillCopies(r) {
 	const C = wantCopies(r);
-	return (kindOf(r) === "wish" ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])).filter(([c, i]) => i ? copyHas(c) : firstCopyChosen(r));
+	return (kindOf$1(r) === "wish" ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])).filter(([c, i]) => i ? copyHas(c) : firstCopyChosen(r));
 }
-var copiesLegend = (r) => (stillCopies(r).length > 1 ? "The copies you " : "The copy you ") + (kindOf(r) === "wish" ? "want" : "still want");
+var copiesLegend = (r) => (stillCopies(r).length > 1 ? "The copies you " : "The copy you ") + (kindOf$1(r) === "wish" ? "want" : "still want");
 function copyLabelShown(r, c, i) {
 	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
 	return i > 0 || !!(c.name || c.pressing || c.catalog || c.budget) || !!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch)) || typed && !!c.label && c.label !== origLabel(r);
 }
-var pickable = (r) => kindOf(r) === "wish" ? wantCopies(r).filter(copyHas) : [];
+var pickable = (r) => kindOf$1(r) === "wish" ? wantCopies(r).filter(copyHas) : [];
 function pickPatch(r, ci) {
 	const C = pickable(r);
 	if (C.length < 2) return {};
@@ -763,7 +764,7 @@ function toForm(r) {
 		year: s(r.year),
 		runtime: s(r.runtime)
 	};
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	const [c0, ...more] = wantCopies(r);
 	f.moreCopies = more;
 	if (k !== "own") Object.assign(f, {
@@ -835,6 +836,8 @@ function patchFor(r, baseline, form) {
 	});
 	return patch;
 }
+// src/model/site.ts
+var DEFAULT_TITLE = "My Vinyl Wall";
 var PHOTOS = {
 	listening: { file: "listening-room.jpg" },
 	crates: {
@@ -845,22 +848,33 @@ var PHOTOS = {
 	cafe: { file: "coffee-shop.jpg" },
 	tavern: { file: "coffee-shop-2.jpg" }
 };
-var PATTERNS = [
-	"grille",
-	"grooves",
-	"walnut",
-	"foam",
-	"sunburst",
-	"spines",
-	"felt",
-	"plain"
+var BACKGROUNDS = [
+	["listening", "Listening room"],
+	["crates", "Crate digging"],
+	["shop", "Record shop"],
+	["cafe", "Coffee shop"],
+	["tavern", "Cozy tavern"],
+	["grille", "Speaker grille"],
+	["grooves", "Grooves"],
+	["walnut", "Walnut paneling"],
+	["foam", "Studio foam"],
+	["sunburst", "Sunburst"],
+	["spines", "Crate dig"],
+	["felt", "Felt slipmat"],
+	["plain", "Plain wall"]
 ];
 var HANGS = [
-	"barn",
-	"peg",
-	"cork",
-	"float"
+	["barn", "Barnwood"],
+	["peg", "Pegs"],
+	["cork", "Cork"],
+	["float", "Floating"]
 ];
+var isStockPhoto = (key) => !!PHOTOS[key];
+var DEFAULT_DIM = {
+	upload: 70,
+	stock: 50
+};
+var presetOf = (bg) => BACKGROUNDS.some(([k]) => k === bg.preset) ? String(bg.preset) : "listening";
 var okAsset = (id) => typeof id === "string" && /^[A-Za-z0-9_-]{1,64}$/.test(id);
 var stockDim = (v) => {
 	const t = 40 + v * .6;
@@ -878,16 +892,16 @@ function siteOf(doc) {
 	if (bg.kind === "photo" && okAsset(bg.assetId)) background = {
 		kind: "photo",
 		url: "/_blob/" + bg.assetId,
-		dim: dim ?? 70
+		dim: dim ?? DEFAULT_DIM.upload
 	};
 	else {
-		const preset = String(bg.preset);
-		const photo = PHOTOS[preset] ?? (PATTERNS.includes(preset) ? null : PHOTOS.listening);
+		const preset = presetOf(bg);
+		const photo = PHOTOS[preset];
 		background = photo ? {
 			kind: "photo",
 			url: "backgrounds/" + photo.file,
 			pos: photo.pos,
-			dim: stockDim(dim ?? 50)
+			dim: stockDim(dim ?? DEFAULT_DIM.stock)
 		} : {
 			kind: "pattern",
 			preset
@@ -896,11 +910,20 @@ function siteOf(doc) {
 	return {
 		title,
 		background,
-		hang: HANGS.includes(String(s.hang)) ? String(s.hang) : "barn"
+		hang: HANGS.some(([k]) => k === s.hang) ? String(s.hang) : "barn"
 	};
 }
 // src/runtime/runtime.tsx
 var Ctx = createContext(null);
+var isObj = (v) => !!v && typeof v === "object" && !Array.isArray(v);
+function mergeSettings(s, patch) {
+	const out = { ...s };
+	for (const [k, v] of Object.entries(patch)) out[k] = isObj(v) && isObj(s[k]) ? {
+		...s[k],
+		...v
+	} : v;
+	return out;
+}
 function useRuntime() {
 	const rt = useContext(Ctx);
 	if (!rt) throw new Error("useRuntime outside RuntimeProvider");
@@ -1006,14 +1029,8 @@ function RuntimeProvider({ claude, children }) {
 		};
 	}, [claude]);
 	const saveSettings = (patch) => {
-		setSettings((s) => ({
-			...s,
-			...patch
-		}));
-		live.current.settings = {
-			...live.current.settings,
-			...patch
-		};
+		setSettings((s) => mergeSettings(s, patch));
+		live.current.settings = mergeSettings(live.current.settings, patch);
 		const next = settingsWriting.current.then(async () => {
 			try {
 				const ref = db.current.doc("settings/site");
@@ -1034,8 +1051,12 @@ function RuntimeProvider({ claude, children }) {
 		settingsWriting.current = next;
 		return next;
 	};
-	const fireTask = () => {
+	const fireTask = (now) => {
 		const t = task.current;
+		if (now === true) {
+			t.lastFire = 0;
+			clearTimeout(t.fireTimer);
+		}
 		const { settings: s, records: recs } = live.current;
 		if (!mcp.current) return setNotice("Background updates aren't available in this view. Ask Claude in chat to sync.");
 		if (runActive(s)) {
@@ -1109,7 +1130,7 @@ function RuntimeProvider({ claude, children }) {
 		if (!t.syncDirty) return;
 		t.syncDirty = false;
 		clearTimeout(t.syncTimer);
-		writing.current.then(fireTask);
+		writing.current.then(() => fireTask());
 	};
 	const queue = (id, fn, fresh = false) => {
 		const next = writing.current.then(async () => {
@@ -1164,13 +1185,13 @@ function RuntimeProvider({ claude, children }) {
 		return next;
 	};
 	const upload = async (file) => {
-		if (!assets.current) throw new Error("Cover uploads aren't available in this view.");
+		if (!assets.current) throw new Error("Uploads aren't available in this view.");
 		const tryIt = () => assets.current.upload(file);
 		try {
 			return (await tryIt().catch((e) => e?.code === "store_unavailable" ? tryIt() : Promise.reject(e))).id;
 		} catch (e) {
 			const code = e?.code;
-			throw new Error(code === "too_large" ? "That image is too big to store. Try a smaller one." : code === "not_granted" || code === "capability_removed" ? "Cover uploads aren't available in this view." : msgOf(e));
+			throw new Error(code === "too_large" ? "That image is too big to store. Try a smaller one." : code === "not_granted" || code === "capability_removed" ? "Uploads aren't available in this view." : msgOf(e));
 		}
 	};
 	const gearWrite = (what, fn) => {
@@ -1228,6 +1249,7 @@ function RuntimeProvider({ claude, children }) {
 		status,
 		records,
 		settings,
+		settingsLoaded,
 		site: siteOf(settings),
 		artists,
 		gear,
@@ -1248,6 +1270,7 @@ function RuntimeProvider({ claude, children }) {
 		newId: () => db.current.collection("records").doc().id,
 		create,
 		upload,
+		deleteAsset: (id) => assets.current ? assets.current.delete(id).then(() => {}, () => {}) : Promise.resolve(),
 		saveSettings,
 		saveGear,
 		deleteGear,
@@ -2061,7 +2084,7 @@ var byPlays = (n, t) => (a, b) => b[n] - a[n] || b[t] - a[t] || b.last.localeCom
 var cache = null;
 function rankedPlays(records, day = today()) {
 	if (cache && cache.recs === records && cache.day === day) return cache.list;
-	const list = records.filter((r) => !r.deleted && kindOf(r) === "own").map((r) => ({
+	const list = records.filter((r) => !r.deleted && kindOf$1(r) === "own").map((r) => ({
 		r,
 		...playStats(r, day)
 	})).filter((x) => x.count).sort(byPlays("count", "min"));
@@ -2425,43 +2448,40 @@ function EquipmentSheet({ open, onClose, onRecord }) {
 		onOpenChange: (o) => !o && onClose(),
 		children: /* @__PURE__ */ jsxs(DrawerContent, {
 			className: "w-full sm:max-w-xl",
-			children: [/* @__PURE__ */ jsxs(DrawerHeader, {
-				className: "gap-1",
-				children: [
-					view.k !== "root" && /* @__PURE__ */ jsx(Button, {
+			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [
+				view.k !== "root" && /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					className: "-ms-3 self-start",
+					onClick: back,
+					children: "‹ All gear"
+				}),
+				/* @__PURE__ */ jsx(DrawerTitle, {
+					ref: title,
+					tabIndex: -1,
+					className: "break-words outline-none",
+					children: head.t
+				}),
+				/* @__PURE__ */ jsx(DrawerDescription, { children: head.d }),
+				view.k === "item" && g && canEdit && /* @__PURE__ */ jsxs("div", {
+					className: "flex flex-wrap items-center gap-2",
+					children: [/* @__PURE__ */ jsx(Button, {
 						size: "sm",
-						variant: "ghost",
-						className: "-ms-3 self-start",
-						onClick: back,
-						children: "‹ All gear"
-					}),
-					/* @__PURE__ */ jsx(DrawerTitle, {
-						ref: title,
-						tabIndex: -1,
-						className: "break-words outline-none",
-						children: head.t
-					}),
-					/* @__PURE__ */ jsx(DrawerDescription, { children: head.d }),
-					view.k === "item" && g && canEdit && /* @__PURE__ */ jsxs("div", {
-						className: "mt-1 flex flex-wrap items-center gap-2",
-						children: [/* @__PURE__ */ jsx(Button, {
-							size: "sm",
-							variant: editing ? "primary" : "outline",
-							onClick: () => setEditing(!editing),
-							children: editing ? "Done" : "Edit"
-						}), editing && /* @__PURE__ */ jsx("span", {
-							role: "status",
-							className: "text-foreground-muted text-xs",
-							children: saved
-						})]
-					}),
-					view.k === "setup" && /* @__PURE__ */ jsx("span", {
+						variant: editing ? "primary" : "outline",
+						onClick: () => setEditing(!editing),
+						children: editing ? "Done" : "Edit"
+					}), editing && /* @__PURE__ */ jsx("span", {
 						role: "status",
 						className: "text-foreground-muted text-xs",
 						children: saved
-					})
-				]
-			}), /* @__PURE__ */ jsx(DrawerBody, {
+					})]
+				}),
+				view.k === "setup" && /* @__PURE__ */ jsx("span", {
+					role: "status",
+					className: "text-foreground-muted text-xs",
+					children: saved
+				})
+			] }), /* @__PURE__ */ jsx(DrawerBody, {
 				ref: body,
 				children: /* @__PURE__ */ jsxs(Boundary, {
 					title: "Couldn't show this",
@@ -2532,7 +2552,7 @@ function GearPill({ onOpen }) {
 				variant: "outline",
 				"aria-label": p.aria,
 				onClick: onOpen,
-				className: "rounded-full bg-transparent before:rounded-full before:bg-transparent",
+				className: ROUND,
 				children: /* @__PURE__ */ jsxs("svg", {
 					viewBox: "0 0 24 24",
 					fill: "none",
@@ -2581,12 +2601,689 @@ function GearPill({ onOpen }) {
 }
 // src/version.ts
 var APP_VERSION = "1.0.0";
+// src/model/image.ts
+var browser = {
+	bitmap: (f) => createImageBitmap(f),
+	encode: (bmp, w, h, quality) => {
+		const c = document.createElement("canvas");
+		c.width = w;
+		c.height = h;
+		c.getContext("2d").drawImage(bmp, 0, 0, w, h);
+		return new Promise((res) => c.toBlob(res, "image/jpeg", quality));
+	}
+};
+async function shrinkImage(file, max, quality, api = browser) {
+	try {
+		const bmp = await api.bitmap(file);
+		const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
+		if (k === 1 && file.size < 256e3) {
+			bmp.close?.();
+			return file;
+		}
+		const blob = await api.encode(bmp, Math.round(bmp.width * k), Math.round(bmp.height * k), quality);
+		bmp.close?.();
+		if (!blob || blob.size >= file.size) return file;
+		return new File([blob], (file.name || "image").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
+	} catch {
+		return file;
+	}
+}
+// src/model/filter.ts
+var FKEYS = [
+	"own",
+	"ord",
+	"p1",
+	"p2",
+	"p3"
+];
+var FLABEL = {
+	own: "owned",
+	ord: "on the way",
+	p1: "top want",
+	p2: "want",
+	p3: "someday"
+};
+function fkey(r) {
+	const k = kindOf$1(r);
+	return k === "ordered" ? "ord" : k === "wish" ? r.priority == 1 ? "p1" : r.priority == 3 ? "p3" : "p2" : "own";
+}
+var fold = (t) => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+var words = (q) => fold(q).split(/\s+/).filter(Boolean);
+var matches = (r, w) => {
+	const hay = fold([
+		r.title,
+		r.artist,
+		r.label,
+		r.year
+	].join(" "));
+	return w.every((x) => hay.includes(x));
+};
+function shownList(records, filter, query) {
+	const all = wallOrder(records);
+	const n = {};
+	for (const r of all) n[fkey(r)] = (n[fkey(r)] || 0) + 1;
+	const on = FKEYS.filter((k) => filter.includes(k) && n[k]);
+	const w = words(query);
+	return {
+		n,
+		on,
+		list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!w.length || matches(r, w)))
+	};
+}
+// src/wall/Face.tsx
+function Face({ title, artist, hue, cover, className = "", small }) {
+	const [failed, setFailed] = useState(false);
+	if (cover && !failed) return /* @__PURE__ */ jsx("img", {
+		src: cover,
+		alt: "",
+		loading: "lazy",
+		decoding: "async",
+		onError: () => setFailed(true),
+		className: `object-cover ${className}`
+	});
+	return /* @__PURE__ */ jsxs("div", {
+		className: `flex flex-col justify-between overflow-hidden text-(--cover-ink) ${small ? "p-2" : "p-3"} ${className}`,
+		style: { background: `linear-gradient(150deg, hsl(${hue} 45% 32%), hsl(${(hue + 40) % 360} 50% 18%))` },
+		children: [/* @__PURE__ */ jsx("span", {
+			className: `font-display leading-[0.95] font-extrabold break-words uppercase ${small ? "text-base" : "text-2xl"}`,
+			children: title || "Untitled"
+		}), !small && /* @__PURE__ */ jsx("span", {
+			className: "font-mono text-xs opacity-85",
+			children: artist
+		})]
+	});
+}
+// src/wall/Wall.tsx
+var TAG_TONE = {
+	ship: "bg-ship text-ship-ink",
+	want: "bg-want text-want-ink",
+	someday: "bg-someday text-someday-ink",
+	paper: "bg-paper text-paper-ink"
+};
+var CHIP_TONE = {
+	ord: "bg-ship",
+	p1: "bg-want",
+	p2: "bg-paper",
+	p3: "bg-someday"
+};
+var KEY = "rw.filter";
+function useWallFilter() {
+	const [filter, setFilter] = useState(() => {
+		try {
+			const v = JSON.parse(localStorage.getItem(KEY) || "[]");
+			return Array.isArray(v) ? FKEYS.filter((k) => v.includes(k)) : [];
+		} catch {
+			return [];
+		}
+	});
+	const set = (v) => {
+		setFilter(v);
+		try {
+			localStorage.setItem(KEY, JSON.stringify(v));
+		} catch {}
+	};
+	return [filter, set];
+}
+var PlusIcon = () => /* @__PURE__ */ jsx("svg", {
+	viewBox: "0 0 24 24",
+	fill: "none",
+	stroke: "currentColor",
+	strokeWidth: "2",
+	strokeLinecap: "round",
+	"aria-hidden": "true",
+	className: "size-5 sm:size-4",
+	children: /* @__PURE__ */ jsx("path", { d: "M12 5v14M5 12h14" })
+});
+var SearchIcon = () => /* @__PURE__ */ jsxs("svg", {
+	viewBox: "0 0 24 24",
+	fill: "none",
+	stroke: "currentColor",
+	strokeWidth: "1.8",
+	strokeLinecap: "round",
+	"aria-hidden": "true",
+	children: [/* @__PURE__ */ jsx("circle", {
+		cx: "11",
+		cy: "11",
+		r: "6.5"
+	}), /* @__PURE__ */ jsx("path", { d: "M16 16l4.5 4.5" })]
+});
+function WallBackground({ bg }) {
+	return /* @__PURE__ */ jsx("div", {
+		className: `wall-bg ${bgClass(bg)}`,
+		"data-testid": "wall-bg",
+		style: bgStyle(bg),
+		"aria-hidden": "true"
+	});
+}
+var bgClass = (bg) => bg.kind === "photo" ? "bg-photo" : "bg-" + bg.preset;
+var bgStyle = (bg) => bg.kind === "photo" ? {
+	"--photo": `url("${bg.url}")`,
+	"--dim": bg.dim + "%",
+	"--photo-pos": bg.pos
+} : void 0;
+var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, onOpen }) {
+	const tag = tagText ? {
+		text: tagText,
+		tone: tagTone
+	} : null;
+	return /* @__PURE__ */ jsx("li", {
+		className: "slot",
+		children: /* @__PURE__ */ jsxs("div", {
+			className: "hanger",
+			children: [/* @__PURE__ */ jsx("span", {
+				className: "ring",
+				"aria-hidden": "true"
+			}), /* @__PURE__ */ jsxs("button", {
+				type: "button",
+				"data-testid": "sleeve",
+				"data-id": id,
+				onClick: () => onOpen(id),
+				"aria-label": `Open ${title} by ${artist}${tag ? ", " + tag.text.replace(/ · /g, ", ") : ""}${looking ? ", looking up details" : ""}`,
+				title: looking ? "Looking up details" : void 0,
+				className: "group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
+				children: [/* @__PURE__ */ jsxs("div", {
+					className: "sleeve-box transition-transform group-active:scale-[0.975]",
+					children: [
+						/* @__PURE__ */ jsx("div", {
+							className: "disc",
+							style: { "--disc-label": `hsl(${hue} 60% 45%)` }
+						}),
+						/* @__PURE__ */ jsx(Face, {
+							title,
+							artist,
+							hue,
+							cover,
+							className: "sleeve-face"
+						}),
+						looking && /* @__PURE__ */ jsx("span", {
+							"aria-hidden": "true",
+							className: "bg-brass motion-safe:animate-pulse-dot absolute end-2 top-2 z-4 size-2.5 rounded-full shadow-[0_0_0_2px_var(--shade),0_0_0_3px_var(--wall)]"
+						}),
+						tag && /* @__PURE__ */ jsxs(Badge, {
+							className: `hang-tag absolute h-auto rounded-(--radius-4xs) py-1.5 ps-3.5 pe-2 font-mono text-[0.6875rem] leading-none tracking-wider uppercase ${TAG_TONE[tag.tone]}`,
+							children: [/* @__PURE__ */ jsx("span", {
+								"aria-hidden": "true",
+								className: "bg-wall absolute start-1.5 top-1/2 size-1 -translate-y-1/2 rounded-full"
+							}), /* @__PURE__ */ jsx("span", {
+								className: "truncate",
+								children: tag.text
+							})]
+						})
+					]
+				}), /* @__PURE__ */ jsxs("div", {
+					className: "cap on-photo min-w-0 px-0.5 pt-2.5",
+					children: [
+						/* @__PURE__ */ jsx("div", {
+							className: "text-ink text-sm leading-tight font-semibold break-words",
+							children: title
+						}),
+						/* @__PURE__ */ jsx("div", {
+							className: "text-ink-2 text-[0.8125rem] break-words",
+							children: artist
+						}),
+						meta && /* @__PURE__ */ jsx("div", {
+							className: "text-ink-2 mt-0.5 font-mono text-[0.6875rem]",
+							children: meta
+						})
+					]
+				})]
+			})]
+		})
+	});
+});
+function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome }) {
+	const [filter, setFilter] = useWallFilter();
+	const [searching, setSearching] = useState(false);
+	const [query, setQuery] = useState("");
+	const q = useDeferredValue(query);
+	const searchBtn = useRef(null);
+	const { n, on, list } = shownList(records, filter, searching ? q : "");
+	useEffect(() => {
+		document.title = title;
+	}, [title]);
+	const closeSearch = () => {
+		setQuery("");
+		setSearching(false);
+		searchBtn.current?.focus();
+	};
+	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("header", {
+		className: "mb-8 flex flex-col gap-2",
+		children: [/* @__PURE__ */ jsxs("div", {
+			className: "flex items-start justify-between gap-5",
+			children: [/* @__PURE__ */ jsx("h1", {
+				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase",
+				children: title
+			}), /* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs("div", {
+				className: "flex shrink-0 items-center gap-2",
+				children: [
+					gear,
+					/* @__PURE__ */ jsx(Tip, {
+						label: "Search the wall",
+						children: /* @__PURE__ */ jsx(Button, {
+							ref: searchBtn,
+							size: "icon-md",
+							variant: "outline",
+							"aria-label": "Search the wall",
+							"aria-expanded": searching,
+							"aria-controls": "wall-search",
+							className: ROUND,
+							onClick: () => searching ? closeSearch() : setSearching(true),
+							children: /* @__PURE__ */ jsx(SearchIcon, {})
+						})
+					}),
+					tools
+				]
+			}) })]
+		}), /* @__PURE__ */ jsxs("div", {
+			className: "flex items-start justify-between gap-3",
+			children: [/* @__PURE__ */ jsxs("div", {
+				className: "min-w-0 flex-1",
+				children: [/* @__PURE__ */ jsxs("div", {
+					className: "on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1",
+					children: [records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
+						multiple: true,
+						"aria-label": "Show on the wall",
+						value: on,
+						onValueChange: (v) => setFilter(v),
+						className: "flex-wrap gap-1.5",
+						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsxs(Toggle, {
+							value: k,
+							className: buttonVariants({
+								variant: "ghost",
+								size: "sm",
+								className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
+							}),
+							children: [
+								CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
+									"aria-hidden": "true",
+									className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
+								}),
+								/* @__PURE__ */ jsx("b", {
+									className: "text-ink font-medium",
+									children: n[k]
+								}),
+								/* @__PURE__ */ jsx("span", {
+									className: k === "own" ? "" : "max-sm:sr-only",
+									children: FLABEL[k]
+								})
+							]
+						}, k))
+					}), below]
+				}), searching && /* @__PURE__ */ jsxs("div", {
+					role: "search",
+					id: "wall-search",
+					className: "mt-3 flex max-w-md items-center gap-2",
+					children: [/* @__PURE__ */ jsx(Input, {
+						type: "search",
+						"aria-label": "Search the wall",
+						placeholder: "Title, artist, label or year",
+						autoFocus: true,
+						autoComplete: "off",
+						enterKeyHint: "search",
+						value: query,
+						onChange: (e) => setQuery(e.target.value),
+						onKeyDown: (e) => e.key === "Escape" && closeSearch(),
+						className: "flex-1"
+					}), /* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "outline",
+						onClick: closeSearch,
+						children: "Clear"
+					})]
+				})]
+			}), onAdd && /* @__PURE__ */ jsxs(Button, {
+				onClick: onAdd,
+				className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
+				children: [/* @__PURE__ */ jsx(PlusIcon, {}), /* @__PURE__ */ jsx("span", {
+					className: "max-sm:sr-only",
+					children: "Add a record"
+				})]
+			})]
+		})]
+	}), !records.length ? welcome || /* @__PURE__ */ jsx("p", {
+		className: "on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm",
+		children: onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : "Nothing hanging yet."
+	}) : !list.length ? /* @__PURE__ */ jsxs("div", {
+		className: "on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm",
+		children: [/* @__PURE__ */ jsxs("span", { children: [
+			"Nothing on the wall matches “",
+			q,
+			"”."
+		] }), /* @__PURE__ */ jsx(Button, {
+			size: "sm",
+			variant: "outline",
+			onClick: closeSearch,
+			children: "Clear the search"
+		})]
+	}) : /* @__PURE__ */ jsx("ul", {
+		className: "rack",
+		"data-hang": hang,
+		"aria-label": "Records",
+		children: list.map((r) => /* @__PURE__ */ jsx(Sleeve, {
+			id: r.id,
+			title: r.title || "Untitled",
+			artist: r.artist || "",
+			meta: [r.year, r.label].filter(Boolean).join(" · "),
+			cover: coverUrl(r),
+			hue: hueOf(r),
+			tagText: tagOf(r)?.text ?? "",
+			tagTone: tagOf(r)?.tone ?? "paper",
+			looking: lookingUp(r),
+			onOpen
+		}, r.id))
+	})] });
+}
+// src/settings/LookSections.tsx
+var bgOf = (key) => key.startsWith("photo:") ? {
+	kind: "photo",
+	assetId: key.slice(6)
+} : {
+	kind: "preset",
+	preset: key.slice(7)
+};
+var kindOf = (key) => key.startsWith("photo:") ? "upload" : isStockPhoto(key.slice(7)) ? "stock" : "pattern";
+function PageSection() {
+	const { settings, saveSettings } = useRuntime();
+	const [title, setTitle] = useState(String(settings.title || ""));
+	const [saved, setSaved] = useState("");
+	const live = useRef(title);
+	live.current = title;
+	const editing = useRef(false);
+	useEffect(() => {
+		if (!editing.current) setTitle(String(settings.title || ""));
+	}, [settings.title]);
+	const { schedule } = useDebouncedSave(() => saveSettings({ title: live.current.trim() }).then((ok) => {
+		editing.current = false;
+		setSaved(ok ? "Saved" : "");
+	}), setSaved, 500);
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Page" }), /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsxs("div", {
+		className: "flex items-baseline gap-2",
+		children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Title" }), /* @__PURE__ */ jsx("span", {
+			role: "status",
+			className: "text-foreground-muted text-xs",
+			children: saved
+		})]
+	}), /* @__PURE__ */ jsx(Input, {
+		value: title,
+		placeholder: DEFAULT_TITLE,
+		maxLength: 60,
+		onChange: (e) => {
+			editing.current = true;
+			setTitle(e.target.value);
+			schedule();
+		}
+	})] })] });
+}
+var TILE = "group flex min-w-0 cursor-pointer flex-col gap-2 text-start outline-none";
+var SWATCH = "bg-wall border-border block w-full overflow-hidden rounded-md border group-data-pressed:outline-2 group-data-pressed:outline-offset-2 group-data-pressed:outline-primary group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)";
+var NAME = "text-foreground-muted group-data-pressed:text-foreground-intense text-sm break-words";
+var XIcon = () => /* @__PURE__ */ jsx("svg", {
+	viewBox: "0 0 24 24",
+	fill: "none",
+	stroke: "currentColor",
+	strokeWidth: "2.2",
+	strokeLinecap: "round",
+	"aria-hidden": "true",
+	className: "size-3.5",
+	children: /* @__PURE__ */ jsx("path", { d: "M6 6l12 12M18 6L6 18" })
+});
+function BackgroundSection() {
+	const { settings, saveSettings, hasAssets, upload, deleteAsset } = useRuntime();
+	const bg = settings.bg || {
+		kind: "preset",
+		preset: "listening"
+	};
+	const uploads = (settings.uploads || []).filter((u) => okAsset(u?.id));
+	const isUpload = bg.kind === "photo" && okAsset(bg.assetId);
+	const current = isUpload ? "photo:" + bg.assetId : "preset:" + presetOf(bg);
+	const stock = kindOf(current) === "stock";
+	const savedDim = typeof settings.dim === "number" ? settings.dim : DEFAULT_DIM[isUpload ? "upload" : "stock"];
+	const [dragging, setDragging] = useState(null);
+	const dim = dragging ?? savedDim;
+	const [status, setStatus] = useState("");
+	const [removing, setRemoving] = useState(null);
+	const file = useRef(null);
+	const look = (key, v) => siteOf({
+		bg: bgOf(key),
+		dim: v
+	}).background;
+	const dimFor = (key) => {
+		const k = kindOf(key);
+		return k !== "pattern" && k !== kindOf(current) ? { dim: DEFAULT_DIM[k] } : {};
+	};
+	const pick = (key) => {
+		if (!key || key === current) return;
+		saveSettings({
+			bg: bgOf(key),
+			...dimFor(key)
+		});
+	};
+	const [busy, setBusy] = useState(false);
+	const add = async (f) => {
+		if (!f || busy) return;
+		if (f.size > 15728640) return setStatus("That image is over 15 MB. Try a smaller one.");
+		setStatus("Uploading…");
+		setBusy(true);
+		try {
+			const id = await upload(await shrinkImage(f, 2e3, .82));
+			const name = (f.name || "Your photo").replace(/\.[^.]+$/, "").slice(0, 40);
+			await saveSettings({
+				uploads: [...uploads, {
+					id,
+					name
+				}],
+				bg: {
+					kind: "photo",
+					assetId: id
+				},
+				...dimFor("photo:" + id)
+			});
+			setStatus("");
+		} catch (e) {
+			setStatus("Upload failed: " + (e.message || String(e)));
+		}
+		setBusy(false);
+	};
+	const remove = async (id) => {
+		const patch = { uploads: uploads.filter((u) => u.id !== id) };
+		if (current === "photo:" + id) Object.assign(patch, { bg: bgOf("preset:listening") }, dimFor("preset:listening"));
+		if (await saveSettings(patch)) deleteAsset(id);
+	};
+	const removingCurrent = removing !== null && current === "photo:" + removing;
+	const tile = (key, name) => {
+		const l = look(key, key === current ? dim : void 0);
+		return /* @__PURE__ */ jsxs(Toggle, {
+			value: key,
+			className: TILE,
+			children: [/* @__PURE__ */ jsx("span", {
+				className: `${SWATCH} aspect-4/3 ${bgClass(l)}`,
+				style: bgStyle(l)
+			}), /* @__PURE__ */ jsx("span", {
+				className: NAME,
+				children: name
+			})]
+		}, key);
+	};
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [
+		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Background" }),
+		/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-col gap-2",
+			children: [
+				/* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs(ToggleGroup, {
+					value: [current],
+					onValueChange: (v) => pick(String(v[0] || "")),
+					className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-3",
+					children: [
+						BACKGROUNDS.map(([k, name]) => tile("preset:" + k, name)),
+						uploads.map((u) => /* @__PURE__ */ jsxs("div", {
+							className: "relative min-w-0",
+							children: [tile("photo:" + u.id, u.name || "Your photo"), hasAssets && /* @__PURE__ */ jsx(Tip, {
+								label: "Remove this background",
+								children: /* @__PURE__ */ jsx("button", {
+									type: "button",
+									"aria-label": `Remove ${u.name || "this photo"}`,
+									onClick: () => setRemoving(u.id),
+									className: "bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
+									children: /* @__PURE__ */ jsx(XIcon, {})
+								})
+							})]
+						}, u.id)),
+						hasAssets && /* @__PURE__ */ jsxs("button", {
+							type: "button",
+							className: TILE,
+							disabled: busy,
+							onClick: () => file.current?.click(),
+							children: [/* @__PURE__ */ jsx("span", {
+								className: "border-border-strong text-foreground-muted grid aspect-4/3 w-full place-items-center rounded-md border border-dashed text-2xl leading-none group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)",
+								children: "+"
+							}), /* @__PURE__ */ jsx("span", {
+								className: NAME,
+								children: "Upload your own"
+							})]
+						})
+					]
+				}) }),
+				/* @__PURE__ */ jsx("input", {
+					ref: file,
+					type: "file",
+					accept: "image/jpeg,image/png,image/webp",
+					hidden: true,
+					"aria-label": "Upload your own background",
+					onChange: (e) => add(e.target.files?.[0]).then(() => e.target.value = "")
+				}),
+				status && /* @__PURE__ */ jsx("p", {
+					role: "status",
+					className: "text-foreground-muted text-sm",
+					children: status
+				}),
+				!hasAssets && /* @__PURE__ */ jsx("p", {
+					className: "text-foreground-muted text-sm",
+					children: "Uploading your own background isn't available in this view."
+				})
+			]
+		}),
+		(isUpload || stock) && /* @__PURE__ */ jsxs(Field, { children: [
+			/* @__PURE__ */ jsx(FieldLabel, { children: "Soften the photo" }),
+			/* @__PURE__ */ jsx(Slider, {
+				value: dim,
+				min: isUpload ? 20 : 0,
+				max: isUpload ? 90 : 100,
+				step: 5,
+				thumbAriaLabel: "Soften the photo",
+				onValueChange: (v) => setDragging(v),
+				onValueCommitted: (v) => saveSettings({ dim: v }).then(() => setDragging(null))
+			}),
+			/* @__PURE__ */ jsx(FieldDescription, { children: "So the records stay readable over it." })
+		] }),
+		dragging !== null && createPortal(/* @__PURE__ */ jsx(WallBackground, { bg: look(current, dragging) }), document.body),
+		/* @__PURE__ */ jsx(Confirm, {
+			open: removing !== null,
+			title: "Remove this background for good?" + (removingCurrent ? " The wall goes back to the Listening room." : ""),
+			yes: "Remove",
+			onYes: () => removing && remove(removing),
+			onClose: () => setRemoving(null)
+		})
+	] });
+}
+function HangingSection() {
+	const { site, saveSettings } = useRuntime();
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Hanging" }), /* @__PURE__ */ jsx(ToggleGroup, {
+		value: [site.hang],
+		onValueChange: (v) => v[0] && v[0] !== site.hang && saveSettings({ hang: String(v[0]) }),
+		className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-4",
+		children: HANGS.map(([k, name]) => /* @__PURE__ */ jsxs(Toggle, {
+			value: k,
+			className: TILE,
+			children: [/* @__PURE__ */ jsx("span", {
+				className: `${SWATCH} h-20`,
+				"aria-hidden": "true",
+				children: /* @__PURE__ */ jsx("span", {
+					className: "rack grid-cols-1",
+					"data-hang": k,
+					children: /* @__PURE__ */ jsx("span", {
+						className: "slot block",
+						children: /* @__PURE__ */ jsxs("span", {
+							className: "hanger block",
+							children: [/* @__PURE__ */ jsx("span", { className: "ring" }), /* @__PURE__ */ jsx("span", {
+								className: "sleeve-box mx-auto block w-24",
+								children: /* @__PURE__ */ jsx("span", { className: "sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" })
+							})]
+						})
+					})
+				})
+			}), /* @__PURE__ */ jsx("span", {
+				className: NAME,
+				children: name
+			})]
+		}, k))
+	})] });
+}
 // src/settings/SettingsSheet.tsx
 function useUpdateAvailable() {
 	const { canEdit, hasMcp, settings } = useRuntime();
 	return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, "1.0.0");
 }
-function DiscogsSection() {
+var STALL = 6e5;
+function DiscogsImport({ dz }) {
+	const { settings, saveSettings, fireTask, hasMcp } = useRuntime();
+	const [, redraw] = useState(0);
+	const stalled = !!dz.importRequested && Date.now() - (dz.importRequestedAt || 0) > STALL;
+	useEffect(() => {
+		if (!dz.importRequested || stalled) return;
+		const t = setTimeout(() => redraw((n) => n + 1), (dz.importRequestedAt || 0) + STALL + 1e3 - Date.now());
+		return () => clearTimeout(t);
+	}, [
+		dz.importRequested,
+		dz.importRequestedAt,
+		stalled
+	]);
+	const ask = () => saveSettings({ discogs: {
+		importRequested: true,
+		importRequestedAt: Date.now()
+	} }).then(() => fireTask(true));
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-3",
+		children: [/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-col gap-2",
+			children: [/* @__PURE__ */ jsx("p", {
+				className: "text-foreground-intense text-sm font-semibold",
+				children: "Bring in what's already on Discogs"
+			}), /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes."
+			})]
+		}), !hasMcp || !settings.taskId ? /* @__PURE__ */ jsx("p", {
+			className: "text-foreground-muted text-sm",
+			children: "Importing runs in the background, which isn't connected for this page. Open your own wall to import."
+		}) : /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-wrap gap-3",
+			children: [/* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				disabled: dz.importRequested,
+				onClick: ask,
+				children: dz.importRequested ? "Importing…" : "Import from Discogs"
+			}), stalled && /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				onClick: ask,
+				children: "Try again"
+			})]
+		}), /* @__PURE__ */ jsxs("p", {
+			role: "status",
+			className: "text-foreground-muted text-sm empty:hidden",
+			children: [dz.importRequested ? stalled ? "This is taking longer than it should." : "This takes a few minutes. Records appear on the wall as they come in." : dz.importMsg || "", !dz.importRequested && dz.importedAt && /* @__PURE__ */ jsxs("span", {
+				className: "font-mono",
+				children: [
+					" (",
+					dz.importedAt,
+					")"
+				]
+			})]
+		})] })]
+	});
+}
+function DiscogsSection({ focus }) {
 	const { settings, saveSettings, saveToken, removeToken, fireTask } = useRuntime();
 	const dz = settings.discogs || {};
 	const [user, setUser] = useState(dz.username || "");
@@ -2601,7 +3298,6 @@ function DiscogsSection() {
 		clearTimeout(userTimer.current);
 		userTimer.current = setTimeout(() => {
 			saveSettings({ discogs: {
-				...dz,
 				username: u.trim(),
 				...dz.hasToken ? { status: "pending" } : {}
 			} });
@@ -2652,16 +3348,19 @@ function DiscogsSection() {
 		}
 	};
 	return /* @__PURE__ */ jsxs(Fieldset, { children: [
-		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Discogs" }),
-		/* @__PURE__ */ jsx("p", {
-			className: "text-foreground-muted text-sm",
-			children: "Connect your Discogs account to keep your collection and wantlist in sync with the wall."
+		/* @__PURE__ */ jsxs("div", {
+			className: "flex flex-col gap-2",
+			children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Discogs" }), /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "Connect your Discogs account to keep your collection and wantlist in sync with the wall."
+			})]
 		}),
 		/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Username" }), /* @__PURE__ */ jsx(Input, {
 			value: user,
 			onChange: (e) => typeUser(e.target.value),
 			autoComplete: "off",
-			autoCapitalize: "off"
+			autoCapitalize: "off",
+			autoFocus: focus
 		})] }),
 		dz.hasToken && /* @__PURE__ */ jsxs("div", {
 			className: "bg-wall flex flex-wrap items-center gap-2.5 rounded-(--radius-xs) p-3",
@@ -2709,10 +3408,7 @@ function DiscogsSection() {
 				/* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					variant: "outline",
-					onClick: () => saveSettings({ discogs: {
-						...dz,
-						status: "pending"
-					} }).then(() => fireTask()),
+					onClick: () => saveSettings({ discogs: { status: "pending" } }).then(() => fireTask()),
 					children: "Check again"
 				}),
 				/* @__PURE__ */ jsx(Button, {
@@ -2735,7 +3431,7 @@ function DiscogsSection() {
 						autoCapitalize: "off",
 						spellCheck: false,
 						placeholder: "Paste your token",
-						className: "min-w-0 flex-1 font-mono"
+						className: "min-w-0 flex-1 basis-full font-mono sm:basis-0"
 					}),
 					/* @__PURE__ */ jsx(Button, {
 						size: "sm",
@@ -2750,7 +3446,7 @@ function DiscogsSection() {
 					}),
 					replacing && /* @__PURE__ */ jsx(Button, {
 						size: "sm",
-						variant: "ghost",
+						variant: "outline",
 						onClick: () => setReplacing(false),
 						children: "Cancel"
 					})
@@ -2781,14 +3477,21 @@ function DiscogsSection() {
 			yes: "Remove token",
 			onYes: remove,
 			onClose: () => setConfirm(false)
-		})
+		}),
+		dz.hasToken && dz.status === "ok" && /* @__PURE__ */ jsx(DiscogsImport, { dz })
 	] });
 }
-function SettingsSheet({ open, onClose }) {
+function SettingsSheet({ open, at, onClose }) {
 	const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime();
 	const update = useUpdateAvailable();
 	const [copyNote, setCopyNote] = useState("");
 	const ask = useRef(null);
+	const discogs = useRef(null);
+	useEffect(() => {
+		if (!open || at !== "discogs") return;
+		const t = setTimeout(() => discogs.current?.scrollIntoView({ block: "start" }), 350);
+		return () => clearTimeout(t);
+	}, [open, at]);
 	useEffect(() => {
 		if (open && canEdit && hasMcp && settings.taskId && Date.now() - (settings.update?.checkedMs || 0) > 864e5) fireTask();
 	}, [open]);
@@ -2798,15 +3501,15 @@ function SettingsSheet({ open, onClose }) {
 		onOpenChange: (o) => !o && onClose(),
 		children: /* @__PURE__ */ jsxs(DrawerContent, {
 			className: "w-full sm:max-w-xl",
-			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [/* @__PURE__ */ jsx(DrawerTitle, { children: "Settings" }), /* @__PURE__ */ jsx(DrawerDescription, { children: "Your Discogs connection and updates" })] }), /* @__PURE__ */ jsxs(DrawerBody, {
-				className: "flex flex-col gap-8 *:shrink-0",
+			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [/* @__PURE__ */ jsx(DrawerTitle, { children: "Settings" }), /* @__PURE__ */ jsx(DrawerDescription, { children: "How your wall looks, Discogs and help" })] }), /* @__PURE__ */ jsxs(DrawerBody, { children: [(error || notice) && /* @__PURE__ */ jsx(Alert, {
+				variant: error ? "error" : "info",
+				className: "mb-4",
+				dismissible: true,
+				onOpenChange: (o) => !o && clearError(),
+				children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
+			}), /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-8 pb-8 *:shrink-0",
 				children: [
-					(error || notice) && /* @__PURE__ */ jsx(Alert, {
-						variant: error ? "error" : "info",
-						dismissible: true,
-						onOpenChange: (o) => !o && clearError(),
-						children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
-					}),
 					update && /* @__PURE__ */ jsxs(Alert, {
 						variant: "warning",
 						children: [/* @__PURE__ */ jsx(AlertTitle, { children: "An update is available" }), /* @__PURE__ */ jsxs(AlertDescription, {
@@ -2844,13 +3547,44 @@ function SettingsSheet({ open, onClose }) {
 							]
 						})]
 					}),
-					canEdit && /* @__PURE__ */ jsx(DiscogsSection, {}),
-					/* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Help" }), /* @__PURE__ */ jsxs("p", {
-						className: "text-foreground-muted font-mono text-xs",
-						children: ["Vinyl Wall ", APP_VERSION]
-					})] })
+					canEdit && /* @__PURE__ */ jsxs(Fragment, { children: [
+						/* @__PURE__ */ jsx(PageSection, {}),
+						/* @__PURE__ */ jsx(BackgroundSection, {}),
+						/* @__PURE__ */ jsx(HangingSection, {}),
+						/* @__PURE__ */ jsx("div", {
+							ref: discogs,
+							className: "scroll-mt-6",
+							children: /* @__PURE__ */ jsx(DiscogsSection, { focus: at === "discogs" })
+						})
+					] }),
+					/* @__PURE__ */ jsxs(Fieldset, { children: [
+						/* @__PURE__ */ jsx(FieldsetLegend, { children: "Help" }),
+						/* @__PURE__ */ jsxs("p", {
+							className: "text-foreground-muted text-sm",
+							children: [
+								"Found a problem or have an idea?",
+								" ",
+								/* @__PURE__ */ jsx("a", {
+									href: "https://github.com/ober37/vinyl-wall/issues/new/choose",
+									target: "_blank",
+									rel: "noopener",
+									className: "text-primary underline-offset-2 hover:underline",
+									children: "Tell us on GitHub"
+								}),
+								"."
+							]
+						}),
+						/* @__PURE__ */ jsx("p", {
+							className: "text-foreground-muted text-sm",
+							children: "Anyone you share this wall with can see everything on it, including prices, orders and notes. Only you and people you make Editors can change it."
+						}),
+						/* @__PURE__ */ jsxs("p", {
+							className: "text-foreground-muted font-mono text-xs",
+							children: ["Vinyl Wall ", APP_VERSION]
+						})
+					] })
 				]
-			})]
+			})] })]
 		})
 	});
 }
@@ -2889,33 +3623,6 @@ var enrichPatch = (r) => r.aboutBlocked ? { needsEnrich: true } : {
 	...RELOOK_ABOUT
 };
 var hasArtistInfo = (r, artistIds) => !r.aboutBlocked && (!!r.artistRef && artistIds.has(String(r.artistRef)) || !!r.about?.summary);
-// src/model/image.ts
-var browser = {
-	bitmap: (f) => createImageBitmap(f),
-	encode: (bmp, w, h, quality) => {
-		const c = document.createElement("canvas");
-		c.width = w;
-		c.height = h;
-		c.getContext("2d").drawImage(bmp, 0, 0, w, h);
-		return new Promise((res) => c.toBlob(res, "image/jpeg", quality));
-	}
-};
-async function shrinkImage(file, max, quality, api = browser) {
-	try {
-		const bmp = await api.bitmap(file);
-		const k = Math.min(1, max / Math.max(bmp.width, bmp.height));
-		if (k === 1 && file.size < 256e3) {
-			bmp.close?.();
-			return file;
-		}
-		const blob = await api.encode(bmp, Math.round(bmp.width * k), Math.round(bmp.height * k), quality);
-		bmp.close?.();
-		if (!blob || blob.size >= file.size) return file;
-		return new File([blob], (file.name || "image").replace(/\.[^.]+$/, "") + ".jpg", { type: "image/jpeg" });
-	} catch {
-		return file;
-	}
-}
 // src/sheet/CoverButton.tsx
 function CoverButton({ hasCover, onUploaded, onStatus, disabled }) {
 	const { hasAssets, upload } = useRuntime();
@@ -3643,7 +4350,7 @@ function writtenNotes(r, isPlay) {
 }
 // src/model/status.ts
 function movePatch(r, to, det, ci) {
-	const from = kindOf(r);
+	const from = kindOf$1(r);
 	if (to === from) return null;
 	const t = today();
 	const notes = notesOf(r);
@@ -3691,29 +4398,6 @@ function movePatch(r, to, det, ci) {
 		msg
 	};
 }
-// src/wall/Face.tsx
-function Face({ title, artist, hue, cover, className = "", small }) {
-	const [failed, setFailed] = useState(false);
-	if (cover && !failed) return /* @__PURE__ */ jsx("img", {
-		src: cover,
-		alt: "",
-		loading: "lazy",
-		decoding: "async",
-		onError: () => setFailed(true),
-		className: `object-cover ${className}`
-	});
-	return /* @__PURE__ */ jsxs("div", {
-		className: `flex flex-col justify-between overflow-hidden text-(--cover-ink) ${small ? "p-2" : "p-3"} ${className}`,
-		style: { background: `linear-gradient(150deg, hsl(${hue} 45% 32%), hsl(${(hue + 40) % 360} 50% 18%))` },
-		children: [/* @__PURE__ */ jsx("span", {
-			className: `font-display leading-[0.95] font-extrabold break-words uppercase ${small ? "text-base" : "text-2xl"}`,
-			children: title || "Untitled"
-		}), !small && /* @__PURE__ */ jsx("span", {
-			className: "font-mono text-xs opacity-85",
-			children: artist
-		})]
-	});
-}
 // src/sheet/Copies.tsx
 var pressRow = (c) => c.pressing ? [["Pressing", /* @__PURE__ */ jsx("span", {
 	className: "whitespace-pre-line",
@@ -3728,7 +4412,7 @@ function CopiesView({ r, onEditCopy }) {
 	const L = stillCopies(r);
 	if (!L.length) return null;
 	let body;
-	if (L.length === 1 && kindOf(r) === "wish") {
+	if (L.length === 1 && kindOf$1(r) === "wish") {
 		const [c, i] = L[0];
 		const rows = [
 			...pressRow(c),
@@ -4317,7 +5001,7 @@ function NotesTab({ r }) {
 	};
 	const drop = () => edit && mutate(r.id, (latest) => ({ notes: deleteNote(latest, edit.ref) ?? gone() })).then((ok) => ok && setEdit(null));
 	return /* @__PURE__ */ jsxs("div", {
-		className: "flex flex-col gap-4",
+		className: "flex flex-col gap-6",
 		children: [
 			canEdit && /* @__PURE__ */ jsxs("form", {
 				className: "flex flex-col gap-2",
@@ -4329,7 +5013,7 @@ function NotesTab({ r }) {
 					"aria-label": "Note",
 					rows: 2,
 					value: draft,
-					placeholder: PLACEHOLDER[kindOf(r)],
+					placeholder: PLACEHOLDER[kindOf$1(r)],
 					onChange: (e) => setDraft(e.target.value),
 					onKeyDown: (e) => {
 						if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
@@ -4434,7 +5118,7 @@ function trackUrl(carrier, n) {
 }
 function discogsLinks(r) {
 	const q = encodeURIComponent(`${r.artist} ${r.title}`);
-	const ord = kindOf(r) === "ordered";
+	const ord = kindOf$1(r) === "ordered";
 	const id = r.discogsId ? encodeURIComponent(String(r.discogsId)) : "";
 	const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`;
 	return [
@@ -4667,7 +5351,7 @@ var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
 });
 function ResearchTab({ r, onEditCopy, want, setWant }) {
 	const { canEdit, settings, mutate } = useRuntime();
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	const wish = k === "wish";
 	const items = researchEntries(r).map((e, i) => ({
 		e,
@@ -4890,7 +5574,7 @@ function ResearchTab({ r, onEditCopy, want, setWant }) {
 	});
 }
 function hasResearch(r, canEdit) {
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	return k === "wish" || k === "own" && (canEdit || researchEntries(r).length > 0) || k === "ordered" && stillCopies(r).length > 0;
 }
 // src/sheet/StatusActions.tsx
@@ -4902,7 +5586,7 @@ function StatusActions({ r, onMoved }) {
 	const [paid, setPaid] = useState("");
 	const [shop, setShop] = useState("");
 	const [busy, setBusy] = useState(false);
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	if (k === "own") return null;
 	const move = async (to, det) => {
 		setBusy(true);
@@ -5000,7 +5684,7 @@ function StatusActions({ r, onMoved }) {
 }
 // src/sheet/ViewBody.tsx
 function copyFacts(r) {
-	if (kindOf(r) !== "own") return [];
+	if (kindOf$1(r) !== "own") return [];
 	const f = [];
 	const p = pressingText(r);
 	if (p) f.push(["Pressing", /* @__PURE__ */ jsx("span", {
@@ -5120,7 +5804,7 @@ function Summary({ r }) {
 }
 function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 	const { canEdit } = useRuntime();
-	const k = kindOf(r);
+	const k = kindOf$1(r);
 	const own = k === "own";
 	const info = keyInfo(r);
 	const copy = copyFacts(r);
@@ -5138,7 +5822,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }) {
 	];
 	const titled = (name, node) => tabs.length === 1 ? /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: name }), node] }) : node;
 	return /* @__PURE__ */ jsxs("div", {
-		className: "flex flex-col gap-5",
+		className: "flex flex-col gap-6",
 		children: [
 			/* @__PURE__ */ jsx(Summary, { r }, r.id),
 			r.why ? /* @__PURE__ */ jsx("blockquote", {
@@ -5255,7 +5939,7 @@ function useAutosave(r, editing) {
 		r,
 		form
 	};
-	const kind = r ? kindOf(r) : void 0;
+	const kind = r ? kindOf$1(r) : void 0;
 	useEffect(() => {
 		if (editing && r) {
 			const f = toForm(r);
@@ -5334,7 +6018,7 @@ function RecordSheet({ id, onClose, onBack }) {
 	const moveTo = (to, ci) => {
 		if (!r) return;
 		flush();
-		if (to !== "wish" && ci === void 0 && kindOf(r) === "wish" && pickable(r).length > 1) return setPick(to);
+		if (to !== "wish" && ci === void 0 && kindOf$1(r) === "wish" && pickable(r).length > 1) return setPick(to);
 		setPick(null);
 		let m = "";
 		mutate(r.id, (latest) => {
@@ -5357,7 +6041,7 @@ function RecordSheet({ id, onClose, onBack }) {
 		if (!r) return;
 		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask());
 	};
-	const k = r ? kindOf(r) : "own";
+	const k = r ? kindOf$1(r) : "own";
 	const by = r ? [
 		r.artist,
 		r.year,
@@ -5515,333 +6199,94 @@ function RecordSheet({ id, onClose, onBack }) {
 		})
 	});
 }
-// src/model/filter.ts
-var FKEYS = [
-	"own",
-	"ord",
-	"p1",
-	"p2",
-	"p3"
-];
-var FLABEL = {
-	own: "owned",
-	ord: "on the way",
-	p1: "top want",
-	p2: "want",
-	p3: "someday"
-};
-function fkey(r) {
-	const k = kindOf(r);
-	return k === "ordered" ? "ord" : k === "wish" ? r.priority == 1 ? "p1" : r.priority == 3 ? "p3" : "p2" : "own";
-}
-var fold = (t) => String(t ?? "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
-var words = (q) => fold(q).split(/\s+/).filter(Boolean);
-var matches = (r, w) => {
-	const hay = fold([
-		r.title,
-		r.artist,
-		r.label,
-		r.year
-	].join(" "));
-	return w.every((x) => hay.includes(x));
-};
-function shownList(records, filter, query) {
-	const all = wallOrder(records);
-	const n = {};
-	for (const r of all) n[fkey(r)] = (n[fkey(r)] || 0) + 1;
-	const on = FKEYS.filter((k) => filter.includes(k) && n[k]);
-	const w = words(query);
-	return {
-		n,
-		on,
-		list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!w.length || matches(r, w)))
-	};
-}
-// src/wall/Wall.tsx
-var TAG_TONE = {
-	ship: "bg-ship text-ship-ink",
-	want: "bg-want text-want-ink",
-	someday: "bg-someday text-someday-ink",
-	paper: "bg-paper text-paper-ink"
-};
-var CHIP_TONE = {
-	ord: "bg-ship",
-	p1: "bg-want",
-	p2: "bg-paper",
-	p3: "bg-someday"
-};
-var KEY = "rw.filter";
-function useWallFilter() {
-	const [filter, setFilter] = useState(() => {
-		try {
-			const v = JSON.parse(localStorage.getItem(KEY) || "[]");
-			return Array.isArray(v) ? FKEYS.filter((k) => v.includes(k)) : [];
-		} catch {
-			return [];
-		}
-	});
-	const set = (v) => {
-		setFilter(v);
-		try {
-			localStorage.setItem(KEY, JSON.stringify(v));
-		} catch {}
-	};
-	return [filter, set];
-}
-var PlusIcon = () => /* @__PURE__ */ jsx("svg", {
-	viewBox: "0 0 24 24",
-	fill: "none",
-	stroke: "currentColor",
-	strokeWidth: "2",
-	strokeLinecap: "round",
-	"aria-hidden": "true",
-	className: "size-5 sm:size-4",
-	children: /* @__PURE__ */ jsx("path", { d: "M12 5v14M5 12h14" })
-});
-var SearchIcon = () => /* @__PURE__ */ jsxs("svg", {
-	viewBox: "0 0 24 24",
-	fill: "none",
-	stroke: "currentColor",
-	strokeWidth: "1.8",
-	strokeLinecap: "round",
-	"aria-hidden": "true",
-	children: [/* @__PURE__ */ jsx("circle", {
-		cx: "11",
-		cy: "11",
-		r: "6.5"
-	}), /* @__PURE__ */ jsx("path", { d: "M16 16l4.5 4.5" })]
-});
-function WallBackground({ bg }) {
-	if (bg.kind === "photo") return /* @__PURE__ */ jsx("div", {
-		className: "wall-photo",
-		"data-testid": "wall-photo",
-		style: {
-			"--photo": `url("${bg.url}")`,
-			"--dim": bg.dim + "%",
-			"--photo-pos": bg.pos
-		}
-	});
-	if (bg.preset === "grille") return /* @__PURE__ */ jsx("div", {
-		className: "fixed inset-0 -z-10",
-		"aria-hidden": "true",
-		children: /* @__PURE__ */ jsx(BackgroundPattern, {
-			variant: "dots",
-			className: "size-full"
-		})
-	});
-	return null;
-}
-var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText, tagTone, looking, onOpen }) {
-	const tag = tagText ? {
-		text: tagText,
-		tone: tagTone
-	} : null;
-	return /* @__PURE__ */ jsx("li", {
-		className: "slot",
-		children: /* @__PURE__ */ jsxs("div", {
-			className: "hanger",
-			children: [/* @__PURE__ */ jsx("span", {
-				className: "ring",
-				"aria-hidden": "true"
-			}), /* @__PURE__ */ jsxs("button", {
-				type: "button",
-				"data-testid": "sleeve",
-				"data-id": id,
-				onClick: () => onOpen(id),
-				"aria-label": `Open ${title} by ${artist}${tag ? ", " + tag.text.replace(/ · /g, ", ") : ""}${looking ? ", looking up details" : ""}`,
-				title: looking ? "Looking up details" : void 0,
-				className: "group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
-				children: [/* @__PURE__ */ jsxs("div", {
-					className: "sleeve-box transition-transform group-active:scale-[0.975]",
-					children: [
-						/* @__PURE__ */ jsx("div", {
-							className: "disc",
-							style: { "--disc-label": `hsl(${hue} 60% 45%)` }
-						}),
-						/* @__PURE__ */ jsx(Face, {
-							title,
-							artist,
-							hue,
-							cover,
-							className: "sleeve-face"
-						}),
-						looking && /* @__PURE__ */ jsx("span", {
-							"aria-hidden": "true",
-							className: "bg-brass motion-safe:animate-pulse-dot absolute end-2 top-2 z-4 size-2.5 rounded-full shadow-[0_0_0_2px_var(--shade),0_0_0_3px_var(--wall)]"
-						}),
-						tag && /* @__PURE__ */ jsxs(Badge, {
-							className: `hang-tag absolute h-auto rounded-(--radius-4xs) py-1.5 ps-3.5 pe-2 font-mono text-[0.6875rem] leading-none tracking-wider uppercase ${TAG_TONE[tag.tone]}`,
-							children: [/* @__PURE__ */ jsx("span", {
-								"aria-hidden": "true",
-								className: "bg-wall absolute start-1.5 top-1/2 size-1 -translate-y-1/2 rounded-full"
-							}), /* @__PURE__ */ jsx("span", {
-								className: "truncate",
-								children: tag.text
-							})]
-						})
-					]
-				}), /* @__PURE__ */ jsxs("div", {
-					className: "on-photo min-w-0 px-0.5 pt-2.5",
-					children: [
-						/* @__PURE__ */ jsx("div", {
-							className: "text-ink text-sm leading-tight font-semibold break-words",
-							children: title
-						}),
-						/* @__PURE__ */ jsx("div", {
-							className: "text-ink-2 text-[0.8125rem] break-words",
-							children: artist
-						}),
-						meta && /* @__PURE__ */ jsx("div", {
-							className: "text-ink-2 mt-0.5 font-mono text-[0.6875rem]",
-							children: meta
-						})
-					]
+// src/wall/Welcome.tsx
+function Welcome({ discogsDone, gearDone, onAdd, onDiscogs, onGear, onBlank }) {
+	return /* @__PURE__ */ jsxs("section", {
+		"aria-labelledby": "welcome-title",
+		className: "border-border flex max-w-180 flex-col gap-6 rounded-xl border bg-[color-mix(in_oklch,var(--sheet)_88%,transparent)] p-4 shadow-[0_10px_30px_var(--shadow-tone)] sm:p-6",
+		children: [
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-2",
+				children: [/* @__PURE__ */ jsx("h2", {
+					id: "welcome-title",
+					className: "font-display text-ink text-[1.625rem] leading-none font-semibold tracking-[0.06em] uppercase",
+					children: "Start your wall"
+				}), /* @__PURE__ */ jsx("p", {
+					className: "text-foreground-muted max-w-[58ch]",
+					children: "Hang the records you'd keep top to bottom. Add one with just the artist and album: the cover, year, label and runtime are looked up for you."
 				})]
-			})]
-		})
-	});
-});
-function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below }) {
-	const [filter, setFilter] = useWallFilter();
-	const [searching, setSearching] = useState(false);
-	const [query, setQuery] = useState("");
-	const q = useDeferredValue(query);
-	const searchBtn = useRef(null);
-	const { n, on, list } = shownList(records, filter, searching ? q : "");
-	useEffect(() => {
-		document.title = title;
-	}, [title]);
-	const closeSearch = () => {
-		setQuery("");
-		setSearching(false);
-		searchBtn.current?.focus();
-	};
-	return /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsxs("header", {
-		className: "mb-8 flex flex-col gap-2",
-		children: [/* @__PURE__ */ jsxs("div", {
-			className: "flex items-start justify-between gap-5",
-			children: [/* @__PURE__ */ jsx("h1", {
-				className: "font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase",
-				children: title
-			}), /* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs("div", {
-				className: "flex shrink-0 items-center gap-2",
+			}),
+			/* @__PURE__ */ jsx("ol", {
+				className: "grid grid-cols-[2rem_1fr] sm:grid-cols-[2rem_1fr_auto]",
 				children: [
-					gear,
-					/* @__PURE__ */ jsx(Tip, {
-						label: "Search the wall",
-						children: /* @__PURE__ */ jsx(Button, {
-							ref: searchBtn,
-							size: "icon-md",
-							variant: "outline",
-							"aria-label": "Search the wall",
-							"aria-expanded": searching,
-							"aria-controls": "wall-search",
-							className: "rounded-full bg-transparent before:rounded-full before:bg-transparent",
-							onClick: () => searching ? closeSearch() : setSearching(true),
-							children: /* @__PURE__ */ jsx(SearchIcon, {})
+					{
+						title: "Add your first record",
+						text: "Something you own, or one you're hunting for.",
+						button: "Add a record",
+						primary: true,
+						on: onAdd
+					},
+					{
+						title: "Connect Discogs",
+						text: "Optional. Keeps your collection and wantlist in sync, and can bring in records you've already listed there.",
+						button: "Open Settings",
+						done: discogsDone,
+						on: onDiscogs
+					},
+					{
+						title: "Add your turntable and stylus",
+						text: "Optional. Plays add up so you know when a stylus is wearing out.",
+						button: "Set up equipment",
+						done: gearDone,
+						on: onGear
+					}
+				].map((s, i) => /* @__PURE__ */ jsxs("li", {
+					className: "border-border col-span-full grid grid-cols-subgrid items-start gap-x-3 border-t py-4 last:pb-0",
+					children: [
+						/* @__PURE__ */ jsxs("span", {
+							className: `grid size-8 place-items-center rounded-full border font-mono text-sm ${s.done ? "bg-primary border-primary text-primary-foreground" : "border-border text-foreground-muted"}`,
+							children: [s.done ? /* @__PURE__ */ jsx("span", {
+								"aria-hidden": "true",
+								children: "✓"
+							}) : i + 1, s.done && /* @__PURE__ */ jsx("span", {
+								className: "sr-only",
+								children: ", done"
+							})]
+						}),
+						/* @__PURE__ */ jsxs("div", {
+							className: "flex min-w-0 flex-col",
+							children: [/* @__PURE__ */ jsx("b", {
+								className: "text-foreground-intense leading-8 font-semibold",
+								children: s.title
+							}), /* @__PURE__ */ jsx("span", {
+								className: "text-foreground-muted text-sm",
+								children: s.text
+							})]
+						}),
+						/* @__PURE__ */ jsx(Button, {
+							size: "sm",
+							variant: s.primary ? "primary" : "outline",
+							onClick: s.on,
+							className: "col-start-2 mt-3 justify-self-start sm:col-start-3 sm:row-start-1 sm:mt-0 sm:w-full sm:self-center",
+							children: s.button
 						})
-					}),
-					tools
-				]
-			}) })]
-		}), /* @__PURE__ */ jsxs("div", {
-			className: "flex items-start justify-between gap-3",
-			children: [/* @__PURE__ */ jsxs("div", {
-				className: "min-w-0 flex-1",
-				children: [/* @__PURE__ */ jsxs("div", {
-					className: "on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1",
-					children: [records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
-						multiple: true,
-						"aria-label": "Show on the wall",
-						value: on,
-						onValueChange: (v) => setFilter(v),
-						className: "flex-wrap gap-1.5",
-						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsxs(Toggle, {
-							value: k,
-							className: buttonVariants({
-								variant: "ghost",
-								size: "sm",
-								className: "text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
-							}),
-							children: [
-								CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
-									"aria-hidden": "true",
-									className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
-								}),
-								/* @__PURE__ */ jsx("b", {
-									className: "text-ink font-medium",
-									children: n[k]
-								}),
-								/* @__PURE__ */ jsx("span", {
-									className: k === "own" ? "" : "max-sm:sr-only",
-									children: FLABEL[k]
-								})
-							]
-						}, k))
-					}), below]
-				}), searching && /* @__PURE__ */ jsxs("div", {
-					role: "search",
-					id: "wall-search",
-					className: "mt-3 flex max-w-md items-center gap-2",
-					children: [/* @__PURE__ */ jsx(Input, {
-						type: "search",
-						"aria-label": "Search the wall",
-						placeholder: "Title, artist, label or year",
-						autoFocus: true,
-						autoComplete: "off",
-						enterKeyHint: "search",
-						value: query,
-						onChange: (e) => setQuery(e.target.value),
-						onKeyDown: (e) => e.key === "Escape" && closeSearch(),
-						className: "flex-1"
-					}), /* @__PURE__ */ jsx(Button, {
-						size: "sm",
-						variant: "outline",
-						onClick: closeSearch,
-						children: "Clear"
-					})]
+					]
+				}, s.title))
+			}),
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex flex-wrap items-center gap-3",
+				children: [/* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "outline",
+					onClick: onBlank,
+					children: "Start blank"
+				}), /* @__PURE__ */ jsx("span", {
+					className: "text-foreground-muted text-sm",
+					children: "Skip this and hang records as you go."
 				})]
-			}), onAdd && /* @__PURE__ */ jsxs(Button, {
-				onClick: onAdd,
-				className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
-				children: [/* @__PURE__ */ jsx(PlusIcon, {}), /* @__PURE__ */ jsx("span", {
-					className: "max-sm:sr-only",
-					children: "Add a record"
-				})]
-			})]
-		})]
-	}), !records.length ? /* @__PURE__ */ jsx("p", {
-		className: "on-photo text-ink-2 max-w-xl rounded-(--radius-xs) border-border border border-dashed px-5 py-7 text-sm",
-		children: onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : "Nothing hanging yet."
-	}) : !list.length ? /* @__PURE__ */ jsxs("div", {
-		className: "on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm",
-		children: [/* @__PURE__ */ jsxs("span", { children: [
-			"Nothing on the wall matches “",
-			q,
-			"”."
-		] }), /* @__PURE__ */ jsx(Button, {
-			size: "sm",
-			variant: "outline",
-			onClick: closeSearch,
-			children: "Clear the search"
-		})]
-	}) : /* @__PURE__ */ jsx("ul", {
-		className: "rack",
-		"data-hang": hang,
-		"aria-label": "Records",
-		children: list.map((r) => /* @__PURE__ */ jsx(Sleeve, {
-			id: r.id,
-			title: r.title || "Untitled",
-			artist: r.artist || "",
-			meta: [r.year, r.label].filter(Boolean).join(" · "),
-			cover: coverUrl(r),
-			hue: hueOf(r),
-			tagText: tagOf(r)?.text ?? "",
-			tagTone: tagOf(r)?.tone ?? "paper",
-			looking: lookingUp(r),
-			onOpen
-		}, r.id))
-	})] });
+			})
+		]
+	});
 }
 // src/App.tsx
 var GearIcon = () => /* @__PURE__ */ jsxs("svg", {
@@ -5876,7 +6321,7 @@ function useLookupNews(n) {
 	return news;
 }
 function App() {
-	const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear } = useRuntime();
+	const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings } = useRuntime();
 	const [openId, setOpenId] = useState(null);
 	const [settingsOpen, setSettingsOpen] = useState(false);
 	const [adding, setAdding] = useState(false);
@@ -5926,6 +6371,14 @@ function App() {
 							looking
 						]
 					}),
+					welcome: canEdit && settingsLoaded && !settings.welcomeDismissed && /* @__PURE__ */ jsx(Welcome, {
+						discogsDone: settings.discogs?.status === "ok",
+						gearDone: gear.some((g) => !g.example),
+						onAdd: () => setAdding(true),
+						onDiscogs: () => setSettingsOpen("discogs"),
+						onGear: () => setEquipOpen(true),
+						onBlank: () => saveSettings({ welcomeDismissed: true })
+					}),
 					gear: gearPillShown(gear, canEdit) && /* @__PURE__ */ jsx(GearPill, { onOpen: () => setEquipOpen(true) }),
 					tools: /* @__PURE__ */ jsx(Fragment, { children: canEdit && /* @__PURE__ */ jsxs("span", {
 						className: "relative",
@@ -5935,8 +6388,8 @@ function App() {
 								size: "icon-md",
 								variant: "outline",
 								"aria-label": update ? "Settings (update available)" : "Settings",
-								className: "rounded-full bg-transparent before:rounded-full before:bg-transparent",
-								onClick: () => setSettingsOpen(true),
+								className: "bg-wall/70 rounded-full before:rounded-full before:bg-transparent",
+								onClick: () => setSettingsOpen("top"),
 								children: /* @__PURE__ */ jsx(GearIcon, {})
 							})
 						}), update && /* @__PURE__ */ jsx("span", {
@@ -5968,7 +6421,8 @@ function App() {
 				}
 			}),
 			/* @__PURE__ */ jsx(SettingsSheet, {
-				open: settingsOpen,
+				open: !!settingsOpen,
+				at: settingsOpen === "discogs" ? "discogs" : void 0,
 				onClose: () => setSettingsOpen(false)
 			}),
 			/* @__PURE__ */ jsx(NewRecordSheet, {
@@ -6108,7 +6562,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --default-font-family: var(--font-sans);
     --default-mono-font-family: var(--font-mono);
     --radius: var(--radius);
-    --color-border-intense: var(--border-intense);
     --radius-4xs: var(--radius-4xs);
     --radius-3xs: var(--radius-3xs);
     --radius-2xs: var(--radius-2xs);
@@ -6499,13 +6952,22 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   @media (hover: hover) {
-    .slot:hover .hanger {
+    .rack[data-hang] .slot:nth-child(n):hover .hanger {
       transform: rotate(0) translateY(2px);
+    }
+
+    .rack[data-hang="float"] .slot:nth-child(n):hover .hanger {
+      transform: translateY(-5px);
     }
   }
 
   .ring {
     z-index: 3;
+    position: absolute;
+    left: 50%;
+  }
+
+  .rack[data-hang="barn"] .ring {
     border: 4px solid var(--iron);
     border-top-color: var(--iron-hi);
     border-left-color: var(--iron-mid);
@@ -6514,12 +6976,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     filter: drop-shadow(0 2px 2px var(--shadow-tone));
     border-radius: 50%;
     margin-left: -.8125rem;
-    position: absolute;
     top: -.875rem;
-    left: 50%;
   }
 
-  .ring:after {
+  .rack[data-hang="barn"] .ring:after {
     content: "";
     border-radius: var(--radius-4xs);
     background: radial-gradient(circle at 50% 50%, var(--iron-hi) 0 1.2px, transparent 1.8px), linear-gradient(var(--bracket), var(--bracket-2));
@@ -6529,6 +6989,265 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     position: absolute;
     top: -.875rem;
     left: 50%;
+  }
+
+  .rack[data-hang="peg"] .slot:before {
+    content: "";
+    background: repeating-linear-gradient(90deg, var(--gleam) 0 23px, var(--shade) 23px 25px, transparent 25px 61px, var(--shade) 61px 63px, transparent 63px 97px), repeating-linear-gradient(180deg, var(--shade) 0 1px, transparent 1px 3px, var(--gleam) 3px 4px, transparent 4px 6px), linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
+    inset-inline: 0;
+    height: 1rem;
+    position: absolute;
+    top: .125rem;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="peg"] .slot:before {
+      background: repeating-linear-gradient(90deg, color-mix(in srgb, var(--gleam) 3.5%, transparent) 0 23px, color-mix(in srgb, var(--shade) 14%, transparent) 23px 25px, transparent 25px 61px, color-mix(in srgb, var(--shade) 8%, transparent) 61px 63px, transparent 63px 97px), repeating-linear-gradient(180deg, color-mix(in srgb, var(--shade) 20%, transparent) 0 1px, transparent 1px 3px, color-mix(in srgb, var(--gleam) 4%, transparent) 3px 4px, transparent 4px 6px), linear-gradient(var(--peg-rail), var(--peg-rail-2) 45%, var(--peg-rail-3) 88%, var(--peg-rail-4));
+    }
+  }
+
+  .rack[data-hang="peg"] .slot:before {
+    box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -2px 0 var(--shade);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="peg"] .slot:before {
+      box-shadow: 0 5px 9px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 12%, transparent), inset 0 -2px 0 color-mix(in srgb, var(--shade) 45%, transparent);
+    }
+  }
+
+  .rack[data-hang="peg"] .hanger {
+    transform-origin: 50% -1.25rem;
+  }
+
+  .rack[data-hang="peg"] .ring {
+    background: radial-gradient(circle at 36% 32%, var(--peg) 0 8%, var(--peg-2) 30%, var(--peg-3) 62%, var(--peg-rail-4));
+    width: 1rem;
+    height: 1rem;
+    box-shadow: 0 3px 4px var(--shade), inset 0 0 0 1.5px var(--shade);
+    border-radius: 50%;
+    margin-left: -.5rem;
+    top: -1.4375rem;
+    left: 50%;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="peg"] .ring {
+      box-shadow: 0 3px 4px color-mix(in srgb, var(--shade) 50%, transparent), inset 0 0 0 1.5px color-mix(in srgb, var(--shade) 35%, transparent);
+    }
+  }
+
+  .rack[data-hang="peg"] .hanger:before, .rack[data-hang="peg"] .hanger:after {
+    content: "";
+    z-index: 2;
+    pointer-events: none;
+    background: var(--yarn);
+    inset-inline: 10%;
+    height: 1.25rem;
+    position: absolute;
+    top: -1.125rem;
+    -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+    mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E") 0 0 / 100% 100% no-repeat;
+  }
+
+  .rack[data-hang="peg"] .hanger:after {
+    background: var(--yarn-2);
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='1.4' stroke-dasharray='2.2 2.6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpolyline points='0,20 50,1 100,20' fill='none' stroke='%23000' stroke-width='1.4' stroke-dasharray='2.2 2.6' vector-effect='non-scaling-stroke'/%3E%3C/svg%3E");
+  }
+
+  .rack[data-hang="cork"] .slot:before {
+    content: "";
+    background-color: var(--cork);
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(var(--gleam), var(--shade));
+    inset-inline: 0;
+    height: 1.1875rem;
+    position: absolute;
+    top: 1.0625rem;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .slot:before {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"), linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
+    }
+  }
+
+  .rack[data-hang="cork"] .slot:before {
+    box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 var(--gleam), inset 0 -1px 0 var(--shade);
+    background-size: 160px 60px, auto;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .slot:before {
+      box-shadow: 0 5px 5px -3px var(--shadow-tone), inset 0 1px 0 color-mix(in srgb, var(--gleam) 18%, transparent), inset 0 -1px 0 color-mix(in srgb, var(--shade) 30%, transparent);
+    }
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+1) {
+    --tx: -8px;
+    --la: -58deg;
+    --ll: 5px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n+2) {
+    --tx: 5px;
+    --la: 52deg;
+    --ll: 5px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(3n) {
+    --tx: -2px;
+    --la: -80deg;
+    --ll: 6px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(4n) {
+    --tx: 10px;
+    --la: 70deg;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(7n+3) {
+    --la: 100deg;
+    --ll: 4px;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(5n+1) {
+    --pin: var(--pin-1);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(5n+2) {
+    --pin: var(--pin-2);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(5n+3) {
+    --pin: var(--pin-3);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(5n+4) {
+    --pin: var(--pin-4);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(5n) {
+    --pin: var(--pin-5);
+  }
+
+  .rack[data-hang="cork"] .hanger {
+    transform-origin: calc(50% + var(--tx, 0px)) -.375rem;
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(odd) .hanger {
+    transform: rotate(-1.6deg);
+  }
+
+  .rack[data-hang="cork"] .slot:nth-child(2n) .hanger {
+    transform: rotate(1.3deg);
+  }
+
+  .rack[data-hang="cork"] .ring {
+    width: 13px;
+    height: 13px;
+    transform: translateX(var(--tx, 0px));
+    background: radial-gradient(circle at 40% 35%, var(--pin), var(--pin) 45%, var(--pin));
+    border-radius: 50%;
+    margin-left: -6.5px;
+    top: -.8125rem;
+    left: 50%;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .ring {
+      background: radial-gradient(circle at 40% 35%, color-mix(in srgb, var(--pin) 70%, var(--gleam)), var(--pin) 45%, color-mix(in srgb, var(--pin) 60%, var(--shade)));
+    }
+  }
+
+  .rack[data-hang="cork"] .ring {
+    box-shadow: 1px 2px 2px var(--shade);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .ring {
+      box-shadow: 1px 2px 2px color-mix(in srgb, var(--shade) 45%, transparent);
+    }
+  }
+
+  .rack[data-hang="cork"] .ring:before, .rack[data-hang="cork"] .ring:after {
+    content: "";
+    position: absolute;
+  }
+
+  .rack[data-hang="cork"] .ring:before {
+    width: 6px;
+    height: var(--ll, 7px);
+    transform-origin: 50% 100%;
+    transform: rotate(var(--la, 0deg));
+    background: linear-gradient(90deg, var(--pin), var(--pin) 45%, var(--pin));
+    margin-left: -3px;
+    bottom: 50%;
+    left: 50%;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .ring:before {
+      background: linear-gradient(90deg, color-mix(in srgb, var(--pin) 62%, var(--shade)), var(--pin) 45%, color-mix(in srgb, var(--pin) 55%, var(--shade)));
+    }
+  }
+
+  .rack[data-hang="cork"] .ring:after {
+    width: 11px;
+    height: 11px;
+    transform: rotate(var(--la, 0deg)) translateY(calc(-1 * var(--ll, 7px))) rotate(calc(-1 * var(--la, 0deg)));
+    background: radial-gradient(circle at 35% 30%, var(--pin) 0 14%, var(--pin) 50%, var(--pin));
+    border-radius: 50%;
+    top: 1px;
+    left: 1px;
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .ring:after {
+      background: radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--pin) 40%, var(--gleam)) 0 14%, var(--pin) 50%, color-mix(in srgb, var(--pin) 68%, var(--shade)));
+    }
+  }
+
+  .rack[data-hang="cork"] .ring:after {
+    box-shadow: 2px 4px 4px var(--shade);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="cork"] .ring:after {
+      box-shadow: 2px 4px 4px color-mix(in srgb, var(--shade) 35%, transparent);
+    }
+  }
+
+  .rack[data-hang="float"] {
+    grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
+    column-gap: 1.75rem;
+    overflow-x: visible;
+  }
+
+  .rack[data-hang="float"] .slot {
+    padding: 1rem 0 0;
+  }
+
+  .rack[data-hang="float"] .ring {
+    display: none;
+  }
+
+  .rack[data-hang="float"] .slot:nth-child(n) .hanger {
+    transform: none;
+  }
+
+  .rack[data-hang="float"] .sleeve-face {
+    box-shadow: inset 0 1px 0 var(--gleam), 0 3px 0 var(--shade), 0 46px 58px -20px var(--shade), 0 22px 30px -10px var(--shade), 0 2px 4px var(--shadow-tone);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .rack[data-hang="float"] .sleeve-face {
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--gleam) 22%, transparent), 0 3px 0 color-mix(in srgb, var(--shade) 32%, transparent), 0 46px 58px -20px color-mix(in srgb, var(--shade) 78%, transparent), 0 22px 30px -10px color-mix(in srgb, var(--shade) 42%, transparent), 0 2px 4px var(--shadow-tone);
+    }
+  }
+
+  .rack[data-hang="float"] .cap {
+    padding-top: 1.5rem;
   }
 
   .sleeve-box {
@@ -6576,21 +7295,24 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transform: rotate(6deg);
   }
 
-  .wall-photo {
+  .wall-bg {
     z-index: -1;
     pointer-events: none;
-    background-image: linear-gradient(var(--wall), var(--wall)), var(--photo);
     position: fixed;
     inset: 0;
   }
 
+  .bg-photo {
+    background-image: linear-gradient(var(--wall), var(--wall)), var(--photo);
+  }
+
   @supports (color: color-mix(in lab, red, red)) {
-    .wall-photo {
+    .bg-photo {
       background-image: linear-gradient(color-mix(in srgb, var(--wall) var(--dim), transparent), color-mix(in srgb, var(--wall) var(--dim), transparent)), var(--photo);
     }
   }
 
-  .wall-photo {
+  .bg-photo {
     background-size: cover;
     background-position: var(--photo-pos, center);
   }
@@ -6614,9 +7336,76 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       transition: none;
     }
 
-    .slot:nth-child(n) .hanger {
+    .rack[data-hang] .slot:nth-child(n) .hanger {
       transform: none;
     }
+  }
+
+  .bg-grooves {
+    background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, var(--wall-2) 3px 4px);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-grooves {
+      background-image: repeating-radial-gradient(circle at 112% -12%, var(--wall) 0 3px, color-mix(in srgb, var(--wall-2) 80%, var(--line)) 3px 4px);
+    }
+  }
+
+  .bg-walnut {
+    background-image: repeating-linear-gradient(90deg, transparent 0 178px, var(--rail) 178px 180px), repeating-linear-gradient(90deg, var(--rail) 0 4px, var(--rail) 4px 6px, var(--rail) 6px 13px, var(--rail) 13px 15px);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-walnut {
+      background-image: repeating-linear-gradient(90deg, transparent 0 178px, color-mix(in srgb, var(--rail) 45%, var(--wall)) 178px 180px), repeating-linear-gradient(90deg, color-mix(in srgb, var(--rail) 22%, var(--wall)) 0 4px, color-mix(in srgb, var(--rail) 32%, var(--wall)) 4px 6px, color-mix(in srgb, var(--rail) 18%, var(--wall)) 6px 13px, color-mix(in srgb, var(--rail) 27%, var(--wall)) 13px 15px);
+    }
+  }
+
+  .bg-foam {
+    background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, var(--wall-2) 72%);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-foam {
+      background-image: radial-gradient(circle at 50% 50%, var(--wall) 0 28%, color-mix(in srgb, var(--wall-2) 70%, var(--line)) 72%);
+    }
+  }
+
+  .bg-foam {
+    background-size: 34px 34px;
+  }
+
+  .bg-sunburst {
+    background-image: repeating-conic-gradient(from 0deg at 50% -20%, var(--wall) 0 4deg, var(--wall-2) 4deg 8deg);
+  }
+
+  .bg-spines {
+    background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, var(--line) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-spines {
+      background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, color-mix(in srgb, var(--line) 70%, var(--wall)) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
+    }
+  }
+
+  .bg-felt {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .45 0 0 0 0 .45 0 0 0 .38 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  }
+
+  .bg-grille {
+    background-image: radial-gradient(circle, var(--ink) 1.5px, transparent 2px), radial-gradient(circle, var(--ink) 1.5px, transparent 2px), linear-gradient(var(--wall-2), var(--wall-2));
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-grille {
+      background-image: radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), radial-gradient(circle, color-mix(in srgb, var(--ink) 16%, transparent) 1.5px, transparent 2px), linear-gradient(color-mix(in srgb, var(--wall-2) 60%, var(--wall)), color-mix(in srgb, var(--wall-2) 60%, var(--wall)));
+    }
+  }
+
+  .bg-grille {
+    background-position: 0 0, 4.5px 4.5px, 0 0;
+    background-size: 9px 9px, 9px 9px, auto;
   }
 }
 
@@ -6693,6 +7482,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     inset-inline-end: calc(var(--spacing) * .5);
   }
 
+  .end-1\.5 {
+    inset-inline-end: calc(var(--spacing) * 1.5);
+  }
+
   .end-2 {
     inset-inline-end: calc(var(--spacing) * 2);
   }
@@ -6711,6 +7504,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .top-0\.5 {
     top: calc(var(--spacing) * .5);
+  }
+
+  .top-1\.5 {
+    top: calc(var(--spacing) * 1.5);
   }
 
   .top-1\/2 {
@@ -6763,6 +7560,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .z-50 {
     z-index: 50;
+  }
+
+  .col-span-full {
+    grid-column: 1 / -1;
+  }
+
+  .col-start-2 {
+    grid-column-start: 2;
   }
 
   .container {
@@ -6970,6 +7775,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     display: table;
   }
 
+  .aspect-4\/3 {
+    aspect-ratio: 4 / 3;
+  }
+
   .size-1 {
     width: var(--spacing);
     height: var(--spacing);
@@ -7018,6 +7827,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .size-5\.5 {
     width: calc(var(--spacing) * 5.5);
     height: calc(var(--spacing) * 5.5);
+  }
+
+  .size-6 {
+    width: calc(var(--spacing) * 6);
+    height: calc(var(--spacing) * 6);
   }
 
   .size-8 {
@@ -7132,6 +7946,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: calc(var(--spacing) * 14);
   }
 
+  .h-20 {
+    height: calc(var(--spacing) * 20);
+  }
+
   .h-\[calc\(100dvh-1\.5rem-var\(--snap-offset\,0\)\)\] {
     height: calc(100dvh - 1.5rem - var(--snap-offset, 0));
   }
@@ -7212,6 +8030,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     width: calc(var(--spacing) * 18);
   }
 
+  .w-24 {
+    width: calc(var(--spacing) * 24);
+  }
+
   .w-96 {
     width: calc(var(--spacing) * 96);
   }
@@ -7238,6 +8060,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .max-w-6xl {
     max-width: var(--container-6xl);
+  }
+
+  .max-w-180 {
+    max-width: calc(var(--spacing) * 180);
+  }
+
+  .max-w-\[58ch\] {
+    max-width: 58ch;
   }
 
   .max-w-full {
@@ -7383,12 +8213,20 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     resize: vertical;
   }
 
+  .scroll-mt-6 {
+    scroll-margin-top: calc(var(--spacing) * 6);
+  }
+
   .list-disc {
     list-style-type: disc;
   }
 
   .\[grid-template-columns\:auto_1fr_auto\] {
     grid-template-columns: auto 1fr auto;
+  }
+
+  .grid-cols-1 {
+    grid-template-columns: repeat(1, minmax(0, 1fr));
   }
 
   .grid-cols-2 {
@@ -7403,12 +8241,20 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     grid-template-columns: 2.5rem 1fr auto;
   }
 
+  .grid-cols-\[2rem_1fr\] {
+    grid-template-columns: 2rem 1fr;
+  }
+
   .grid-cols-\[auto_1fr\] {
     grid-template-columns: auto 1fr;
   }
 
   .grid-cols-\[auto_1fr_auto\] {
     grid-template-columns: auto 1fr auto;
+  }
+
+  .grid-cols-subgrid {
+    grid-template-columns: subgrid;
   }
 
   .grid-rows-\[0fr\] {
@@ -7597,6 +8443,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .self-stretch {
     align-self: stretch;
+  }
+
+  .justify-self-start {
+    justify-self: flex-start;
   }
 
   .truncate {
@@ -7805,6 +8655,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
+  .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
+    background-color: var(--sheet);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-\[color-mix\(in_oklch\,var\(--sheet\)_88\%\,transparent\)\] {
+      background-color: color-mix(in oklch,var(--sheet) 88%,transparent);
+    }
+  }
+
   .bg-background {
     background-color: var(--background);
   }
@@ -7843,66 +8703,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-color: var(--brass);
   }
 
-  .bg-current\/5 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/5 {
-      background-color: color-mix(in oklab, currentcolor 5%, transparent);
-    }
-  }
-
-  .bg-current\/9 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/9 {
-      background-color: color-mix(in oklab, currentcolor 9%, transparent);
-    }
-  }
-
-  .bg-current\/12 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/12 {
-      background-color: color-mix(in oklab, currentcolor 12%, transparent);
-    }
-  }
-
-  .bg-current\/14 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/14 {
-      background-color: color-mix(in oklab, currentcolor 14%, transparent);
-    }
-  }
-
-  .bg-current\/32 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/32 {
-      background-color: color-mix(in oklab, currentcolor 32%, transparent);
-    }
-  }
-
-  .bg-current\/62 {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .bg-current\/62 {
-      background-color: color-mix(in oklab, currentcolor 62%, transparent);
-    }
-  }
-
   .bg-error {
     background-color: var(--error);
   }
@@ -7937,6 +8737,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .bg-info-subtle {
     background-color: var(--info-subtle);
+  }
+
+  .bg-ink\/70 {
+    background-color: var(--ink);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-ink\/70 {
+      background-color: color-mix(in oklab, var(--ink) 70%, transparent);
+    }
   }
 
   .bg-paper {
@@ -7987,8 +8797,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-color: #0000;
   }
 
-  .bg-wall {
+  .bg-wall, .bg-wall\/70 {
     background-color: var(--wall);
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-wall\/70 {
+      background-color: color-mix(in oklab, var(--wall) 70%, transparent);
+    }
   }
 
   .bg-want {
@@ -8018,6 +8834,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   @supports (color: color-mix(in lab, red, red)) {
     .bg-white\/10 {
       background-color: color-mix(in oklab, var(--color-white) 10%, transparent);
+    }
+  }
+
+  .bg-\[linear-gradient\(150deg\,var\(--accent\)\,color-mix\(in_oklch\,var\(--accent\)_45\%\,var\(--shade\)\)\)\] {
+    background-image: linear-gradient(150deg,var(--accent),var(--accent));
+  }
+
+  @supports (color: color-mix(in lab, red, red)) {
+    .bg-\[linear-gradient\(150deg\,var\(--accent\)\,color-mix\(in_oklch\,var\(--accent\)_45\%\,var\(--shade\)\)\)\] {
+      background-image: linear-gradient(150deg,var(--accent),color-mix(in oklch,var(--accent) 45%,var(--shade)));
     }
   }
 
@@ -8163,6 +8989,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .py-3\.5 {
     padding-block: calc(var(--spacing) * 3.5);
+  }
+
+  .py-4 {
+    padding-block: calc(var(--spacing) * 4);
   }
 
   .py-7 {
@@ -8336,6 +9166,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     font-size: 1.25rem;
   }
 
+  .text-\[1\.625rem\] {
+    font-size: 1.625rem;
+  }
+
   .text-\[1rem\] {
     font-size: 1rem;
   }
@@ -8363,6 +9197,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .leading-5 {
     --tw-leading: calc(var(--spacing) * 5);
     line-height: calc(var(--spacing) * 5);
+  }
+
+  .leading-8 {
+    --tw-leading: calc(var(--spacing) * 8);
+    line-height: calc(var(--spacing) * 8);
   }
 
   .leading-\[0\.95\] {
@@ -8398,6 +9237,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .font-semibold {
     --tw-font-weight: var(--font-weight-semibold);
     font-weight: var(--font-weight-semibold);
+  }
+
+  .tracking-\[0\.06em\] {
+    --tw-tracking: .06em;
+    letter-spacing: .06em;
   }
 
   .tracking-wide {
@@ -8448,10 +9292,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .text-\(--cover-ink\) {
     color: var(--cover-ink);
-  }
-
-  .text-\(--pattern-color\) {
-    color: var(--pattern-color);
   }
 
   .text-error-emphasis {
@@ -8546,6 +9386,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     color: var(--success-foreground);
   }
 
+  .text-wall {
+    color: var(--wall);
+  }
+
   .text-want-ink {
     color: var(--want-ink);
   }
@@ -8595,10 +9439,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     opacity: .85;
   }
 
-  .opacity-100 {
-    opacity: 1;
-  }
-
   .opacity-\[calc\(1-var\(--drawer-swipe-progress\)\)\] {
     opacity: calc(1 - var(--drawer-swipe-progress));
   }
@@ -8620,6 +9460,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .shadow-\[0_0_0_2px_var\(--shade\)\,0_0_0_3px_var\(--wall\)\] {
     --tw-shadow: 0 0 0 2px var(--tw-shadow-color, var(--shade)), 0 0 0 3px var(--tw-shadow-color, var(--wall));
+    box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
+  }
+
+  .shadow-\[0_10px_30px_var\(--shadow-tone\)\] {
+    --tw-shadow: 0 10px 30px var(--tw-shadow-color, var(--shadow-tone));
     box-shadow: var(--tw-inset-shadow), var(--tw-inset-ring-shadow), var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
   }
 
@@ -8973,20 +9818,8 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     --m2: var(--metal-silver-lo);
   }
 
-  .\[--pattern-color\:var\(--color-border-intense\)\] {
-    --pattern-color: var(--color-border-intense);
-  }
-
-  .\[--pattern-highlight\:var\(--spotlight-size\)\] {
-    --pattern-highlight: var(--spotlight-size);
-  }
-
   .\[--snap-offset\:var\(--drawer-snap-point-offset\,0px\)\] {
     --snap-offset: var(--drawer-snap-point-offset, 0px);
-  }
-
-  .\[--spotlight-size\:200px\] {
-    --spotlight-size: 200px;
   }
 
   .\[--stack-count\:max\(0\,calc\(var\(--nested-drawers\,0\)-var\(--stack-progress\)\)\)\] {
@@ -9117,6 +9950,19 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     }
   }
 
+  .group-focus-visible\:outline-2:is(:where(.group):focus-visible *) {
+    outline-style: var(--tw-outline-style);
+    outline-width: 2px;
+  }
+
+  .group-focus-visible\:outline-offset-2:is(:where(.group):focus-visible *) {
+    outline-offset: 2px;
+  }
+
+  .group-focus-visible\:outline-\(--focus-ring\):is(:where(.group):focus-visible *) {
+    outline-color: var(--focus-ring);
+  }
+
   .group-active\:scale-\[0\.975\]:is(:where(.group):active *) {
     scale: .975;
   }
@@ -9216,6 +10062,23 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .group-data-open\/accordion-item\:rotate-180:is(:where(.group\/accordion-item)[data-open] *), .group-data-panel-open\:rotate-180:is(:where(.group)[data-panel-open] *) {
     rotate: 180deg;
+  }
+
+  .group-data-pressed\:text-foreground-intense:is(:where(.group)[data-pressed] *) {
+    color: var(--foreground-intense);
+  }
+
+  .group-data-pressed\:outline-2:is(:where(.group)[data-pressed] *) {
+    outline-style: var(--tw-outline-style);
+    outline-width: 2px;
+  }
+
+  .group-data-pressed\:outline-offset-2:is(:where(.group)[data-pressed] *) {
+    outline-offset: 2px;
+  }
+
+  .group-data-pressed\:outline-primary:is(:where(.group)[data-pressed] *) {
+    outline-color: var(--primary);
   }
 
   .group-data-selected\/check\:opacity-100:is(:where(.group\/check)[data-selected] *) {
@@ -9460,7 +10323,27 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       content: var(--tw-content);
       background-color: var(--background-subtle);
     }
+  }
 
+  .after\:absolute:after {
+    content: var(--tw-content);
+    position: absolute;
+  }
+
+  .after\:-inset-2\.5:after {
+    content: var(--tw-content);
+    inset: calc(var(--spacing) * -2.5);
+  }
+
+  .last\:pb-0:last-child {
+    padding-bottom: 0;
+  }
+
+  .empty\:hidden:empty {
+    display: none;
+  }
+
+  @media (hover: hover) {
     .hover\:border-border:hover {
       border-color: var(--border);
     }
@@ -11009,6 +11892,18 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       grid-column: span 2 / span 2;
     }
 
+    .sm\:col-start-3 {
+      grid-column-start: 3;
+    }
+
+    .sm\:row-start-1 {
+      grid-row-start: 1;
+    }
+
+    .sm\:mt-0 {
+      margin-top: 0;
+    }
+
     .sm\:size-4 {
       width: calc(var(--spacing) * 4);
       height: calc(var(--spacing) * 4);
@@ -11026,6 +11921,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       width: fit-content;
     }
 
+    .sm\:w-full {
+      width: 100%;
+    }
+
     .sm\:max-w-xl {
       max-width: var(--container-xl);
     }
@@ -11034,12 +11933,24 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       flex: none;
     }
 
+    .sm\:basis-0 {
+      flex-basis: 0;
+    }
+
     .sm\:grid-cols-2 {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
+    .sm\:grid-cols-3 {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
     .sm\:grid-cols-4 {
       grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .sm\:grid-cols-\[2rem_1fr_auto\] {
+      grid-template-columns: 2rem 1fr auto;
     }
 
     .sm\:flex-row {
@@ -11048,6 +11959,14 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .sm\:justify-end {
       justify-content: flex-end;
+    }
+
+    .sm\:self-center {
+      align-self: center;
+    }
+
+    .sm\:p-6 {
+      padding: calc(var(--spacing) * 6);
     }
 
     .sm\:px-4 {
@@ -11127,36 +12046,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .data-\[orientation\=vertical\]\:rtl\:origin-right[data-orientation="vertical"]:where(:dir(rtl), [dir="rtl"], [dir="rtl"] *) {
     transform-origin: 100%;
-  }
-
-  .dark\:bg-current\/14:is(.dark *) {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .dark\:bg-current\/14:is(.dark *) {
-      background-color: color-mix(in oklab, currentcolor 14%, transparent);
-    }
-  }
-
-  .dark\:bg-current\/38:is(.dark *) {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .dark\:bg-current\/38:is(.dark *) {
-      background-color: color-mix(in oklab, currentcolor 38%, transparent);
-    }
-  }
-
-  .dark\:bg-current\/68:is(.dark *) {
-    background-color: currentColor;
-  }
-
-  @supports (color: color-mix(in lab, red, red)) {
-    .dark\:bg-current\/68:is(.dark *) {
-      background-color: color-mix(in oklab, currentcolor 68%, transparent);
-    }
   }
 
   @media (pointer: coarse) {
@@ -11861,6 +12750,22 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --iron-mid: #5a5651;
   --bracket: #3b3b3b;
   --bracket-2: #151515;
+  --rail: #6a462b;
+  --cork: #bd8f5f;
+  --pin-1: #d63a35;
+  --pin-2: #f2c418;
+  --pin-3: #1f5fc4;
+  --pin-4: #1f9a52;
+  --pin-5: #f1efe9;
+  --peg-rail: #5b3b27;
+  --peg-rail-2: #45291a;
+  --peg-rail-3: #2f1c11;
+  --peg-rail-4: #24150c;
+  --peg: #9a6a46;
+  --peg-2: #6a4129;
+  --peg-3: #3d2416;
+  --yarn: #2b201b;
+  --yarn-2: #614a3d;
   --gleam: #fff;
   --cover-ink: #fff;
   --metal-gold-hi: #f6dc96;
@@ -11893,6 +12798,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --shade-alpha: 55%;
   --vinyl: #050606;
   --groove: #1d201f;
+  --rail: #5a3b24;
 }
 
 :root, .light, .dark {
