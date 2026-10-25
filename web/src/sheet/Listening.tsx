@@ -22,6 +22,9 @@ import { Segmented } from './Segmented'
 
 // the play whose journal is open; fresh = just logged (Skip and Undo instead of a date and Delete), with what it put on the gear
 type Journal = { ref: NoteRef; fresh: boolean; msg?: string }
+// the open journal of each record, kept when its sheet closes (production's journalOpen), so a play just logged still
+// offers Undo when the record is opened again
+const journals = new Map<string, Journal>()
 
 function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
   const { mutate, gear, setups, saveGear } = useRuntime()
@@ -222,7 +225,12 @@ function StatsRow({ r }: { r: Rec }) {
 
 export function Listening({ r }: { r: Rec }) {
   const { canEdit } = useRuntime()
-  const [journal, setJournal] = useState<Journal | null>(null)
+  const [journal, keepJournal] = useState<Journal | null>(() => journals.get(r.id) ?? null)
+  const setJournal = (j: Journal | null) => {
+    if (j) journals.set(r.id, j)
+    else journals.delete(r.id)
+    keepJournal(j)
+  }
   const months = playMonths(r)
   const cur = today().slice(0, 7)
   const [open, setOpen] = useState<string[]>(() => [months.some((m) => m.month === cur) ? cur : months[0]?.month].filter(Boolean))

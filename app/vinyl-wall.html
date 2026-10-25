@@ -3939,6 +3939,7 @@ function saveJournal(r, ref, j) {
 	return notes;
 }
 // src/sheet/Listening.tsx
+var journals = /* @__PURE__ */ new Map();
 function LogCard({ r, onLogged }) {
 	const { mutate, gear, setups, saveGear } = useRuntime();
 	const T = recordTracks(r);
@@ -4196,7 +4197,12 @@ function StatsRow({ r }) {
 }
 function Listening({ r }) {
 	const { canEdit } = useRuntime();
-	const [journal, setJournal] = useState(null);
+	const [journal, keepJournal] = useState(() => journals.get(r.id) ?? null);
+	const setJournal = (j) => {
+		if (j) journals.set(r.id, j);
+		else journals.delete(r.id);
+		keepJournal(j);
+	};
 	const months = playMonths(r);
 	const cur = today().slice(0, 7);
 	const [open, setOpen] = useState(() => [months.some((m) => m.month === cur) ? cur : months[0]?.month].filter(Boolean));

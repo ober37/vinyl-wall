@@ -188,4 +188,17 @@ describe('plays on gear', () => {
     await user.click(within(dlg).getByRole('button', { name: 'Delete' }))
     await waitFor(() => expect(sets(fake, 'gear/hp').at(-1)).toMatchObject({ minutes: 0, plays: [] }))
   })
+
+  it('a play just logged still offers Undo after its sheet is closed and opened again', async () => {
+    const { fake, user } = setup({}, { setups: { den: SETUPS.den }, gear: { sty: GEAR.sty } })
+    await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
+    await screen.findByRole('heading', { name: 'Blue Train' })
+    await user.click(btn('Log play'))
+    await screen.findByRole('button', { name: 'Undo' })
+    await user.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Blue Train' })).toBeNull())
+    await user.click(screen.getByRole('button', { name: /Open Blue Train/ }))
+    await user.click(await screen.findByRole('button', { name: 'Undo' }))
+    await waitFor(() => expect(sets(fake, 'gear/sty').at(-1)).toMatchObject({ minutes: 0, plays: [] }))
+  })
 })
