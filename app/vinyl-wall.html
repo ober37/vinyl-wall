@@ -6078,14 +6078,14 @@ function RecordSheet({ id, onClose, onBack }) {
 					children: "‹ Equipment"
 				}),
 				/* @__PURE__ */ jsxs(DrawerHeader, {
-					className: "flex-row items-start gap-4",
+					className: "flex-row items-stretch gap-4",
 					children: [/* @__PURE__ */ jsx(Face, {
 						title: r.title || "",
 						artist: r.artist || "",
 						hue: hueOf(r),
 						cover: coverUrl(r),
 						small: true,
-						className: "size-24 shrink-0 rounded-(--radius-2xs)"
+						className: "size-24 shrink-0 rounded-(--radius-2xs) sm:aspect-square sm:size-auto sm:min-h-24 sm:self-stretch"
 					}, r.id), /* @__PURE__ */ jsxs("div", {
 						className: "flex min-w-0 flex-1 flex-col gap-1",
 						children: [
@@ -11912,13 +11912,26 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       margin-top: 0;
     }
 
+    .sm\:aspect-square {
+      aspect-ratio: 1;
+    }
+
     .sm\:size-4 {
       width: calc(var(--spacing) * 4);
       height: calc(var(--spacing) * 4);
     }
 
+    .sm\:size-auto {
+      width: auto;
+      height: auto;
+    }
+
     .sm\:h-10 {
       height: calc(var(--spacing) * 10);
+    }
+
+    .sm\:min-h-24 {
+      min-height: calc(var(--spacing) * 24);
     }
 
     .sm\:w-auto {
@@ -11971,6 +11984,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .sm\:self-center {
       align-self: center;
+    }
+
+    .sm\:self-stretch {
+      align-self: stretch;
     }
 
     .sm\:p-6 {
