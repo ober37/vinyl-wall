@@ -30,9 +30,7 @@ const open = async (user: User, title: string) => {
   await screen.findByRole('heading', { name: title })
 }
 const sleeves = () => screen.queryAllByTestId('sleeve').map((b) => b.getAttribute('data-id'))
-// the Notes count as "Notes 1", however the space between them is drawn
-const tabNames = () =>
-  screen.queryAllByRole('tab').map((t) => t.textContent!.replace(/^Notes ?(\d)/, 'Notes $1') + (t.getAttribute('aria-selected') === 'true' ? '*' : ''))
+const tabNames = () => screen.queryAllByRole('tab').map((t) => t.textContent! + (t.getAttribute('aria-selected') === 'true' ? '*' : ''))
 const facts = (el: HTMLElement) => [...el.querySelectorAll('dt')].map((dt) => [dt.textContent, dt.nextElementSibling?.textContent])
 afterEach(() => localStorage.clear())
 
@@ -44,7 +42,7 @@ describe('the wall', () => {
       .getAllByRole('button')
       .map((b) => [b.querySelector('b')?.textContent, b.querySelector('span:not([aria-hidden])')!.className.includes('max-sm:sr-only')])
     expect(words).toEqual([['2', false], ['1', true], ['1', true], ['1', true]])
-    expect(within(counts).getByRole('button', { name: /on the way/ })).toBeTruthy()
+    expect(within(counts).getAllByRole('button').map((b) => b.textContent)).toEqual(['2 owned', '1 on the way', '1 top want', '1 someday'])
   })
 
   it('has no counts row on an empty wall', async () => {
@@ -92,7 +90,16 @@ describe('search', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Search the wall' }))
   })
 
-  it.todo('the X button "Clear search" closes search (React has a text button named "Clear"; production line 552)')
+  // production's × "Clear search" is a Clear text button here (an approved departure)
+  it('Clear closes search and shows the whole wall', async () => {
+    const { user } = setup()
+    await user.click(await screen.findByRole('button', { name: 'Search the wall' }))
+    await user.type(screen.getByRole('searchbox', { name: 'Search the wall' }), 'coltrane')
+    await waitFor(() => expect(sleeves()).toEqual(['r3']))
+    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(screen.queryByRole('searchbox')).toBeNull()
+    expect(sleeves()).toHaveLength(5)
+  })
 })
 
 describe('the welcome card', () => {
@@ -119,7 +126,12 @@ describe('the record sheet', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
   })
 
-  it.todo('puts focus on Close when the sheet opens (React focuses the sheet itself; production line 1179)')
+  // production focuses Close; here the sheet itself takes focus (an approved departure)
+  it('takes focus when it opens', async () => {
+    const { user } = setup()
+    await open(user, 'Kind of Blue')
+    await waitFor(() => expect(screen.getByRole('dialog').contains(document.activeElement)).toBe(true))
+  })
 
   it('closes on a click outside it', async () => {
     const { user } = setup()
@@ -195,7 +207,14 @@ describe('the tabs', () => {
     expect(tabNames()).toEqual(['Listening*', 'Research', 'Notes 1', 'About'])
   })
 
-  it.todo('keep the tab chosen through Edit and Done (React goes back to the first tab; production lines 1090, 1133)')
+  it('keep the tab chosen through Edit and Done', async () => {
+    const { user } = setup()
+    await open(user, 'Kind of Blue')
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    expect(tabNames()).toEqual(['Listening', 'Research', 'Notes 1', 'About*'])
+  })
 
   it('move focus with the arrow keys, round from the last to the first', async () => {
     const { user } = setup()
@@ -207,7 +226,13 @@ describe('the tabs', () => {
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
   })
 
-  it.todo('show the tab an arrow key moves to (React only moves focus until Enter; production lines 1251-1254)')
+  it('show the tab an arrow key moves to', async () => {
+    const { user } = setup()
+    await open(user, 'Kind of Blue')
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    await user.keyboard('{ArrowRight}')
+    expect(tabNames()).toEqual(['Listening*', 'Research', 'Notes 1', 'About'])
+  })
 
   it('keep the plays on Listening and the written notes on Notes', async () => {
     const { user } = setup()

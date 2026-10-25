@@ -102,7 +102,7 @@ export function GearItem({ g, onOpen }: { g: Gear; onOpen: (id: string) => void 
         <FieldsetLegend>Log</FieldsetLegend>
         {canEdit && (
           <form onSubmit={addNote} className="flex flex-wrap gap-2">
-            <Input aria-label="Log entry" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Cleaned with the brush" autoComplete="off" className="min-w-0 flex-1" />
+            <Input aria-label="Log entry" value={note} onChange={(e) => setNote(e.target.value)} placeholder="e.g. Set tracking force to 3.5 g" autoComplete="off" className="min-w-0 flex-1" />
             <Button type="submit" size="sm" variant="outline" disabled={!note.trim()}>
               Log
             </Button>

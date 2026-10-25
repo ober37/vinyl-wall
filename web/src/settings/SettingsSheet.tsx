@@ -123,7 +123,8 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
       setStatus('')
       fireTask({ asked: true })
     } catch (e) {
-      setStatus("Couldn't save the token: " + ((e as { message?: string }).message || String(e)))
+      const x = e as { message?: string; code?: string }
+      setStatus(x.code === 'signed-out' ? x.message! : "Couldn't save the token: " + (x.message || String(e)))
     }
   }
   const remove = async () => {
@@ -363,7 +364,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
                   .
                 </p>
                 <p className="text-foreground-muted text-sm">
-                  Anyone you share this wall with can see everything on it, including prices, orders and notes. Only you and people you make
+                  Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make
                   Editors can change it.
                 </p>
                 <p className="text-foreground-muted font-mono text-xs">Vinyl Wall {APP_VERSION}</p>

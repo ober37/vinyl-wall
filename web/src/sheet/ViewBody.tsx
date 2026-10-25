@@ -263,7 +263,7 @@ function LinkList({ links }: { links: [string, string][] }) {
   )
 }
 
-export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant }: {
+export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, setTab }: {
   r: Rec
   msg: string
   onMoved: (msg: string) => void
@@ -272,6 +272,9 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
   onEditCopy: (ci: number) => void
   want: WantMsg | null
   setWant: (w: WantMsg | null) => void
+  // the tab chosen, '' for the record's first (its task tab)
+  tab: string
+  setTab: (t: string) => void
 }) {
   const { canEdit, artists } = useRuntime()
   const k = kindOf(r)
@@ -315,15 +318,16 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
         </p>
       )}
       {tabs.length > 0 && (
-        <Tabs key={"tabs" + r.id + k} defaultValue={tabs[0]}>
+        <Tabs key={"tabs" + r.id + k} value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
           {tabs.length > 1 && (
-            <TabsList variant="line" size="sm">
+            <TabsList variant="line" size="sm" activateOnFocus>
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
               {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
               {research && <TabsTrigger value="research">Research</TabsTrigger>}
               {notes && (
                 <TabsTrigger value="notes">
-                  Notes{notesN > 0 && <span className="text-foreground-muted ms-1">{notesN}</span>}
+                  Notes{notesN > 0 && ' '}
+                  {notesN > 0 && <span className="text-foreground-muted ms-1">{notesN}</span>}
                 </TabsTrigger>
               )}
               {about && <TabsTrigger value="about">About</TabsTrigger>}

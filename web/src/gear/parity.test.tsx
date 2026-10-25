@@ -347,5 +347,17 @@ describe('when a gear write fails', () => {
     expect(await screen.findByText("Couldn't delete: Not allowed")).toBeTruthy()
   })
 
-  it.todo('adding a setup says "Couldn\'t add the setup" (production 1659; React says "Couldn\'t save the setup" and stays on the list)')
+  it('says "Couldn\'t add the setup"', async () => {
+    const { user } = setup({ failWrites: true })
+    await equipment(user, /cartridge:/)
+    await user.click(btn('+ Add another setup'))
+    expect(await screen.findByText("Couldn't add the setup: Not allowed", {}, { timeout: 2000 })).toBeTruthy()
+  })
+
+  it('suggests what a log entry might say', async () => {
+    const { user } = setup()
+    await equipment(user, /cartridge:/)
+    await openPiece(user, 'ATN-VM95E')
+    expect(screen.getByRole('textbox', { name: 'Log entry' }).getAttribute('placeholder')).toBe('e.g. Set tracking force to 3.5 g')
+  })
 })

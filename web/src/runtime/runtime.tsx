@@ -54,7 +54,8 @@ type Runtime = {
   // data can be worked out from the piece as it is (undefined when it's gone); nothing returned writes nothing
   saveGear: (id: string, data: GearPatch) => Promise<boolean>
   deleteGear: (id: string) => Promise<boolean>
-  saveSetup: (id: string, doc: Record<string, unknown>) => Promise<boolean>
+  // what: the words for a failure, "save the setup" unless said
+  saveSetup: (id: string, doc: Record<string, unknown>, what?: string) => Promise<boolean>
   deleteSetup: (id: string) => Promise<boolean>
   newDocId: (collection: 'gear' | 'setups') => string
   // the library file (Export and Import in Settings): save a file to the viewer's device (rejects with { code }, "declined"
@@ -323,7 +324,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
   }
 
   // every write waits its turn; a fresh one reads the record first, so it builds on what's there now
-  const queue = (id: string, fn: (latest: Rec) => Record<string, unknown> | 'delete' | null, fresh = false) => {
+  // what: the words for a failure ("Couldn't save: …", "Couldn't remove it: …")
+  const queue = (id: string, fn: (latest: Rec) => Record<string, unknown> | 'delete' | null, fresh = false, what = 'save') => {
     const next = writing.current.then(async () => {
       try {
         const ref = db.current!.collection('records').doc(id)
@@ -345,7 +347,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
         setError('')
         return !!patch
       } catch (e) {
-        setError("Couldn't save: " + msgOf(e))
+        setError("Couldn't " + what + ': ' + msgOf(e))
         return false
       }
     })
@@ -421,9 +423,9 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     setGear(gearLive.current)
     return gearWrite('delete', () => db.current!.collection('gear').doc(id).delete())
   }
-  const saveSetup = (id: string, doc: Record<string, unknown>) => {
+  const saveSetup = (id: string, doc: Record<string, unknown>, what = 'save the setup') => {
     setSetups((S) => (S.some((x) => x.id === id) ? S.map((x) => (x.id === id ? { ...doc, id } : x)) : [...S, { ...doc, id }]))
-    return gearWrite('save the setup', () => db.current!.collection('setups').doc(id).set(doc))
+    return gearWrite(what, () => db.current!.collection('setups').doc(id).set(doc))
   }
   const deleteSetup = (id: string) => {
     setSetups((S) => S.filter((x) => x.id !== id))
@@ -457,7 +459,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       remove: (id) => {
         // a record on Discogs is marked, so the task can take it off there too
         let synced = false
-        return queue(id, (r) => ((synced = !!(r.discogsSync as { rid?: unknown } | undefined)?.rid) ? { deleted: true } : 'delete'), true).then((ok) => {
+        return queue(id, (r) => ((synced = !!(r.discogsSync as { rid?: unknown } | undefined)?.rid) ? { deleted: true } : 'delete'), true, 'remove it').then((ok) => {
           if (ok && synced) setNotice('Removed. Taking it off Discogs too.')
           return ok
         })
@@ -474,7 +476,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       newDocId: (c) => db.current!.collection(c).doc().id,
       saveToken: async (token) => {
         const ref = secret()
-        if (!ref) throw new Error('Sign in to claude.ai to save your token.')
+        // said as it is, not as a failed save
+        if (!ref) throw Object.assign(new Error('Sign in to claude.ai to save your token.'), { code: 'signed-out' })
         await ref.set({ token, savedAt: new Date().toISOString() })
       },
       removeToken: async () => {

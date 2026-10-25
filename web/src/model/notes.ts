@@ -35,7 +35,8 @@ export function deleteNote(r: Rec, ref: NoteRef): Note[] | null {
 // written notes (not plays), newest first, with their refs
 export function writtenNotes(r: Rec, isPlay: (n: Note) => boolean) {
   return notesOf(r)
-    .map((n, i) => ({ n, ref: refOf(n, i) }))
+    .map((n, i) => ({ n, i }))
     .filter((x) => x.n && typeof x.n === 'object' && !isPlay(x.n))
+    .map(({ n, i }) => ({ n, ref: refOf(n, i) }))
     .reverse()
 }

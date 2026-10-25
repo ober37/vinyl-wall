@@ -65,9 +65,11 @@ const stub = () => {
     },
   })
   const assets = { upload: async (b) => ({ id: 'a' + ++seq, url: '', sizeBytes: b.size, contentType: b.type }) }
-  const db = { collection: coll, doc: () => ({ onSnapshot: (n) => (setTimeout(() => n(snap('site', null))), () => {}) }) }
+  // window.__site: the settings doc, when a check needs one (a hanging style)
+  const db = { collection: coll, doc: () => ({ onSnapshot: (n) => (setTimeout(() => n(snap('site', window.__site || null))), () => {}) }) }
   const user = { can: async () => true, canEdit: async () => true, isOwner: async () => true, id: async () => 'u_check' }
-  window.claude = { use: async (k) => ({ db, user, assets })[k] ?? null }
+  const downloads = { save: async () => {} }
+  window.claude = { use: async (k) => ({ db, user, assets, downloads })[k] ?? null }
 }
 
 const browser = await puppeteer.launch({
@@ -128,6 +130,41 @@ try {
   await new Promise((r) => setTimeout(r, 800))
   if (!(await page.$('xpath/.//h2[normalize-space()="Rumours"] | .//*[@data-slot="drawer-title" and normalize-space()="Rumours"]')))
     fail.push("Add a record: Hang it didn't open the new record")
+  // the share picture hangs the records the way the wall does: the dark plank on Barnwood, a cork strip on Cork (a real
+  // canvas, so it's checked here rather than in Vitest). The first rail runs along y 245-266 (Barnwood) and 259-278 (Cork)
+  // of the 1080-wide picture, drawn at 2x; the stub wall's background is the listening-room photo, dark under its wash
+  const railColour = async (site, y) => {
+    const p = await browser.newPage()
+    await p.evaluateOnNewDocument((s) => (window.__site = s), site)
+    await p.evaluateOnNewDocument(stub)
+    await p.goto(`http://127.0.0.1:${port}/`)
+    await p.waitForSelector('[aria-label="Share your wall"]', { timeout: 20000 })
+    await p.click('[aria-label="Share your wall"]')
+    await p.waitForSelector('img[alt="Picture of your wall"]', { timeout: 15000 })
+    // the rail's average colour over 80 pixels of its first length (the cork has grain; sleeves hang over its lower edge)
+    const px = await p.$eval(
+      'img[alt="Picture of your wall"]',
+      async (img, y) => {
+        await img.decode()
+        const c = document.createElement('canvas')
+        c.width = img.naturalWidth
+        c.height = img.naturalHeight
+        const g = c.getContext('2d')
+        g.drawImage(img, 0, 0)
+        const d = g.getImageData(140, y * 2, 80, 1).data
+        const sum = [0, 0, 0]
+        for (let i = 0; i < d.length; i += 4) for (let k = 0; k < 3; k++) sum[k] += d[i + k]
+        return sum.map((x) => Math.round(x / 80))
+      },
+      y,
+    )
+    await p.close()
+    return px
+  }
+  const bw = await railColour(null, 255)
+  if (!(bw[0] < 100 && bw[0] > bw[2] && bw[0] - bw[2] < 40)) fail.push(`share picture: Barnwood's plank isn't drawn (${bw})`)
+  const ck = await railColour({ hang: 'cork' }, 263)
+  if (!(ck[0] > 110 && ck[0] - ck[2] > 35)) fail.push(`share picture: Cork's strip isn't drawn (${ck})`)
 } catch (e) {
   fail.push(String(e.message || e))
 } finally {
@@ -138,4 +175,4 @@ if (fail.length) {
   console.error('FAIL\n' + fail.join('\n'))
   process.exit(1)
 }
-console.log('PASS the built page filters the wall, opens a record, takes a Log a play choice and adds a record with a cover')
+console.log('PASS the built page filters the wall, opens a record, takes a Log a play choice, adds a record with a cover and draws the share picture')

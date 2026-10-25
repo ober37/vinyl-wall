@@ -48,10 +48,11 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
       const f = toForm(r)
       baseline.current = f
       setForm(f)
-      setSaved('')
     } else setForm(null)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editing, r?.id, kind])
+  // the status line belongs to this record in this mode; a status move (which changes kind) keeps its own line
+  useEffect(() => setSaved(''), [editing, r?.id])
 
   // a change made elsewhere (a copy added from Research or in chat) shows in the form when nothing typed is waiting
   useEffect(() => {
@@ -107,6 +108,8 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const [focusCopy, setFocusCopy] = useState<number | null>(null)
   const [want, setWant] = useState<WantMsg | null>(null)
   const [msg, setMsg] = useState('')
+  // the tab in view, kept through Edit and Done; a sheet opens on its task tab
+  const [tab, setTab] = useState('')
   // a hunt with several copies asks which one first; the status stays as it is until one is picked
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
   const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
@@ -116,6 +119,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     setPick(null)
     setWant(null)
     setMsg('')
+    setTab('')
     clearError(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
@@ -286,6 +290,8 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                     }}
                     want={want}
                     setWant={setWant}
+                    tab={tab}
+                    setTab={setTab}
                     onEditCopy={(ci) => {
                       setFocusCopy(ci)
                       setEditing(true)

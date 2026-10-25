@@ -246,7 +246,7 @@ export function Wall({ records, title, hang, discogsOn = false, onOpen, onAdd, o
                       })}
                     >
                       {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
-                      <b className="text-ink font-medium">{n[k]}</b>
+                      <b className="text-ink font-medium">{n[k]}</b>{' '}
                       <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
                     </Toggle>
                   ))}

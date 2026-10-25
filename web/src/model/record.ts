@@ -168,7 +168,12 @@ export function playMonths(r: Rec): PlayMonth[] {
     const d = String(n.d || '')
     const tp = Array.isArray(n.tracks) ? n.tracks : []
     const cnt = tp.length || +(/^Played (\d+)/.exec(t) || [])[1] || 0
-    const what = /^Played the whole album/.test(t)
+    // only Log play's own wording ("Played <kind>[ on <setup>] (~N min)[. comment]") reads compactly; a play typed by
+    // hand shows as written
+    const on = /^(?: on (.+))? $/.exec(m[2])
+    const what = !on
+      ? t
+      : /^Played the whole album/.test(t)
       ? 'Whole album'
       : /^Played one side/.test(t)
         ? n.side
@@ -182,10 +187,10 @@ export function playMonths(r: Rec): PlayMonth[] {
       date: d ? playDate(d) : '',
       what,
       icon: /^Played the whole album/.test(t) ? '●' : /^Played one side/.test(t) ? '◐' : '◔',
-      setup: (/ on (.+?) \(~\d+ min\)/.exec(t) || [])[1] || '',
+      setup: on?.[1] || '',
       min: +m[3] || 0,
       vibe: vibeOf(n),
-      thoughts: String(n.j ?? t.slice(m[0].length).replace(/^\.\s*/, '')).trim(),
+      thoughts: String(n.j ?? (on ? t.slice(m[0].length).replace(/^\.\s*/, '') : '')).trim(),
     }
     const month = /^\d{4}-\d\d-\d\d$/.test(d) ? d.slice(0, 7) : ''
     let g = months[months.length - 1]

@@ -205,11 +205,33 @@ describe('Log a play', () => {
     await user.click(btn('Tracks'))
     expect(screen.queryByRole('group', { name: 'Which side' })).toBeNull()
   })
+
+  it('numbers each track on its side', async () => {
+    const { user } = setup()
+    await open(user, 'Kind of Blue')
+    await user.click(btn('Tracks'))
+    expect(screen.getAllByRole('checkbox').map((c) => c.closest('label')!.textContent)).toEqual([
+      'So What 9:22',
+      '1 - Freddie Freeloader 9:46',
+      '2 - Blue in Green 5:37',
+      'All Blues 11:33',
+      'Flamenco Sketches 9:26',
+    ])
+  })
 })
 
 describe('notes written by hand', () => {
-  // production skips it (1080); React's writtenNotes reads the blank entry's date before filtering, and the sheet crashes
-  it.todo('skips a blank entry in the notes (model/notes.ts:38 calls refOf on null)')
+  it('skips a blank entry, and shows a play typed by hand as written', async () => {
+    const { user } = setup((s) =>
+      Object.assign(s.records.r3, {
+        notes: [null, { d: 'March 3, 2024', t: 'Bought a second copy.' }, { d: '2026-01-02', t: "Played the whole album twice at Dave's (~40 min)" }],
+      }),
+    )
+    await open(user, 'Blue Train')
+    expect(within(screen.getByRole('tabpanel')).getByText(/Played the whole album twice at Dave's \(~40 min\)/)).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: /Notes/ }))
+    expect(within(screen.getByRole('tabpanel')).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['March 3, 2024Bought a second copy.Edit'])
+  })
 
   it('shows an odd date as written', async () => {
     const { user } = setup((s) => (s.records.r3.notes = [{ d: 'March 3, 2024', t: 'Bought a second copy.' }]))
@@ -262,9 +284,26 @@ describe('notes written by hand', () => {
   })
 })
 
+describe('removing a record', () => {
+  it('says "Couldn\'t remove it" when the wall refuses', async () => {
+    const { user } = setup(() => {}, { failWrites: true })
+    await open(user, 'Blue Train')
+    await user.click(btn('Edit'))
+    await user.click(btn('Remove from the wall…'))
+    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Remove' }))
+    expect(await screen.findByText(/^Couldn't remove it: /)).toBeTruthy()
+  })
+})
+
 describe('moving a record', () => {
-  // production says so in edit's status line (1344-1345); React sets it, then clears it when the status changes the form
-  it.todo('says "Moved back to the hunt." when edit moves a record to the hunt (RecordSheet.tsx:46-54 wipes it)')
+  it('says "Moved back to the hunt." when edit moves a record to the hunt', async () => {
+    const { fake, user } = setup()
+    await open(user, 'Aja')
+    await user.click(btn('Edit'))
+    await user.click(btn('Wanted'))
+    await waitFor(() => expect(fake.records.r5.status).toBe('wish'))
+    expect(await screen.findByText('Moved back to the hunt.')).toBeTruthy()
+  })
 
   it('back to Want brings every copy back, the record’s own first', async () => {
     const { fake, user } = setup((s) =>
@@ -333,6 +372,7 @@ describe('edit mode', () => {
     await user.click(btn('Edit'))
     await user.clear(screen.getByRole('textbox', { name: 'Shop website' }))
     await user.type(screen.getByRole('textbox', { name: 'Shop website' }), 'javascript:alert(1)')
+    expect(screen.queryByText("Not a web address, so it won't link")).toBeNull()
     await user.tab()
     expect(screen.getByText("Not a web address, so it won't link")).toBeTruthy()
   })

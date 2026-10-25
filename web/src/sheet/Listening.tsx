@@ -84,6 +84,8 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
                 <label key={t.pos} className="text-foreground flex items-start gap-2 text-sm">
                   <Checkbox value={t.pos} className="mt-0.5" />
                   <span>
+                    {/* its number on the side ("1 - So What"), or its position when the tracks have no sides */}
+                    {trackNum(t.pos, sd)}
                     {t.title} {t.dur && <span className="text-foreground-muted">{t.dur}</span>}
                   </span>
                 </label>
@@ -220,6 +222,11 @@ function StatsRow({ r }: { r: Rec }) {
       ))}
     </dl>
   )
+}
+
+const trackNum = (pos: unknown, side: string) => {
+  const n = side ? String(pos || '').replace(/^[A-Z]+/, '') : String(pos || '')
+  return n ? n + ' - ' : ''
 }
 
 export function Listening({ r }: { r: Rec }) {

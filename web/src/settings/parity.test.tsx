@@ -201,6 +201,15 @@ describe('Settings: Discogs', () => {
     expect(fake.store['data/users/u_me']).toBeUndefined()
   })
 
+  it('asks to sign in, plainly, where the token has nowhere to go', async () => {
+    const { user } = setup({ opts: { userId: '' } })
+    const sheet = await openSettings(user)
+    await user.type(within(sheet).getByRole('textbox', { name: 'Username' }), 'tester')
+    await user.type(within(sheet).getByLabelText('Personal access token'), 'abcdefghij0123456789wxyz')
+    await user.click(within(sheet).getByRole('button', { name: 'Save token' }))
+    expect(await within(sheet).findByText('Sign in to claude.ai to save your token.')).toBeTruthy()
+  })
+
   it('Replace token takes a new one and checks it', async () => {
     const { fake, user, site } = setup({ site: verified })
     const sheet = await openSettings(user)
@@ -234,6 +243,7 @@ describe('Settings: help', () => {
     const { user } = setup()
     const sheet = await openSettings(user)
     expect(within(sheet).getByText('Vinyl Wall ' + APP_VERSION)).toBeTruthy()
+    expect(within(sheet).getByText(/can see everything on it, prices, orders and notes included\./)).toBeTruthy()
   })
 })
 

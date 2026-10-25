@@ -48,7 +48,7 @@ function Root({ go, onRecord }: { go: (v: View) => void; onRecord: (id: string) 
   // the first setup is made quietly, named "My setup", and goes straight to adding its turntable; later ones open to be named
   const newSetup = async (first: boolean) => {
     const id = newDocId('setups')
-    if (!(await saveSetup(id, { name: first ? 'My setup' : 'Setup ' + (S.length + 1), note: '', added: Date.now() }))) return
+    if (!(await saveSetup(id, { name: first ? 'My setup' : 'Setup ' + (S.length + 1), note: '', added: Date.now() }, 'add the setup'))) return
     go(first ? { k: 'add', setup: id, type: 'turntable' } : { k: 'setup', id })
   }
 

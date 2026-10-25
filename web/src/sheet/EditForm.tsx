@@ -112,13 +112,19 @@ function Paid({ form, set, placeholder }: { form: Form; set: Props['set']; place
 }
 
 function ShopUrl({ form, set, placeholder }: { form: Form; set: Props['set']; placeholder: string }) {
-  const bad = !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
+  // said once the field is left, not while the address is still being typed
+  const [left, setLeft] = useState(false)
+  const bad = left && !!form.shopUrl?.trim() && !shopHref(form.shopUrl)
   return (
     <Field className="sm:col-span-2" invalid={bad}>
       <FieldLabel>Shop website</FieldLabel>
       <Input
         value={form.shopUrl ?? ''}
-        onChange={(e) => set('shopUrl', e.target.value)}
+        onChange={(e) => {
+          setLeft(false)
+          set('shopUrl', e.target.value)
+        }}
+        onBlur={() => setLeft(true)}
         type="url"
         autoCapitalize="off"
         autoComplete="off"
