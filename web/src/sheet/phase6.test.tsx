@@ -31,6 +31,34 @@ const legend = (name: string) => screen.getByRole('group', { name })
 const release = () => screen.getByRole('textbox', { name: 'Release number' })
 const connected = { discogs: { username: 'me', hasToken: true, status: 'ok' } }
 
+describe('an edit waiting to go to Discogs', () => {
+  const done = { status: 'own', coverAsset: 'c', runtime: 40, aboutAt: 1, aboutV: 3, about: { summary: 's' } }
+  const recs = {
+    s1: { title: 'Edited Album', artist: 'A', needsSync: true, ...done },
+    s2: { title: 'Loaded Album', artist: 'B', needsSync: 'check', ...done },
+  }
+  const sleeve = (t: string) => screen.findByRole('button', { name: new RegExp('^Open ' + t) })
+
+  it('shows as busy like a lookup, while Discogs is connected; a loaded record is checked quietly', async () => {
+    const { user } = setup(recs, connected)
+    expect((await sleeve('Edited Album')).getAttribute('aria-label')).toMatch(/looking up details$/)
+    expect((await sleeve('Loaded Album')).getAttribute('aria-label')).not.toMatch(/looking up/)
+    await user.click(await sleeve('Edited Album'))
+    expect(await screen.findByText('Waiting to sync…')).toBeTruthy()
+    // in edit, the Discogs section says it, once
+    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
+    expect(screen.getAllByText('Waiting to sync…')).toHaveLength(1)
+  })
+
+  it('doesn’t, while Discogs isn’t connected', async () => {
+    const { user } = setup(recs)
+    expect((await sleeve('Edited Album')).getAttribute('aria-label')).not.toMatch(/looking up/)
+    await user.click(await sleeve('Edited Album'))
+    await screen.findByRole('heading', { name: 'Edited Album' })
+    expect(screen.queryByText('Waiting to sync…')).toBeNull()
+  })
+})
+
 describe('the runout in edit', () => {
   it('shows each side and saves what is typed in production’s shape', async () => {
     const { fake, user } = setup()
@@ -71,7 +99,7 @@ describe('the Discogs release in edit', () => {
     await user.paste('https://www.discogs.com/release/12345-Miles-Davis-Kind-Of-Blue')
     expect(release()).toHaveProperty('value', '12345')
     expect(screen.getByText('Waiting to sync…')).toBeTruthy()
-    await waitFor(() => expect(updates(fake, 'r1').at(-1)).toEqual({ discogsId: 12345, discogsMatch: '', needsSync: true }))
+    await waitFor(() => expect(updates(fake, 'r1').at(-1)).toEqual({ discogsId: 12345, discogsMatch: 'set by you', needsSync: true }))
     expect(screen.getByRole('link', { name: 'Open on Discogs ↗' }).getAttribute('href')).toBe('https://www.discogs.com/release/12345')
   })
 
@@ -162,6 +190,7 @@ describe('Discogs helpers', () => {
     expect(syncDay('2020-01-02 12:00 UTC')).toMatch(/2020/)
     expect(syncLine({ id: 'x', discogsSync: { state: 'error', msg: 'boom' } }, false)).toBe('Sync failed: boom')
     expect(syncLine({ id: 'x', discogsMatch: 'imported from Discogs' }, false)).toBe('Not synced yet · imported from Discogs')
+    expect(syncLine({ id: 'x', discogsSync: { state: 'synced', where: 'wantlist', at: '2026-10-25 15:00 UTC' }, discogsMatch: 'set by you' }, false)).toMatch(/^Synced to your wantlist · .+ · set by you$/)
     expect(syncLine({ id: 'x', needsSync: true }, false)).toBe('Waiting to sync…')
   })
   it('reads unlabelled runouts by side and drops empty sides', () => {

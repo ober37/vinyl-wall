@@ -6,7 +6,7 @@ import { ROUND, Tip } from './wall/Tip'
 import { EquipmentSheet } from './gear/EquipmentSheet'
 import { GearPill, gearPillShown } from './gear/GearPill'
 import { useRuntime } from './runtime/runtime'
-import { lookingUp } from './model/task'
+import { busy } from './model/task'
 import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
 import { NewRecordSheet } from './sheet/NewRecordSheet'
 import { RecordSheet } from './sheet/RecordSheet'
@@ -54,7 +54,8 @@ export function App() {
   // a record opened from Equipment's Listening summary offers the way back
   const [fromEquip, setFromEquip] = useState(false)
   const update = useUpdateAvailable()
-  const looking = records.filter(lookingUp).length
+  const discogsOn = settings.discogs?.status === 'ok'
+  const looking = records.filter((r) => busy(r, discogsOn)).length
   const lookupNews = useLookupNews(canEdit ? looking : 0)
 
   return (
@@ -79,6 +80,7 @@ export function App() {
             records={records}
             title={site.title}
             hang={site.hang}
+            discogsOn={discogsOn}
             onOpen={setOpenId}
             onAdd={canEdit ? () => setAdding(true) : undefined}
             // viewers too: the picture shows nothing they can't already see
@@ -101,7 +103,7 @@ export function App() {
               settingsLoaded &&
               !settings.welcomeDismissed && (
                 <Welcome
-                  discogsDone={settings.discogs?.status === 'ok'}
+                  discogsDone={discogsOn}
                   gearDone={gear.some((g) => !g.example)}
                   onAdd={() => setAdding(true)}
                   onDiscogs={() => setSettingsOpen('discogs')}

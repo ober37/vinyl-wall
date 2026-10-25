@@ -44,7 +44,8 @@ describe('patchFor', () => {
     expect(withSync({ title: 'a' })).toEqual({ title: 'a', needsSync: true })
     expect(withSync({ catalog: 'a', notes: [] })).toEqual({ catalog: 'a', notes: [] })
     // a release written without how it was matched is the person's choice
-    expect(withSync({ discogsId: 5 })).toEqual({ discogsId: 5, discogsMatch: '', needsSync: true })
+    expect(withSync({ discogsId: 5 })).toEqual({ discogsId: 5, discogsMatch: 'set by you', needsSync: true })
+    expect(withSync({ discogsId: '' })).toEqual({ discogsId: '', discogsMatch: '', needsSync: true })
     expect(withSync({ discogsId: 5, discogsMatch: 'catalog' })).toEqual({ discogsId: 5, discogsMatch: 'catalog', needsSync: true })
   })
 

@@ -108,6 +108,45 @@ calls.clear()
 S.sync_one({**got, "deleted": True}, w, sync)
 check("sync: deleting the record takes its copies off the wantlist", ("DELETE", "/users/u/wants/1", None) in calls, calls)
 
+# --- import: the notes the sync writes come back as the fields they came from (Discogs has no fields for them)
+def back(d, keys, read, write):
+    got = read(write(d))
+    return {k: got.get(k) for k in keys} == {k: d[k] for k in keys}, (write(d), got)
+
+hunt = {"status": "wish", "priority": 1, "pressing": "2019 half-speed", "budget": "40"}
+check("round trip: a hunt's priority, target and budget", *back(hunt, ["priority", "pressing", "budget"], I.read_want, S.want_notes))
+check("round trip: Someday with nothing else", *back({"status": "wish", "priority": 3}, ["priority"], I.read_want, S.want_notes))
+order = {"status": "ordered", "shop": "Rough Trade", "orderDate": "2026-10-01", "orderStatus": "shipped", "eta": "2026-11-02",
+         "pressing": "Blue vinyl, 2LP"}
+check("round trip: an order", *back(order, list(order), I.read_want, S.want_notes))
+check("round trip: an order with only a shop", *back({"status": "ordered", "shop": "Discogs"}, ["status", "shop"], I.read_want, S.want_notes))
+own = {"status": "own", "pressing": "1971 UK first press", "matrix": "Side A: YEX 773-1 · Side B: YEX 774-1", "shop": "Reckless",
+       "acquired": "2024-05-03", "paid": "45", "why": "My dad's favourite."}
+check("round trip: an owned copy's pressing, runout, shop, date, price and why", *back(own, list(own)[1:], I.read_coll, S.coll_notes))
+check("round trip: an owned copy with only a price", *back({"status": "own", "paid": "20"}, ["paid"], I.read_coll, S.coll_notes))
+copy = I.read_want(S.copy_notes({"priority": 2}, {"name": "Half-speed", "budget": "40"}))
+check("round trip: a copy's name and budget", copy.get("pressing") == "Half-speed" and copy.get("budget") == "40", copy)
+several = I.read_want(S.want_notes({"status": "wish", "priority": 1, "copyName": "UK first", "budget": "150",
+                                    "moreCopies": [{"name": "Half-speed", "budget": "40"}]}))
+check("with copies, only the priority (each copy's own note has its name and budget)", several == {"priority": 1}, several)
+cut = I.read_coll(S.coll_notes({**own, "why": "x" * 300}))
+check("a line Discogs cut short isn't read as a value", cut.get("matrix") == own["matrix"] and "why" not in cut, cut)
+cut = I.read_want(S.want_notes({**hunt, "pressing": "y" * 300}))
+check("a wantlist note Discogs cut gives only its priority", cut == {"priority": 1}, cut)
+shop = I.read_coll(S.coll_notes({"shop": "Reckless (Soho)"}))
+check("parentheses in a shop's name aren't a date", shop == {"shop": "Reckless (Soho)"}, shop)
+coll = [{**rel(20, "Let It Bleed", "The Rolling Stones"), "notes": [{"field_id": 3, "value": S.coll_notes(own)}]}]
+wants = [{**rel(21, "Blue", "Joni Mitchell"), "notes": S.want_notes(order)}, {**rel(22, "Court and Spark", "Joni Mitchell"), "notes": "Got this from Bob"}]
+sys.argv = ["x", os.path.join(tmp, "empty"), os.path.join(tmp, "notes.json")]
+os.makedirs(os.path.join(tmp, "empty"))
+I.main()
+got = {w["doc_id"]: w["data"] for w in json.load(open(os.path.join(tmp, "notes.json"))) if w["collection"] == "records"}
+check("import: an owned copy's note fills its fields and isn't kept as a note",
+      got["dg-20"]["matrix"] == own["matrix"] and got["dg-20"]["paid"] == "45" and got["dg-20"]["notes"] == [], got["dg-20"])
+check("import: an order comes back as an order", got["dg-21"]["status"] == "ordered" and got["dg-21"]["orderStatus"] == "shipped", got["dg-21"])
+check("import: any other note stays a note", got["dg-22"]["priority"] == 2 and "Got this from Bob" in got["dg-22"]["notes"][0]["t"], got["dg-22"])
+check("notes in other shapes aren't read", I.read_want("Got this from Bob") == {} and I.read_coll("Signed copy") == {})
+
 # --- sync: a run with a lot to sync stops starting records after its budget, and says how many wait
 for i in range(3):
     with open(os.path.join(tmp, "wall", f"s{i}.json"), "w") as fh:

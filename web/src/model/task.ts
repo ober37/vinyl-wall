@@ -44,6 +44,11 @@ export function pendingWork(records: Rec[], s: Settings): string {
     (w.length ? w.join('; ') + '. Run only these parts, in the usual order.' : 'nothing specific; run every part and do whatever is pending.')
   )
 }
+// waiting for the task to push an edit to Discogs, while Discogs is connected. A library load's records are only checked
+// (needsSync "check"): most have nothing to change, so they don't show as busy
+export const syncing = (r: Rec, discogsOn: boolean) => discogsOn && r.needsSync === true && !r.example && !r.deleted
+// what the wall shows as busy: the same dot and count for a lookup or a sync
+export const busy = (r: Rec, discogsOn: boolean) => lookingUp(r) || syncing(r, discogsOn)
 // what a manual lookup says while it runs (a title ending in "." doesn't get four dots)
 // the one line a record's sheet shows while the task looks it up: the cover and details, details again, or the album info
 export function lookupStatus(r: Rec): string {

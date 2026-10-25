@@ -152,7 +152,7 @@ export function importable(d: Data): Data {
   if (!Array.isArray(r.notes)) r.notes = []
   if (r.copyName !== undefined && typeof r.copyName !== 'string') delete r.copyName
   if (r.moreCopies !== undefined) r.moreCopies = wantCopies({ id: '', moreCopies: r.moreCopies } as Rec).slice(1)
-  r.needsSync = true // synced afresh to this wall's Discogs account, if it has one
+  r.needsSync = 'check' // checked against this wall's Discogs account, if it has one (quietly: see syncing)
   return r
 }
 

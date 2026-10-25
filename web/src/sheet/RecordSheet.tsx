@@ -16,7 +16,7 @@ import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/cre
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
-import { lookupStatus } from '../model/task'
+import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { CoverButton } from './CoverButton'
@@ -151,6 +151,8 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
+  // a lookup says what it's doing; an edit waiting for Discogs says so too, except in edit, where the Discogs section does
+  const status = r ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
 
   return (
     <Drawer side="right" open={!!r} onOpenChange={(o) => !o && close()}>
@@ -212,10 +214,10 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                 {/* what it's earned, owned records in view only, on a row of its own so phones don't crowd the one above */}
                 {k === 'own' && !editing && <Badges r={r} records={records} />}
                 {/* waiting on the background task: the record's one lookup line, gone when the task fills it in */}
-                {lookupStatus(r) && (
+                {status && (
                   <p role="status" className="text-foreground-muted mt-1 flex items-center gap-2 text-xs">
                     <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                    {lookupStatus(r)}
+                    {status}
                   </p>
                 )}
               </div>

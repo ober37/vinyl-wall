@@ -20,6 +20,9 @@ Rules:
     gets none of them.
   - Imported records are marked as already synced (discogsSync), so the wall -> Discogs sync never re-adds
     them, and collection copies are marked adopted, so the wall never deletes them from Discogs.
+  - Notes the wall's sync wrote (discogs_sync.py coll_notes / want_notes / copy_notes) are read back into fields: a
+    hunt's priority, target pressing and budget, an order's shop, dates and status, an owned copy's pressing, runout,
+    shop, date and price. A note in any other shape, or one Discogs cut at 255 characters, stays a note as well.
   - Covers, runtime etc. are left for the background task (needsEnrich).
   - Deterministic doc ids ("dg-<release id>") make a re-run harmless.
 """
@@ -31,6 +34,67 @@ MAX_ITEMS = 1000
 GRADE_BACK = {"Mint (M)": "M", "Near Mint (NM or M-)": "NM", "Very Good Plus (VG+)": "VG+", "Very Good (VG)": "VG",
               "Good Plus (G+)": "G+", "Good (G)": "G", "Fair (F)": "F", "Poor (P)": "P"}
 _last = [0.0]
+CUT = 254  # Discogs keeps 255 characters of a note; one this long may have lost its end
+
+# the shapes discogs_sync.py writes
+PRIORITY = {"Top want": 1, "Want": 2, "Someday": 3}
+ORDER_STATUS = {"Pre-order": "preorder", "Shipped": "shipped", "Delayed": "delayed"}
+ORDER = re.compile(r"On order(?: from (?P<shop>.+?))?(?: \(ordered (?P<orderDate>[^)]*)\))?(?:\. (?P<orderStatus>"
+                   + "|".join(ORDER_STATUS) + r"))?(?:, expected (?P<eta>.+?))?(?:\. Edition: (?P<pressing>.+))?", re.S)
+WANT = re.compile(r"(?P<priority>" + "|".join(PRIORITY) + r")(?:\. Target: (?P<target>.+?)|\. Targets: .+?)?(?:\. Budget \$(?P<budget>\S+))?", re.S)
+BOUGHT = re.compile(r"Bought: ?(?P<shop>.*?)(?: ?\((?P<acquired>\d{4}-\d\d-\d\d)\))?(?: ?\$(?P<paid>\S+))?")
+
+
+def take_note(rec, note, read, prefix):
+    """Fill rec from a note the wall wrote; keep the note itself when it's in another shape or may have lost its end."""
+    back = read(note)
+    rec.update(back)
+    if note and (not back or len(note) >= CUT):
+        rec["notes"].append({"d": today(), "t": prefix + note[:500]})
+
+
+def read_want(note):
+    """A wantlist note the wall wrote, as record fields ({} for any other note). A note Discogs cut gives only what
+    comes first (an order, or the priority), since its last value may have lost its end. With several copies
+    ("Targets: …") only the priority is read: each copy's own note carries its name and budget, and the list leaves
+    out a record with no copy of its own, so its first entry may not be the record's."""
+    cut = len(note) >= CUT
+    m = ORDER.fullmatch(note)
+    if m:
+        f = {k: v for k, v in m.groupdict().items() if v}
+        if "orderStatus" in f:
+            f["orderStatus"] = ORDER_STATUS[f["orderStatus"]]
+        return {"status": "ordered"} if cut else {"status": "ordered", **f}
+    m = WANT.fullmatch(note)
+    if not m:
+        return {}
+    f = {"priority": PRIORITY[m["priority"]]}
+    if cut:
+        return f
+    if m["target"]:
+        f["pressing"] = m["target"]
+    if m["budget"]:
+        f["budget"] = m["budget"]
+    return f
+
+
+def read_coll(note):
+    """A collection Notes field the wall wrote, as record fields ({} for any other note)."""
+    f, why = {}, []
+    for line in note.split("\n"):
+        if line.endswith("…"):  # the line Discogs' 255 characters cut short: kept in the note only
+            continue
+        if line.startswith("Pressing: "):
+            f["pressing"] = line[10:]
+        elif line.startswith("Runout: "):
+            f["matrix"] = line[8:]
+        elif line.startswith("Bought: "):
+            f.update({k: v for k, v in BOUGHT.fullmatch(line).groupdict().items() if v})
+        else:
+            why.append(line)
+    if f and why:
+        f["why"] = " ".join(why)
+    return f
 
 
 def call(path, params=None):
@@ -172,10 +236,9 @@ def main():
             rec["mediaGrade"] = GRADE_BACK[fields[1]]
         if GRADE_BACK.get(fields.get(2)):
             rec["sleeveGrade"] = GRADE_BACK[fields[2]]
-        if (fields.get(3) or "").strip():
-            rec["notes"].append({"d": today(), "t": "Notes from Discogs: " + fields[3].strip()[:500]})
         if it.get("date_added"):
             rec["acquired"] = it["date_added"][:10]
+        take_note(rec, (fields.get(3) or "").strip(), read_coll, "Notes from Discogs: ")
         rec["discogsSync"] = {"state": "synced", "at": now(), "rid": bi["id"], "where": "collection",
                               "instanceId": it.get("instance_id"), "adopted": True}
         writes.append({"op": "set", "collection": "records", "doc_id": f"dg-{bi['id']}", "data": rec})
@@ -189,10 +252,11 @@ def main():
         key = (norm(artist_of(bi)), norm(bi.get("title")))
         if key in hunts and bi["id"] not in seen:
             lab = (bi.get("labels") or [{}])[0]
+            back = read_want((it.get("notes") or "").strip())  # a copy's note: "Want. Target: <name>. Budget $<budget>"
             hunts[key].setdefault("moreCopies", []).append({
-                "name": "", "pressing": pressing_of(bi), "label": clean_name(lab.get("name")),
+                "name": back.get("pressing", ""), "pressing": pressing_of(bi), "label": clean_name(lab.get("name")),
                 "catalog": "" if (lab.get("catno") or "").lower() == "none" else (lab.get("catno") or ""),
-                "budget": "", "discogsId": bi["id"]})
+                "budget": back.get("budget", ""), "discogsId": bi["id"]})
             hunts[key]["discogsSync"].setdefault("copyRids", []).append(bi["id"])
             seen.add(bi["id"]); n_copies += 1
             continue
@@ -201,8 +265,7 @@ def main():
             continue
         rec = base_record(bi, "wish", ms + len(writes))
         rec["priority"] = 2
-        if (it.get("notes") or "").strip():
-            rec["notes"].append({"d": today(), "t": "Wantlist note from Discogs: " + it["notes"].strip()[:500]})
+        take_note(rec, (it.get("notes") or "").strip(), read_want, "Wantlist note from Discogs: ")
         rec["discogsSync"] = {"state": "synced", "at": now(), "rid": bi["id"], "where": "wantlist"}
         writes.append({"op": "set", "collection": "records", "doc_id": f"dg-{bi['id']}", "data": rec})
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_want += 1

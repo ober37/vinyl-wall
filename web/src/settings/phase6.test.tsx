@@ -92,7 +92,8 @@ describe('Import from a file', () => {
     const x1 = fake.store.records.x1
     // its cover is held here, so it stays; nothing of another wall's sync comes along
     expect(x1.coverAsset).toBe('k1')
-    expect(x1.needsSync).toBe(true)
+    // checked against this wall's Discogs quietly, not shown as an edit waiting to sync
+    expect(x1.needsSync).toBe('check')
     expect(x1).not.toHaveProperty('discogsSync')
     expect(x1).not.toHaveProperty('taskId')
     expect(fake.store.records.x2).toMatchObject({ needsEnrich: true, notes: [] })

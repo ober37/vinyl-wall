@@ -46,9 +46,10 @@ const SYNCED = new Set([
   'budget', 'copyName', 'moreCopies', 'orderDate', 'orderStatus', 'eta', 'discogsId', 'deleted',
 ])
 // every write goes through this: a synced field changed means the background task pushes it to Discogs, and a release
-// written without saying how it was matched is the person's own choice, not the matcher's
+// written without saying how it was matched is the person's own choice, not the matcher's ("set by you", so the release
+// line still says how it was matched)
 export function withSync(patch: Record<string, unknown>) {
-  const p = 'discogsId' in patch && !('discogsMatch' in patch) ? { ...patch, discogsMatch: '' } : patch
+  const p = 'discogsId' in patch && !('discogsMatch' in patch) ? { ...patch, discogsMatch: patch.discogsId === '' ? '' : 'set by you' } : patch
   return Object.keys(p).some((k) => SYNCED.has(k)) ? { ...p, needsSync: true } : p
 }
 
