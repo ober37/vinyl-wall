@@ -23,12 +23,18 @@ const matches = (r: Rec, w: string[]) => {
   return w.every((x) => hay.includes(x))
 }
 
+// how many of each badge in a list
+export function countByKey(list: Rec[]) {
+  const n: Partial<Record<FKey, number>> = {}
+  for (const r of list) n[fkey(r)] = (n[fkey(r)] || 0) + 1
+  return n
+}
+
 // the counts, the badges actually filtering (chosen ones some record has), and the records shown in wall order.
 // Nothing chosen, or only badges no record has, shows them all.
 export function shownList(records: Rec[], filter: FKey[], query: string) {
   const all = wallOrder(records)
-  const n: Partial<Record<FKey, number>> = {}
-  for (const r of all) n[fkey(r)] = (n[fkey(r)] || 0) + 1
+  const n = countByKey(all)
   const on = FKEYS.filter((k) => filter.includes(k) && n[k])
   const w = words(query)
   return { n, on, list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!w.length || matches(r, w))) }

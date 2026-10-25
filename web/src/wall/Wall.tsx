@@ -6,6 +6,7 @@ import { Toggle } from '@appica/ui-react/toggle'
 import { ROUND, Tip, TipGroup } from './Tip'
 import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
+import type { Shown } from '../model/share'
 import { coverUrl, hueOf, tagOf, type Rec, type Tag } from '../model/record'
 import { lookingUp } from '../model/task'
 import type { Background } from '../model/site'
@@ -50,6 +51,13 @@ const SearchIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" aria-hidden="true">
     <circle cx="11" cy="11" r="6.5" />
     <path d="M16 16l4.5 4.5" />
+  </svg>
+)
+const ShareIcon = () => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <path d="M12 3v12" />
+    <path d="M7 8l5-5 5 5" />
+    <path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" />
   </svg>
 )
 
@@ -120,13 +128,15 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, welcome }: {
+export function Wall({ records, title, hang, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
   records: Rec[]
   title: string
   hang: string
   onOpen: (id: string) => void
   // editors only: opens the new-record sheet
   onAdd?: () => void
+  // where the page can save files: a picture of what the wall shows (hidden while it shows nothing)
+  onShare?: (s: Shown) => void
   tools?: React.ReactNode
   // the Equipment button, first of the round buttons beside the title
   gear?: React.ReactNode
@@ -141,6 +151,9 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, 
   const q = useDeferredValue(query)
   const searchBtn = useRef<HTMLButtonElement>(null)
   const { n, on, list } = shownList(records, filter, searching ? q : '')
+  // on phones the first row sits as far below the header as the title sits below the buttons; Cork's pins and Floating's
+  // sleeves start lower in their slots than a rail does, so those two lose the header's margin and the rack's top padding
+  const lowHang = hang === 'cork' || hang === 'float'
 
   useEffect(() => {
     document.title = title
@@ -153,14 +166,16 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, 
 
   return (
     <>
-      <header className="mb-8 flex flex-col gap-2">
-        <div className="flex items-start justify-between gap-5">
-          {/* the display face sets its first letter in a little; pulled back so the letters start on the chips' edge */}
-          <h1 className="font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance uppercase">
+      <header className={`mb-8 flex flex-col gap-2 ${lowHang ? 'max-sm:mb-3' : 'max-sm:mb-4'}`}>
+        {/* on phones the round buttons get their own row above the title, so the title has the full width */}
+        <div className="flex items-start justify-between gap-5 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4">
+          {/* the display face sets its first letter in a little; pulled back so the letters start on the chips' edge.
+              A single word too long for the line breaks rather than running off the page */}
+          <h1 className="font-display text-ink -ms-[0.045em] min-w-0 text-[clamp(2.25rem,7vw,4.25rem)] leading-none font-extrabold tracking-wide text-balance break-words uppercase">
             {title}
           </h1>
           <TipGroup>
-            <div className="flex shrink-0 items-center gap-2">
+            <div className="flex shrink-0 items-center gap-2 max-sm:self-end">
               {gear}
               <Tip label="Search the wall">
                 <Button
@@ -176,6 +191,19 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, 
                   <SearchIcon />
                 </Button>
               </Tip>
+              {onShare && list.length > 0 && (
+                <Tip label="Share your wall">
+                  <Button
+                    size="icon-md"
+                    variant="outline"
+                    aria-label="Share your wall"
+                    className={ROUND}
+                    onClick={() => onShare({ list, total: records.length, filtered: on.length > 0, searched: searching && !!q.trim() })}
+                  >
+                    <ShareIcon />
+                  </Button>
+                </Tip>
+              )}
               {tools}
             </div>
           </TipGroup>
@@ -257,7 +285,7 @@ export function Wall({ records, title, hang, onOpen, onAdd, tools, gear, below, 
           </Button>
         </div>
       ) : (
-        <ul className="rack" data-hang={hang} aria-label="Records">
+        <ul className={`rack ${lowHang ? 'max-sm:pt-0' : ''}`} data-hang={hang} aria-label="Records">
           {list.map((r) => (
             <Sleeve
               key={r.id}

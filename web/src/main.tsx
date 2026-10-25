@@ -4,6 +4,7 @@ import { ThemeProvider } from '@appica/ui-react/providers/theme-provider'
 import { App } from './App'
 import { RuntimeProvider } from './runtime/runtime'
 import { THEME_KEY } from './theme-key'
+import { setGrain } from './wall/grain'
 import './index.css'
 
 // outside claude.ai, `npm run dev` runs on the fake runtime with sample records
@@ -30,6 +31,7 @@ async function runtime(): Promise<Window['claude'] | undefined> {
   return fakeClaude(seed, { canWrite: !q.has('ro') }).claude
 }
 
+setGrain()
 runtime().then((claude) =>
   createRoot(document.getElementById('root')!).render(
     <StrictMode>

@@ -229,6 +229,8 @@ const hash = (s: string) => {
   return Math.abs(h)
 }
 export const hueOf = (r: Rec) => hash((r.title || '') + (r.artist || '')) % 360
+// a generated sleeve's two colours, corner to corner, on the wall and in the share picture
+export const faceColors = (hue: number) => [`hsl(${hue} 45% 32%)`, `hsl(${(hue + 40) % 360} 50% 18%)`] as const
 
 export const OSTAT: Record<string, string> = { preorder: 'Pre-order', ordered: 'Ordered', shipped: 'Shipped', delayed: 'Delayed' }
 // an order's state as one of OSTAT's; anything else stored there (an old "delivered") reads as Ordered

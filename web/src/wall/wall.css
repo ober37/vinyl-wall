@@ -1,6 +1,6 @@
 /* The rack: what appica has no component for (the four hanging styles, a record behind each sleeve, a hang tag, the
    pattern backgrounds), ported from production's CSS. Colours come only from theme.css tokens; the multi-layer gradients
-   can't be utilities. The noise textures are SVG noise laid over a token colour (cork's dark flecks, felt's grey). */
+   can't be utilities. The grain on cork and felt is a tile grain.ts makes, laid over a token colour. */
 
 @layer components {
   /* each row draws its own plank through the tops of its slots */
@@ -156,7 +156,8 @@
   }
 
   /* Cork: a cork strip behind the top of each row and a coloured push pin above each sleeve, each leaning its own way
-     (a fixed pattern, so it doesn't change between redraws). --la is the lean, --ll how far the cap sits from the base */
+     (a fixed pattern, so it doesn't change between redraws; drawShare.ts's pinFor draws the same one in the share picture). --la is
+     the lean, --ll how far the cap sits from the base */
   .rack[data-hang='cork'] .slot::before {
     content: '';
     position: absolute;
@@ -164,8 +165,9 @@
     top: 1.0625rem;
     height: 1.1875rem;
     background-color: var(--cork);
+    /* the grain is a tile made in grain.ts (the share picture draws the same one) */
     background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      var(--cork-grain, none),
       linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     background-size: 160px 60px, auto;
     box-shadow:
@@ -356,7 +358,9 @@
     background-image: repeating-linear-gradient(90deg, var(--wall) 0 11px, var(--wall-2) 11px 13px, var(--wall) 13px 29px, color-mix(in srgb, var(--line) 70%, var(--wall)) 29px 30px, var(--wall) 30px 41px, var(--wall-2) 41px 47px);
   }
   .bg-felt {
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .45 0 0 0 0 .45 0 0 0 0 .45 0 0 0 .38 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    /* a tile made in grain.ts, as the cork's grain */
+    background-image: var(--felt-grain, none);
+    background-size: 180px 180px;
   }
   .bg-grille {
     background-image:

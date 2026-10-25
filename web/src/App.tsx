@@ -10,6 +10,8 @@ import { lookingUp } from './model/task'
 import { SettingsSheet, useUpdateAvailable } from './settings/SettingsSheet'
 import { NewRecordSheet } from './sheet/NewRecordSheet'
 import { RecordSheet } from './sheet/RecordSheet'
+import type { Shown } from './model/share'
+import { ShareSheet } from './wall/ShareSheet'
 import { Wall, WallBackground } from './wall/Wall'
 import { Welcome } from './wall/Welcome'
 
@@ -41,12 +43,14 @@ function useLookupNews(n: number) {
 }
 
 export function App() {
-  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings } = useRuntime()
+  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings, hasDownloads } =
+    useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
   // Settings: closed, open, or open on the Discogs section or the import
   const [settingsOpen, setSettingsOpen] = useState<false | 'top' | 'discogs' | 'import'>(false)
   const [adding, setAdding] = useState(false)
   const [equipOpen, setEquipOpen] = useState(false)
+  const [sharing, setSharing] = useState<Shown | null>(null)
   // a record opened from Equipment's Listening summary offers the way back
   const [fromEquip, setFromEquip] = useState(false)
   const update = useUpdateAvailable()
@@ -64,7 +68,7 @@ export function App() {
           {MESSAGE[status]}
         </p>
       )}
-      {(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && (
+      {(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && !sharing && (
         <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
           <AlertTitle>{error || wallNotice}</AlertTitle>
         </Alert>
@@ -77,13 +81,15 @@ export function App() {
             hang={site.hang}
             onOpen={setOpenId}
             onAdd={canEdit ? () => setAdding(true) : undefined}
+            // viewers too: the picture shows nothing they can't already see
+            onShare={hasDownloads ? setSharing : undefined}
             below={
               canEdit &&
               looking > 0 && (
                 // a count, not a filter: no outline, so it doesn't read as one of the chips
                 <span
                   aria-label={`Looking up ${looking} record${looking === 1 ? '' : 's'}`}
-                  className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem]"
+                  className="text-ink-2 flex h-8 items-center gap-1.5 px-1 font-mono text-[0.8125rem] max-sm:h-auto"
                 >
                   <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
                   Looking up {looking}
@@ -157,6 +163,7 @@ export function App() {
           setOpenId(id)
         }}
       />
+      <ShareSheet shown={sharing} onClose={() => setSharing(null)} />
       <SettingsSheet open={!!settingsOpen} at={settingsOpen || undefined} onClose={() => setSettingsOpen(false)} />
       <NewRecordSheet
         open={adding}
