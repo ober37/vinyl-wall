@@ -170,7 +170,9 @@ export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClos
                 ‹ Equipment
               </Button>
             )}
-            <DrawerHeader className="flex-row items-start gap-4">
+            {/* from sm up the cover is as tall as the lines beside it (never under 96px), square; on phones it stays 96px, as
+                a taller one would squeeze the title */}
+            <DrawerHeader className="flex-row items-stretch gap-4">
               <Face
                 key={r.id}
                 title={r.title || ''}
@@ -178,7 +180,7 @@ export function RecordSheet({ id, onClose, onBack }: { id: string | null; onClos
                 hue={hueOf(r)}
                 cover={coverUrl(r)}
                 small
-                className="size-24 shrink-0 rounded-(--radius-2xs)"
+                className="size-24 shrink-0 rounded-(--radius-2xs) sm:aspect-square sm:size-auto sm:min-h-24 sm:self-stretch"
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 <DrawerTitle className="break-words">{r.title || 'Untitled'}</DrawerTitle>
