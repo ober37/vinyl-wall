@@ -118,7 +118,7 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
               </Badge>
             )}
           </div>
-          <div className="cap on-photo min-w-0 px-0.5 pt-2.5">
+          <div className="cap on-photo mt-2.5 min-w-0">
             {/* above the title, not on the sleeve, where it would cover a generated cover's title */}
             {example && (
               <span className="bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase">

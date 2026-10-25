@@ -253,7 +253,7 @@
       0 2px 4px var(--shadow-tone);
   }
   .rack[data-hang='float'] .cap {
-    padding-top: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .sleeve-box {
@@ -318,6 +318,19 @@
     background-size: cover;
     background-position: var(--photo-pos, center);
   }
+  .cap {
+    padding-inline: 0.125rem;
+  }
+  /* light mode: a record's caption sits on a frosted label, so it reads over any photo or pattern; padded like the
+     filter chips */
+  :root:not(.dark) .cap {
+    border-radius: var(--radius-sm);
+    --frost: color-mix(in srgb, var(--sheet) 55%, transparent);
+    background: var(--frost);
+    box-shadow: 0 0 0.5rem 0.125rem var(--frost); /* feathers the edge into the wall */
+    backdrop-filter: blur(6px);
+    padding: 0.375rem 0.625rem;
+  }
   /* small text stays readable over a photo: darker secondary ink, and a halo in the wall colour */
   .photo-bg .on-photo {
     --ink-2: color-mix(in oklch, var(--ink-2) 55%, var(--ink));
@@ -325,6 +338,10 @@
       0 0 2px var(--wall),
       0 0 8px var(--wall),
       0 0 14px var(--wall);
+  }
+  :root:not(.dark) .photo-bg .cap.on-photo {
+    --ink-2: inherit;
+    text-shadow: none;
   }
 
   @media (prefers-reduced-motion: reduce) {

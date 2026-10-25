@@ -3438,7 +3438,7 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 						})
 					]
 				}), /* @__PURE__ */ jsxs("div", {
-					className: "cap on-photo min-w-0 px-0.5 pt-2.5",
+					className: "cap on-photo mt-2.5 min-w-0",
 					children: [
 						example && /* @__PURE__ */ jsx("span", {
 							className: "bg-paper text-paper-ink mb-1.5 inline-block rounded-(--radius-4xs) px-1.5 py-1 font-mono text-[0.625rem] leading-none tracking-wider uppercase",
@@ -9202,7 +9202,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   }
 
   .rack[data-hang="float"] .cap {
-    padding-top: 1.5rem;
+    margin-top: 1.5rem;
   }
 
   .sleeve-box {
@@ -9264,9 +9264,28 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     background-position: var(--photo-pos, center);
   }
 
+  .cap {
+    padding-inline: .125rem;
+  }
+
+  :root:not(.dark) .cap {
+    border-radius: var(--radius-sm);
+    --frost: color-mix(in srgb, var(--sheet) 55%, transparent);
+    background: var(--frost);
+    box-shadow: 0 0 .5rem .125rem var(--frost);
+    -webkit-backdrop-filter: blur(6px);
+    backdrop-filter: blur(6px);
+    padding: .375rem .625rem;
+  }
+
   .photo-bg .on-photo {
     --ink-2: color-mix(in oklch, var(--ink-2) 55%, var(--ink));
     text-shadow: 0 0 2px var(--wall), 0 0 8px var(--wall), 0 0 14px var(--wall);
+  }
+
+  :root:not(.dark) .photo-bg .cap.on-photo {
+    --ink-2: inherit;
+    text-shadow: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -9597,6 +9616,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
+  }
+
+  .mt-2\.5 {
+    margin-top: calc(var(--spacing) * 2.5);
   }
 
   .mt-3 {
