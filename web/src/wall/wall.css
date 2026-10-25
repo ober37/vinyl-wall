@@ -1,6 +1,6 @@
 /* The rack: what appica has no component for (the four hanging styles, a record behind each sleeve, a hang tag, the
    pattern backgrounds), ported from production's CSS. Colours come only from theme.css tokens; the multi-layer gradients
-   can't be utilities. The noise textures (cork's brown flecks, felt's grey) keep production's own SVG noise. */
+   can't be utilities. The noise textures are SVG noise laid over a token colour (cork's dark flecks, felt's grey). */
 
 @layer components {
   /* each row draws its own plank through the tops of its slots */
@@ -89,6 +89,8 @@
     border-top-color: var(--iron-hi);
     border-left-color: var(--iron-mid);
     filter: drop-shadow(0 2px 2px var(--shadow-tone));
+    /* a thin outline in the ink colour around the ring */
+    box-shadow: 0 0 0 1px currentColor;
   }
   .rack[data-hang='barn'] .hook::after {
     content: '';
@@ -163,7 +165,7 @@
     height: 1.1875rem;
     background-color: var(--cork);
     background-image:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .28 0 0 0 0 .15 0 0 0 0 .06 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='60'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 2.2 -.75'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E"),
       linear-gradient(color-mix(in srgb, var(--gleam) 12%, transparent), color-mix(in srgb, var(--shade) 14%, transparent));
     background-size: 160px 60px, auto;
     box-shadow:
