@@ -49,9 +49,22 @@ function copyFacts(r: Rec): [string, React.ReactNode][] {
     f.push([
       'Runout',
       <Collapsible>
-        <CollapsibleTrigger className="text-foreground underline-offset-2 hover:underline">
-          {runs.length > 1 ? runs.length + ' sides' : 'Show'}
-          {r.catalog && <span className="text-foreground-muted"> · Cat. {r.catalog}</span>}
+        <CollapsibleTrigger className="group text-foreground inline-flex items-center gap-1 text-start underline decoration-dotted underline-offset-2">
+          <span>
+            {runs.length > 1 ? runs.length + ' sides' : 'Show'}
+            {r.catalog && <span className="text-foreground-muted"> · Cat. {r.catalog}</span>}
+          </span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            aria-hidden="true"
+            className="size-3.5 shrink-0 transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none"
+          >
+            <path d="M6 9l6 6 6-6" />
+          </svg>
         </CollapsibleTrigger>
         <CollapsibleContent className="pt-1">
           {runs.map((x) => (
@@ -99,7 +112,7 @@ function Tracks({ r }: { r: Rec }) {
         ))}
       </ol>
       {shown.length < T.length && (
-        <Button variant="ghost" size="sm" className="-ms-3 self-start" onClick={() => setAll(true)}>
+        <Button variant="ghost" size="sm" className="-ms-4 self-start" onClick={() => setAll(true)}>
           Show all {T.length} tracks
         </Button>
       )}
@@ -141,7 +154,7 @@ function Blurb({ text, clampAt, credit }: { text: string; clampAt: number; credi
       )}
       <div className="flex flex-wrap items-baseline gap-3">
         {long && (
-          <Button size="sm" variant="ghost" className="-ms-3" aria-expanded={open} onClick={() => setOpen(!open)}>
+          <Button size="sm" variant="ghost" className="-ms-4" aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? 'Less' : 'More'}
           </Button>
         )}
@@ -225,7 +238,7 @@ function ArtistAbout({ A }: { A: Artist }) {
         <div className="flex flex-col gap-1">
           <LinkList links={shown} />
           {shown.length < A.links.length && (
-            <Button variant="ghost" size="sm" className="-ms-3 self-start" onClick={() => setAll(true)}>
+            <Button variant="ghost" size="sm" className="-ms-4 self-start" onClick={() => setAll(true)}>
               Show all {A.links.length} links
             </Button>
           )}
@@ -341,13 +354,13 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant 
               {info.length > 0 && (
                 <Fieldset>
                   <FieldsetLegend>About the album</FieldsetLegend>
-                  <Facts rows={info.map(([k, v]) => [k, <span className="whitespace-pre-line">{v}</span>])} />
+                  <Facts labelCol rows={info.map(([k, v]) => [k, <span className="whitespace-pre-line">{v}</span>])} />
                 </Fieldset>
               )}
               {copy.length > 0 && (
                 <Fieldset>
                   <FieldsetLegend>Your copy</FieldsetLegend>
-                  <Facts rows={copy} />
+                  <Facts labelCol rows={copy} />
                   <LinkList links={discogsLinks(r)} />
                 </Fieldset>
               )}
