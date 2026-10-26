@@ -3749,6 +3749,11 @@ function Chooser({ swatch, name, open, onOpenChange, children }) {
 		})]
 	});
 }
+var thumb = (l) => l.kind === "photo" ? {
+	...bgStyle(l),
+	"--dim": "0%",
+	"--dim-light": "0%"
+} : bgStyle(l);
 var ROW_SWATCH = "bg-wall border-border block h-15 w-20 shrink-0 overflow-hidden rounded-md border";
 var XIcon = () => /* @__PURE__ */ jsx("svg", {
 	viewBox: "0 0 24 24",
@@ -3842,15 +3847,15 @@ function BackgroundSection() {
 	};
 	const removingCurrent = removing !== null && current === "photo:" + removing;
 	const currentName = isUpload ? uploads.find((u) => "photo:" + u.id === current)?.name || "Your photo" : BACKGROUNDS.find(([k]) => "preset:" + k === current)[1];
-	const shownLook = look(current, dim);
+	const shownLook = look(current);
 	const tile = (key, name) => {
-		const l = look(key, key === current ? dim : void 0);
+		const l = look(key);
 		return /* @__PURE__ */ jsxs(Toggle, {
 			value: key,
 			className: TILE,
 			children: [/* @__PURE__ */ jsx("span", {
 				className: `${SWATCH} aspect-4/3 ${bgClass(l)}`,
-				style: bgStyle(l)
+				style: thumb(l)
 			}), /* @__PURE__ */ jsx("span", {
 				className: NAME,
 				children: name
@@ -3862,7 +3867,7 @@ function BackgroundSection() {
 		/* @__PURE__ */ jsx(Chooser, {
 			swatch: /* @__PURE__ */ jsx("span", {
 				className: `${ROW_SWATCH} ${bgClass(shownLook)}`,
-				style: bgStyle(shownLook),
+				style: thumb(shownLook),
 				"aria-hidden": "true"
 			}),
 			name: currentName,
@@ -9143,7 +9148,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     row-gap: 1.625rem;
     padding-top: .25rem;
     display: grid;
-    overflow-x: clip;
   }
 
   .slot {
@@ -9393,7 +9397,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .rack[data-hang="float"] {
     grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
     column-gap: 1.75rem;
-    overflow-x: visible;
   }
 
   .rack[data-hang="float"] .slot {
@@ -14959,6 +14962,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 body {
   background-color: var(--wall);
   color: var(--ink);
+}
+
+#root {
+  overflow-x: clip;
 }
 
 [data-previewing] [data-slot="drawer-backdrop"] {
