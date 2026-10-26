@@ -287,7 +287,7 @@ export function BackgroundSection() {
             <span>Faint</span>
             <span>Strong</span>
           </div>
-          <FieldDescription>{previewing ? 'Showing your wall. Let go to come back.' : 'Turn it down if the records get hard to read.'}</FieldDescription>
+          {previewing && <FieldDescription>Showing your wall. Let go to come back.</FieldDescription>}
         </Field>
       )}
       {dragging !== null && createPortal(<WallBackground bg={look(current, dragging)} />, document.body)}

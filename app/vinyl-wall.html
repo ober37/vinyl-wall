@@ -3943,7 +3943,7 @@ function BackgroundSection() {
 					className: "text-foreground-muted flex justify-between text-xs",
 					children: [/* @__PURE__ */ jsx("span", { children: "Faint" }), /* @__PURE__ */ jsx("span", { children: "Strong" })]
 				}),
-				/* @__PURE__ */ jsx(FieldDescription, { children: previewing ? "Showing your wall. Let go to come back." : "Turn it down if the records get hard to read." })
+				previewing && /* @__PURE__ */ jsx(FieldDescription, { children: "Showing your wall. Let go to come back." })
 			]
 		}),
 		dragging !== null && createPortal(/* @__PURE__ */ jsx(WallBackground, { bg: look(current, dragging) }), document.body),
