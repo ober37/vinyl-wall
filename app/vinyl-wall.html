@@ -3743,7 +3743,8 @@ function Chooser({ swatch, name, open, onOpenChange, children }) {
 				})
 			]
 		}), /* @__PURE__ */ jsx(CollapsibleContent, {
-			className: "-mx-1 -mb-1 px-1 pt-4 pb-1",
+			keepMounted: true,
+			className: "-mx-1 -mb-1 px-1 pt-4 pb-1 transition-none",
 			children
 		})]
 	});
@@ -11831,6 +11832,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     transition-property: transform, translate, scale, rotate;
     transition-timing-function: var(--tw-ease, var(--default-transition-timing-function));
     transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+
+  .transition-none {
+    transition-property: none;
   }
 
   .delay-150 {

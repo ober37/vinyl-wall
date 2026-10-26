@@ -96,8 +96,11 @@ function Chooser({
           <Chevron />
         </span>
       </CollapsibleTrigger>
-      {/* room for the chosen tile's ring, which the panel would otherwise clip */}
-      <CollapsibleContent className="-mx-1 -mb-1 px-1 pt-4 pb-1">{children}</CollapsibleContent>
+      {/* room for the chosen tile's ring, which the panel would otherwise clip. The tiles stay built and open at once:
+          sliding 13 photo and pattern tiles open was sluggish on phones */}
+      <CollapsibleContent keepMounted className="-mx-1 -mb-1 px-1 pt-4 pb-1 transition-none">
+        {children}
+      </CollapsibleContent>
     </Collapsible>
   )
 }
