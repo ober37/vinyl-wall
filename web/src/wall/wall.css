@@ -9,7 +9,6 @@
     grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr));
     row-gap: 1.625rem;
     padding-top: 0.25rem;
-    overflow-x: clip;
   }
   .slot {
     position: relative;
@@ -236,7 +235,6 @@
   .rack[data-hang='float'] {
     column-gap: 1.75rem;
     grid-template-columns: repeat(auto-fill, minmax(8.75rem, 1fr));
-    overflow-x: visible;
   }
   .rack[data-hang='float'] .slot {
     padding: 1rem 0 0;

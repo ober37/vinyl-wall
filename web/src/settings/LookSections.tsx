@@ -104,6 +104,8 @@ function Chooser({
     </Collapsible>
   )
 }
+// a thumbnail shows a photo as it is, with no wash, whatever Photo strength is set to
+const thumb = (l: Background) => (l.kind === 'photo' ? { ...bgStyle(l), '--dim': '0%', '--dim-light': '0%' } : bgStyle(l))
 const ROW_SWATCH = 'bg-wall border-border block h-15 w-20 shrink-0 overflow-hidden rounded-md border'
 
 const XIcon = () => (
@@ -195,14 +197,13 @@ export function BackgroundSection() {
   const currentName = isUpload
     ? uploads.find((u) => 'photo:' + u.id === current)?.name || 'Your photo'
     : BACKGROUNDS.find(([k]) => 'preset:' + k === current)![1]
-  const shownLook = look(current, dim)
+  const shownLook = look(current)
 
-  // a tile shows its own photo at its kind's default wash, and the chosen one at the wash set
   const tile = (key: string, name: string) => {
-    const l = look(key, key === current ? dim : undefined)
+    const l = look(key)
     return (
       <Toggle key={key} value={key} className={TILE}>
-        <span className={`${SWATCH} aspect-4/3 ${bgClass(l)}`} style={bgStyle(l)} />
+        <span className={`${SWATCH} aspect-4/3 ${bgClass(l)}`} style={thumb(l)} />
         <span className={NAME}>{name}</span>
       </Toggle>
     )
@@ -213,7 +214,7 @@ export function BackgroundSection() {
       <FieldsetLegend>Background</FieldsetLegend>
       {/* an upload under way or its message keeps the tiles open, so the message isn't folded away */}
       <Chooser
-        swatch={<span className={`${ROW_SWATCH} ${bgClass(shownLook)}`} style={bgStyle(shownLook)} aria-hidden="true" />}
+        swatch={<span className={`${ROW_SWATCH} ${bgClass(shownLook)}`} style={thumb(shownLook)} aria-hidden="true" />}
         name={currentName}
         open={open || busy || !!status}
         onOpenChange={setOpen}
