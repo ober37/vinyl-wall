@@ -40,6 +40,13 @@ describe('patchFor', () => {
     expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, title: 'x' })).toEqual({ title: 'x' })
   })
 
+  it('a new title or artist starts over a lookup that gave up', () => {
+    const r = { ...owned, about: undefined, lookTries: 3, lookV: 1, lookedAt: Date.now() }
+    const f = toForm(r)
+    expect(patchFor(r, f, { ...f, title: 'Kind of Blue (Legacy)' })).toEqual({ title: 'Kind of Blue (Legacy)', lookTries: 0 })
+    expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
+  })
+
   it('flags Discogs sync only for synced fields', () => {
     expect(withSync({ title: 'a' })).toEqual({ title: 'a', needsSync: true })
     expect(withSync({ catalog: 'a', notes: [] })).toEqual({ catalog: 'a', notes: [] })

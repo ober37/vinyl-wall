@@ -584,6 +584,24 @@ def load_dir(d):
     return out
 
 
+# a lookup that leaves a record unresolved (no cover or runtime, album info rate-limited) waits a day, then a week, and
+# stops after the third try; one that's asked for (needsEnrich) always runs. Bump LOOKUP_V (and the page's, in
+# web/src/model/task.ts) when the lookup gets better, so records it stopped on get one more try (#69)
+LOOKUP_V = 1
+WAITS = [0, 86400000, 7 * 86400000]
+
+
+def tries(r):
+    if r.get("needsEnrich"):
+        return 0
+    return min(r.get("lookTries") or 0, len(WAITS) if r.get("lookV") == LOOKUP_V else len(WAITS) - 1)
+
+
+def due(r, now_ms):
+    n = tries(r)
+    return bool(r.get("needsEnrich")) or (n < len(WAITS) and now_ms - (r.get("lookedAt") or 0) >= WAITS[n])
+
+
 def needs_a(r):
     return not r.get("deleted") and bool(r.get("needsEnrich") or not r.get("coverAsset") or not r.get("runtime"))
 
@@ -600,7 +618,9 @@ def plan(records_dir, artists_dir, versions_path, work, earlier=None):
     recs, arts, ver = load_dir(records_dir), load_dir(artists_dir) if os.path.isdir(artists_dir) else {}, json.load(open(versions_path))
     e = json.load(open(earlier)) if earlier else {"records": {}, "later": [], "left": 0}
     tried = set(e["records"]) | set(e["later"])  # the second plan leaves the records the first left for the next run
-    todo = [rid for rid, r in recs.items() if rid not in tried and r.get("title") and r.get("artist") and (needs_a(r) or needs_f(r))]
+    now_ms = int(time.time() * 1000)
+    todo = [rid for rid, r in recs.items() if rid not in tried and r.get("title") and r.get("artist") and (needs_a(r) or needs_f(r))
+            and due(r, now_ms)]
     todo.sort(key=lambda rid: (-(recs[rid].get("added") or 0), recs[rid].get("title") or ""))  # newest first: a fresh add goes first
     todo, rest = todo[:MAX_RECORDS], todo[MAX_RECORDS:]
     later = len(rest)
@@ -994,6 +1014,12 @@ def save(work, g, *pairs):
                 d["artistRef"] = f["artistKey"]
             if not f["summarise"] and not f["retry"]:  # nothing to write: done now; a rate-limited miss waits for the next run
                 d["aboutAt"], d["aboutV"] = today, 3
+        # still short of a cover or runtime, or rate-limited: one more try counted; resolved: the count goes
+        if (f["needA"] and not ((r.get("coverAsset") or d.get("coverAsset")) and (r.get("runtime") or d.get("runtime")))) \
+                or f["retry"]:
+            d.update(lookTries=tries(r) + 1, lookedAt=int(time.time() * 1000), lookV=LOOKUP_V)
+        elif "lookTries" in r:
+            d.update(lookTries=DEL, lookedAt=DEL, lookV=DEL)
         v = p["records"][rid]["version"]
         add("update", "records", rid, d, v)
         after["records"][rid] = (v or 0) + 1
