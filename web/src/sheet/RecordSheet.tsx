@@ -12,13 +12,14 @@ import {
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
-import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST } from '../model/create'
+import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST, removeCoverPatch, UNBLOCK_ARTIST } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
 import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
+import { Confirm } from './Confirm'
 import { CoverButton } from './CoverButton'
 import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
@@ -101,7 +102,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 // onBack: the record was opened from Equipment, so its header offers the way back there
 // onDiscogs: open Settings on its Discogs section (the release line's way to connect)
 export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | null; onClose: () => void; onBack?: () => void; onDiscogs?: () => void }) {
-  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings } = useRuntime()
+  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -116,6 +117,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const setTab = (t: string) => setTabAt({ at, tab: t })
   // a hunt with several copies asks which one first; the status stays as it is until one is picked
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
+  const [uncover, setUncover] = useState(false)
   const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
 
   useEffect(() => {
@@ -156,6 +158,23 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const enrich = () => {
     if (!r) return
     update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }))
+  }
+  // Remove cover: the image goes too when no other record shows it; an upload of their own is gone for good (#62)
+  const shared = !!r?.coverAsset && records.some((x) => x.id !== r.id && x.coverAsset === r.coverAsset)
+  const ownUpload = !!r?.coverAsset && !r.autoFilled?.includes('coverAsset') && !shared
+  const uncoverIt = async () => {
+    if (!r) return
+    const { coverAsset, coverOriginal } = r
+    if (!(await update(r.id, removeCoverPatch(r)))) return
+    setSaved('Saved')
+    // and its full-size original, when it has one
+    for (const id of [coverAsset, coverOriginal])
+      if (typeof id === 'string' && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id)
+  }
+  // Look up album & artist info again: takes back Not this artist (#63)
+  const relook = () => {
+    if (!r) return
+    update(r.id, UNBLOCK_ARTIST).then((ok) => ok && fireTask({ asked: true }))
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
@@ -247,6 +266,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                         if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
                       }}
                     />
+                    {r.coverAsset && (
+                      <Button size="sm" variant="outline" onClick={() => setUncover(true)}>
+                        Remove cover
+                      </Button>
+                    )}
                     <Button size="sm" variant="outline" disabled={!!r.needsEnrich} onClick={enrich}>
                       Find cover & details
                     </Button>
@@ -255,6 +279,18 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                         Not this artist
                       </Button>
                     )}
+                    {r.aboutBlocked && (
+                      <Button size="sm" variant="outline" onClick={relook}>
+                        Look up album & artist info again
+                      </Button>
+                    )}
+                    <Confirm
+                      open={uncover}
+                      title={`Remove this cover${ownUpload ? ' for good' : ''}? The record goes back to its plain sleeve.`}
+                      yes="Remove"
+                      onYes={uncoverIt}
+                      onClose={() => setUncover(false)}
+                    />
                   </div>
                 )}
                 {editing && pick && (

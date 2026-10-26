@@ -733,7 +733,7 @@ function pendingParts(records, s, fresh, now = Date.now()) {
 	const w = [];
 	if (dz.hasToken && (!dz.status || dz.status === "pending")) w.push("verify the Discogs connection (Part B)");
 	if (dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-	const look = live.filter((r) => r.needsEnrich || !fresh && (!r.coverAsset || !r.runtime) && lookDue(r, now) || aboutPending(r, now)).length;
+	const look = live.filter((r) => r.needsEnrich || !fresh && (!(r.coverAsset || r.coverBlocked) || !r.runtime) && lookDue(r, now) || aboutPending(r, now)).length;
 	if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? "s" : ""}`);
 	const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length;
 	if (now - (s.update?.checkedMs || 0) > 864e5) w.push("check for a newer release (Part E)");
@@ -747,7 +747,7 @@ function pendingWork(records, s) {
 var syncing = (r, discogsOn) => discogsOn && r.needsSync === true && !r.example && !r.deleted;
 var busy = (r, discogsOn) => lookingUp(r) || syncing(r, discogsOn);
 function lookupStatus(r) {
-	if (r.needsEnrich) return r.coverAsset ? "Looking up details…" : "Looking up the cover and details…";
+	if (r.needsEnrich) return r.coverAsset || r.coverBlocked ? "Looking up details…" : "Looking up the cover and details…";
 	return aboutPending(r) ? "Looking up the album…" : "";
 }
 var runEnds = (s) => Math.max(s.run?.startedMs || 0, s.run?.beatMs || 0) + 12e5;
@@ -879,10 +879,10 @@ function patchFor(r, baseline, form) {
 	const keys = Object.keys(patch);
 	if (!keys.length) return patch;
 	if (Array.isArray(r.autoFilled) && keys.some((k) => r.autoFilled.includes(k))) patch.autoFilled = r.autoFilled.filter((k) => !(k in patch));
-	if (("title" in patch || "artist" in patch) && !r.aboutBlocked && (r.aboutAt || r.artistRef || r.about)) Object.assign(patch, RELOOK_ABOUT, {
+	if (("title" in patch || "artist" in patch) && (r.aboutBlocked || r.aboutAt || r.artistRef || r.about)) Object.assign(patch, RELOOK_ABOUT, {
 		artistRef: "",
 		about: null
-	});
+	}, r.aboutBlocked ? { aboutBlocked: false } : {});
 	if (("title" in patch || "artist" in patch) && r.lookTries) patch.lookTries = 0;
 	return patch;
 }
@@ -3045,6 +3045,7 @@ var IMPORT_FIELDS = [
 	"discogsMatch",
 	"coverAsset",
 	"coverOriginal",
+	"coverBlocked",
 	"researchLog",
 	"added",
 	"autoFilled",
@@ -3104,7 +3105,7 @@ function recordWrites(p, has, moved, artistIds) {
 		if (moved.has(r.coverAsset)) r.coverAsset = moved.get(r.coverAsset);
 		else if (!has(r.coverAsset)) {
 			delete r.coverAsset;
-			r.needsEnrich = true;
+			if (!r.coverBlocked) r.needsEnrich = true;
 		}
 		if (!r.aboutBlocked && r.artistRef && !artistIds.has(String(r.artistRef))) {
 			delete r.aboutAt;
@@ -4992,14 +4993,27 @@ function dupeOf(records, doc, now = Date.now()) {
 var coverPatch = (r, id) => ({
 	coverAsset: id,
 	needsEnrich: false,
-	autoFilled: (r.autoFilled || []).filter((k) => k !== "coverAsset")
+	autoFilled: (r.autoFilled || []).filter((k) => k !== "coverAsset"),
+	...r.coverBlocked ? { coverBlocked: false } : {}
+});
+var removeCoverPatch = (r) => ({
+	coverAsset: "",
+	coverBlocked: true,
+	...r.coverOriginal ? { coverOriginal: "" } : {},
+	...r.autoFilled?.includes("coverAsset") ? { autoFilled: r.autoFilled.filter((k) => k !== "coverAsset") } : {}
 });
 var NOT_ARTIST = {
 	artistRef: "",
 	about: null,
 	aboutBlocked: true
 };
-var enrichPatch = (r) => r.aboutBlocked ? { needsEnrich: true } : {
+var enrichPatch = (r) => ({
+	needsEnrich: true,
+	...r.aboutBlocked ? {} : RELOOK_ABOUT,
+	...r.coverBlocked ? { coverBlocked: false } : {}
+});
+var UNBLOCK_ARTIST = {
+	aboutBlocked: false,
 	needsEnrich: true,
 	...RELOOK_ABOUT
 };
@@ -7911,7 +7925,7 @@ function useAutosave(r, editing) {
 	};
 }
 function RecordSheet({ id, onClose, onBack, onDiscogs }) {
-	const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings } = useRuntime();
+	const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime();
 	const r = records.find((x) => x.id === id);
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
@@ -7929,6 +7943,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		tab: t
 	});
 	const [pick, setPick] = useState(null);
+	const [uncover, setUncover] = useState(false);
 	const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit);
 	useEffect(() => {
 		setEditing(false);
@@ -7966,6 +7981,19 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 	const enrich = () => {
 		if (!r) return;
 		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }));
+	};
+	const shared = !!r?.coverAsset && records.some((x) => x.id !== r.id && x.coverAsset === r.coverAsset);
+	const ownUpload = !!r?.coverAsset && !r.autoFilled?.includes("coverAsset") && !shared;
+	const uncoverIt = async () => {
+		if (!r) return;
+		const { coverAsset, coverOriginal } = r;
+		if (!await update(r.id, removeCoverPatch(r))) return;
+		setSaved("Saved");
+		for (const id of [coverAsset, coverOriginal]) if (typeof id === "string" && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id);
+	};
+	const relook = () => {
+		if (!r) return;
+		update(r.id, UNBLOCK_ARTIST).then((ok) => ok && fireTask({ asked: true }));
 	};
 	const k = r ? kindOf$1(r) : "own";
 	const by = r ? [
@@ -8070,6 +8098,12 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 										if (await update(r.id, coverPatch(r, a))) setSaved("Saved");
 									}
 								}),
+								r.coverAsset && /* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "outline",
+									onClick: () => setUncover(true),
+									children: "Remove cover"
+								}),
 								/* @__PURE__ */ jsx(Button, {
 									size: "sm",
 									variant: "outline",
@@ -8082,6 +8116,19 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 									variant: "outline",
 									onClick: async () => await update(r.id, NOT_ARTIST) && setSaved("Saved"),
 									children: "Not this artist"
+								}),
+								r.aboutBlocked && /* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "outline",
+									onClick: relook,
+									children: "Look up album & artist info again"
+								}),
+								/* @__PURE__ */ jsx(Confirm, {
+									open: uncover,
+									title: `Remove this cover${ownUpload ? " for good" : ""}? The record goes back to its plain sleeve.`,
+									yes: "Remove",
+									onYes: uncoverIt,
+									onClose: () => setUncover(false)
 								})
 							]
 						}),

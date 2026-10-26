@@ -2,7 +2,7 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { App } from '../App'
-import { exportFile, libNorm, planImport } from '../model/library'
+import { exportFile, libNorm, planImport, recordWrites } from '../model/library'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
@@ -167,5 +167,13 @@ describe('the library file', () => {
     const f = exportFile({ records: recs, gear: [], setups: [], artists: [], settings: {}, app: '1.0.0' })
     const p = planImport(JSON.stringify(f), { records: [], artists: [], gear: [], setups: [] })
     expect(typeof p === 'string' ? p : p.recs.map(([id]) => id).sort()).toEqual(Object.keys(s.records).sort())
+  })
+  it('keeps a removed cover removed, without a lookup for it (#62)', () => {
+    const f = exportFile({ records: [{ id: 'x', title: 'T', artist: 'A', coverAsset: '', coverBlocked: true }], gear: [], setups: [], artists: [], settings: {}, app: '1.0.0' })
+    const p = planImport(JSON.stringify(f), { records: [], artists: [], gear: [], setups: [] })
+    if (typeof p === 'string') throw new Error(p)
+    const [[, d]] = recordWrites(p, () => false, new Map(), new Set())
+    expect(d).toMatchObject({ coverBlocked: true })
+    expect(d).not.toHaveProperty('needsEnrich')
   })
 })

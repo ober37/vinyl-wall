@@ -18,6 +18,9 @@ describe('what the background task is started with', () => {
     ])
     expect(pendingParts([done], {}, false, now)).toEqual(['check for a newer release (Part E)'])
   })
+  it('a removed cover is not waited for (#62)', () => {
+    expect(pendingParts([{ ...done, coverAsset: '', coverBlocked: true }], { update: { checkedMs: now } }, false, now)).toEqual([])
+  })
   it('leaves out records a run already tried, when fresh', () => {
     const tried: Rec = { ...done, coverAsset: undefined }
     expect(pendingParts([tried], { update: { checkedMs: now } }, false, now)).toHaveLength(1)

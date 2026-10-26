@@ -32,6 +32,7 @@ export type Rec = {
   sleeveGrade?: string
   matrix?: string
   coverAsset?: string
+  coverBlocked?: boolean
   priority?: number
   eta?: string
   added?: number

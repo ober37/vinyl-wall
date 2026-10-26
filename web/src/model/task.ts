@@ -43,7 +43,7 @@ export function pendingParts(records: Rec[], s: Settings, fresh: boolean, now = 
   if (dz.hasToken && (!dz.status || dz.status === 'pending')) w.push('verify the Discogs connection (Part B)')
   if (dz.importRequested) w.push('import from Discogs (Part D): settings/site discogs.importRequested is true')
   const look = live.filter(
-    (r) => r.needsEnrich || (!fresh && (!r.coverAsset || !r.runtime) && lookDue(r, now)) || aboutPending(r, now),
+    (r) => r.needsEnrich || (!fresh && (!(r.coverAsset || r.coverBlocked) || !r.runtime) && lookDue(r, now)) || aboutPending(r, now),
   ).length
   if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? 's' : ''}`)
   const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length
@@ -66,7 +66,7 @@ export const busy = (r: Rec, discogsOn: boolean) => lookingUp(r) || syncing(r, d
 // what a manual lookup says while it runs (a title ending in "." doesn't get four dots)
 // the one line a record's sheet shows while the task looks it up: the cover and details, details again, or the album info
 export function lookupStatus(r: Rec): string {
-  if (r.needsEnrich) return r.coverAsset ? 'Looking up details…' : 'Looking up the cover and details…'
+  if (r.needsEnrich) return r.coverAsset || r.coverBlocked ? 'Looking up details…' : 'Looking up the cover and details…'
   return aboutPending(r) ? 'Looking up the album…' : ''
 }
 

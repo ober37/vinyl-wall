@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 16.
+Skill version 17.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -29,6 +29,8 @@ Ask either/or questions as a yes/no where you can ("Is it new or sealed?", not "
 If a shop listing shows a release date still to come (a pre-order), ask whether they have it in hand before adding it as owned rather than ordered.
 
 To change a record, `update` only the fields that change, plus `needsSync: true` so the change reaches Discogs (an order that arrives moves from the wantlist to the collection).
+
+A record with `coverBlocked: true` had its cover removed on purpose: don't give it a cover (`coverAsset`, or `needsEnrich` for one) unless they ask. When they do, also set `coverBlocked: false`. Likewise `aboutBlocked: true` means they turned off its album and artist info (Not this artist): leave it off unless they ask, then set `aboutBlocked: false`, `aboutAt: ""`, `aboutV: 0` and `needsEnrich: true`.
 
 ## Where to buy a copy
 

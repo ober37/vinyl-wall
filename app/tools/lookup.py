@@ -619,8 +619,13 @@ def due(r, now_ms):
     return bool(r.get("needsEnrich")) or (n < len(WAITS) and now_ms - (r.get("lookedAt") or 0) >= WAITS[n])
 
 
+def has_cover(r):
+    """A cover, or one removed on purpose (Remove cover): the lookup leaves those alone (#62)."""
+    return bool(r.get("coverAsset") or r.get("coverBlocked"))
+
+
 def needs_a(r):
-    return not r.get("deleted") and bool(r.get("needsEnrich") or not r.get("coverAsset") or not r.get("runtime"))
+    return not r.get("deleted") and bool(r.get("needsEnrich") or not has_cover(r) or not r.get("runtime"))
 
 
 def needs_f(r):
@@ -681,7 +686,7 @@ def fetch_group(work, g, p, done):
     def _per_record(rid):
         r = recs[rid]
         out = {"discogs": discogs_release(r.get("discogsId")) if r.get("discogsId") else None}
-        if rid in A and (not r.get("coverAsset") or not r.get("runtime") or not r.get("year") or not r.get("label")) \
+        if rid in A and (not has_cover(r) or not r.get("runtime") or not r.get("year") or not r.get("label")) \
                 or (thin(r) and not out["discogs"]):  # a thin record needs them to check the match (#65)
             out["deezer"] = deezer(r)
             if not out["deezer"] or not out["deezer"].get("cover") or not out["deezer"].get("runtime"):
@@ -706,7 +711,7 @@ def fetch_group(work, g, p, done):
         r, s = recs[rid], src[rid]
         want_q = rid in F and rid not in album_q
         want_tracks = rid in F and not s["discogs"]
-        want_cover = rid in A and not r.get("coverAsset") and not r.get("coverHint") and not _discogs_image(s["discogs"]) \
+        want_cover = rid in A and not has_cover(r) and not r.get("coverHint") and not _discogs_image(s["discogs"]) \
             and not (s.get("deezer") or {}).get("cover") and not (s.get("itunes") or {}).get("cover")
         want_check = thin(r) and rid not in album_q and not s["discogs"]
         if not (want_q or want_tracks or want_cover or want_check):
@@ -780,7 +785,7 @@ def fetch_group(work, g, p, done):
 
         if rid in A:
             f["fill"] = facts(r, e, dz, it, dg, m.get("year"))
-            if not r.get("coverAsset"):
+            if not has_cover(r):
                 gid = m.get("gid")
                 f["coverUrl"] = r.get("coverHint") or _discogs_image(dg) or dz.get("cover") or it.get("cover") \
                     or (f"https://coverartarchive.org/release-group/{gid}/front-500" if gid else None)
@@ -1045,7 +1050,7 @@ def save(work, g, *pairs):
             has = any((n or {}).get("t") == NO_COVER for n in notes)
             if "coverAsset" in filled and has:
                 d["notes"] = [n for n in notes if (n or {}).get("t") != NO_COVER]
-            elif not r.get("coverAsset") and not f.get("coverUrl") and not has:
+            elif not has_cover(r) and not f.get("coverUrl") and not has:
                 d["notes"] = notes + [{"d": today, "t": NO_COVER}]
         if f["needF"]:
             if f.get("about"):
@@ -1055,7 +1060,7 @@ def save(work, g, *pairs):
             if not f["summarise"] and not f["retry"]:  # nothing to write: done now; a rate-limited miss waits for the next run
                 d["aboutAt"], d["aboutV"] = today, 3
         # still short of a cover or runtime, or rate-limited: one more try counted; resolved: the count goes
-        if (f["needA"] and not ((r.get("coverAsset") or d.get("coverAsset")) and (r.get("runtime") or d.get("runtime")))) \
+        if (f["needA"] and not ((has_cover(r) or d.get("coverAsset")) and (r.get("runtime") or d.get("runtime")))) \
                 or f["retry"]:
             d.update(lookTries=tries(r) + 1, lookedAt=int(time.time() * 1000), lookV=LOOKUP_V)
         elif "lookTries" in r:

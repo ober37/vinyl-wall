@@ -23,16 +23,31 @@ export function dupeOf(records: Rec[], doc: Record<string, unknown>, now = Date.
   return records.find((r) => (r.artist + '|' + r.title).toLowerCase() === key && now - (r.added || 0) < 120000)
 }
 
-// an uploaded cover replaces the looked-up one and stops the lookup waiting for it
+// an uploaded cover replaces the looked-up one and stops the lookup waiting for it (and lifts a Remove cover)
 export const coverPatch = (r: Rec, id: string) => ({
   coverAsset: id,
   needsEnrich: false,
   autoFilled: (r.autoFilled || []).filter((k) => k !== 'coverAsset'),
+  ...(r.coverBlocked ? { coverBlocked: false } : {}),
+})
+// "Remove cover": back to the plain sleeve, and the lookup doesn't put one back until an upload or Find cover & details (#62)
+export const removeCoverPatch = (r: Rec) => ({
+  coverAsset: '',
+  coverBlocked: true,
+  ...(r.coverOriginal ? { coverOriginal: '' } : {}),
+  ...(r.autoFilled?.includes('coverAsset') ? { autoFilled: r.autoFilled.filter((k) => k !== 'coverAsset') } : {}),
 })
 
 // "Not this artist": drop the artist and album info the lookup matched, and don't look it up again
 export const NOT_ARTIST = { artistRef: '', about: null, aboutBlocked: true }
-// "Find cover & details" looks the album info up again too, unless it's been turned off with Not this artist
-export const enrichPatch = (r: Rec) => (r.aboutBlocked ? { needsEnrich: true } : { needsEnrich: true, ...RELOOK_ABOUT })
+// "Find cover & details" looks the album info up again too, unless it's been turned off with Not this artist, and
+// lifts a Remove cover
+export const enrichPatch = (r: Rec) => ({
+  needsEnrich: true,
+  ...(r.aboutBlocked ? {} : RELOOK_ABOUT),
+  ...(r.coverBlocked ? { coverBlocked: false } : {}),
+})
+// "Look up album & artist info again": takes back Not this artist and matches the album afresh (#63)
+export const UNBLOCK_ARTIST = { aboutBlocked: false, needsEnrich: true, ...RELOOK_ABOUT }
 export const hasArtistInfo = (r: Rec, artistIds: Set<string>) =>
   !r.aboutBlocked && ((!!r.artistRef && artistIds.has(String(r.artistRef))) || !!r.about?.summary)

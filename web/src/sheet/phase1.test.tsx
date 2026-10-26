@@ -202,6 +202,49 @@ describe('edit mode', () => {
     expect(screen.queryByRole('button', { name: 'Not this artist' })).toBeNull()
   })
 
+  it('Look up album & artist info again takes back Not this artist (#63)', async () => {
+    const { fake, user } = setup()
+    await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
+    await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
+    expect(screen.queryByRole('button', { name: 'Look up album & artist info again' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Not this artist' }))
+    await user.click(await screen.findByRole('button', { name: 'Look up album & artist info again' }))
+    await waitFor(() => expect(fake.records.r1).toMatchObject({ aboutBlocked: false, needsEnrich: true, aboutAt: '', aboutV: 0 }))
+    expect(fires(fake).length).toBeGreaterThan(0)
+    expect(screen.queryByRole('button', { name: 'Look up album & artist info again' })).toBeNull()
+  })
+
+  it('Remove cover asks, goes back to the sleeve, and keeps an image another record shows (#62)', async () => {
+    const { fake, user } = setup()
+    await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
+    await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
+    await user.click(screen.getByRole('button', { name: 'Remove cover' }))
+    expect(await screen.findByRole('alertdialog', { name: 'Remove this cover? The record goes back to its plain sleeve.' })).toBeTruthy()
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(fake.records.r1).toMatchObject({ coverAsset: '', coverBlocked: true }))
+    expect(fake.calls.some((c) => c.op === 'delete' && c.path.startsWith('assets/'))).toBe(false)
+    expect(screen.queryByRole('button', { name: 'Remove cover' })).toBeNull()
+    // Find cover & details brings one back
+    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await waitFor(() => expect(fake.records.r1).toMatchObject({ coverBlocked: false, needsEnrich: true }))
+  })
+
+  it('Remove cover deletes an upload of their own for good, and an upload lifts it (#62)', async () => {
+    const { fake, user } = setup()
+    await act(async () => fake.remote('r1', { coverAsset: 'mine', coverOriginal: 'big', autoFilled: [] }))
+    await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
+    await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
+    await user.click(screen.getByRole('button', { name: 'Remove cover' }))
+    await screen.findByRole('alertdialog', { name: 'Remove this cover for good? The record goes back to its plain sleeve.' })
+    await user.click(screen.getByRole('button', { name: 'Remove' }))
+    await waitFor(() => expect(fake.calls.some((c) => c.op === 'delete' && c.path === 'assets/mine')).toBe(true))
+    // its full-size original goes too
+    expect(fake.calls.some((c) => c.op === 'delete' && c.path === 'assets/big')).toBe(true)
+    await user.upload(screen.getByLabelText('Upload cover'), new File(['x'], 'c.png', { type: 'image/png' }))
+    await waitFor(() => expect(fake.records.r1).toMatchObject({ coverBlocked: false }))
+    expect(fake.records.r1.coverAsset).toBeTruthy()
+  })
+
   it('marks what the lookup filled in', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
