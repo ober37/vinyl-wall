@@ -52,6 +52,8 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
     schedule()
   }
   const where = shopWhere(shop)
+  // what the chat can look up for a shop: its search, and for a local shop where it is, its phone and a line about it
+  const missing = !okSearch(d.search) || (d.kind === 'local' && !(d.place.trim() && d.phone.trim() && d.about.trim()))
   const tryIt = okSearch(d.search) ? shopLink({ ...shop, search: d.search.trim() }, sample) : ''
   const field = (k: keyof Draft, label: string, props: React.ComponentProps<typeof Input> = {}) => (
     <Field>
@@ -71,16 +73,18 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
           <Chevron />
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="transition-none">
+      {/* room for a focused field's ring, which the panel would otherwise clip */}
+      <CollapsibleContent className="-mx-1 px-1 transition-none">
         <div className="flex flex-col gap-4 pt-4 pb-2">
           <span role="status" className="text-foreground-muted -mb-2 text-xs empty:hidden">
             {saved}
           </span>
+          {missing && <p className="text-foreground-muted text-sm">Your Claude chat can fill in the missing details.</p>}
           {field('name', 'Name', { maxLength: 80 })}
           <Segmented label="Kind" value={d.kind} options={KINDS} onChange={(v) => set('kind', v)} />
           {field('url', d.kind === 'local' ? 'Web store' : 'Website', { inputMode: 'url', placeholder: 'shop.example.com' })}
           <Field>
-            <FieldLabel>Search link (Claude can fill this in)</FieldLabel>
+            <FieldLabel>Search link</FieldLabel>
             <Input value={d.search} inputMode="url" onChange={(e) => set('search', e.target.value)} />
             <FieldDescription>
               {d.search.trim() && !tryIt ? (

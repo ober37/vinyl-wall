@@ -4167,6 +4167,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 		schedule();
 	};
 	const where = shopWhere(shop);
+	const missing = !okSearch(d.search) || d.kind === "local" && !(d.place.trim() && d.phone.trim() && d.about.trim());
 	const tryIt = okSearch(d.search) ? shopLink({
 		...shop,
 		search: d.search.trim()
@@ -4195,7 +4196,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 				children: [open ? "Done" : "Edit", /* @__PURE__ */ jsx(Chevron, {})]
 			})]
 		}), /* @__PURE__ */ jsx(CollapsibleContent, {
-			className: "transition-none",
+			className: "-mx-1 px-1 transition-none",
 			children: /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-4 pt-4 pb-2",
 				children: [
@@ -4203,6 +4204,10 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 						role: "status",
 						className: "text-foreground-muted -mb-2 text-xs empty:hidden",
 						children: saved
+					}),
+					missing && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Your Claude chat can fill in the missing details."
 					}),
 					field("name", "Name", { maxLength: 80 }),
 					/* @__PURE__ */ jsx(Segmented, {
@@ -4216,7 +4221,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 						placeholder: "shop.example.com"
 					}),
 					/* @__PURE__ */ jsxs(Field, { children: [
-						/* @__PURE__ */ jsx(FieldLabel, { children: "Search link (Claude can fill this in)" }),
+						/* @__PURE__ */ jsx(FieldLabel, { children: "Search link" }),
 						/* @__PURE__ */ jsx(Input, {
 							value: d.search,
 							inputMode: "url",

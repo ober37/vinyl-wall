@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 13.
+Skill version 14.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -85,7 +85,8 @@ Each shop has:
 
 Leave out anything you can't find. To change the list, `get` `settings/site`, then `update` it with the whole `shops` list and `if_version`.
 
-- **Adding a shop:** look it up: the website, the search link, and for a local shop the address, phone, email and about. Skip it if a shop with that name is already on the list. Tell them in a line what you added and what you couldn't find.
+- **Adding a shop:** look it up: the website, the search link, and for a local shop the address, phone, email and about. If a shop with that name is already on the list, fill in that one instead (next point). Tell them in a line what you added and what you couldn't find.
+- **Filling in a shop:** when they ask you to fill in or update a shop already on the list (often one they added on the wall with just a name or a website), look up what's missing and fill only the empty fields. Never change what they typed, and keep its `id`. Tell them in a line what you filled in and what you couldn't find.
 - **Finding shops near them:** when they ask for record shops near a place (a ZIP code, town or neighborhood), search the web. List up to 8 shops, nearest first. For each, give its town, one line about it, and whether its stock can be searched online (a web store you can search for an album). Ask which ones to add, and add only the ones they pick, as local shops. That includes shops without online stock, which you save with no `url` or `search`; the wall shows those with call, email and map links.
 - **Removing a shop:** take it out of the list.
 
@@ -115,6 +116,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
     - A local shop whose stock isn't online: say they can call or email to ask.
   - **Exclusive variants:** an exclusive variant ("Limited to 200", a colour) is a pressing in its own right. Name it that way so it can be added as a copy.
   - **Sources:** cite product pages.
+  - **Missing shop details:** when a local shop you check is missing its search link, address, phone, email or about, and you come across them along the way, fill in the empty ones as in Filling in a shop. Mention it in a line ("I also filled in Siren Records' address and phone").
   - **Writing it up:** lead with the shops that have it, and sum up the rest in one line ("Nothing at Amazon or eBay"). Then cover other places on the web as usual.
 - **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
 - **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt (starting `Follow up on my research from <date>: "<headline>"`, ending `My follow-up: …`) names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.
