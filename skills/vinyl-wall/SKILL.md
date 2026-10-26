@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 15.
+Skill version 16.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -89,10 +89,12 @@ Leave out anything you can't find. The wall doesn't show `upc` or `shopify`, and
 
 **What a shop supports:** whenever you add a shop, fill one in, or list shops near them, work out what its web store supports, and save what works:
 - **Search:** search its site for an album and note the results page's address, with `{q}` in place of the words.
-- **Barcode pages:** many record-shop storefronts open a product by barcode at `<store>/UPC/<barcode>`. Try it with the barcode of a record they're likely to stock (a Discogs release's barcode, from `https://api.discogs.com/releases/<id>`, `identifiers` of type "Barcode"). Save `upc` only if it opens a product page.
+- **Barcode pages:** many record-shop storefronts open a product by barcode at `<store>/UPC/<barcode>`. Try it with the barcode of a record they're likely to stock (a Discogs release's barcode, from `https://api.discogs.com/releases/<id>`, `identifiers` of type "Barcode"), and save `upc` if it opens a product page. Also save it without opening a page when:
+  - the store's pages load files from `cdn.broadtime.com`, which means it's a Broadtime storefront, and those always open products at `/UPC/<barcode>`;
+  - the person gives you one of the store's barcode links (like `https://sirenrecordsmchenry.com/UPC/8717931357418`): save it with `{upc}` in place of the digits.
 - **Shopify:** `<store>/search/suggest.json?q=<words>&resources[type]=product` answers with JSON.
 
-Check each link works before saving it. When listing shops near them, say in a word what each one's store supports ("searchable", "by barcode").
+Check each link works before saving it. Some stores answer automated visits with a bot check instead of the page: a near-empty page titled "Loading" that refreshes itself, or a challenge page. That doesn't mean the store lacks the feature, so don't decide anything from it; fall back on what you can tell (like the Broadtime files above) and say what you couldn't check. When listing shops near them, say in a word what each one's store supports ("searchable", "by barcode").
 
 To change the list, `get` `settings/site`, then `update` it with the whole `shops` list and `if_version`.
 
@@ -120,7 +122,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 - **Finding or buying a copy:** when the question is about finding or buying a copy (which pressing to hunt, where it's available, what it costs), check their shops first.
   - **Order:** `get` `settings/site` for `shops` (if it's missing, use the defaults above). Check local shops first, then online shops, then marketplaces.
   - **Matching:** look up the album at each shop that has a `search`, and match only this album by this artist on vinyl. Skip CDs, tapes, merch and other albums.
-  - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`): read the release's barcodes from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only) and put each in `upc`. A page found that way is that exact pressing.
+  - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`): read the release's barcodes from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only) and put each in `upc`. A page found that way is that exact pressing. If a shop's bot check stops you opening its pages, don't report it as having nothing: its line reads `"<shop>: couldn't check from here"`, and the pressing's barcode page goes in `sources` so they can open it themselves.
   - **Shopify stores (`shopify: true`, like Revolver):** they have structured data. `<shop>/search/suggest.json?q=<artist title>&resources[type]=product` lists matching products with `available`, `price` and `url`. `<shop>/products/<handle>.json` gives each variant's `price` and `available`.
   - **What to report:**
     - A shop: what's in stock (format, colour variant, price, link), and anything sold out or on pre-order.
