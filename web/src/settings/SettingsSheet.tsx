@@ -7,6 +7,7 @@ import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, Dr
 import { Field, FieldLabel, FieldDescription } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@appica/ui-react/tabs'
 import { longDate, today } from '../model/record'
 import { newer, updateAsk } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
@@ -250,19 +251,26 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
 
 const REPO_URL = 'https://github.com/ober37/vinyl-wall'
 
-// at: 'discogs' opens it on the Discogs section with the username ready (the welcome card's Connect Discogs); 'import' on
-// the import (as does an import under way, or one finished while Settings was closed)
+// Three tabs: Wall (how it looks), Library (Discogs, export and import) and About; people who can't edit see only About.
+// at: 'discogs' opens it on Library with the username ready (the welcome card's Connect Discogs); 'import' on the import
+// (as does an import under way, or one finished while Settings was closed)
 export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top' | 'discogs' | 'import'; onClose: () => void }) {
   const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime()
   const update = useUpdateAvailable()
+  const tabs = canEdit ? ['wall', 'library', 'about'] : ['about']
+  const dz = (settings.discogs || {}) as Discogs
+  const discogsTrouble = !!dz.hasToken && dz.status === 'error'
   const [copyNote, setCopyNote] = useState('')
   const ask = useRef<HTMLSpanElement>(null)
-  const discogs = useRef<HTMLDivElement>(null)
   const lib = useLibrary()
   const [view, setView] = useState<'main' | 'import'>('main')
+  const [tab, setTab] = useState('wall')
   const title = useRef<HTMLHeadingElement>(null)
   useEffect(() => {
-    if (open) setView(at === 'import' || lib.active ? 'import' : 'main')
+    if (!open) return
+    const importing = at === 'import' || lib.active
+    setView(importing ? 'import' : 'main')
+    setTab(importing || at === 'discogs' ? 'library' : 'wall')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
   // a change of view puts focus on the new title, except where the step's own button takes it (a plan, a finished import)
@@ -282,12 +290,6 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
     if (view === 'import') lib.leave()
     onClose()
   }
-  useEffect(() => {
-    if (!open || at !== 'discogs') return
-    const t = setTimeout(() => discogs.current?.scrollIntoView({ block: 'start' }), 350)
-    return () => clearTimeout(t)
-  }, [open, at])
-
   // opening Settings checks for a newer release at most once a day, on the owner's own wall
   useEffect(() => {
     if (open && canEdit && hasMcp && settings.taskId && Date.now() - (settings.update?.checkedMs || 0) > 24 * 3600000) fireTask()
@@ -306,9 +308,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
           <DrawerTitle ref={title} tabIndex={-1} className="outline-none">
             {view === 'import' ? 'Import your library' : 'Settings'}
           </DrawerTitle>
-          <DrawerDescription>
-            {view === 'import' ? 'Bring in a file you saved with Export your library.' : 'How your wall looks, Discogs, your library and help'}
-          </DrawerDescription>
+          {view === 'import' && <DrawerDescription>Bring in a file you saved with Export your library.</DrawerDescription>}
         </DrawerHeader>
         <DrawerBody>
           {(error || notice) && (
@@ -321,7 +321,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
               <ImportView lib={lib} onDone={close} />
             </div>
           ) : (
-            <div className="flex flex-col gap-8 pb-8 *:shrink-0">
+            <div className="flex flex-col gap-6 pb-8">
               {update && (
                 <Alert variant="warning">
                   <AlertTitle>An update is available</AlertTitle>
@@ -354,32 +354,55 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
                   </AlertDescription>
                 </Alert>
               )}
-              {canEdit && (
-                <>
-                  <PageSection />
-                  <BackgroundSection />
-                  <HangingSection />
-                  <div ref={discogs} className="scroll-mt-6">
+              {/* the hidden tabs stay mounted, so an edit typed just before switching still saves */}
+              <Tabs className="gap-5" value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
+                {tabs.length > 1 && (
+                  <TabsList variant="line" size="sm" activateOnFocus>
+                    <TabsTrigger value="wall">Wall</TabsTrigger>
+                    <TabsTrigger value="library">
+                      Library
+                      {discogsTrouble && (
+                        <>
+                          {' '}
+                          <span aria-hidden="true" className="bg-want size-1.75 rounded-full" />
+                          <span className="sr-only">(Discogs needs attention)</span>
+                        </>
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="about">About</TabsTrigger>
+                  </TabsList>
+                )}
+                {canEdit && (
+                  <TabsContent value="wall" keepMounted className="flex flex-col gap-8">
+                    <PageSection />
+                    <BackgroundSection />
+                    <HangingSection />
+                  </TabsContent>
+                )}
+                {canEdit && (
+                  <TabsContent value="library" keepMounted className="flex flex-col gap-8">
                     <DiscogsSection focus={at === 'discogs'} />
-                  </div>
-                  <LibrarySection lib={lib} onImport={() => setView('import')} />
-                </>
-              )}
-              <Fieldset>
-                <FieldsetLegend>Help</FieldsetLegend>
-                <p className="text-foreground-muted text-sm">
-                  Found a problem or have an idea?{' '}
-                  <a href={REPO_URL + '/issues/new/choose'} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
-                    Tell us on GitHub
-                  </a>
-                  .
-                </p>
-                <p className="text-foreground-muted text-sm">
-                  Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make
-                  Editors can change it.
-                </p>
-                <p className="text-foreground-muted font-mono text-xs">Vinyl Wall {APP_VERSION}</p>
-              </Fieldset>
+                    <LibrarySection lib={lib} onImport={() => setView('import')} />
+                  </TabsContent>
+                )}
+                <TabsContent value="about" keepMounted>
+                  <Fieldset>
+                    <FieldsetLegend>About</FieldsetLegend>
+                    <p className="text-foreground-muted text-sm">
+                      Found a problem or have an idea?{' '}
+                      <a href={REPO_URL + '/issues/new/choose'} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
+                        Tell us on GitHub
+                      </a>
+                      .
+                    </p>
+                    <p className="text-foreground-muted text-sm">
+                      Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make Editors can
+                      change it.
+                    </p>
+                    <p className="text-foreground-muted font-mono text-xs">Vinyl Wall {APP_VERSION}</p>
+                  </Fieldset>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
         </DrawerBody>

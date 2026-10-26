@@ -52,9 +52,12 @@ function setup(
   return { fake, user: userEvent.setup(), site: () => fake.store.settings.site as Record<string, unknown> }
 }
 const fires = (fake: ReturnType<typeof fakeClaude>) => fake.calls.filter((c) => c.op === 'fire')
-const openSettings = async (user: U) => {
+// Settings opens on Wall; tab picks another
+const openSettings = async (user: U, tab?: string) => {
   await user.click(await screen.findByRole('button', { name: /^Settings/ }))
-  return screen.findByRole('dialog', { name: 'Settings' })
+  const sheet = await screen.findByRole('dialog', { name: 'Settings' })
+  if (tab) await user.click(within(sheet).getByRole('tab', { name: new RegExp('^' + tab) }))
+  return sheet
 }
 const pause = (ms: number) => new Promise((r) => setTimeout(r, ms))
 // every record write waits a moment, so each step of an import is on screen long enough to see
@@ -96,7 +99,7 @@ function heard() {
 const IMG = 'data:image/jpeg;base64,/9j/4AECAw=='
 const fileOf = (o: unknown) => new File([JSON.stringify({ vinylWall: 1, ...(o as object) })], 'lib.json', { type: 'application/json' })
 const bringIn = async (user: U, f: File) => {
-  const sheet = await openSettings(user)
+  const sheet = await openSettings(user, 'Library')
   await user.click(within(sheet).getByRole('button', { name: 'Import from a file' }))
   const view = await screen.findByRole('dialog', { name: 'Import your library' })
   await user.upload(document.querySelector<HTMLInputElement>('input[type=file][accept=".json,application/json"]')!, f)
@@ -160,7 +163,7 @@ describe('Settings: Discogs', () => {
 
   it('saves the username as it is typed, without a check while there is no token', async () => {
     const { fake, user, site } = setup()
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.type(within(sheet).getByRole('textbox', { name: 'Username' }), 'ober37')
     await waitFor(() => expect(site().discogs).toEqual({ username: 'ober37' }), { timeout: 2000 })
     await pause(50)
@@ -169,7 +172,7 @@ describe('Settings: Discogs', () => {
 
   it('checks the token again when the username changes', async () => {
     const { fake, user, site } = setup({ site: verified })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     const name = within(sheet).getByRole('textbox', { name: 'Username' })
     await user.clear(name)
     await user.type(name, 'alice')
@@ -181,7 +184,7 @@ describe('Settings: Discogs', () => {
 
   it('hides the token as it is typed, with Show and Hide, and links to where tokens are made', async () => {
     const { user } = setup()
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     const token = within(sheet).getByLabelText('Personal access token')
     expect(token.getAttribute('type')).toBe('password')
     await user.click(within(sheet).getByRole('button', { name: 'Show' }))
@@ -194,7 +197,7 @@ describe('Settings: Discogs', () => {
 
   it('asks for the username before saving a token', async () => {
     const { fake, user } = setup()
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.type(within(sheet).getByLabelText('Personal access token'), 'abcdefghij0123456789wxyz')
     await user.click(within(sheet).getByRole('button', { name: 'Save token' }))
     expect(within(sheet).getByText('Add your Discogs username first.')).toBeTruthy()
@@ -203,7 +206,7 @@ describe('Settings: Discogs', () => {
 
   it('asks to sign in, plainly, where the token has nowhere to go', async () => {
     const { user } = setup({ opts: { userId: '' } })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.type(within(sheet).getByRole('textbox', { name: 'Username' }), 'tester')
     await user.type(within(sheet).getByLabelText('Personal access token'), 'abcdefghij0123456789wxyz')
     await user.click(within(sheet).getByRole('button', { name: 'Save token' }))
@@ -212,7 +215,7 @@ describe('Settings: Discogs', () => {
 
   it('Replace token takes a new one and checks it', async () => {
     const { fake, user, site } = setup({ site: verified })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     expect(within(sheet).queryByLabelText('Personal access token')).toBeNull()
     await user.click(within(sheet).getByRole('button', { name: 'Replace token' }))
     await user.type(within(sheet).getByLabelText('Personal access token'), 'zyxwvutsrq9876543210newt')
@@ -227,7 +230,7 @@ describe('Settings: Discogs', () => {
       site: verified,
       seed: (s) => (s.collections = { 'data/users/u_me': { discogs: { token: 'abcdefghij0123456789abcd' } } }),
     })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.click(within(sheet).getByRole('button', { name: 'Remove token' }))
     const ask = await screen.findByRole('alertdialog')
     expect(within(ask).getByText('Remove your token? Syncing with Discogs stops until you add one again.')).toBeTruthy()
@@ -291,7 +294,7 @@ describe('Export your library: what it says and carries', () => {
       site: { bg: { kind: 'photo', assetId: 'bg1' } },
       seed: (s) => Object.assign(s.records.r3, { coverAsset: 'c3' }),
     })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.click(within(sheet).getByRole('button', { name: 'Export your library' }))
     expect(await within(sheet).findByText('Saving your library…')).toBeTruthy()
     release()
@@ -307,7 +310,7 @@ describe('Export your library: what it says and carries', () => {
         s.collections = { artists: { 'mb-miles': { name: 'Miles Davis', summary: 'Trumpeter.' }, 'mb-other': { name: 'Someone Else', summary: 'x' } } }
       },
     })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.click(within(sheet).getByRole('button', { name: 'Export your library' }))
     expect(await within(sheet).findByText('Saved 5 records.')).toBeTruthy()
     const f = JSON.parse(fake.saved[0].data as string)
@@ -384,7 +387,7 @@ describe('Import from a file: each case', () => {
     )
     const covers = Object.fromEntries(Object.keys(recs).map((_, i) => [`k${i}`, IMG]))
     const { user } = setup({ wrap: slowWrites })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.click(within(sheet).getByRole('button', { name: 'Import from a file' }))
     const view = await screen.findByRole('dialog', { name: 'Import your library' })
     await user.upload(document.querySelector<HTMLInputElement>('input[type=file][accept=".json,application/json"]')!, fileOf({ records: recs, covers }))

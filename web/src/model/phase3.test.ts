@@ -26,7 +26,6 @@ describe('orders', () => {
     ])
     expect(discogsLinks({ id: 'a', title: 'Aja', artist: 'Steely Dan', status: 'ordered' }).map((l) => l[0])).toEqual([
       'Find the edition',
-      'Past sales (Popsike)',
     ])
   })
 

@@ -23,9 +23,12 @@ function setup(opts: Opts = {}, empty = false, assets: string[] = []) {
   )
   return { fake, user: userEvent.setup() }
 }
+// export and import live on Settings' Library tab
 const openSettings = async (user: U) => {
   await user.click(await screen.findByRole('button', { name: 'Settings' }))
-  return screen.findByRole('dialog', { name: 'Settings' })
+  const sheet = await screen.findByRole('dialog', { name: 'Settings' })
+  await user.click(within(sheet).getByRole('tab', { name: /^Library/ }))
+  return sheet
 }
 const fileOf = (o: unknown, name = 'vinyl-wall-2026-10-01.json') => new File([JSON.stringify(o)], name, { type: 'application/json' })
 const choose = async (user: U, f: File) => user.upload(document.querySelector<HTMLInputElement>('input[type=file][accept=".json,application/json"]')!, f)

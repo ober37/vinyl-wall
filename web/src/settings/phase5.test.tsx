@@ -23,10 +23,16 @@ function setup(site: Record<string, unknown> = {}, opts: Opts = {}, empty = fals
   )
   return { fake, user: userEvent.setup(), site: () => fake.store.settings.site as Record<string, unknown> }
 }
-const openSettings = async (user: ReturnType<typeof userEvent.setup>) => {
+// Settings opens on Wall; tab picks another
+const openSettings = async (user: ReturnType<typeof userEvent.setup>, tab?: string) => {
   await user.click(await screen.findByRole('button', { name: 'Settings' }))
-  return screen.findByRole('dialog', { name: 'Settings' })
+  const sheet = await screen.findByRole('dialog', { name: 'Settings' })
+  if (tab) await user.click(within(sheet).getByRole('tab', { name: new RegExp('^' + tab) }))
+  return sheet
 }
+// a folded chooser (Background, Hanging) opened to its tiles
+const openChooser = async (user: ReturnType<typeof userEvent.setup>, sheet: HTMLElement, name: string) =>
+  user.click(within(within(sheet).getByRole('group', { name })).getByRole('button', { name: /Change$/ }))
 afterEach(() => localStorage.clear())
 
 describe('Settings: how the wall looks', () => {
@@ -43,6 +49,7 @@ describe('Settings: how the wall looks', () => {
     expect(siteOf({ bg: { kind: 'preset', preset: 'walnut' } }).background).toEqual({ kind: 'pattern', preset: 'walnut' })
     const { user, site } = setup()
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Background')
     const group = within(sheet).getByRole('group', { name: 'Background' })
     expect(within(group).getByRole('button', { name: 'Listening room' }).getAttribute('aria-pressed')).toBe('true')
     // a stock photo offers its strength; a pattern doesn't
@@ -56,6 +63,7 @@ describe('Settings: how the wall looks', () => {
   it('uploads a photo as the background, and removing it for good goes back to the listening room', async () => {
     const { fake, user, site } = setup({ bg: { kind: 'preset', preset: 'crates' }, dim: 40 })
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Background')
     await user.upload(within(sheet).getByLabelText('Upload your own background'), new File(['x'], 'my den.jpg', { type: 'image/jpeg' }))
     // an uploaded photo starts at its own scale's default
     await waitFor(() => expect(site()).toMatchObject({ bg: { kind: 'photo', assetId: 'a_1' }, uploads: [{ id: 'a_1', name: 'my den' }], dim: 70 }))
@@ -72,6 +80,7 @@ describe('Settings: how the wall looks', () => {
   it('keeps each photo kind on its own slider scale, even through a pattern or a photo missing from uploads', async () => {
     const { user, site } = setup({ bg: { kind: 'photo', assetId: 'x1' }, dim: 85 })
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Background')
     expect(within(sheet).getByRole('slider', { name: 'Photo strength' }).getAttribute('min')).toBe('20')
     const group = within(sheet).getByRole('group', { name: 'Background' })
     await user.click(within(group).getByRole('button', { name: 'Grooves' }))
@@ -84,6 +93,7 @@ describe('Settings: how the wall looks', () => {
   it("says so when a photo is too big, and offers no upload where this view can't store files", async () => {
     const { user } = setup()
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Background')
     const big = new File(['x'], 'huge.jpg', { type: 'image/jpeg' })
     Object.defineProperty(big, 'size', { value: 16 * 1024 * 1024 })
     await user.upload(within(sheet).getByLabelText('Upload your own background'), big)
@@ -93,6 +103,7 @@ describe('Settings: how the wall looks', () => {
   it('hides the upload tile without file storage', async () => {
     const { user } = setup({}, { assets: 'none' })
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Background')
     expect(within(sheet).queryByText('Upload your own')).toBeNull()
     expect(within(sheet).getByText("Uploading your own background isn't available in this view.")).toBeTruthy()
   })
@@ -108,9 +119,45 @@ describe('Settings: how the wall looks', () => {
   it('hangs the records in the style picked', async () => {
     const { user, site } = setup()
     const sheet = await openSettings(user)
+    await openChooser(user, sheet, 'Hanging')
     await user.click(within(within(sheet).getByRole('group', { name: 'Hanging' })).getByRole('button', { name: 'Cork' }))
     await waitFor(() => expect(site().hang).toBe('cork'))
     expect(screen.getByRole('list', { name: 'Records', hidden: true }).getAttribute('data-hang')).toBe('cork')
+  })
+})
+
+describe('Settings: tabs', () => {
+  it('opens on Wall, with Background and Hanging folded to what they are now', async () => {
+    const { user } = setup({ hang: 'peg' })
+    const sheet = await openSettings(user)
+    expect(within(sheet).getByRole('tab', { name: 'Wall' }).getAttribute('aria-selected')).toBe('true')
+    const bg = within(sheet).getByRole('group', { name: 'Background' })
+    expect(within(bg).getByRole('button', { name: /Listening room.*Change$/ })).toBeTruthy()
+    expect(within(bg).queryByRole('button', { name: 'Walnut paneling' })).toBeNull()
+    expect(within(within(sheet).getByRole('group', { name: 'Hanging' })).getByRole('button', { name: /Pegs.*Change$/ })).toBeTruthy()
+  })
+
+  it('keeps a username typed just before switching tabs', async () => {
+    const { user, site } = setup()
+    const sheet = await openSettings(user, 'Library')
+    await user.type(within(sheet).getByRole('textbox', { name: 'Username' }), 'ober37')
+    await user.click(within(sheet).getByRole('tab', { name: 'Wall' }))
+    await waitFor(() => expect(site().discogs).toMatchObject({ username: 'ober37' }))
+  })
+
+  it('goes back to Library from the import', async () => {
+    const { user } = setup()
+    const sheet = await openSettings(user, 'Library')
+    await user.click(within(sheet).getByRole('button', { name: 'Import from a file' }))
+    await user.click(within(await screen.findByRole('dialog', { name: 'Import your library' })).getByRole('button', { name: '‹ Settings' }))
+    const back = await screen.findByRole('dialog', { name: 'Settings' })
+    expect(within(back).getByRole('tab', { name: 'Library' }).getAttribute('aria-selected')).toBe('true')
+  })
+
+  it('marks Library when Discogs turned the token down', async () => {
+    const { user } = setup({ discogs: { username: 'bob', hasToken: true, last4: 'abcd', status: 'error' } })
+    const sheet = await openSettings(user)
+    expect(within(sheet).getByRole('tab', { name: 'Library (Discogs needs attention)' })).toBeTruthy()
   })
 })
 
@@ -119,7 +166,7 @@ describe('Settings: Discogs import and help', () => {
 
   it('starts the import at once, even straight after another start', async () => {
     const { fake, user, site } = setup(verified)
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     await user.click(within(sheet).getByRole('button', { name: 'Check again' }))
     await waitFor(() => expect(fake.calls.filter((c) => c.op === 'fire')).toHaveLength(1))
     // the check ran and verified the token again
@@ -133,15 +180,16 @@ describe('Settings: Discogs import and help', () => {
 
   it('offers Try again when an import has waited over ten minutes', async () => {
     const { user } = setup({ discogs: { ...verified.discogs, importRequested: true, importRequestedAt: Date.now() - 11 * 60000 } })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     expect(within(sheet).getByText('This is taking longer than it should. Try again to restart it.')).toBeTruthy()
     expect(within(sheet).getByRole('button', { name: 'Try again' })).toBeTruthy()
   })
 
   it('offers no import until the token is verified, and links to GitHub for help', async () => {
     const { user } = setup({ discogs: { username: 'bob', hasToken: true, last4: 'abcd', status: 'pending' } })
-    const sheet = await openSettings(user)
+    const sheet = await openSettings(user, 'Library')
     expect(within(sheet).queryByText("Bring in what's already on Discogs")).toBeNull()
+    await user.click(within(sheet).getByRole('tab', { name: 'About' }))
     expect(within(sheet).getByRole('link', { name: 'Tell us on GitHub' }).getAttribute('href')).toBe('https://github.com/ober37/vinyl-wall/issues/new/choose')
   })
 })
@@ -162,6 +210,7 @@ describe('the welcome card', () => {
     expect(within(card).getByText(', done')).toBeTruthy()
     await user.click(within(card).getByRole('button', { name: 'Open Settings' }))
     const sheet = await screen.findByRole('dialog', { name: 'Settings' })
+    expect(within(sheet).getByRole('tab', { name: 'Library' }).getAttribute('aria-selected')).toBe('true')
     await waitFor(() => expect(document.activeElement).toBe(within(sheet).getByRole('textbox', { name: 'Username' })))
   })
 

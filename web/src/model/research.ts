@@ -107,8 +107,6 @@ export function searchLinks(r: Rec): [string, string][] {
     ['Discogs releases', `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
     ['Discogs marketplace', `https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
     ['eBay', `https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
-    ['MusicStack', `https://www.musicstack.com/search.cgi?find=${q}&t=0&media=LP`],
-    ['Popsike (past sales)', `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
     ['Record stores near me', 'https://www.google.com/maps/search/record+store'],
   ]
 }
