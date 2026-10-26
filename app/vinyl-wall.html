@@ -61,12 +61,12 @@ import { AlertDialog, AlertDialogClose, AlertDialogContent, AlertDialogFooter, A
 import { Badge } from "@appica/ui-react/badge";
 import { Meter, MeterProgress } from "@appica/ui-react/meter";
 import { CopyButton } from "@appica/ui-react/copy-button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@appica/ui-react/tabs";
 import { createPortal } from "react-dom";
-import { Slider } from "@appica/ui-react/slider";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@appica/ui-react/collapsible";
+import { Slider } from "@appica/ui-react/slider";
 import { Form } from "@appica/ui-react/form";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@appica/ui-react/accordion";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@appica/ui-react/tabs";
 import { CheckboxGroup } from "@appica/ui-react/checkbox-group";
 // \0vite/modulepreload-polyfill.js
 (function polyfill() {
@@ -3262,6 +3262,41 @@ function ImportView({ lib, onDone }) {
 		]
 	});
 }
+// src/sheet/Links.tsx
+var link = "text-primary underline-offset-2 hover:underline";
+function LinkList({ links }) {
+	return /* @__PURE__ */ jsx("ul", {
+		className: "flex flex-col gap-2 text-sm",
+		children: links.map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
+			href: u,
+			target: "_blank",
+			rel: "noopener",
+			className: link,
+			children: [t, " ↗"]
+		}) }, t + u))
+	});
+}
+function Source({ name, href }) {
+	return href ? /* @__PURE__ */ jsxs("a", {
+		href,
+		target: "_blank",
+		rel: "noopener",
+		className: "text-primary whitespace-nowrap hover:underline",
+		children: [name, " ↗"]
+	}) : /* @__PURE__ */ jsx(Fragment$1, { children: name });
+}
+function Chevron({ className = "size-4" }) {
+	return /* @__PURE__ */ jsx("svg", {
+		viewBox: "0 0 24 24",
+		fill: "none",
+		stroke: "currentColor",
+		strokeWidth: "2",
+		strokeLinecap: "round",
+		"aria-hidden": "true",
+		className: `${className} transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none`,
+		children: /* @__PURE__ */ jsx("path", { d: "M6 9l6 6 6-6" })
+	});
+}
 // src/model/filter.ts
 var FKEYS = [
 	"own",
@@ -3690,6 +3725,30 @@ function PageSection() {
 var TILE = "group flex min-w-0 cursor-pointer flex-col gap-2 text-start outline-none";
 var SWATCH = "bg-wall border-border block w-full overflow-hidden rounded-md border group-data-pressed:outline-2 group-data-pressed:outline-offset-2 group-data-pressed:outline-primary group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)";
 var NAME = "text-foreground-muted group-data-pressed:text-foreground-intense text-sm break-words";
+function Chooser({ swatch, name, open, onOpenChange, children }) {
+	return /* @__PURE__ */ jsxs(Collapsible, {
+		open,
+		onOpenChange,
+		children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+			className: "group flex w-full cursor-pointer items-center gap-3 rounded-md text-start outline-offset-2 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
+			children: [
+				swatch,
+				/* @__PURE__ */ jsx("span", {
+					className: "text-foreground-intense min-w-0 flex-1 text-sm break-words",
+					children: name
+				}),
+				/* @__PURE__ */ jsxs("span", {
+					className: "text-primary flex shrink-0 items-center gap-1 text-sm",
+					children: [open ? "Done" : "Change", /* @__PURE__ */ jsx(Chevron, {})]
+				})
+			]
+		}), /* @__PURE__ */ jsx(CollapsibleContent, {
+			className: "pt-4",
+			children
+		})]
+	});
+}
+var ROW_SWATCH = "bg-wall border-border block h-15 w-20 shrink-0 overflow-hidden rounded-md border";
 var XIcon = () => /* @__PURE__ */ jsx("svg", {
 	viewBox: "0 0 24 24",
 	fill: "none",
@@ -3723,6 +3782,7 @@ function BackgroundSection() {
 	}, [previewing]);
 	const [status, setStatus] = useState("");
 	const [removing, setRemoving] = useState(null);
+	const [open, setOpen] = useState(false);
 	const file = useRef(null);
 	const look = (key, v) => siteOf({
 		bg: bgOf(key),
@@ -3780,6 +3840,8 @@ function BackgroundSection() {
 		if (await saveSettings(patch)) deleteAsset(id);
 	};
 	const removingCurrent = removing !== null && current === "photo:" + removing;
+	const currentName = isUpload ? uploads.find((u) => "photo:" + u.id === current)?.name || "Your photo" : BACKGROUNDS.find(([k]) => "preset:" + k === current)[1];
+	const shownLook = look(current, dim);
 	const tile = (key, name) => {
 		const l = look(key, key === current ? dim : void 0);
 		return /* @__PURE__ */ jsxs(Toggle, {
@@ -3796,61 +3858,71 @@ function BackgroundSection() {
 	};
 	return /* @__PURE__ */ jsxs(Fieldset, { children: [
 		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Background" }),
-		/* @__PURE__ */ jsxs("div", {
-			className: "flex flex-col gap-2",
-			children: [
-				/* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs(ToggleGroup, {
-					value: [current],
-					onValueChange: (v) => pick(String(v[0] || "")),
-					className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-3",
-					children: [
-						BACKGROUNDS.map(([k, name]) => tile("preset:" + k, name)),
-						uploads.map((u) => /* @__PURE__ */ jsxs("div", {
-							className: "relative min-w-0",
-							children: [tile("photo:" + u.id, u.name || "Your photo"), hasAssets && /* @__PURE__ */ jsx(Tip, {
-								label: "Remove this background",
-								children: /* @__PURE__ */ jsx("button", {
-									type: "button",
-									"aria-label": `Remove ${u.name || "this photo"}`,
-									onClick: () => setRemoving(u.id),
-									className: "bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
-									children: /* @__PURE__ */ jsx(XIcon, {})
-								})
-							})]
-						}, u.id)),
-						hasAssets && /* @__PURE__ */ jsxs("button", {
-							type: "button",
-							className: TILE,
-							disabled: busy,
-							onClick: () => file.current?.click(),
-							children: [/* @__PURE__ */ jsx("span", {
-								className: "border-border-strong text-foreground-muted grid aspect-4/3 w-full place-items-center rounded-md border border-dashed text-2xl leading-none group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)",
-								children: "+"
-							}), /* @__PURE__ */ jsx("span", {
-								className: NAME,
-								children: "Upload your own"
-							})]
-						})
-					]
-				}) }),
-				/* @__PURE__ */ jsx("input", {
-					ref: file,
-					type: "file",
-					accept: "image/jpeg,image/png,image/webp",
-					hidden: true,
-					"aria-label": "Upload your own background",
-					onChange: (e) => add(e.target.files?.[0]).then(() => e.target.value = "")
-				}),
-				status && /* @__PURE__ */ jsx("p", {
-					role: "status",
-					className: "text-foreground-muted text-sm",
-					children: status
-				}),
-				!hasAssets && /* @__PURE__ */ jsx("p", {
-					className: "text-foreground-muted text-sm",
-					children: "Uploading your own background isn't available in this view."
-				})
-			]
+		/* @__PURE__ */ jsx(Chooser, {
+			swatch: /* @__PURE__ */ jsx("span", {
+				className: `${ROW_SWATCH} ${bgClass(shownLook)}`,
+				style: bgStyle(shownLook),
+				"aria-hidden": "true"
+			}),
+			name: currentName,
+			open: open || busy || !!status,
+			onOpenChange: setOpen,
+			children: /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-2",
+				children: [
+					/* @__PURE__ */ jsx(TipGroup, { children: /* @__PURE__ */ jsxs(ToggleGroup, {
+						value: [current],
+						onValueChange: (v) => pick(String(v[0] || "")),
+						className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-3",
+						children: [
+							BACKGROUNDS.map(([k, name]) => tile("preset:" + k, name)),
+							uploads.map((u) => /* @__PURE__ */ jsxs("div", {
+								className: "relative min-w-0",
+								children: [tile("photo:" + u.id, u.name || "Your photo"), hasAssets && /* @__PURE__ */ jsx(Tip, {
+									label: "Remove this background",
+									children: /* @__PURE__ */ jsx("button", {
+										type: "button",
+										"aria-label": `Remove ${u.name || "this photo"}`,
+										onClick: () => setRemoving(u.id),
+										className: "bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
+										children: /* @__PURE__ */ jsx(XIcon, {})
+									})
+								})]
+							}, u.id)),
+							hasAssets && /* @__PURE__ */ jsxs("button", {
+								type: "button",
+								className: TILE,
+								disabled: busy,
+								onClick: () => file.current?.click(),
+								children: [/* @__PURE__ */ jsx("span", {
+									className: "border-border-strong text-foreground-muted grid aspect-4/3 w-full place-items-center rounded-md border border-dashed text-2xl leading-none group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)",
+									children: "+"
+								}), /* @__PURE__ */ jsx("span", {
+									className: NAME,
+									children: "Upload your own"
+								})]
+							})
+						]
+					}) }),
+					/* @__PURE__ */ jsx("input", {
+						ref: file,
+						type: "file",
+						accept: "image/jpeg,image/png,image/webp",
+						hidden: true,
+						"aria-label": "Upload your own background",
+						onChange: (e) => add(e.target.files?.[0]).then(() => e.target.value = "")
+					}),
+					status && /* @__PURE__ */ jsx("p", {
+						role: "status",
+						className: "text-foreground-muted text-sm",
+						children: status
+					}),
+					!hasAssets && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Uploading your own background isn't available in this view."
+					})
+				]
+			})
 		}),
 		(isUpload || stock) && /* @__PURE__ */ jsxs(Field, {
 			className: "soften",
@@ -3884,37 +3956,51 @@ function BackgroundSection() {
 		})
 	] });
 }
+var HangSwatch = ({ hang, className }) => /* @__PURE__ */ jsx("span", {
+	className,
+	"aria-hidden": "true",
+	children: /* @__PURE__ */ jsx("span", {
+		className: "rack grid-cols-1",
+		"data-hang": hang,
+		children: /* @__PURE__ */ jsx("span", {
+			className: "slot block",
+			children: /* @__PURE__ */ jsxs("span", {
+				className: "hanger block",
+				children: [/* @__PURE__ */ jsx("span", { className: "hook" }), /* @__PURE__ */ jsx("span", {
+					className: "sleeve-box mx-auto block w-24",
+					children: /* @__PURE__ */ jsx("span", { className: "sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" })
+				})]
+			})
+		})
+	})
+});
 function HangingSection() {
 	const { site, saveSettings } = useRuntime();
-	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Hanging" }), /* @__PURE__ */ jsx(ToggleGroup, {
-		value: [site.hang],
-		onValueChange: (v) => v[0] && v[0] !== site.hang && saveSettings({ hang: String(v[0]) }),
-		className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-4",
-		children: HANGS.map(([k, name]) => /* @__PURE__ */ jsxs(Toggle, {
-			value: k,
-			className: TILE,
-			children: [/* @__PURE__ */ jsx("span", {
-				className: `${SWATCH} h-20`,
-				"aria-hidden": "true",
-				children: /* @__PURE__ */ jsx("span", {
-					className: "rack grid-cols-1",
-					"data-hang": k,
-					children: /* @__PURE__ */ jsx("span", {
-						className: "slot block",
-						children: /* @__PURE__ */ jsxs("span", {
-							className: "hanger block",
-							children: [/* @__PURE__ */ jsx("span", { className: "hook" }), /* @__PURE__ */ jsx("span", {
-								className: "sleeve-box mx-auto block w-24",
-								children: /* @__PURE__ */ jsx("span", { className: "sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" })
-							})]
-						})
-					})
-				})
-			}), /* @__PURE__ */ jsx("span", {
-				className: NAME,
-				children: name
-			})]
-		}, k))
+	const [open, setOpen] = useState(false);
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Hanging" }), /* @__PURE__ */ jsx(Chooser, {
+		swatch: /* @__PURE__ */ jsx(HangSwatch, {
+			hang: site.hang,
+			className: ROW_SWATCH
+		}),
+		name: HANGS.find(([k]) => k === site.hang)[1],
+		open,
+		onOpenChange: setOpen,
+		children: /* @__PURE__ */ jsx(ToggleGroup, {
+			value: [site.hang],
+			onValueChange: (v) => v[0] && v[0] !== site.hang && saveSettings({ hang: String(v[0]) }),
+			className: "grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-4",
+			children: HANGS.map(([k, name]) => /* @__PURE__ */ jsxs(Toggle, {
+				value: k,
+				className: TILE,
+				children: [/* @__PURE__ */ jsx(HangSwatch, {
+					hang: k,
+					className: `${SWATCH} h-20`
+				}), /* @__PURE__ */ jsx("span", {
+					className: NAME,
+					children: name
+				})]
+			}, k))
+		})
 	})] });
 }
 // src/settings/SettingsSheet.tsx
@@ -4195,14 +4281,24 @@ function DiscogsSection({ focus }) {
 function SettingsSheet({ open, at, onClose }) {
 	const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime();
 	const update = useUpdateAvailable();
+	const tabs = canEdit ? [
+		"wall",
+		"library",
+		"about"
+	] : ["about"];
+	const dz = settings.discogs || {};
+	const discogsTrouble = !!dz.hasToken && dz.status === "error";
 	const [copyNote, setCopyNote] = useState("");
 	const ask = useRef(null);
-	const discogs = useRef(null);
 	const lib = useLibrary();
 	const [view, setView] = useState("main");
+	const [tab, setTab] = useState("wall");
 	const title = useRef(null);
 	useEffect(() => {
-		if (open) setView(at === "import" || lib.active ? "import" : "main");
+		if (!open) return;
+		const importing = at === "import" || lib.active;
+		setView(importing ? "import" : "main");
+		setTab(importing || at === "discogs" ? "library" : "wall");
 	}, [open]);
 	const shown = useRef(view);
 	useEffect(() => {
@@ -4219,11 +4315,6 @@ function SettingsSheet({ open, at, onClose }) {
 		if (view === "import") lib.leave();
 		onClose();
 	};
-	useEffect(() => {
-		if (!open || at !== "discogs") return;
-		const t = setTimeout(() => discogs.current?.scrollIntoView({ block: "start" }), 350);
-		return () => clearTimeout(t);
-	}, [open, at]);
 	useEffect(() => {
 		if (open && canEdit && hasMcp && settings.taskId && Date.now() - (settings.update?.checkedMs || 0) > 864e5) fireTask();
 	}, [open]);
@@ -4247,7 +4338,7 @@ function SettingsSheet({ open, at, onClose }) {
 					className: "outline-none",
 					children: view === "import" ? "Import your library" : "Settings"
 				}),
-				/* @__PURE__ */ jsx(DrawerDescription, { children: view === "import" ? "Bring in a file you saved with Export your library." : "How your wall looks, Discogs, your library and help" })
+				view === "import" && /* @__PURE__ */ jsx(DrawerDescription, { children: "Bring in a file you saved with Export your library." })
 			] }), /* @__PURE__ */ jsxs(DrawerBody, { children: [(error || notice) && /* @__PURE__ */ jsx(Alert, {
 				variant: error ? "error" : "info",
 				className: "mb-4",
@@ -4261,86 +4352,128 @@ function SettingsSheet({ open, at, onClose }) {
 					onDone: close
 				})
 			}) : /* @__PURE__ */ jsxs("div", {
-				className: "flex flex-col gap-8 pb-8 *:shrink-0",
-				children: [
-					update && /* @__PURE__ */ jsxs(Alert, {
-						variant: "warning",
-						children: [/* @__PURE__ */ jsx(AlertTitle, { children: "An update is available" }), /* @__PURE__ */ jsxs(AlertDescription, {
-							className: "flex flex-col gap-2",
+				className: "flex flex-col gap-6 pb-8",
+				children: [update && /* @__PURE__ */ jsxs(Alert, {
+					variant: "warning",
+					children: [/* @__PURE__ */ jsx(AlertTitle, { children: "An update is available" }), /* @__PURE__ */ jsxs(AlertDescription, {
+						className: "flex flex-col gap-2",
+						children: [
+							/* @__PURE__ */ jsx("span", { children: "To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are." }),
+							/* @__PURE__ */ jsx("span", {
+								ref: ask,
+								className: "bg-background-strong block rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all",
+								children: updateAsk(settings)
+							}),
+							/* @__PURE__ */ jsxs("span", {
+								className: "flex items-center gap-2",
+								children: [/* @__PURE__ */ jsx(CopyButton, {
+									size: "sm",
+									variant: "outline",
+									value: updateAsk(settings),
+									copiedLabel: "Copied",
+									onCopyError: () => {
+										const sel = getSelection();
+										if (ask.current && sel) {
+											const r = document.createRange();
+											r.selectNodeContents(ask.current);
+											sel.removeAllRanges();
+											sel.addRange(r);
+										}
+										setCopyNote("Selected: copy it with your device's copy command");
+									},
+									children: "Copy"
+								}), copyNote && /* @__PURE__ */ jsx("span", {
+									className: "text-xs",
+									children: copyNote
+								})]
+							})
+						]
+					})]
+				}), /* @__PURE__ */ jsxs(Tabs, {
+					className: "gap-5",
+					value: tabs.includes(tab) ? tab : tabs[0],
+					onValueChange: (v) => setTab(String(v)),
+					children: [
+						tabs.length > 1 && /* @__PURE__ */ jsxs(TabsList, {
+							variant: "line",
+							size: "sm",
+							activateOnFocus: true,
 							children: [
-								/* @__PURE__ */ jsx("span", { children: "To install it, start a chat with Claude and send this. Your records, equipment and settings stay as they are." }),
-								/* @__PURE__ */ jsx("span", {
-									ref: ask,
-									className: "bg-background-strong block rounded-(--radius-2xs) p-2 font-mono text-xs break-all select-all",
-									children: updateAsk(settings)
+								/* @__PURE__ */ jsx(TabsTrigger, {
+									value: "wall",
+									children: "Wall"
 								}),
-								/* @__PURE__ */ jsxs("span", {
-									className: "flex items-center gap-2",
-									children: [/* @__PURE__ */ jsx(CopyButton, {
-										size: "sm",
-										variant: "outline",
-										value: updateAsk(settings),
-										copiedLabel: "Copied",
-										onCopyError: () => {
-											const sel = getSelection();
-											if (ask.current && sel) {
-												const r = document.createRange();
-												r.selectNodeContents(ask.current);
-												sel.removeAllRanges();
-												sel.addRange(r);
-											}
-											setCopyNote("Selected: copy it with your device's copy command");
-										},
-										children: "Copy"
-									}), copyNote && /* @__PURE__ */ jsx("span", {
-										className: "text-xs",
-										children: copyNote
-									})]
+								/* @__PURE__ */ jsxs(TabsTrigger, {
+									value: "library",
+									children: ["Library", discogsTrouble && /* @__PURE__ */ jsxs(Fragment$1, { children: [
+										" ",
+										/* @__PURE__ */ jsx("span", {
+											"aria-hidden": "true",
+											className: "bg-want size-1.75 rounded-full"
+										}),
+										/* @__PURE__ */ jsx("span", {
+											className: "sr-only",
+											children: "(Discogs needs attention)"
+										})
+									] })]
+								}),
+								/* @__PURE__ */ jsx(TabsTrigger, {
+									value: "about",
+									children: "About"
 								})
 							]
-						})]
-					}),
-					canEdit && /* @__PURE__ */ jsxs(Fragment$1, { children: [
-						/* @__PURE__ */ jsx(PageSection, {}),
-						/* @__PURE__ */ jsx(BackgroundSection, {}),
-						/* @__PURE__ */ jsx(HangingSection, {}),
-						/* @__PURE__ */ jsx("div", {
-							ref: discogs,
-							className: "scroll-mt-6",
-							children: /* @__PURE__ */ jsx(DiscogsSection, { focus: at === "discogs" })
 						}),
-						/* @__PURE__ */ jsx(LibrarySection, {
-							lib,
-							onImport: () => setView("import")
-						})
-					] }),
-					/* @__PURE__ */ jsxs(Fieldset, { children: [
-						/* @__PURE__ */ jsx(FieldsetLegend, { children: "Help" }),
-						/* @__PURE__ */ jsxs("p", {
-							className: "text-foreground-muted text-sm",
+						canEdit && /* @__PURE__ */ jsxs(TabsContent, {
+							value: "wall",
+							keepMounted: true,
+							className: "flex flex-col gap-8",
 							children: [
-								"Found a problem or have an idea?",
-								" ",
-								/* @__PURE__ */ jsx("a", {
-									href: "https://github.com/ober37/vinyl-wall/issues/new/choose",
-									target: "_blank",
-									rel: "noopener",
-									className: "text-primary underline-offset-2 hover:underline",
-									children: "Tell us on GitHub"
-								}),
-								"."
+								/* @__PURE__ */ jsx(PageSection, {}),
+								/* @__PURE__ */ jsx(BackgroundSection, {}),
+								/* @__PURE__ */ jsx(HangingSection, {})
 							]
 						}),
-						/* @__PURE__ */ jsx("p", {
-							className: "text-foreground-muted text-sm",
-							children: "Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make Editors can change it."
+						canEdit && /* @__PURE__ */ jsxs(TabsContent, {
+							value: "library",
+							keepMounted: true,
+							className: "flex flex-col gap-8",
+							children: [/* @__PURE__ */ jsx(DiscogsSection, { focus: at === "discogs" }), /* @__PURE__ */ jsx(LibrarySection, {
+								lib,
+								onImport: () => setView("import")
+							})]
 						}),
-						/* @__PURE__ */ jsxs("p", {
-							className: "text-foreground-muted font-mono text-xs",
-							children: ["Vinyl Wall ", APP_VERSION]
+						/* @__PURE__ */ jsx(TabsContent, {
+							value: "about",
+							keepMounted: true,
+							children: /* @__PURE__ */ jsxs(Fieldset, { children: [
+								/* @__PURE__ */ jsx(FieldsetLegend, { children: "About" }),
+								/* @__PURE__ */ jsxs("p", {
+									className: "text-foreground-muted text-sm",
+									children: [
+										"Found a problem or have an idea?",
+										" ",
+										/* @__PURE__ */ jsx("a", {
+											href: "https://github.com/ober37/vinyl-wall/issues/new/choose",
+											target: "_blank",
+											rel: "noopener",
+											className: "text-primary underline-offset-2 hover:underline",
+											children: "Tell us on GitHub"
+										}),
+										"."
+									]
+								}),
+								/* @__PURE__ */ jsx("p", {
+									className: "text-foreground-muted text-sm",
+									children: "Anyone you share this wall with can see everything on it, prices, orders and notes included. Only you and people you make Editors can change it."
+								}),
+								/* @__PURE__ */ jsxs("p", {
+									className: "text-foreground-muted font-mono text-xs",
+									children: ["Vinyl Wall ", APP_VERSION]
+								})
+							] })
 						})
-					] })
-				]
+					]
+				})]
 			})] })]
 		})
 	});
@@ -5158,41 +5291,6 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 		]
 	});
 }
-// src/sheet/Links.tsx
-var link = "text-primary underline-offset-2 hover:underline";
-function LinkList({ links }) {
-	return /* @__PURE__ */ jsx("ul", {
-		className: "flex flex-col gap-2 text-sm",
-		children: links.map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
-			href: u,
-			target: "_blank",
-			rel: "noopener",
-			className: link,
-			children: [t, " ↗"]
-		}) }, t + u))
-	});
-}
-function Source({ name, href }) {
-	return href ? /* @__PURE__ */ jsxs("a", {
-		href,
-		target: "_blank",
-		rel: "noopener",
-		className: "text-primary whitespace-nowrap hover:underline",
-		children: [name, " ↗"]
-	}) : /* @__PURE__ */ jsx(Fragment$1, { children: name });
-}
-function Chevron({ className = "size-4" }) {
-	return /* @__PURE__ */ jsx("svg", {
-		viewBox: "0 0 24 24",
-		fill: "none",
-		stroke: "currentColor",
-		strokeWidth: "2",
-		strokeLinecap: "round",
-		"aria-hidden": "true",
-		className: `${className} transition-transform group-data-panel-open:rotate-180 motion-reduce:transition-none`,
-		children: /* @__PURE__ */ jsx("path", { d: "M6 9l6 6 6-6" })
-	});
-}
 // src/sheet/NewRecordSheet.tsx
 var blank = (kind) => toForm({
 	id: "",
@@ -5698,7 +5796,7 @@ function discogsLinks(r) {
 	const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`;
 	return [
 		id ? [ord ? "The edition you ordered" : "Your pressing", `https://www.discogs.com/release/${id}`] : [ord ? "Find the edition" : "Find your pressing", search],
-		id ? ["What it sells for", `https://www.discogs.com/sell/history/${id}`] : ["Past sales (Popsike)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+		...id ? [["What it sells for", `https://www.discogs.com/sell/history/${id}`]] : [],
 		["Other pressings", search]
 	].filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i);
 }
@@ -6415,8 +6513,6 @@ function searchLinks(r) {
 		["Discogs releases", `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
 		["Discogs marketplace", `https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
 		["eBay", `https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
-		["MusicStack", `https://www.musicstack.com/search.cgi?find=${q}&t=0&media=LP`],
-		["Popsike (past sales)", `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
 		["Record stores near me", "https://www.google.com/maps/search/record+store"]
 	];
 }
@@ -9990,6 +10086,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: calc(var(--spacing) * 14);
   }
 
+  .h-15 {
+    height: calc(var(--spacing) * 15);
+  }
+
   .h-20 {
     height: calc(var(--spacing) * 20);
   }
@@ -10072,6 +10172,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .w-18 {
     width: calc(var(--spacing) * 18);
+  }
+
+  .w-20 {
+    width: calc(var(--spacing) * 20);
   }
 
   .w-24 {
@@ -10255,10 +10359,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .resize-y {
     resize: vertical;
-  }
-
-  .scroll-mt-6 {
-    scroll-margin-top: calc(var(--spacing) * 6);
   }
 
   .list-disc {
