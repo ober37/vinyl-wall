@@ -1,21 +1,10 @@
 #!/bin/sh
-# Smoke test: builds the preview, serves dev/ on a spare port, runs dev/test.html in headless Chrome and prints the results.
-# Exits non-zero if anything fails. Set CHROME to your Chrome binary if it isn't in the usual macOS place.
+# Every test: the task's Python scripts, then the React page's typecheck, Vitest suite and check:cdn (the built page in
+# headless Chrome, with its size and first-visit budgets). Exits non-zero if anything fails. Needs web/'s packages
+# (npm ci --prefix web) and Chrome; set CHROME to your Chrome binary if it isn't in the usual macOS place.
 cd "$(dirname "$0")" || exit 1
-CHROME="${CHROME:-/Applications/Google Chrome.app/Contents/MacOS/Google Chrome}"
-PORT="${PORT:-8799}"
-python3 build.py >/dev/null || exit 1
 python3 -I test_lookup.py || exit 1
 python3 -I test_discogs.py >/dev/null || { python3 -I test_discogs.py | grep -v "^PASS"; exit 1; }
-# the React page in web/, when its packages are installed
-# and its built page in Chrome (needs the network: React and appica load from jsdelivr)
-if [ -d ../web/node_modules ]; then (cd ../web && npx tsc && npx vitest run --reporter=dot && npx vite build >/dev/null && npm run -s check:cdn) || exit 1; fi
-python3 -m http.server "$PORT" >/dev/null 2>&1 &
-SERVER=$!
-trap 'kill $SERVER 2>/dev/null; rm -rf "$PROFILE"' EXIT
-PROFILE="$(mktemp -d)"
-sleep 1
-OUT="$("$CHROME" --headless=new --disable-gpu --user-data-dir="$PROFILE" --virtual-time-budget=120000 \
-  --dump-dom "http://localhost:$PORT/test.html" 2>/dev/null)"
-echo "$OUT" | sed -n '/<pre id="out">/,/<\/pre>/p' | sed 's/<[^>]*>//g; s/&quot;/"/g; s/&amp;/\&/g; s/&lt;/</g; s/&gt;/>/g'
-echo "$OUT" | grep -q '<title>DONE all passed</title>'
+# the React page in web/, and its built page in Chrome (needs the network: React and appica load from jsdelivr)
+[ -d ../web/node_modules ] || { echo "web/ has no packages: run npm ci --prefix web"; exit 1; }
+cd ../web && npx tsc && npx vitest run --reporter=dot && npx vite build >/dev/null && npm run -s check:cdn
