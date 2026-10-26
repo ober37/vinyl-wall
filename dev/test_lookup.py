@@ -134,4 +134,43 @@ with contextlib.redirect_stdout(io.StringIO()):
     L.plan(db, os.path.join(db, "none"), os.path.join(db, "v.json"), os.path.join(db, "work"))
 check("retries: the plan leaves out a record the lookup stopped on",
       json.load(open(os.path.join(db, "work", "plan.json")))["records"] == {})
+
+aja = {"title": "Aja", "artist": "Steely Dan"}
+wd = lambda y: {"claims": {"P577": [{"rank": "normal", "mainsnak": {"datavalue": {"value": {"time": f"+{y}-09-23T00:00:00Z", "precision": 11}}}}]}}
+reissue, original = {"year": "2023", "label": "UMe", "runtime": 40}, {"year": "1977"}
+check("year: the earliest a source gives, not the store's reissue", L.facts(aja, {}, reissue, original, None, None) == {"year": "1977", "runtime": 40},
+      L.facts(aja, {}, reissue, original, None, None))
+check("year: a reissue's label isn't the album's", "label" not in L.facts(aja, {}, reissue, {}, None, "1977"))
+check("year: a store's label when its edition is the original", L.facts(aja, {}, {"year": "1977", "label": "ABC"}, {}, None, None)["label"] == "ABC")
+looked = {**aja, "year": "1977", "label": "ABC", "runtime": 40, "autoFilled": ["year", "label"]}
+check("year: a looked-up original stays when a refresh finds only a reissue", L.facts(looked, {}, reissue, {}, None, None) == {})
+check("year: a looked-up year gives way to an earlier one", L.facts({**looked, "year": "2023"}, {}, {}, original, None, None) == {"year": "1977"})
+check("year: a looked-up year gives way to Wikidata's", L.facts({**looked, "year": "1974"}, wd(1999), {}, {}, None, None) == {"year": "1999"})
+check("year: a typed year is never touched", L.facts({**aja, "year": "1980"}, wd(1977), {}, original, None, None) == {})
+check("year: a pressing's year 0 doesn't count", L.facts(aja, {}, {}, {}, {"year": 0}, None) == {})
+
+check("thin: one word each", L.thin({"title": "Test", "artist": "Test"}) and L.thin({"title": "Okapi", "artist": "Novelists"}))
+check("thin: a two-word artist isn't", not L.thin(aja) and not L.thin({"title": "Tusk", "artist": "Fleetwood Mac"}))
+check("thin: sources agree within a year", L.agree("2026", None, "2026") and L.agree("2025", "2024", None))
+check("thin: one source, or years apart, isn't agreement", not L.agree("1974", None, "1999-01-01") and not L.agree(None, "2026", None))
+SRC = {"Test": ({"year": "1974", "cover": "https://dz/test.jpg", "label": "WM Poland"}, None, {"id": "g1", "title": "TEST", "first-release-date": "1999"}),
+       "Untitled": (None, {"year": "2026", "cover": "https://it/u.jpg"}, None),
+       "Mahjong": ({"year": "2026", "cover": "https://dz/m.jpg"}, None, {"id": "g2", "first-release-date": "2026-08-28"}),
+       "Aja": (reissue | {"cover": "https://dz/aja.jpg"}, None, None)}
+L.deezer, L.itunes, L.mb_group = (lambda r: SRC[r["title"]][0]), (lambda r: SRC[r["title"]][1]), (lambda r: SRC[r["title"]][2])
+L.mb_tracks = lambda gid: {"tracks": [{"pos": "A1", "title": "x"}], "tracksSource": "musicbrainz", "tracksUrl": ""}
+L.mb_wikidata, L.pick_albums, L.extracts, L.full_texts = (lambda gid: None), (lambda recs: {}), (lambda *a, **k: {}), (lambda *a, **k: {})
+L.pick_artists = lambda want, failed: {rid: "Q900" for rid in want}
+L.get_cover = lambda url, dst: dst
+thins = {"t": {"title": "Test", "artist": "Test"}, "u": {"title": "Untitled", "artist": "Unknown"},
+         "m": {"title": "Mahjong", "artist": "ASAVA"}, "a": aja}
+work = tempfile.mkdtemp()
+with contextlib.redirect_stdout(io.StringIO()):
+    L.fetch_group(work, 0, {"groups": [list(thins)], "records": {k: {"data": r} for k, r in thins.items()}, "artists": {}}, set())
+got = json.load(open(os.path.join(work, "g0", "found.json")))["found"]
+check("thin: Test / Test gets no cover, label or album info", got["t"]["fill"] == {} and not got["t"]["coverUrl"]
+      and got["t"]["about"] == {} and "artistKey" not in got["t"], got["t"])
+check("thin: a single store's match isn't enough", got["u"]["fill"] == {} and not got["u"]["coverUrl"], got["u"])
+check("thin: two sources that agree still match", got["m"]["fill"].get("year") == "2026" and got["m"]["coverUrl"], got["m"])
+check("thin: a two-word artist matches on one source, as before", got["a"]["coverUrl"] and got["a"]["fill"].get("year") == "2023", got["a"])
 sys.exit(1 if fails else 0)

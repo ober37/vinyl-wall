@@ -169,6 +169,23 @@ def artist_ok(a, b):
     return min(len(x), len(y)) >= 5 and lev(x, y) <= (2 if min(len(x), len(y)) >= 9 else 1)
 
 
+def thin(r):
+    """A one-word title by a one-word artist ("Test" / "Test"): some store nearly always has a match (#65)."""
+    one = lambda s: len([w for w in re.split(r"[^a-z0-9]+", strip_title(s).lower()) if w and w != "the"]) == 1
+    return one(r["title"]) and one(r["artist"])
+
+
+def agree(*years):
+    """Two of the sources that matched give years within one of each other."""
+    ys = sorted(int(y) for y in map(year4, years) if y)
+    return any(b - a <= 1 for a, b in zip(ys, ys[1:]))
+
+
+def year4(x):
+    s = str(x or "")[:4]
+    return s if re.match(r"^\d{4}$", s) and s != "0000" else None
+
+
 def bare_title(t):  # "Toxicity (System of a Down album)" -> "Toxicity"
     return re.sub(r"\s*\([^)]*\)\s*$", "", t or "")
 
@@ -664,7 +681,8 @@ def fetch_group(work, g, p, done):
     def _per_record(rid):
         r = recs[rid]
         out = {"discogs": discogs_release(r.get("discogsId")) if r.get("discogsId") else None}
-        if rid in A and (not r.get("coverAsset") or not r.get("runtime") or not r.get("year") or not r.get("label")):
+        if rid in A and (not r.get("coverAsset") or not r.get("runtime") or not r.get("year") or not r.get("label")) \
+                or (thin(r) and not out["discogs"]):  # a thin record needs them to check the match (#65)
             out["deezer"] = deezer(r)
             if not out["deezer"] or not out["deezer"].get("cover") or not out["deezer"].get("runtime"):
                 out["itunes"] = itunes(r)
@@ -690,12 +708,14 @@ def fetch_group(work, g, p, done):
         want_tracks = rid in F and not s["discogs"]
         want_cover = rid in A and not r.get("coverAsset") and not r.get("coverHint") and not _discogs_image(s["discogs"]) \
             and not (s.get("deezer") or {}).get("cover") and not (s.get("itunes") or {}).get("cover")
-        if not (want_q or want_tracks or want_cover):
+        want_check = thin(r) and rid not in album_q and not s["discogs"]
+        if not (want_q or want_tracks or want_cover or want_check):
             return rid, {}
         grp = mb_group(r)
         if not grp:
             return rid, {}
-        out = {"gid": grp["id"], "artist": ((grp.get("artist-credit") or [{}])[0].get("artist") or {}).get("id")}
+        out = {"gid": grp["id"], "artist": ((grp.get("artist-credit") or [{}])[0].get("artist") or {}).get("id"),
+               "year": year4(grp.get("first-release-date"))}
         if want_q:
             out["q"] = mb_wikidata(grp["id"])
         if want_tracks:
@@ -704,6 +724,13 @@ def fetch_group(work, g, p, done):
 
     with ThreadPoolExecutor(4) as ex:
         mbr = dict(ex.map(mb, recs))
+    # a thin record counts as matched only through Wikidata, its linked pressing, or two sources that agree on the
+    # year; otherwise it gets nothing, not even its artist's article (#65)
+    unsure = {rid for rid, r in recs.items() if thin(r) and rid not in album_q and not src[rid]["discogs"]
+              and not agree((src[rid].get("deezer") or {}).get("year"), (src[rid].get("itunes") or {}).get("year"), mbr[rid].get("year"))}
+    for rid in unsure:
+        src[rid].update(deezer=None, itunes=None)
+        mbr[rid] = {}
     for rid, m in mbr.items():
         if m.get("q"):
             album_q[rid] = m["q"]
@@ -719,7 +746,7 @@ def fetch_group(work, g, p, done):
     wm_own = stats["wikimedia"]  # failures from here to t_wiki are the #32 fallback's; they hold back only its own records
     wiki_failed, page_failed = set(), set()
     artist_q.update(pick_artists({rid: (recs[rid]["artist"], recs[rid]["title"], mbr.get(rid, {}).get("artist"), _dartist(src[rid]["discogs"]))
-                                  for rid in F if not artist_q.get(rid)}, wiki_failed))
+                                  for rid in F - unsure if not artist_q.get(rid)}, wiki_failed))
     wm_own = stats["wikimedia"] - wm_own
     entities([q for q in artist_q.values() if q])
     entities([v for q in album_q.values() for pr in ("P264", "P162", "P136", "P483") for v in claims(ENT.get(q) or {}, pr)
@@ -752,16 +779,7 @@ def fetch_group(work, g, p, done):
         f = {"needA": rid in A, "needF": rid in F, "fill": {}, "coverUrl": None}
 
         if rid in A:
-            auto = set(r.get("autoFilled") or [])
-            free = lambda k: not r.get(k) or k in auto
-            dg_rt = _discogs_runtime(dg)
-            cand = {"year": [(released(e) or "")[:4], dz.get("year"), it.get("year"), str((dg or {}).get("year") or "")],
-                    "label": [label((claims(e, "P264") or [""])[0]), dz.get("label"), _dlabel(dg)],
-                    "runtime": [dg_rt, dz.get("runtime"), it.get("runtime")]}
-            for k, vals in cand.items():
-                v = next((x for x in vals if x and (k != "year" or re.match(r"^\d{4}$", str(x)))), None)
-                if v and free(k) and v != r.get(k):
-                    f["fill"][k] = int(v) if k == "runtime" else v
+            f["fill"] = facts(r, e, dz, it, dg, m.get("year"))
             if not r.get("coverAsset"):
                 gid = m.get("gid")
                 f["coverUrl"] = r.get("coverHint") or _discogs_image(dg) or dz.get("cover") or it.get("cover") \
@@ -842,6 +860,28 @@ def fetch_group(work, g, p, done):
     os.replace(tmp, os.path.join(gdir, "found.json"))  # appears whole, so a waiting step never reads half a file
     print(f"group {g}: sources {t_src - t0:.1f}s, musicbrainz {t_mb - t_src:.1f}s, wikipedia {t_wiki - t_mb:.1f}s, "
           f"covers {time.time() - t_wiki:.1f}s", flush=True)
+
+
+def facts(r, e, dz, it, dg, mb_year):
+    """Year, label and runtime to fill, from the album's Wikidata entity, Deezer, iTunes, the linked pressing and the
+    MusicBrainz release group. Stores and pressings are often a reissue, so the year is the earliest any of them gives,
+    and a store's or pressing's label counts only when its own year is that one. A looked-up year or label is replaced
+    only by an earlier year or by Wikidata's; a typed one never (#64)."""
+    auto = set(r.get("autoFilled") or [])
+    free = lambda k: not r.get(k) or k in auto
+    wd_year, dg_year = year4(released(e)), year4((dg or {}).get("year"))
+    year = min(filter(None, (wd_year, mb_year, year4(dz.get("year")), year4(it.get("year")), dg_year)), default=None)
+    wd_label = label((claims(e, "P264") or [""])[0])
+    fill = {}
+    if year and free("year") and year != r.get("year") and (not r.get("year") or wd_year or year < str(r["year"])):
+        fill["year"] = year
+    lab = wd_label or (dz.get("label") if year4(dz.get("year")) == year else None) or (_dlabel(dg) if dg_year == year else None)
+    if lab and free("label") and lab != r.get("label") and (not r.get("label") or wd_label or "year" in fill):
+        fill["label"] = lab
+    rt = next((x for x in (_discogs_runtime(dg), dz.get("runtime"), it.get("runtime")) if x), None)
+    if rt and free("runtime") and rt != r.get("runtime"):
+        fill["runtime"] = int(rt)
+    return fill
 
 
 def _discogs_image(dg):
