@@ -91,6 +91,10 @@ describe('shops: the data', () => {
     expect(f.settings!.site!.shops).toEqual([RECKLESS])
     expect(lookPatch({ shops: [RECKLESS, { name: '' }] }, null).shops).toEqual([RECKLESS])
     expect(lookPatch({}, null).shops).toBeUndefined()
+    // every kind, and what the chat found, round-trips
+    const all = [RECKLESS, DUSTY, { ...DEFAULT_SHOPS[0], shopify: true }, DEFAULT_SHOPS[3], { id: 'sr', name: 'Siren Records', kind: 'local', upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }]
+    const out = exportFile({ records: [], gear: [], setups: [], artists: [], settings: { shops: all }, app: 'x' })
+    expect(lookPatch(JSON.parse(JSON.stringify(out)).settings.site, null).shops).toEqual(all)
   })
 })
 
