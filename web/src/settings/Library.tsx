@@ -16,6 +16,7 @@ import {
   lookPatch,
   planImport,
   planSummary,
+  shopsFrom,
   recordWrites,
   type Plan,
 } from '../model/library'
@@ -106,6 +107,7 @@ export function useLibrary() {
         artists,
         gear: rt.gear,
         setups: rt.setups,
+        settings: rt.settings,
       })
       if (typeof p === 'string') {
         setMsg(p)
@@ -175,8 +177,12 @@ export function useLibrary() {
         await rt.put('records', id, d)
         if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`)
       }
-      // a wall that had no records takes the file's look too; an existing wall keeps its own
+      // a wall that had no records takes the file's look too; an existing wall keeps its own, and gains the file's shops
       if (p.empty) await takeLook(p, has, moved, upload)
+      else {
+        const m = shopsFrom(rt.settings, p.site)
+        if (m) await rt.saveSettings({ shops: m.list })
+      }
       setMsg(
         doneMessage(
           p,

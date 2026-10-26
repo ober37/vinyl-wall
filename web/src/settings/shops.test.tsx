@@ -3,8 +3,8 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
-import { exportFile, lookPatch } from '../model/library'
-import { DEFAULT_SHOPS, shopLine, shopLink, shopOrder, shopsOf, shopWhere, siteUrl, type Shop } from '../model/shops'
+import { doneMessage, exportFile, lookPatch, planImport, planSummary, shopsFrom, type Plan } from '../model/library'
+import { DEFAULT_SHOPS, mergeShops, shopLine, shopLink, shopOrder, shopsOf, shopWhere, siteUrl, type Shop } from '../model/shops'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
@@ -95,6 +95,37 @@ describe('shops: the data', () => {
     const all = [RECKLESS, DUSTY, { ...DEFAULT_SHOPS[0], shopify: true }, DEFAULT_SHOPS[3], { id: 'sr', name: 'Siren Records', kind: 'local', upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }]
     const out = exportFile({ records: [], gear: [], setups: [], artists: [], settings: { shops: all }, app: 'x' })
     expect(lookPatch(JSON.parse(JSON.stringify(out)).settings.site, null).shops).toEqual(all)
+  })
+})
+
+describe('shops: importing into a wall with records', () => {
+  const file = (shops: unknown[], records: Record<string, unknown> = {}) =>
+    JSON.stringify({ vinylWall: 1, records, settings: { site: { shops } } })
+  const wall = { records: [{ id: 'r1', title: 'Ten', artist: 'Pearl Jam' }], artists: [], gear: [], setups: [] }
+  const siren: Shop = { id: 'sr', name: 'Siren Records', kind: 'local', upc: 'https://sirenrecordsmchenry.com/UPC/{upc}', phone: '815-347-8363' }
+
+  it('adds the shops the wall lacks and fills in only what a shop is missing', () => {
+    const mine: Shop = { id: 'm', name: 'siren records', kind: 'local', phone: '555-0100' }
+    const m = mergeShops([mine, DEFAULT_SHOPS[0]], [siren, { ...DEFAULT_SHOPS[0], url: 'https://elsewhere.example/' }, DUSTY])
+    expect(m.list).toEqual([{ ...mine, upc: siren.upc }, DEFAULT_SHOPS[0], DUSTY])
+    expect([m.added, m.filled]).toEqual([1, 1])
+    // an online shop doesn't take a local shop's contact details
+    expect(mergeShops([{ id: 'o', name: 'X', kind: 'online' }], [{ id: 'x', name: 'X', kind: 'local', phone: '1' }]).filled).toBe(0)
+  })
+
+  it("starts from the wall's defaults, and says what it will do", () => {
+    const p = planImport(file([siren]), wall) as Plan
+    expect(p.shops).toEqual({ added: 1, filled: 0 })
+    expect(planSummary(p)).toBe('Adds 1 shop.')
+    expect(doneMessage(p, [])).toBe('Done: added 1 shop.')
+    expect(shopsFrom({}, p.site)!.list.map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Discogs Marketplace', 'eBay', 'Siren Records'])
+    const q = planImport(file([siren], { r2: { title: 'Vs.', artist: 'Pearl Jam' } }), { ...wall, settings: { shops: [{ ...siren, phone: '' }] } }) as Plan
+    expect(planSummary(q)).toBe('Adds 1 record, and fills in 1 of your shops.')
+    expect(doneMessage(q, [])).toBe('Brought in 1 record. Also filled in 1 of your shops.')
+  })
+
+  it('has nothing to do when the wall already has those shops', () => {
+    expect(planImport(file([DEFAULT_SHOPS[0]]), wall)).toBe('Everything in this file is already on the wall.')
   })
 })
 

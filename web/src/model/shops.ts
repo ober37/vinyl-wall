@@ -97,6 +97,30 @@ export const shopOrder = (list: Shop[]) => [...list].sort((a, b) => rank(a) - ra
 export const discogsReleases = (r: Rec) =>
   `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`
 
+// a file's shops brought onto a wall that has its own (an import): shops it doesn't have are added, and a shop it has
+// (by name) gets only the details it's missing, so nothing typed on this wall changes
+export function mergeShops(wall: Shop[], file: Shop[]): { list: Shop[]; added: number; filled: number } {
+  const list = wall.map((s) => ({ ...s }))
+  let added = 0
+  let filled = 0
+  for (const f of file) {
+    const s = list.find((x) => x.name.toLowerCase() === f.name.toLowerCase())
+    if (!s) {
+      list.push(f)
+      added++
+      continue
+    }
+    let more = false
+    for (const k of ['url', 'search', 'upc', 'shopify', 'place', 'phone', 'email', 'about'] as const)
+      if (f[k] && !s[k] && (s.kind === 'local' || !['place', 'phone', 'email', 'about'].includes(k))) {
+        ;(s as Record<string, unknown>)[k] = f[k]
+        more = true
+      }
+    if (more) filled++
+  }
+  return { list, added, filled }
+}
+
 // a research entry's "<shop>: <result>" line, split so the shop's name can link to its search
 export function shopLine(line: string, list: Shop[]): { shop?: Shop; name: string; rest: string } {
   const i = line.indexOf(': ')

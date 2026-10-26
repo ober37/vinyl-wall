@@ -2822,6 +2822,44 @@ function shopWhere(s) {
 var rank = (s) => s.kind === "local" ? s.url || s.search ? 0 : 1 : s.kind === "online" ? 2 : 3;
 var shopOrder = (list) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
 var discogsReleases = (r) => `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`;
+function mergeShops(wall, file) {
+	const list = wall.map((s) => ({ ...s }));
+	let added = 0;
+	let filled = 0;
+	for (const f of file) {
+		const s = list.find((x) => x.name.toLowerCase() === f.name.toLowerCase());
+		if (!s) {
+			list.push(f);
+			added++;
+			continue;
+		}
+		let more = false;
+		for (const k of [
+			"url",
+			"search",
+			"upc",
+			"shopify",
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) if (f[k] && !s[k] && (s.kind === "local" || ![
+			"place",
+			"phone",
+			"email",
+			"about"
+		].includes(k))) {
+			s[k] = f[k];
+			more = true;
+		}
+		if (more) filled++;
+	}
+	return {
+		list,
+		added,
+		filled
+	};
+}
 function shopLine(line, list) {
 	const i = line.indexOf(": ");
 	if (i < 0) return {
@@ -2921,12 +2959,33 @@ function planImport(text, w) {
 		site: snap.settings?.site || {},
 		empty: !w.records.some((r) => !r.deleted),
 		known: w.artists.map((a) => a.id),
-		covers: snap.covers && typeof snap.covers === "object" ? snap.covers : {}
+		covers: snap.covers && typeof snap.covers === "object" ? snap.covers : {},
+		shops: {
+			added: 0,
+			filled: 0
+		}
 	};
-	if (p.recs.length + p.gear.length + p.setups.length === 0) return "Everything in this file is already on the wall.";
+	if (!p.empty) {
+		const m = shopsFrom(w.settings || {}, p.site);
+		if (m) p.shops = {
+			added: m.added,
+			filled: m.filled
+		};
+	}
+	if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled === 0) return "Everything in this file is already on the wall.";
 	return p;
 }
-var planSummary = (p) => `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
+function shopsFrom(settings, site) {
+	if (!Array.isArray(site.shops)) return null;
+	const m = mergeShops(shopsOf(settings), shopsOf(site));
+	return m.added || m.filled ? m : null;
+}
+var shopWords = ({ added, filled }, done = false) => [added ? `${done ? "added" : "adds"} ${added} shop${added === 1 ? "" : "s"}` : "", filled ? `${done ? "filled" : "fills"} in ${filled} of your shops` : ""].filter(Boolean).join(" and ");
+var planSummary = (p) => {
+	const n = p.recs.length + p.gear.length + p.setups.length;
+	const shops = shopWords(p.shops);
+	return (n ? `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}${shops ? ", and " + shops : ""}.` : shops.charAt(0).toUpperCase() + shops.slice(1) + ".") + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
+};
 var IMPORT_FIELDS = [
 	"title",
 	"artist",
@@ -3051,7 +3110,9 @@ function doneMessage(p, recs) {
 	const about = recs.some((d) => aboutPending(d));
 	const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d)).length;
 	const what = enrich && about ? "covers or album info" : enrich ? "covers" : "album info";
-	return `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
+	const n = p.recs.length + p.gear.length + p.setups.length;
+	const shops = shopWords(p.shops, true);
+	return (n || !shops ? `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` : "") + (shops ? (n ? " Also " : "Done: ") + shops + "." : "") + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
 }
 // src/settings/Library.tsx
 async function pool(n, items, fn) {
@@ -3118,7 +3179,8 @@ function useLibrary() {
 				records,
 				artists,
 				gear: rt.gear,
-				setups: rt.setups
+				setups: rt.setups,
+				settings: rt.settings
 			});
 			if (typeof p === "string") {
 				setMsg(p);
@@ -3178,6 +3240,10 @@ function useLibrary() {
 				if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`);
 			}
 			if (p.empty) await takeLook(p, has, moved, upload);
+			else {
+				const m = shopsFrom(rt.settings, p.site);
+				if (m) await rt.saveSettings({ shops: m.list });
+			}
 			setMsg(doneMessage(p, recs.map(([, d]) => d)));
 			text.current = "";
 			setStage("done");
