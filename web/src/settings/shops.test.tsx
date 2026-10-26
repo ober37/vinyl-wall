@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
 import { exportFile, lookPatch } from '../model/library'
-import { DEFAULT_SHOPS, fixedLinks, shopLine, shopLink, shopOrder, shopsOf, shopWhere, siteUrl, type Shop } from '../model/shops'
+import { DEFAULT_SHOPS, shopLine, shopLink, shopOrder, shopsOf, shopWhere, siteUrl, type Shop } from '../model/shops'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
@@ -79,9 +79,6 @@ describe('shops: the data', () => {
     ])
     expect(shopWhere(RECKLESS)).toBe('Chicago')
     expect(shopWhere(DEFAULT_SHOPS[1])).toBe('amazon.com')
-    const r = { id: 'r', artist: 'A', title: 'B' }
-    expect(fixedLinks(r, DEFAULT_SHOPS).map(([t]) => t)).toEqual(['Discogs releases', 'Record stores near me'])
-    expect(fixedLinks(r, [RECKLESS]).map(([t]) => t)).toEqual(['Discogs releases', 'More shops near me'])
   })
 
   it('splits a research line into its shop and result', () => {
@@ -98,13 +95,14 @@ describe('shops: the data', () => {
 })
 
 describe('Search elsewhere', () => {
-  it('lists your shops in order, a local shop without a web store as its name with Call · Email · Map', async () => {
+  it('lists Discogs releases, then your shops under their kind, a local shop without a web store with Call · Email · Map', async () => {
     const { user } = setup({ shops: [DEFAULT_SHOPS[3], RECKLESS, DUSTY] }, hunt)
     await openRecord(user, 'Revolver')
     const names = linkNames()
-    expect(names.slice(names.indexOf('Dusty Groove ↗'))).toEqual([
-      'Dusty Groove ↗', 'Map', 'Call', 'Email', 'Map', 'eBay ↗', 'Discogs releases ↗', 'More shops near me ↗',
-    ])
+    expect(names.slice(names.indexOf('Discogs releases ↗'))).toEqual(['Discogs releases ↗', 'Dusty Groove ↗', 'Map', 'Call', 'Email', 'Map', 'eBay ↗'])
+    expect(screen.getByRole('heading', { name: 'Local shops' })).toBeTruthy()
+    expect(screen.getByRole('heading', { name: 'Marketplaces' })).toBeTruthy()
+    expect(screen.queryByRole('heading', { name: 'Online shops' })).toBeNull()
     expect(screen.getByText('Reckless Records').tagName).toBe('SPAN')
     expect(screen.getByRole('link', { name: 'Call Reckless Records' }).getAttribute('href')).toBe('tel:7732353727')
     expect(screen.getByRole('link', { name: 'Email Reckless Records' }).getAttribute('href')).toBe('mailto:wicker@reckless.com')
@@ -120,6 +118,16 @@ describe('Search elsewhere', () => {
     const shops = screen.getByRole('heading', { name: 'At your shops' }).parentElement!
     expect(within(shops).getByRole('link', { name: 'Revolver ↗' }).getAttribute('href')).toBe('https://shop.revolvermag.com/search?q=The%20Beatles%20Revolver')
     expect(within(shops).getByText('Elsewhere: nothing')).toBeTruthy()
+  })
+})
+
+describe('Search elsewhere with no shops', () => {
+  it('shows Discogs releases and points an editor to Settings', async () => {
+    const { user } = setup({ shops: [] }, hunt)
+    await openRecord(user, 'Revolver')
+    expect(screen.getByRole('link', { name: 'Discogs releases ↗' })).toBeTruthy()
+    expect(screen.getByText('Add your shops in Settings → Shops.')).toBeTruthy()
+    expect(screen.queryByRole('link', { name: /near me/ })).toBeNull()
   })
 })
 

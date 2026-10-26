@@ -93,14 +93,9 @@ export function shopWhere(s: Shop): string {
 const rank = (s: Shop) => (s.kind === 'local' ? (s.url || s.search ? 0 : 1) : s.kind === 'online' ? 2 : 3)
 export const shopOrder = (list: Shop[]) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name))
 
-// after your shops: the Discogs database, and shops near you (more of them once you have local ones)
-export function fixedLinks(r: Rec, list: Shop[]): [string, string][] {
-  const q = encodeURIComponent(`${r.artist} ${r.title}`)
-  return [
-    ['Discogs releases', `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
-    [list.some((s) => s.kind === 'local') ? 'More shops near me' : 'Record stores near me', 'https://www.google.com/maps/search/record+store'],
-  ]
-}
+// before your shops: the album's vinyl releases on Discogs, to pick the pressing
+export const discogsReleases = (r: Rec) =>
+  `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`
 
 // a research entry's "<shop>: <result>" line, split so the shop's name can link to its search
 export function shopLine(line: string, list: Shop[]): { shop?: Shop; name: string; rest: string } {

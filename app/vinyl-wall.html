@@ -2821,9 +2821,7 @@ function shopWhere(s) {
 }
 var rank = (s) => s.kind === "local" ? s.url || s.search ? 0 : 1 : s.kind === "online" ? 2 : 3;
 var shopOrder = (list) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-function fixedLinks(r, list) {
-	return [["Discogs releases", `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`], [list.some((s) => s.kind === "local") ? "More shops near me" : "Record stores near me", "https://www.google.com/maps/search/record+store"]];
-}
+var discogsReleases = (r) => `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`;
 function shopLine(line, list) {
 	const i = line.indexOf(": ");
 	if (i < 0) return {
@@ -6961,55 +6959,78 @@ var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
 	className: "text-foreground flex list-disc flex-col gap-1 ps-5 text-sm",
 	children: items.map((x, i) => /* @__PURE__ */ jsx("li", { children: x }, i))
 });
+var GROUP = {
+	local: "Local shops",
+	online: "Online shops",
+	market: "Marketplaces"
+};
 function SearchElsewhere({ r, shops }) {
-	return /* @__PURE__ */ jsxs("ul", {
-		className: "flex flex-col gap-2 text-sm",
-		children: [shopOrder(shops).map((s) => {
-			const href = shopLink(s, r);
-			const reach = s.kind === "local" ? [
-				["Call", telLink(s)],
-				["Email", mailLink(s)],
-				["Map", mapLink(s)]
-			].filter(([, u]) => u) : [];
-			return /* @__PURE__ */ jsxs("li", {
-				className: "flex flex-col gap-0.5",
-				children: [/* @__PURE__ */ jsxs("span", {
-					className: "flex flex-wrap items-baseline gap-x-1.5",
-					children: [href ? /* @__PURE__ */ jsxs("a", {
-						href,
+	const { canEdit } = useRuntime();
+	const shop = (s) => {
+		const href = shopLink(s, r);
+		const reach = s.kind === "local" ? [
+			["Call", telLink(s)],
+			["Email", mailLink(s)],
+			["Map", mapLink(s)]
+		].filter(([, u]) => u) : [];
+		return /* @__PURE__ */ jsxs("li", {
+			className: "flex flex-col gap-0.5",
+			children: [/* @__PURE__ */ jsxs("span", {
+				className: "flex flex-wrap items-baseline gap-x-1.5",
+				children: [href ? /* @__PURE__ */ jsxs("a", {
+					href,
+					target: "_blank",
+					rel: "noopener",
+					className: link,
+					children: [s.name, " ↗"]
+				}) : /* @__PURE__ */ jsx("span", {
+					className: "text-foreground",
+					children: s.name
+				}), reach.map(([t, u]) => /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("span", {
+					"aria-hidden": "true",
+					className: "text-foreground-muted",
+					children: "·"
+				}), /* @__PURE__ */ jsx("a", {
+					href: u,
+					"aria-label": `${t} ${s.name}`,
+					...t === "Map" ? {
 						target: "_blank",
-						rel: "noopener",
-						className: link,
-						children: [s.name, " ↗"]
-					}) : /* @__PURE__ */ jsx("span", {
-						className: "text-foreground",
-						children: s.name
-					}), reach.map(([t, u]) => /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("span", {
-						"aria-hidden": "true",
-						className: "text-foreground-muted",
-						children: "·"
-					}), /* @__PURE__ */ jsx("a", {
-						href: u,
-						"aria-label": `${t} ${s.name}`,
-						...t === "Map" ? {
-							target: "_blank",
-							rel: "noopener"
-						} : {},
-						className: link,
-						children: t
-					})] }, t))]
-				}), s.about && /* @__PURE__ */ jsx("span", {
-					className: "text-foreground-muted text-xs text-pretty",
-					children: s.about
-				})]
-			}, s.id);
-		}), fixedLinks(r, shops).map(([t, u]) => /* @__PURE__ */ jsx("li", { children: /* @__PURE__ */ jsxs("a", {
-			href: u,
-			target: "_blank",
-			rel: "noopener",
-			className: link,
-			children: [t, " ↗"]
-		}) }, t))]
+						rel: "noopener"
+					} : {},
+					className: link,
+					children: t
+				})] }, t))]
+			}), s.about && /* @__PURE__ */ jsx("span", {
+				className: "text-foreground-muted text-xs text-pretty",
+				children: s.about
+			})]
+		}, s.id);
+	};
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-5 text-sm",
+		children: [
+			/* @__PURE__ */ jsx("a", {
+				href: discogsReleases(r),
+				target: "_blank",
+				rel: "noopener",
+				className: `${link} self-start`,
+				children: "Discogs releases ↗"
+			}),
+			KINDS.map(([k]) => {
+				const list = shopOrder(shops.filter((s) => s.kind === k));
+				return list.length > 0 && /* @__PURE__ */ jsx(Section, {
+					title: GROUP[k],
+					children: /* @__PURE__ */ jsx("ul", {
+						className: "flex flex-col gap-2",
+						children: list.map(shop)
+					})
+				}, k);
+			}),
+			!shops.length && canEdit && /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted",
+				children: "Add your shops in Settings → Shops."
+			})
+		]
 	});
 }
 function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {

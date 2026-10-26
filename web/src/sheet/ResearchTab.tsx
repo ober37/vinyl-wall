@@ -9,7 +9,7 @@ import {
   alreadyWanted, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, sourceList,
   strList, undoWantPatch, wantPatch, type Research, type Wanted,
 } from '../model/research'
-import { fixedLinks, mailLink, mapLink, shopLine, shopLink, shopOrder, shopsOf, telLink, type Shop } from '../model/shops'
+import { discogsReleases, KINDS, mailLink, mapLink, shopLine, shopLink, shopOrder, shopsOf, telLink, type Shop } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
 import { CopiesView } from './Copies'
@@ -69,47 +69,56 @@ const Bullets = ({ items }: { items: React.ReactNode[] }) => (
   </ul>
 )
 
-// Search elsewhere: your shops in order, then the fixed links. A shop's name searches it for the album (a local shop
-// without a web store isn't a link); a local shop adds how to reach it and its line about it
+const GROUP: Record<string, string> = { local: 'Local shops', online: 'Online shops', market: 'Marketplaces' }
+// Search elsewhere: Discogs releases, then your shops under their kind. A shop's name searches it for the album (a local
+// shop without a web store isn't a link); a local shop adds how to reach it and its line about it
 function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
+  const { canEdit } = useRuntime()
+  const shop = (s: Shop) => {
+    const href = shopLink(s, r)
+    const reach = s.kind === 'local' ? [['Call', telLink(s)], ['Email', mailLink(s)], ['Map', mapLink(s)]].filter(([, u]) => u) : []
+    return (
+      <li key={s.id} className="flex flex-col gap-0.5">
+        <span className="flex flex-wrap items-baseline gap-x-1.5">
+          {href ? (
+            <a href={href} target="_blank" rel="noopener" className={link}>
+              {s.name} ↗
+            </a>
+          ) : (
+            <span className="text-foreground">{s.name}</span>
+          )}
+          {reach.map(([t, u]) => (
+            <Fragment key={t}>
+              <span aria-hidden="true" className="text-foreground-muted">
+                ·
+              </span>
+              <a href={u} aria-label={`${t} ${s.name}`} {...(t === 'Map' ? { target: '_blank', rel: 'noopener' } : {})} className={link}>
+                {t}
+              </a>
+            </Fragment>
+          ))}
+        </span>
+        {s.about && <span className="text-foreground-muted text-xs text-pretty">{s.about}</span>}
+      </li>
+    )
+  }
   return (
-    <ul className="flex flex-col gap-2 text-sm">
-      {shopOrder(shops).map((s) => {
-        const href = shopLink(s, r)
-        const reach = s.kind === 'local' ? [['Call', telLink(s)], ['Email', mailLink(s)], ['Map', mapLink(s)]].filter(([, u]) => u) : []
+    <div className="flex flex-col gap-5 text-sm">
+      <a href={discogsReleases(r)} target="_blank" rel="noopener" className={`${link} self-start`}>
+        Discogs releases ↗
+      </a>
+      {KINDS.map(([k]) => {
+        const list = shopOrder(shops.filter((s) => s.kind === k))
         return (
-          <li key={s.id} className="flex flex-col gap-0.5">
-            <span className="flex flex-wrap items-baseline gap-x-1.5">
-              {href ? (
-                <a href={href} target="_blank" rel="noopener" className={link}>
-                  {s.name} ↗
-                </a>
-              ) : (
-                <span className="text-foreground">{s.name}</span>
-              )}
-              {reach.map(([t, u]) => (
-                <Fragment key={t}>
-                  <span aria-hidden="true" className="text-foreground-muted">
-                    ·
-                  </span>
-                  <a href={u} aria-label={`${t} ${s.name}`} {...(t === 'Map' ? { target: '_blank', rel: 'noopener' } : {})} className={link}>
-                    {t}
-                  </a>
-                </Fragment>
-              ))}
-            </span>
-            {s.about && <span className="text-foreground-muted text-xs text-pretty">{s.about}</span>}
-          </li>
+          list.length > 0 && (
+            <Section key={k} title={GROUP[k]}>
+              <ul className="flex flex-col gap-2">{list.map(shop)}</ul>
+            </Section>
+          )
         )
       })}
-      {fixedLinks(r, shops).map(([t, u]) => (
-        <li key={t}>
-          <a href={u} target="_blank" rel="noopener" className={link}>
-            {t} ↗
-          </a>
-        </li>
-      ))}
-    </ul>
+      {!shops.length && canEdit && <p className="text-foreground-muted">Add your shops in Settings → Shops.</p>}
+    </div>
   )
 }
 
