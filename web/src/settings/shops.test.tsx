@@ -58,6 +58,10 @@ describe('shops: the data', () => {
   it('drops what would not link or belongs to another kind', () => {
     const [s] = shopsOf({ shops: [{ name: 'X', kind: 'odd', url: 'javascript:alert(1)', search: 'https://x.com/s', place: 'Somewhere' }, { kind: 'local' }] })
     expect(s).toEqual({ id: 's0', name: 'X', kind: 'online' })
+    expect(shopsOf({ shops: [{ name: 'S', upc: 'https://s.com/UPC/{upc}', shopify: true }, { name: 'T', upc: 'https://t.com/UPC/', shopify: 'yes' }] })).toEqual([
+      { id: 's0', name: 'S', kind: 'online', upc: 'https://s.com/UPC/{upc}', shopify: true },
+      { id: 's1', name: 'T', kind: 'online' },
+    ])
     expect(siteUrl('reckless.com')).toBe('https://reckless.com/')
     expect(siteUrl('javascript:alert(1)')).toBe('')
   })
@@ -141,7 +145,7 @@ describe('Settings → Shops', () => {
   })
 
   it("edits a shop in place, checks its search link, and Try it searches for a record on the wall", async () => {
-    const { user, site } = setup({ shops: [RECKLESS] }, hunt)
+    const { user, site } = setup({ shops: [{ ...RECKLESS, upc: 'https://www.reckless.com/UPC/{upc}' }] }, hunt)
     const sheet = await openShops(user)
     await user.click(within(sheet).getByRole('button', { name: /Reckless Records · Chicago/ }))
     expect(within(sheet).getByText('Your Claude chat can fill in the missing details.')).toBeTruthy()
@@ -153,7 +157,8 @@ describe('Settings → Shops', () => {
     expect(tryIt.getAttribute('href')).toMatch(/^https:\/\/www\.reckless\.com\/search\?q=/)
     await waitFor(() => expect((site().shops as Shop[])[0].search).toBe('https://www.reckless.com/search?q={q}'))
     expect(within(sheet).queryByText('Your Claude chat can fill in the missing details.')).toBeNull()
-    expect((site().shops as Shop[])[0]).toMatchObject({ phone: RECKLESS.phone, email: RECKLESS.email, about: RECKLESS.about })
+    // what the chat found, and isn't edited here, stays
+    expect((site().shops as Shop[])[0]).toMatchObject({ phone: RECKLESS.phone, email: RECKLESS.email, about: RECKLESS.about, upc: 'https://www.reckless.com/UPC/{upc}' })
   })
 
   it('removes a shop after asking, and an empty list stays empty', async () => {

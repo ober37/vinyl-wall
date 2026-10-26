@@ -3,8 +3,21 @@
 import type { Rec } from './record'
 
 export type ShopKind = 'local' | 'online' | 'market'
-// search: the shop's search with {q} where "artist title" goes. A local shop also keeps how to reach it and a line about it
-export type Shop = { id: string; name: string; kind: ShopKind; url?: string; search?: string; place?: string; phone?: string; email?: string; about?: string }
+// search: the shop's search with {q} where "artist title" goes. upc (a product page by barcode, {upc}) and shopify (its
+// product data can be read) are found and used by the chat, not shown. A local shop also keeps how to reach it and a line about it
+export type Shop = {
+  id: string
+  name: string
+  kind: ShopKind
+  url?: string
+  search?: string
+  upc?: string
+  shopify?: boolean
+  place?: string
+  phone?: string
+  email?: string
+  about?: string
+}
 
 export const KINDS: [ShopKind, string][] = [
   ['local', 'Local'],
@@ -12,7 +25,7 @@ export const KINDS: [ShopKind, string][] = [
   ['market', 'Marketplace'],
 ]
 export const DEFAULT_SHOPS: Shop[] = [
-  { id: 'revolver', name: 'Revolver', kind: 'online', url: 'https://shop.revolvermag.com/', search: 'https://shop.revolvermag.com/search?q={q}' },
+  { id: 'revolver', name: 'Revolver', kind: 'online', url: 'https://shop.revolvermag.com/', search: 'https://shop.revolvermag.com/search?q={q}', shopify: true },
   { id: 'amazon', name: 'Amazon', kind: 'online', url: 'https://www.amazon.com/', search: 'https://www.amazon.com/s?k={q}%20vinyl&i=popular' },
   { id: 'discogs', name: 'Discogs Marketplace', kind: 'market', url: 'https://www.discogs.com/sell', search: 'https://www.discogs.com/sell/list?q={q}&format=Vinyl' },
   { id: 'ebay', name: 'eBay', kind: 'market', url: 'https://www.ebay.com/', search: 'https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985' },
@@ -33,6 +46,9 @@ export function shopsOf(settings: Record<string, unknown>): Shop[] {
       const search = https(s.search)
       if (url) shop.url = url
       if (search.includes('{q}')) shop.search = search
+      const upc = https(s.upc)
+      if (upc.includes('{upc}')) shop.upc = upc
+      if (s.shopify === true) shop.shopify = true
       if (kind === 'local')
         for (const k of ['place', 'phone', 'email', 'about'] as const) {
           const v = text(s[k], k === 'about' ? 400 : 120)

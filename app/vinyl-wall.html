@@ -2739,7 +2739,8 @@ var DEFAULT_SHOPS = [
 		name: "Revolver",
 		kind: "online",
 		url: "https://shop.revolvermag.com/",
-		search: "https://shop.revolvermag.com/search?q={q}"
+		search: "https://shop.revolvermag.com/search?q={q}",
+		shopify: true
 	},
 	{
 		id: "amazon",
@@ -2778,6 +2779,9 @@ function shopsOf(settings) {
 		const search = https(s.search);
 		if (url) shop.url = url;
 		if (search.includes("{q}")) shop.search = search;
+		const upc = https(s.upc);
+		if (upc.includes("{upc}")) shop.upc = upc;
+		if (s.shopify === true) shop.shopify = true;
 		if (kind === "local") for (const k of [
 			"place",
 			"phone",
@@ -4140,6 +4144,8 @@ function fromDraft(d, was) {
 		name: d.name.trim() || was.name,
 		kind: d.kind
 	};
+	if (was.upc) s.upc = was.upc;
+	if (was.shopify) s.shopify = true;
 	const url = siteUrl(d.url);
 	if (url.startsWith("https:")) s.url = url;
 	if (okSearch(d.search)) s.search = d.search.trim();

@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 14.
+Skill version 15.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -64,7 +64,7 @@ When you add a record they own, or an order arrives, set `mediaGrade` (vinyl) an
 The wall keeps the person's preferred shops as `shops` on the `settings/site` document. The wall's Search elsewhere lists them, and research checks them first. When `shops` is missing, the wall uses these defaults; the first time you change the list, write the defaults with your change so none of them is lost:
 
 ```json
-[{"id": "revolver", "name": "Revolver", "kind": "online", "url": "https://shop.revolvermag.com/", "search": "https://shop.revolvermag.com/search?q={q}"},
+[{"id": "revolver", "name": "Revolver", "kind": "online", "url": "https://shop.revolvermag.com/", "search": "https://shop.revolvermag.com/search?q={q}", "shopify": true},
  {"id": "amazon", "name": "Amazon", "kind": "online", "url": "https://www.amazon.com/", "search": "https://www.amazon.com/s?k={q}%20vinyl&i=popular"},
  {"id": "discogs", "name": "Discogs Marketplace", "kind": "market", "url": "https://www.discogs.com/sell", "search": "https://www.discogs.com/sell/list?q={q}&format=Vinyl"},
  {"id": "ebay", "name": "eBay", "kind": "market", "url": "https://www.ebay.com/", "search": "https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985"}]
@@ -76,14 +76,25 @@ Each shop has:
 - `name`.
 - `kind`: `"local"` for a shop they can walk into (even one with a web store; it stays one shop), `"online"` for an online shop with its own stock, or `"market"` for a marketplace of many sellers, like eBay.
 - `url`: its website or web store, as an `https://` link.
-- `search`: its search page with `{q}` where the artist and album go, `https://` only, like `https://shop.revolvermag.com/search?q={q}`. Find it by searching the shop's site for an album, and check that the link works before saving it.
+- `search`: its search page with `{q}` where the artist and album go, `https://` only, like `https://shop.revolvermag.com/search?q={q}`.
+- `upc`: its product page by barcode with `{upc}` where the barcode goes, `https://` only, like `https://sirenrecordsmchenry.com/UPC/{upc}`. Only for shops that have one.
+- `shopify`: `true` when it's a Shopify store, so its product data can be read (see Research).
 - For a local shop only, also:
   - `place`: the street address with the town, like "1532 N Milwaukee Ave, Chicago, IL 60622".
   - `phone`.
   - `email`: only an address the shop publishes.
   - `about`: one or two sentences on what makes it worth the trip, like what it's known for. Leave out opening hours, because they change.
 
-Leave out anything you can't find. To change the list, `get` `settings/site`, then `update` it with the whole `shops` list and `if_version`.
+Leave out anything you can't find. The wall doesn't show `upc` or `shopify`, and keeps them when the person edits a shop there.
+
+**What a shop supports:** whenever you add a shop, fill one in, or list shops near them, work out what its web store supports, and save what works:
+- **Search:** search its site for an album and note the results page's address, with `{q}` in place of the words.
+- **Barcode pages:** many record-shop storefronts open a product by barcode at `<store>/UPC/<barcode>`. Try it with the barcode of a record they're likely to stock (a Discogs release's barcode, from `https://api.discogs.com/releases/<id>`, `identifiers` of type "Barcode"). Save `upc` only if it opens a product page.
+- **Shopify:** `<store>/search/suggest.json?q=<words>&resources[type]=product` answers with JSON.
+
+Check each link works before saving it. When listing shops near them, say in a word what each one's store supports ("searchable", "by barcode").
+
+To change the list, `get` `settings/site`, then `update` it with the whole `shops` list and `if_version`.
 
 - **Adding a shop:** look it up: the website, the search link, and for a local shop the address, phone, email and about. If a shop with that name is already on the list, fill in that one instead (next point). Tell them in a line what you added and what you couldn't find.
 - **Filling in a shop:** when they ask you to fill in or update a shop already on the list (often one they added on the wall with just a name or a website), look up what's missing and fill only the empty fields. Never change what they typed, and keep its `id`. Tell them in a line what you filled in and what you couldn't find.
@@ -109,7 +120,8 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 - **Finding or buying a copy:** when the question is about finding or buying a copy (which pressing to hunt, where it's available, what it costs), check their shops first.
   - **Order:** `get` `settings/site` for `shops` (if it's missing, use the defaults above). Check local shops first, then online shops, then marketplaces.
   - **Matching:** look up the album at each shop that has a `search`, and match only this album by this artist on vinyl. Skip CDs, tapes, merch and other albums.
-  - **Shopify stores (like Revolver):** they have structured data. `<shop>/search/suggest.json?q=<artist title>&resources[type]=product` lists matching products with `available`, `price` and `url`. `<shop>/products/<handle>.json` gives each variant's `price` and `available`.
+  - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`): read the release's barcodes from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only) and put each in `upc`. A page found that way is that exact pressing.
+  - **Shopify stores (`shopify: true`, like Revolver):** they have structured data. `<shop>/search/suggest.json?q=<artist title>&resources[type]=product` lists matching products with `available`, `price` and `url`. `<shop>/products/<handle>.json` gives each variant's `price` and `available`.
   - **What to report:**
     - A shop: what's in stock (format, colour variant, price, link), and anything sold out or on pre-order.
     - A marketplace: how many listings and the price range.

@@ -23,9 +23,12 @@ const draftOf = (s: Shop): Draft => ({
   name: s.name, kind: s.kind, url: s.url || '', search: s.search || '', place: s.place || '', phone: s.phone || '', email: s.email || '', about: s.about || '',
 })
 const okSearch = (v: string) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes('{q}')
-// what a draft stores: a name always (the last one when it's cleared), links only when they work, contact only for local
+// what a draft stores: a name always (the last one when it's cleared), links only when they work, contact only for local,
+// and what the chat found that isn't edited here
 function fromDraft(d: Draft, was: Shop): Shop {
   const s: Shop = { id: was.id, name: d.name.trim() || was.name, kind: d.kind }
+  if (was.upc) s.upc = was.upc
+  if (was.shopify) s.shopify = true
   const url = siteUrl(d.url)
   if (url.startsWith('https:')) s.url = url
   if (okSearch(d.search)) s.search = d.search.trim()
