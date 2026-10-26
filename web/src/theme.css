@@ -201,3 +201,8 @@ body {
   background-color: var(--wall);
   color: var(--ink);
 }
+/* the page never scrolls sideways; a record sliding out of the right-most sleeve shows in the margin (#71). On the
+   app's root rather than body, which would hand it to the window */
+#root {
+  overflow-x: clip;
+}
