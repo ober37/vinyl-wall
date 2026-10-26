@@ -206,3 +206,23 @@ body {
 #root {
   overflow-x: clip;
 }
+/* keyboard focus (#81): a 2px brass ring with a small gap (fields keep appica's softer ring); a tab shows it in its
+   own text and underline instead, in a brass deep enough to read as text */
+:focus-visible:not(input, textarea, [role='combobox']) {
+  outline-width: 2px;
+  outline-offset: 2px;
+}
+[data-slot='tabs-trigger']:focus-visible {
+  outline: none;
+  color: var(--warning-intense);
+}
+[data-slot='tabs-list']:has([data-slot='tabs-trigger']:focus-visible) [data-slot='tabs-indicator'] {
+  background-color: var(--warning-intense);
+}
+/* room for the ring at the top and bottom of a sheet's scrolling body, which clips what's inside it */
+[data-slot='drawer-body'] {
+  margin-top: -4px;
+  padding-block: 4px;
+  /* and a control scrolled into view by the keyboard stops short of the edge */
+  scroll-padding-block: 8px;
+}
