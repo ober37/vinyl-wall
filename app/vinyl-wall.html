@@ -15459,6 +15459,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --accent: #2c5c4f;
   --accent-ink: #f2f5f1;
   --brass: #94692a;
+  --ring: var(--brass);
   --paper: #f6f4ec;
   --paper-ink: #2a2622;
   --someday: #56708f;
@@ -15519,6 +15520,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --accent: #7fb8a4;
   --accent-ink: #0f1614;
   --brass: #c99c4a;
+  --ring: color-mix(in srgb, var(--brass) 65%, var(--sheet));
   --paper: #e9e4d6;
   --paper-ink: #2a2622;
   --someday: #9db3cf;
@@ -15591,9 +15593,9 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --success-strong: color-mix(in oklch, var(--accent) 60%, var(--sheet));
   --success-emphasis: var(--accent);
   --success-intense: color-mix(in oklch, var(--accent) 80%, var(--ink));
-  --focus-ring: var(--brass);
-  --focus-ring-input: color-mix(in oklch, var(--brass) 40%, transparent);
-  --focus-ring-primary: var(--brass);
+  --focus-ring: var(--ring);
+  --focus-ring-input: var(--ring);
+  --focus-ring-primary: var(--ring);
   --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --shadow-tone: color-mix(in oklch, var(--shade) var(--shade-alpha), transparent);
