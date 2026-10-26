@@ -247,7 +247,9 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
             </span>
           </span>
         </AccordionTrigger>
-        <AccordionContent>
+        {/* room for a focused ring, which the panel would otherwise clip: as wide as the buttons pulled out at the bottom
+            (-ms-4, -me-4) */}
+        <AccordionContent className="-mx-5 -mb-1 px-5 pb-1">
           <div className="flex flex-col gap-4 text-sm">
             {e.question && (
               <Section title="You asked">

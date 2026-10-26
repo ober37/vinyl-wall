@@ -268,7 +268,8 @@ export function Listening({ r }: { r: Rec }) {
                   </span>
                 </span>
               </AccordionTrigger>
-              <AccordionContent>
+              {/* room for a focused Edit's ring, which the panel would otherwise clip */}
+              <AccordionContent className="-mx-1 px-1">
                 <ul className="divide-(--line) flex flex-col divide-y">
                   {m.plays.map((p) => (
                     <li key={p.key} className="py-2 text-sm">

@@ -76,8 +76,8 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
           <Chevron />
         </span>
       </CollapsibleTrigger>
-      {/* room for a focused field's ring, which the panel would otherwise clip */}
-      <CollapsibleContent className="-mx-1 px-1 transition-none">
+      {/* room for a focused ring, which the panel would otherwise clip: as wide as Remove this shop pulls out (-ms-3) */}
+      <CollapsibleContent className="-mx-4 px-4 transition-none">
         <div className="flex flex-col gap-4 pt-4 pb-2">
           <span role="status" className="text-foreground-muted -mb-2 text-xs empty:hidden">
             {saved}

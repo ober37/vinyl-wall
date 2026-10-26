@@ -4292,7 +4292,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 				children: [open ? "Done" : "Edit", /* @__PURE__ */ jsx(Chevron, {})]
 			})]
 		}), /* @__PURE__ */ jsx(CollapsibleContent, {
-			className: "-mx-1 px-1 transition-none",
+			className: "-mx-4 px-4 transition-none",
 			children: /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-4 pt-4 pb-2",
 				children: [
@@ -6684,53 +6684,56 @@ function Listening({ r }) {
 								" h"
 							]
 						})]
-					}) }), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsx("ul", {
-						className: "divide-(--line) flex flex-col divide-y",
-						children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
-							className: "py-2 text-sm",
-							children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
-								r,
-								p,
-								j: journal,
-								onDone: () => setJournal(null)
-							}, p.key) : /* @__PURE__ */ jsxs("div", {
-								className: "flex items-start justify-between gap-2",
-								children: [/* @__PURE__ */ jsxs("div", {
-									className: "min-w-0",
-									children: [
-										/* @__PURE__ */ jsxs("div", {
-											className: "text-foreground",
-											children: [/* @__PURE__ */ jsx("span", {
-												"aria-hidden": "true",
-												className: "text-foreground-muted me-1.5 text-xs",
-												children: p.icon
-											}), [
-												p.date,
-												p.what,
-												p.setup
-											].filter(Boolean).join(" · ")]
+					}) }), /* @__PURE__ */ jsx(AccordionContent, {
+						className: "-mx-1 px-1",
+						children: /* @__PURE__ */ jsx("ul", {
+							className: "divide-(--line) flex flex-col divide-y",
+							children: m.plays.map((p) => /* @__PURE__ */ jsx("li", {
+								className: "py-2 text-sm",
+								children: isOpen(p) ? /* @__PURE__ */ jsx(JournalEditor, {
+									r,
+									p,
+									j: journal,
+									onDone: () => setJournal(null)
+								}, p.key) : /* @__PURE__ */ jsxs("div", {
+									className: "flex items-start justify-between gap-2",
+									children: [/* @__PURE__ */ jsxs("div", {
+										className: "min-w-0",
+										children: [
+											/* @__PURE__ */ jsxs("div", {
+												className: "text-foreground",
+												children: [/* @__PURE__ */ jsx("span", {
+													"aria-hidden": "true",
+													className: "text-foreground-muted me-1.5 text-xs",
+													children: p.icon
+												}), [
+													p.date,
+													p.what,
+													p.setup
+												].filter(Boolean).join(" · ")]
+											}),
+											p.vibe > 0 && /* @__PURE__ */ jsx("div", {
+												className: "text-foreground-muted",
+												children: VIBES[p.vibe - 1]
+											}),
+											p.thoughts && /* @__PURE__ */ jsx("p", {
+												className: "text-foreground-muted mt-1 break-words whitespace-pre-line",
+												children: /* @__PURE__ */ jsx(Linkify, { text: p.thoughts })
+											})
+										]
+									}), canEdit && /* @__PURE__ */ jsx(Button, {
+										size: "sm",
+										variant: "outline",
+										onClick: () => openJournal({
+											ref: p.ref,
+											fresh: false
 										}),
-										p.vibe > 0 && /* @__PURE__ */ jsx("div", {
-											className: "text-foreground-muted",
-											children: VIBES[p.vibe - 1]
-										}),
-										p.thoughts && /* @__PURE__ */ jsx("p", {
-											className: "text-foreground-muted mt-1 break-words whitespace-pre-line",
-											children: /* @__PURE__ */ jsx(Linkify, { text: p.thoughts })
-										})
-									]
-								}), canEdit && /* @__PURE__ */ jsx(Button, {
-									size: "sm",
-									variant: "outline",
-									onClick: () => openJournal({
-										ref: p.ref,
-										fresh: false
-									}),
-									children: p.thoughts || p.vibe ? "Edit" : "+ Thoughts"
-								})]
-							})
-						}, p.key))
-					}) })]
+										children: p.thoughts || p.vibe ? "Edit" : "+ Thoughts"
+									})]
+								})
+							}, p.key))
+						})
+					})]
 				}, m.month))
 			})
 		]
@@ -7254,78 +7257,81 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 						}), e.headline || firstSentence(e.summary) || "Research notes"]
 					})]
 				})
-			}), /* @__PURE__ */ jsx(AccordionContent, { children: /* @__PURE__ */ jsxs("div", {
-				className: "flex flex-col gap-4 text-sm",
-				children: [
-					e.question && /* @__PURE__ */ jsx(Section, {
-						title: "You asked",
-						children: /* @__PURE__ */ jsx("p", {
-							className: "text-foreground",
-							children: e.question
+			}), /* @__PURE__ */ jsx(AccordionContent, {
+				className: "-mx-5 -mb-1 px-5 pb-1",
+				children: /* @__PURE__ */ jsxs("div", {
+					className: "flex flex-col gap-4 text-sm",
+					children: [
+						e.question && /* @__PURE__ */ jsx(Section, {
+							title: "You asked",
+							children: /* @__PURE__ */ jsx("p", {
+								className: "text-foreground",
+								children: e.question
+							})
+						}),
+						body && /* @__PURE__ */ jsx("p", {
+							className: "text-foreground text-pretty",
+							children: body
+						}),
+						wish && atShops,
+						strList(e.pressings).length > 0 && /* @__PURE__ */ jsx(Section, {
+							title: "Pressings",
+							children: pressings(e, key)
+						}),
+						strList(e.check).length > 0 && /* @__PURE__ */ jsx(Section, {
+							title: "Check in a listing",
+							children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.check) })
+						}),
+						!wish && atShops,
+						strList(e.where).length > 0 && /* @__PURE__ */ jsx(Section, {
+							title: "Where to look",
+							children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.where) })
+						}),
+						e.price && /* @__PURE__ */ jsx(Section, {
+							title: "Price",
+							children: /* @__PURE__ */ jsx("p", {
+								className: "text-foreground",
+								children: e.price
+							})
+						}),
+						src.length > 0 && /* @__PURE__ */ jsx(Section, {
+							title: "Sources",
+							children: /* @__PURE__ */ jsx(Bullets, { items: src.map((s) => /* @__PURE__ */ jsxs("a", {
+								href: s.url,
+								target: "_blank",
+								rel: "noopener",
+								className: "text-primary underline-offset-2 hover:underline",
+								children: [s.title, " ↗"]
+							})) })
+						}),
+						canEdit && /* @__PURE__ */ jsxs("div", {
+							className: "-ms-4 flex flex-wrap items-center gap-1",
+							children: [
+								/* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "ghost",
+									onClick: () => pin(key, !!e.pinned),
+									children: e.pinned ? "Unpin" : "Pin"
+								}),
+								k !== "ordered" && /* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "ghost",
+									onClick: () => copy(key, resPrompt(r, settings.url, e), "Copied. Paste it into Claude to pick up from here."),
+									children: "Follow up in chat"
+								}),
+								/* @__PURE__ */ jsx(Button, {
+									size: "sm",
+									variant: "ghost",
+									className: "text-error-emphasis -me-4 ms-auto",
+									onClick: () => setDel(key),
+									children: "Remove this research"
+								}),
+								copied?.key === key && /* @__PURE__ */ jsx(CopyStatus, { c: copied })
+							]
 						})
-					}),
-					body && /* @__PURE__ */ jsx("p", {
-						className: "text-foreground text-pretty",
-						children: body
-					}),
-					wish && atShops,
-					strList(e.pressings).length > 0 && /* @__PURE__ */ jsx(Section, {
-						title: "Pressings",
-						children: pressings(e, key)
-					}),
-					strList(e.check).length > 0 && /* @__PURE__ */ jsx(Section, {
-						title: "Check in a listing",
-						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.check) })
-					}),
-					!wish && atShops,
-					strList(e.where).length > 0 && /* @__PURE__ */ jsx(Section, {
-						title: "Where to look",
-						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.where) })
-					}),
-					e.price && /* @__PURE__ */ jsx(Section, {
-						title: "Price",
-						children: /* @__PURE__ */ jsx("p", {
-							className: "text-foreground",
-							children: e.price
-						})
-					}),
-					src.length > 0 && /* @__PURE__ */ jsx(Section, {
-						title: "Sources",
-						children: /* @__PURE__ */ jsx(Bullets, { items: src.map((s) => /* @__PURE__ */ jsxs("a", {
-							href: s.url,
-							target: "_blank",
-							rel: "noopener",
-							className: "text-primary underline-offset-2 hover:underline",
-							children: [s.title, " ↗"]
-						})) })
-					}),
-					canEdit && /* @__PURE__ */ jsxs("div", {
-						className: "-ms-4 flex flex-wrap items-center gap-1",
-						children: [
-							/* @__PURE__ */ jsx(Button, {
-								size: "sm",
-								variant: "ghost",
-								onClick: () => pin(key, !!e.pinned),
-								children: e.pinned ? "Unpin" : "Pin"
-							}),
-							k !== "ordered" && /* @__PURE__ */ jsx(Button, {
-								size: "sm",
-								variant: "ghost",
-								onClick: () => copy(key, resPrompt(r, settings.url, e), "Copied. Paste it into Claude to pick up from here."),
-								children: "Follow up in chat"
-							}),
-							/* @__PURE__ */ jsx(Button, {
-								size: "sm",
-								variant: "ghost",
-								className: "text-error-emphasis -me-4 ms-auto",
-								onClick: () => setDel(key),
-								children: "Remove this research"
-							}),
-							copied?.key === key && /* @__PURE__ */ jsx(CopyStatus, { c: copied })
-						]
-					})
-				]
-			}) })]
+					]
+				})
+			})]
 		}, key);
 	};
 	return /* @__PURE__ */ jsxs("div", {
@@ -9760,6 +9766,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     -moz-osx-font-smoothing: grayscale;
     position: relative;
   }
+
+  :focus-visible {
+    outline-color: var(--focus-ring);
+  }
 }
 
 @layer components {
@@ -10362,6 +10372,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .-mx-2 {
     margin-inline: calc(var(--spacing) * -2);
+  }
+
+  .-mx-4 {
+    margin-inline: calc(var(--spacing) * -4);
   }
 
   .-mx-5 {
@@ -15445,6 +15459,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --accent: #2c5c4f;
   --accent-ink: #f2f5f1;
   --brass: #94692a;
+  --ring: var(--brass);
   --paper: #f6f4ec;
   --paper-ink: #2a2622;
   --someday: #56708f;
@@ -15505,6 +15520,7 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --accent: #7fb8a4;
   --accent-ink: #0f1614;
   --brass: #c99c4a;
+  --ring: color-mix(in srgb, var(--brass) 65%, var(--sheet));
   --paper: #e9e4d6;
   --paper-ink: #2a2622;
   --someday: #9db3cf;
@@ -15577,9 +15593,9 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   --success-strong: color-mix(in oklch, var(--accent) 60%, var(--sheet));
   --success-emphasis: var(--accent);
   --success-intense: color-mix(in oklch, var(--accent) 80%, var(--ink));
-  --focus-ring: var(--brass);
-  --focus-ring-input: color-mix(in oklch, var(--brass) 40%, transparent);
-  --focus-ring-primary: var(--brass);
+  --focus-ring: var(--ring);
+  --focus-ring-input: var(--ring);
+  --focus-ring-primary: var(--ring);
   --font-sans: "Instrument Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
   --shadow-tone: color-mix(in oklch, var(--shade) var(--shade-alpha), transparent);
@@ -15598,6 +15614,26 @@ body {
 
 #root {
   overflow-x: clip;
+}
+
+:focus-visible:not(input, textarea, [role="combobox"]) {
+  outline-offset: 2px;
+  outline-width: 2px;
+}
+
+[data-slot="tabs-trigger"]:focus-visible {
+  color: var(--warning-intense);
+  outline: none;
+}
+
+[data-slot="tabs-list"]:has([data-slot="tabs-trigger"]:focus-visible) [data-slot="tabs-indicator"] {
+  background-color: var(--warning-intense);
+}
+
+[data-slot="drawer-body"] {
+  margin-top: -4px;
+  padding-block: 4px;
+  scroll-padding-block: 8px;
 }
 
 [data-previewing] [data-slot="drawer-backdrop"] {
