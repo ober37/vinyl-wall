@@ -9766,6 +9766,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     -moz-osx-font-smoothing: grayscale;
     position: relative;
   }
+
+  :focus-visible {
+    outline-color: var(--focus-ring);
+  }
 }
 
 @layer components {

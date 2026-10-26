@@ -212,6 +212,12 @@ body {
   outline-width: 2px;
   outline-offset: 2px;
 }
+/* brass, too, for what doesn't pick a ring colour of its own (links, a file input), instead of the browser's blue */
+@layer base {
+  :focus-visible {
+    outline-color: var(--focus-ring);
+  }
+}
 [data-slot='tabs-trigger']:focus-visible {
   outline: none;
   color: var(--warning-intense);
