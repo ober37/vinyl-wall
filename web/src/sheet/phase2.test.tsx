@@ -302,7 +302,7 @@ describe('the Research tab', () => {
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     for (const name of ['Copy for Claude', '+ Want', 'Pin', 'Unpin', 'Remove this research', 'Follow up in chat'])
       expect(screen.queryByRole('button', { name })).toBeNull()
-    expect(screen.getByRole('link', { name: 'Discogs marketplace ↗' })).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Discogs Marketplace ↗' })).toBeTruthy()
   })
 
   it('keeps shopping links off an owned record unless it still wants a copy', async () => {

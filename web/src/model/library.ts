@@ -5,6 +5,7 @@
 import { wantCopies } from './copies'
 import { aboutPending } from './task'
 import { BACKGROUNDS, HANGS } from './site'
+import { shopsOf } from './shops'
 import type { Rec } from './record'
 
 type Doc = Record<string, unknown> & { id: string }
@@ -48,7 +49,7 @@ const byId = (list: Doc[]) => Object.fromEntries(list.filter((x) => !x.example &
 // and the artists the records point at
 export function exportFile(p: { records: Rec[]; gear: Doc[]; setups: Doc[]; artists: Doc[]; settings: Data; app: string }): LibFile {
   const site: Data = {}
-  for (const k of ['title', 'bg', 'dim', 'hang']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
+  for (const k of ['title', 'bg', 'dim', 'hang', 'shops']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
   const records = byId(p.records as Doc[])
   const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean))
   return {
@@ -188,7 +189,8 @@ export function recordWrites(p: Plan, has: (id: unknown) => boolean, moved: Map<
   })
 }
 
-// an empty wall takes the file's look: title, a known preset or the photo (given its id on this wall), softening, hanging
+// an empty wall takes the file's look: title, a known preset or the photo (given its id on this wall), softening, hanging,
+// and its shops
 export function lookPatch(site: Data, photoId: string | null): Data {
   const bg = (site.bg || {}) as Data
   const patch: Data = {}
@@ -197,6 +199,7 @@ export function lookPatch(site: Data, photoId: string | null): Data {
   else if (bg.kind === 'photo' && photoId) patch.bg = { kind: 'photo', assetId: photoId }
   if (typeof site.dim === 'number') patch.dim = site.dim
   if (HANGS.some(([k]) => k === site.hang)) patch.hang = site.hang
+  if (Array.isArray(site.shops)) patch.shops = shopsOf(site)
   return patch
 }
 

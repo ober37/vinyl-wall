@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { Fragment, useState } from 'react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Badge } from '@appica/ui-react/badge'
 import { Button } from '@appica/ui-react/button'
@@ -6,13 +6,14 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { stillCopies } from '../model/copies'
 import { kindOf, shortDate, type Rec } from '../model/record'
 import {
-  alreadyWanted, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, searchLinks, sourceList,
+  alreadyWanted, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, sourceList,
   strList, undoWantPatch, wantPatch, type Research, type Wanted,
 } from '../model/research'
+import { fixedLinks, mailLink, mapLink, shopLine, shopLink, shopOrder, shopsOf, telLink, type Shop } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
 import { CopiesView } from './Copies'
-import { link, LinkList } from './Links'
+import { link } from './Links'
 
 // The prompt for Claude, copied; when the clipboard is blocked it shows selected, to copy by hand
 type Copied = { key: string; msg: string; text?: string }
@@ -68,6 +69,50 @@ const Bullets = ({ items }: { items: React.ReactNode[] }) => (
   </ul>
 )
 
+// Search elsewhere: your shops in order, then the fixed links. A shop's name searches it for the album (a local shop
+// without a web store isn't a link); a local shop adds how to reach it and its line about it
+function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
+  return (
+    <ul className="flex flex-col gap-2 text-sm">
+      {shopOrder(shops).map((s) => {
+        const href = shopLink(s, r)
+        const reach = s.kind === 'local' ? [['Call', telLink(s)], ['Email', mailLink(s)], ['Map', mapLink(s)]].filter(([, u]) => u) : []
+        return (
+          <li key={s.id} className="flex flex-col gap-0.5">
+            <span className="flex flex-wrap items-baseline gap-x-1.5">
+              {href ? (
+                <a href={href} target="_blank" rel="noopener" className={link}>
+                  {s.name} ↗
+                </a>
+              ) : (
+                <span className="text-foreground">{s.name}</span>
+              )}
+              {reach.map(([t, u]) => (
+                <Fragment key={t}>
+                  <span aria-hidden="true" className="text-foreground-muted">
+                    ·
+                  </span>
+                  <a href={u} aria-label={`${t} ${s.name}`} {...(t === 'Map' ? { target: '_blank', rel: 'noopener' } : {})} className={link}>
+                    {t}
+                  </a>
+                </Fragment>
+              ))}
+            </span>
+            {s.about && <span className="text-foreground-muted text-xs text-pretty">{s.about}</span>}
+          </li>
+        )
+      })}
+      {fixedLinks(r, shops).map(([t, u]) => (
+        <li key={t}>
+          <a href={u} target="_blank" rel="noopener" className={link}>
+            {t} ↗
+          </a>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
 // What a hunt's + Want added, with Edit and Undo, until the sheet closes or the next one is added: held by the sheet, so
 // Edit, another tab or a remote change doesn't lose the Undo
 export type WantMsg = { key: string; undo: Wanted }
@@ -94,6 +139,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
   const [del, setDel] = useState<string | null>(null)
   const { copied, copy } = useCopy()
   const still = stillCopies(r).length > 0
+  const shops = shopsOf(settings)
 
   const pin = (key: string, pinned: boolean) => {
     if (!pinned) setOpen((o) => (o.includes(key) ? o : [...o, key]))
@@ -156,6 +202,27 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
     const sm = String(e.summary || '').trim()
     const body = e.headline ? sm : sm.slice(firstSentence(sm).length).trim()
     const src = sourceList(e.sources)
+    // what research found at your shops, each shop's name linking to its search for the album
+    const atShops = strList(e.shops).length > 0 && (
+      <Section title="At your shops">
+        <Bullets
+          items={strList(e.shops).map((x) => {
+            const { shop, name, rest } = shopLine(x, shops)
+            const href = shop ? shopLink(shop, r) : ''
+            return href ? (
+              <>
+                <a href={href} target="_blank" rel="noopener" className={link}>
+                  {name} ↗
+                </a>
+                : {rest}
+              </>
+            ) : (
+              x
+            )
+          })}
+        />
+      </Section>
+    )
     return (
       <AccordionItem key={key} value={key}>
         <AccordionTrigger className="text-foreground text-sm font-medium">
@@ -179,12 +246,14 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
               </Section>
             )}
             {body && <p className="text-foreground text-pretty">{body}</p>}
+            {wish && atShops}
             {strList(e.pressings).length > 0 && <Section title="Pressings">{pressings(e, key)}</Section>}
             {strList(e.check).length > 0 && (
               <Section title="Check in a listing">
                 <Bullets items={strList(e.check)} />
               </Section>
             )}
+            {!wish && atShops}
             {strList(e.where).length > 0 && (
               <Section title="Where to look">
                 <Bullets items={strList(e.where)} />
@@ -262,7 +331,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
       {(wish || still) && (
         <Fieldset>
           <FieldsetLegend>Search elsewhere</FieldsetLegend>
-          <LinkList links={searchLinks(r)} />
+          <SearchElsewhere r={r} shops={shops} />
         </Fieldset>
       )}
       <Confirm
