@@ -5,6 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { LOOKUP_V } from '../model/task'
 import { APP_VERSION } from '../version'
 
 type Opts = Parameters<typeof fakeClaude>[1]
@@ -126,6 +127,46 @@ describe('starting the background task', () => {
     } finally {
       vi.useRealTimers()
     }
+  })
+
+  it("doesn't let a recent lookup hold back a sync, and starts syncs at most every 5 minutes (#77)", async () => {
+    localStorage.setItem('vw-lookup', String(Date.now()))
+    const { fake } = setup({ taskId: 't1', discogs: { status: 'ok' }, update: { checkedMs: Date.now() } })
+    await screen.findByRole('button', { name: /Open Blue Train/ })
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await act(async () => fake.remote('r3', { needsSync: true }))
+      await act(async () => vi.advanceTimersByTime(20500))
+      await waitFor(() => expect(fires(fake)).toHaveLength(1))
+      // the run ends, its sync done; another is marked a minute later and waits out the 5 minutes
+      await act(async () => fake.remote('r3', { needsSync: false }))
+      await act(async () => fake.remoteDoc('settings/site', { run: { startedMs: 0 } }))
+      await act(async () => vi.advanceTimersByTime(60000))
+      await act(async () => fake.remote('r2', { needsSync: true }))
+      await act(async () => vi.advanceTimersByTime(2 * 60000))
+      expect(fires(fake)).toHaveLength(1)
+      await act(async () => vi.advanceTimersByTime(2 * 60000))
+      await act(async () => vi.advanceTimersByTime(20500))
+      await waitFor(() => expect(fires(fake)).toHaveLength(2))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it("doesn't start on its own for a record the lookup stopped on (#69)", async () => {
+    const seed = sample()
+    for (const r of Object.values(seed.records))
+      Object.assign(r, { coverAsset: 'c', runtime: 40, aboutAt: '', lookTries: 3, lookV: LOOKUP_V, lookedAt: Date.now() })
+    seed.docs['settings/site'] = { taskId: 't1', update: { checkedMs: Date.now() } }
+    const fake = fakeClaude(seed)
+    render(
+      <RuntimeProvider claude={fake.claude}>
+        <App />
+      </RuntimeProvider>,
+    )
+    await screen.findByRole('button', { name: /Open Blue Train/ })
+    await new Promise((r) => setTimeout(r, 50))
+    expect(fires(fake)).toHaveLength(0)
   })
 
   it('closing the sheet after a synced edit starts the task without the 20 second wait', async () => {
