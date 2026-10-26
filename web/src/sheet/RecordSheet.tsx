@@ -164,10 +164,12 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const ownUpload = !!r?.coverAsset && !r.autoFilled?.includes('coverAsset') && !shared
   const uncoverIt = async () => {
     if (!r) return
-    const asset = r.coverAsset
+    const { coverAsset, coverOriginal } = r
     if (!(await update(r.id, removeCoverPatch(r)))) return
     setSaved('Saved')
-    if (asset && !shared) deleteAsset(asset)
+    // and its full-size original, when it has one
+    for (const id of [coverAsset, coverOriginal])
+      if (typeof id === 'string' && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id)
   }
   // Look up album & artist info again: takes back Not this artist (#63)
   const relook = () => {

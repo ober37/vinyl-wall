@@ -7986,10 +7986,10 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 	const ownUpload = !!r?.coverAsset && !r.autoFilled?.includes("coverAsset") && !shared;
 	const uncoverIt = async () => {
 		if (!r) return;
-		const asset = r.coverAsset;
+		const { coverAsset, coverOriginal } = r;
 		if (!await update(r.id, removeCoverPatch(r))) return;
 		setSaved("Saved");
-		if (asset && !shared) deleteAsset(asset);
+		for (const id of [coverAsset, coverOriginal]) if (typeof id === "string" && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id);
 	};
 	const relook = () => {
 		if (!r) return;

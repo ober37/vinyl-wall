@@ -231,13 +231,15 @@ describe('edit mode', () => {
 
   it('Remove cover deletes an upload of their own for good, and an upload lifts it (#62)', async () => {
     const { fake, user } = setup()
-    await act(async () => fake.remote('r1', { coverAsset: 'mine', autoFilled: [] }))
+    await act(async () => fake.remote('r1', { coverAsset: 'mine', coverOriginal: 'big', autoFilled: [] }))
     await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
     await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
     await user.click(screen.getByRole('button', { name: 'Remove cover' }))
     await screen.findByRole('alertdialog', { name: 'Remove this cover for good? The record goes back to its plain sleeve.' })
     await user.click(screen.getByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(fake.calls.some((c) => c.op === 'delete' && c.path === 'assets/mine')).toBe(true))
+    // its full-size original goes too
+    expect(fake.calls.some((c) => c.op === 'delete' && c.path === 'assets/big')).toBe(true)
     await user.upload(screen.getByLabelText('Upload cover'), new File(['x'], 'c.png', { type: 'image/png' }))
     await waitFor(() => expect(fake.records.r1).toMatchObject({ coverBlocked: false }))
     expect(fake.records.r1.coverAsset).toBeTruthy()
