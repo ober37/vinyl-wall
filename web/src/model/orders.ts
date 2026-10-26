@@ -22,7 +22,8 @@ export function trackUrl(carrier: unknown, n: unknown): string {
   return 'https://www.google.com/search?q=' + encodeURIComponent((c ? c + ' ' : '') + 'tracking ' + num)
 }
 
-// the record's own pressing on Discogs (or a search for it), what it sells for, and other pressings; no repeats
+// the record's own pressing on Discogs (or a search for it), what it sells for (with a release number), and other
+// pressings; no repeats
 export function discogsLinks(r: Rec): [string, string][] {
   const q = encodeURIComponent(`${r.artist} ${r.title}`)
   const ord = kindOf(r) === 'ordered'
@@ -30,7 +31,7 @@ export function discogsLinks(r: Rec): [string, string][] {
   const search = `https://www.discogs.com/search/?q=${q}&type=release&format_exact=Vinyl`
   const L: [string, string][] = [
     id ? [ord ? 'The edition you ordered' : 'Your pressing', `https://www.discogs.com/release/${id}`] : [ord ? 'Find the edition' : 'Find your pressing', search],
-    id ? ['What it sells for', `https://www.discogs.com/sell/history/${id}`] : ['Past sales (Popsike)', `https://www.popsike.com/php/quicksearch.php?searchtext=${q}`],
+    ...(id ? [['What it sells for', `https://www.discogs.com/sell/history/${id}`] as [string, string]] : []),
     ['Other pressings', search],
   ]
   return L.filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i)
