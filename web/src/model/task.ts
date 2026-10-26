@@ -12,12 +12,24 @@ export type Settings = Record<string, unknown> & {
   syncLeft?: number
 }
 
+// a lookup that leaves a record unresolved (no cover or runtime, album info rate-limited) waits a day, then a week, and
+// stops after the third try; one that's asked for (needsEnrich) always runs, and a newer lookup (LOOKUP_V, bumped
+// with lookup.py's) gives a record it stopped on one more try (#69)
+export const LOOKUP_V = 1
+const WAITS = [0, 86400000, 7 * 86400000]
+export function lookDue(r: Rec, now = Date.now()): boolean {
+  if (r.needsEnrich) return true
+  const tries = Math.min(Number(r.lookTries || 0), r.lookV === LOOKUP_V ? WAITS.length : WAITS.length - 1)
+  return tries < WAITS.length && now - Number(r.lookedAt || 0) >= WAITS[tries]
+}
+
 // not looked up yet, or looked up by an older version (below aboutV 3, an album with no summary gets one more try)
-export const aboutPending = (r: Rec) =>
+export const aboutPending = (r: Rec, now = Date.now()) =>
   !r.aboutBlocked &&
   (!r.aboutAt ||
     (!r.aboutV && !!r.about && r.about.source !== 'claude') ||
-    (Number(r.aboutV || 0) < 3 && !r.about?.summary))
+    (Number(r.aboutV || 0) < 3 && !r.about?.summary)) &&
+  lookDue(r, now)
 // look the album info up again: an empty aboutAt and aboutV read as never looked up, here and in lookup.py (#60)
 export const RELOOK_ABOUT = { aboutAt: '', aboutV: 0 }
 // waiting for the task: a cover or details (needsEnrich) or album info
@@ -30,7 +42,9 @@ export function pendingParts(records: Rec[], s: Settings, fresh: boolean, now = 
   const w: string[] = []
   if (dz.hasToken && (!dz.status || dz.status === 'pending')) w.push('verify the Discogs connection (Part B)')
   if (dz.importRequested) w.push('import from Discogs (Part D): settings/site discogs.importRequested is true')
-  const look = live.filter((r) => r.needsEnrich || (!fresh && (!r.coverAsset || !r.runtime)) || aboutPending(r)).length
+  const look = live.filter(
+    (r) => r.needsEnrich || (!fresh && (!r.coverAsset || !r.runtime) && lookDue(r, now)) || aboutPending(r, now),
+  ).length
   if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? 's' : ''}`)
   const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length
   if (now - (s.update?.checkedMs || 0) > 24 * 3600000) w.push('check for a newer release (Part E)')

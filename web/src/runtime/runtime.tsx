@@ -283,28 +283,40 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, quiet])
 
-  // records waiting for album info, or for a sync marked elsewhere (chat, another device), start the task on their own,
-  // at most every 30 minutes across reloads; a sync waits the usual 20 seconds, so the page's own edits still finish first
+  // records waiting for album info start the task on their own at most every 30 minutes across reloads; a sync marked
+  // elsewhere (chat, another device) has its own clock, at most every 5 minutes, and waits the usual 20 seconds, so the
+  // page's own edits still finish first (#77)
+  const [syncDue, setSyncDue] = useState(0)
   useEffect(() => {
     if (status !== 'ready' || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return
-    const look = records.some((r) => !r.deleted && !r.example && aboutPending(r))
-    if (!look && !records.some((r) => syncing(r, settings.discogs?.status === 'ok'))) return
-    let t = 0
-    try {
-      t = +(localStorage.getItem('vw-lookup') || 0)
-    } catch {
-      // storage blocked: look up now
+    const since = (k: string) => {
+      try {
+        return Date.now() - +(localStorage.getItem(k) || 0)
+      } catch {
+        return Infinity // storage blocked: start now
+      }
     }
-    if (Date.now() - t < 30 * 60000) return
-    try {
-      localStorage.setItem('vw-lookup', String(Date.now()))
-    } catch {
-      // not remembered
+    const mark = (k: string) => {
+      try {
+        localStorage.setItem(k, String(Date.now()))
+      } catch {
+        // not remembered
+      }
     }
-    if (look) fireTask()
-    else syncSoon()
+    if (records.some((r) => !r.deleted && !r.example && aboutPending(r)) && since('vw-lookup') >= 30 * 60000) {
+      mark('vw-lookup')
+      return void fireTask()
+    }
+    if (!records.some((r) => syncing(r, settings.discogs?.status === 'ok'))) return
+    const wait = 5 * 60000 - since('vw-sync')
+    if (wait > 0) {
+      const id = setTimeout(() => setSyncDue((n) => n + 1), wait + 1000)
+      return () => clearTimeout(id)
+    }
+    mark('vw-sync')
+    syncSoon()
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, settingsLoaded, canEdit, hasMcp, records, settings])
+  }, [status, settingsLoaded, canEdit, hasMcp, records, settings, syncDue])
 
   // an edit to a field Discogs keeps starts the task 20 seconds after the last such edit (or when the sheet closes)
   const syncSoon = () => {

@@ -711,8 +711,17 @@ function pickPatch(r, ci) {
 		moreCopies: C.filter((_, j) => j !== k)
 	};
 }
-// src/model/task.ts
-var aboutPending = (r) => !r.aboutBlocked && (!r.aboutAt || !r.aboutV && !!r.about && r.about.source !== "claude" || Number(r.aboutV || 0) < 3 && !r.about?.summary);
+var WAITS = [
+	0,
+	864e5,
+	6048e5
+];
+function lookDue(r, now = Date.now()) {
+	if (r.needsEnrich) return true;
+	const tries = Math.min(Number(r.lookTries || 0), r.lookV === 1 ? WAITS.length : WAITS.length - 1);
+	return tries < WAITS.length && now - Number(r.lookedAt || 0) >= WAITS[tries];
+}
+var aboutPending = (r, now = Date.now()) => !r.aboutBlocked && (!r.aboutAt || !r.aboutV && !!r.about && r.about.source !== "claude" || Number(r.aboutV || 0) < 3 && !r.about?.summary) && lookDue(r, now);
 var RELOOK_ABOUT = {
 	aboutAt: "",
 	aboutV: 0
@@ -724,7 +733,7 @@ function pendingParts(records, s, fresh, now = Date.now()) {
 	const w = [];
 	if (dz.hasToken && (!dz.status || dz.status === "pending")) w.push("verify the Discogs connection (Part B)");
 	if (dz.importRequested) w.push("import from Discogs (Part D): settings/site discogs.importRequested is true");
-	const look = live.filter((r) => r.needsEnrich || !fresh && (!r.coverAsset || !r.runtime) || aboutPending(r)).length;
+	const look = live.filter((r) => r.needsEnrich || !fresh && (!r.coverAsset || !r.runtime) && lookDue(r, now) || aboutPending(r, now)).length;
 	if (look) w.push(`look up covers, details and album info (Part L) for ${look} record${look > 1 ? "s" : ""}`);
 	const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length;
 	if (now - (s.update?.checkedMs || 0) > 864e5) w.push("check for a newer release (Part E)");
@@ -874,6 +883,7 @@ function patchFor(r, baseline, form) {
 		artistRef: "",
 		about: null
 	});
+	if (("title" in patch || "artist" in patch) && r.lookTries) patch.lookTries = 0;
 	return patch;
 }
 // src/model/site.ts
@@ -1155,27 +1165,42 @@ function RuntimeProvider({ claude, children }) {
 		}
 		if (canEdit && (Number(settings.lookupLeft) > 0 || Number(settings.syncLeft) > 0)) fireTask();
 	}, [settings, quiet]);
+	const [syncDue, setSyncDue] = useState(0);
 	useEffect(() => {
 		if (status !== "ready" || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return;
-		const look = records.some((r) => !r.deleted && !r.example && aboutPending(r));
-		if (!look && !records.some((r) => syncing(r, settings.discogs?.status === "ok"))) return;
-		let t = 0;
-		try {
-			t = +(localStorage.getItem("vw-lookup") || 0);
-		} catch {}
-		if (Date.now() - t < 18e5) return;
-		try {
-			localStorage.setItem("vw-lookup", String(Date.now()));
-		} catch {}
-		if (look) fireTask();
-		else syncSoon();
+		const since = (k) => {
+			try {
+				return Date.now() - +(localStorage.getItem(k) || 0);
+			} catch {
+				return Infinity;
+			}
+		};
+		const mark = (k) => {
+			try {
+				localStorage.setItem(k, String(Date.now()));
+			} catch {}
+		};
+		if (records.some((r) => !r.deleted && !r.example && aboutPending(r)) && since("vw-lookup") >= 18e5) {
+			mark("vw-lookup");
+			fireTask();
+			return;
+		}
+		if (!records.some((r) => syncing(r, settings.discogs?.status === "ok"))) return;
+		const wait = 3e5 - since("vw-sync");
+		if (wait > 0) {
+			const id = setTimeout(() => setSyncDue((n) => n + 1), wait + 1e3);
+			return () => clearTimeout(id);
+		}
+		mark("vw-sync");
+		syncSoon();
 	}, [
 		status,
 		settingsLoaded,
 		canEdit,
 		hasMcp,
 		records,
-		settings
+		settings,
+		syncDue
 	]);
 	const syncSoon = () => {
 		const t = task.current;

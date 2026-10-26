@@ -132,6 +132,8 @@ export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unk
   // a new title or artist is a different album: what the lookup matched may be wrong, so it looks it up again
   if (('title' in patch || 'artist' in patch) && !r.aboutBlocked && (r.aboutAt || r.artistRef || r.about))
     Object.assign(patch, RELOOK_ABOUT, { artistRef: '', about: null })
+  // and a lookup that gave up on the old one starts over (#69)
+  if (('title' in patch || 'artist' in patch) && r.lookTries) patch.lookTries = 0
   return patch
 }
 

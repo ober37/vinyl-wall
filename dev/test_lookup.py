@@ -94,4 +94,44 @@ check("batches: every write to an existing doc is pinned", all(w["op"] == "set" 
 check("batches: each tells the page the run is still going and what it leaves for the next", writes[0]["collection"] == "settings" and writes[0]["doc_id"] == "site"
       and writes[0]["if_version"] == "SETTINGS_VERSION" and beat["run"]["beatMs"] > 0 and beat["lookupLeft"] == 5 and writes[1]["doc_id"] == "r1",
       (writes, beat))
+
+DAY, now = 86400000, 1_800_000_000_000
+miss = lambda n, ago, v=L.LOOKUP_V: {"lookTries": n, "lookedAt": now - ago, "lookV": v}
+check("retries: never tried is due", L.due({}, now))
+check("retries: a miss waits a day", not L.due(miss(1, DAY - 1), now) and L.due(miss(1, DAY), now))
+check("retries: a second miss waits a week", not L.due(miss(2, 6 * DAY), now) and L.due(miss(2, 7 * DAY), now))
+check("retries: the third miss stops it", not L.due(miss(3, 999 * DAY), now))
+check("retries: asking again (needsEnrich) always runs, and counts from zero",
+      L.due({**miss(3, 0), "needsEnrich": True}, now) and L.tries({**miss(3, 0), "needsEnrich": True}) == 0)
+check("retries: a newer lookup gives a stopped record one more try",
+      L.due(miss(3, 7 * DAY, v=0), now) and L.tries(miss(3, 0, v=0)) == 2)
+ts = open(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "src", "model", "task.ts")).read()
+check("retries: the page's LOOKUP_V matches", f"export const LOOKUP_V = {L.LOOKUP_V}\n" in ts)
+
+import contextlib, io
+work = tempfile.mkdtemp()
+recs = {"none": {"title": "a", "artist": "x"}, "again": {"title": "b", "artist": "x", "lookTries": 1, "lookV": L.LOOKUP_V},
+        "found": {"title": "c", "artist": "x", "lookTries": 2, "lookV": L.LOOKUP_V, "lookedAt": 1},
+        "rate": {"title": "d", "artist": "x", "coverAsset": "a", "runtime": 40}}
+fill = lambda rid, **kw: {"needA": rid != "rate", "needF": True, "fill": kw, "coverUrl": None, "summarise": False, "retry": rid == "rate"}
+json.dump({"groups": [list(recs)], "later": [], "left": 0, "artists": {},
+           "records": {rid: {"data": r, "version": 1} for rid, r in recs.items()}}, open(os.path.join(work, "plan.json"), "w"))
+os.makedirs(os.path.join(work, "g0"))
+json.dump({"found": {"none": fill("none"), "again": fill("again", runtime=40), "found": fill("found", runtime=40), "rate": fill("rate")},
+           "artists": {}}, open(os.path.join(work, "g0", "found.json"), "w"))
+with contextlib.redirect_stdout(io.StringIO()):
+    L.save(work, 0, "found=asset1")
+out = {f.split("records_")[1][:-5]: json.load(open(os.path.join(work, "g0", "facts", f)))
+       for f in os.listdir(os.path.join(work, "g0", "facts")) if f.startswith("records_")}
+check("retries: a miss is counted", out["none"]["lookTries"] == 1 and out["none"]["lookV"] == L.LOOKUP_V and out["none"]["lookedAt"] > 0, out["none"])
+check("retries: a runtime but still no cover is another miss", out["again"]["lookTries"] == 2, out["again"])
+check("retries: a cover and runtime found clears the count", out["found"]["lookTries"] == L.DEL and out["found"]["lookedAt"] == L.DEL, out["found"])
+check("retries: a rate-limited album info lookup is a miss", out["rate"]["lookTries"] == 1, out["rate"])
+db = tempfile.mkdtemp()
+json.dump({"title": "a", "artist": "x", **miss(3, 0)}, open(os.path.join(db, "stopped.json"), "w"))
+json.dump({"records": {}, "artists": {}}, open(os.path.join(db, "v.json"), "w"))
+with contextlib.redirect_stdout(io.StringIO()):
+    L.plan(db, os.path.join(db, "none"), os.path.join(db, "v.json"), os.path.join(db, "work"))
+check("retries: the plan leaves out a record the lookup stopped on",
+      json.load(open(os.path.join(db, "work", "plan.json")))["records"] == {})
 sys.exit(1 if fails else 0)
