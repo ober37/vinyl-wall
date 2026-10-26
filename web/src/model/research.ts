@@ -15,6 +15,7 @@ export type Research = {
   check?: unknown
   where?: unknown
   price?: string
+  shops?: unknown
   pinned?: boolean
   [k: string]: unknown
 }
@@ -97,16 +98,4 @@ export function resPrompt(r: Rec, wallUrl: unknown, e?: Research): string {
     '',
     e ? 'My follow-up: ' : 'My question: ',
   ].join('\n')
-}
-
-// Search elsewhere: where to look for any copy of the album
-export function searchLinks(r: Rec): [string, string][] {
-  const q = encodeURIComponent(`${r.artist} ${r.title}`)
-  const qv = encodeURIComponent(`${r.artist} ${r.title} vinyl LP`)
-  return [
-    ['Discogs releases', `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
-    ['Discogs marketplace', `https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
-    ['eBay', `https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
-    ['Record stores near me', 'https://www.google.com/maps/search/record+store'],
-  ]
 }

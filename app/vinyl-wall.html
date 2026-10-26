@@ -2727,6 +2727,152 @@ async function shrinkImage(file, max, quality, api = browser) {
 		return file;
 	}
 }
+// src/model/shops.ts
+var KINDS = [
+	["local", "Local"],
+	["online", "Online"],
+	["market", "Marketplace"]
+];
+var DEFAULT_SHOPS = [
+	{
+		id: "revolver",
+		name: "Revolver",
+		kind: "online",
+		url: "https://shop.revolvermag.com/",
+		search: "https://shop.revolvermag.com/search?q={q}",
+		shopify: true
+	},
+	{
+		id: "amazon",
+		name: "Amazon",
+		kind: "online",
+		url: "https://www.amazon.com/",
+		search: "https://www.amazon.com/s?k={q}%20vinyl&i=popular"
+	},
+	{
+		id: "discogs",
+		name: "Discogs Marketplace",
+		kind: "market",
+		url: "https://www.discogs.com/sell",
+		search: "https://www.discogs.com/sell/list?q={q}&format=Vinyl"
+	},
+	{
+		id: "ebay",
+		name: "eBay",
+		kind: "market",
+		url: "https://www.ebay.com/",
+		search: "https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985"
+	}
+];
+var https = (v) => /^https:\/\/[^\s]+$/i.test(String(v || "").trim()) ? String(v).trim() : "";
+var text = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
+function shopsOf(settings) {
+	if (!Array.isArray(settings.shops)) return DEFAULT_SHOPS;
+	return settings.shops.filter((s) => !!s && typeof s === "object" && !!text(s.name, 80)).map((s, i) => {
+		const kind = KINDS.some(([k]) => k === s.kind) ? s.kind : "online";
+		const shop = {
+			id: text(s.id, 40) || "s" + i,
+			name: text(s.name, 80),
+			kind
+		};
+		const url = https(s.url);
+		const search = https(s.search);
+		if (url) shop.url = url;
+		if (search.includes("{q}")) shop.search = search;
+		const upc = https(s.upc);
+		if (upc.includes("{upc}")) shop.upc = upc;
+		if (s.shopify === true) shop.shopify = true;
+		if (kind === "local") for (const k of [
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) {
+			const v = text(s[k], k === "about" ? 400 : 120);
+			if (v) shop[k] = v;
+		}
+		return shop;
+	});
+}
+function siteUrl(v) {
+	const t = v.trim();
+	if (!t) return "";
+	try {
+		const u = new URL(/^[a-z]+:/i.test(t) ? t : "https://" + t);
+		return u.protocol === "https:" || u.protocol === "http:" ? u.href : "";
+	} catch {
+		return "";
+	}
+}
+var shopLink = (s, r) => s.search ? s.search.replace("{q}", encodeURIComponent(`${r.artist || ""} ${r.title || ""}`.trim())) : s.url || "";
+var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
+var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
+var mailLink = (s) => s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? "mailto:" + s.email : "";
+function shopWhere(s) {
+	if (s.kind === "local" && s.place) {
+		const p = s.place.split(",").map((x) => x.trim()).filter(Boolean);
+		return p.length > 2 ? p[p.length - 2] : p.length > 1 ? p[p.length - 1] : p[0];
+	}
+	try {
+		return new URL(s.url || s.search || "").hostname.replace(/^www\./, "");
+	} catch {
+		return "";
+	}
+}
+var rank = (s) => s.kind === "local" ? s.url || s.search ? 0 : 1 : s.kind === "online" ? 2 : 3;
+var shopOrder = (list) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+var discogsReleases = (r) => `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`;
+function mergeShops(wall, file) {
+	const list = wall.map((s) => ({ ...s }));
+	let added = 0;
+	let filled = 0;
+	for (const f of file) {
+		const s = list.find((x) => x.name.toLowerCase() === f.name.toLowerCase());
+		if (!s) {
+			list.push(f);
+			added++;
+			continue;
+		}
+		let more = false;
+		for (const k of [
+			"url",
+			"search",
+			"upc",
+			"shopify",
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) if (f[k] && !s[k] && (s.kind === "local" || ![
+			"place",
+			"phone",
+			"email",
+			"about"
+		].includes(k))) {
+			s[k] = f[k];
+			more = true;
+		}
+		if (more) filled++;
+	}
+	return {
+		list,
+		added,
+		filled
+	};
+}
+function shopLine(line, list) {
+	const i = line.indexOf(": ");
+	if (i < 0) return {
+		name: "",
+		rest: line
+	};
+	const name = line.slice(0, i);
+	return {
+		shop: list.find((s) => s.name.toLowerCase() === name.trim().toLowerCase()),
+		name,
+		rest: line.slice(i + 2)
+	};
+}
 // src/model/library.ts
 var nowUTC = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace("T", " ") + " UTC";
 var libNorm = (s) => String(s || "").toLowerCase().replace(/\s*\(\d+\)|\*/g, "").replace(/&/g, " and ").split(/[^a-z0-9]+/).filter((w) => w && w !== "the").join("");
@@ -2748,7 +2894,8 @@ function exportFile(p) {
 		"title",
 		"bg",
 		"dim",
-		"hang"
+		"hang",
+		"shops"
 	]) if (p.settings[k] !== void 0) site[k] = p.settings[k];
 	const records = byId(p.records);
 	const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean));
@@ -2812,12 +2959,33 @@ function planImport(text, w) {
 		site: snap.settings?.site || {},
 		empty: !w.records.some((r) => !r.deleted),
 		known: w.artists.map((a) => a.id),
-		covers: snap.covers && typeof snap.covers === "object" ? snap.covers : {}
+		covers: snap.covers && typeof snap.covers === "object" ? snap.covers : {},
+		shops: {
+			added: 0,
+			filled: 0
+		}
 	};
-	if (p.recs.length + p.gear.length + p.setups.length === 0) return "Everything in this file is already on the wall.";
+	if (!p.empty) {
+		const m = shopsFrom(w.settings || {}, p.site);
+		if (m) p.shops = {
+			added: m.added,
+			filled: m.filled
+		};
+	}
+	if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled === 0) return "Everything in this file is already on the wall.";
 	return p;
 }
-var planSummary = (p) => `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
+function shopsFrom(settings, site) {
+	if (!Array.isArray(site.shops)) return null;
+	const m = mergeShops(shopsOf(settings), shopsOf(site));
+	return m.added || m.filled ? m : null;
+}
+var shopWords = ({ added, filled }, done = false) => [added ? `${done ? "added" : "adds"} ${added} shop${added === 1 ? "" : "s"}` : "", filled ? `${done ? "filled" : "fills"} in ${filled} of your shops` : ""].filter(Boolean).join(" and ");
+var planSummary = (p) => {
+	const n = p.recs.length + p.gear.length + p.setups.length;
+	const shops = shopWords(p.shops);
+	return (n ? `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}${shops ? ", and " + shops : ""}.` : shops.charAt(0).toUpperCase() + shops.slice(1) + ".") + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
+};
 var IMPORT_FIELDS = [
 	"title",
 	"artist",
@@ -2934,6 +3102,7 @@ function lookPatch(site, photoId) {
 	};
 	if (typeof site.dim === "number") patch.dim = site.dim;
 	if (HANGS.some(([k]) => k === site.hang)) patch.hang = site.hang;
+	if (Array.isArray(site.shops)) patch.shops = shopsOf(site);
 	return patch;
 }
 function doneMessage(p, recs) {
@@ -2941,7 +3110,9 @@ function doneMessage(p, recs) {
 	const about = recs.some((d) => aboutPending(d));
 	const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d)).length;
 	const what = enrich && about ? "covers or album info" : enrich ? "covers" : "album info";
-	return `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
+	const n = p.recs.length + p.gear.length + p.setups.length;
+	const shops = shopWords(p.shops, true);
+	return (n || !shops ? `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` : "") + (shops ? (n ? " Also " : "Done: ") + shops + "." : "") + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
 }
 // src/settings/Library.tsx
 async function pool(n, items, fn) {
@@ -3008,7 +3179,8 @@ function useLibrary() {
 				records,
 				artists,
 				gear: rt.gear,
-				setups: rt.setups
+				setups: rt.setups,
+				settings: rt.settings
 			});
 			if (typeof p === "string") {
 				setMsg(p);
@@ -3068,6 +3240,10 @@ function useLibrary() {
 				if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`);
 			}
 			if (p.empty) await takeLook(p, has, moved, upload);
+			else {
+				const m = shopsFrom(rt.settings, p.site);
+				if (m) await rt.saveSettings({ shops: m.list });
+			}
 			setMsg(doneMessage(p, recs.map(([, d]) => d)));
 			text.current = "";
 			setStage("done");
@@ -4009,6 +4185,280 @@ function HangingSection() {
 		})
 	})] });
 }
+// src/settings/Shops.tsx
+var GROUPS = [
+	["local", "Local shops"],
+	["online", "Online shops"],
+	["market", "Marketplaces"]
+];
+var draftOf = (s) => ({
+	name: s.name,
+	kind: s.kind,
+	url: s.url || "",
+	search: s.search || "",
+	place: s.place || "",
+	phone: s.phone || "",
+	email: s.email || "",
+	about: s.about || ""
+});
+var okSearch = (v) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes("{q}");
+function fromDraft(d, was) {
+	const s = {
+		id: was.id,
+		name: d.name.trim() || was.name,
+		kind: d.kind
+	};
+	if (was.upc) s.upc = was.upc;
+	if (was.shopify) s.shopify = true;
+	const url = siteUrl(d.url);
+	if (url.startsWith("https:")) s.url = url;
+	if (okSearch(d.search)) s.search = d.search.trim();
+	if (d.kind === "local") {
+		for (const k of [
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) if (d[k].trim()) s[k] = d[k].trim();
+	}
+	return s;
+}
+function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
+	const [d, setD] = useState(() => draftOf(shop));
+	const [saved, setSaved] = useState("");
+	const live = useRef(d);
+	live.current = d;
+	const { schedule } = useDebouncedSave(() => save(fromDraft(live.current, shop)).then((ok) => setSaved(ok ? "Saved" : "")), setSaved, 500);
+	const set = (k, v) => {
+		setD((x) => ({
+			...x,
+			[k]: v
+		}));
+		schedule();
+	};
+	const where = shopWhere(shop);
+	const missing = !okSearch(d.search) || d.kind === "local" && !(d.place.trim() && d.phone.trim() && d.about.trim());
+	const tryIt = okSearch(d.search) ? shopLink({
+		...shop,
+		search: d.search.trim()
+	}, sample) : "";
+	const field = (k, label, props = {}) => /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: label }), /* @__PURE__ */ jsx(Input, {
+		value: d[k],
+		onChange: (e) => set(k, e.target.value),
+		...props
+	})] });
+	return /* @__PURE__ */ jsxs(Collapsible, {
+		open,
+		onOpenChange,
+		children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+			className: "group flex w-full cursor-pointer items-baseline gap-3 rounded-md text-start outline-offset-2 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
+			children: [/* @__PURE__ */ jsxs("span", {
+				className: "min-w-0 flex-1 text-sm break-words",
+				children: [/* @__PURE__ */ jsx("span", {
+					className: "text-foreground-intense",
+					children: shop.name
+				}), where && /* @__PURE__ */ jsxs("span", {
+					className: "text-foreground-muted",
+					children: [" · ", where]
+				})]
+			}), /* @__PURE__ */ jsxs("span", {
+				className: "text-primary flex shrink-0 items-center gap-1 self-center text-sm",
+				children: [open ? "Done" : "Edit", /* @__PURE__ */ jsx(Chevron, {})]
+			})]
+		}), /* @__PURE__ */ jsx(CollapsibleContent, {
+			className: "-mx-1 px-1 transition-none",
+			children: /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-4 pt-4 pb-2",
+				children: [
+					/* @__PURE__ */ jsx("span", {
+						role: "status",
+						className: "text-foreground-muted -mb-2 text-xs empty:hidden",
+						children: saved
+					}),
+					missing && /* @__PURE__ */ jsx("p", {
+						className: "text-foreground-muted text-sm",
+						children: "Your Claude chat can fill in the missing details."
+					}),
+					field("name", "Name", { maxLength: 80 }),
+					/* @__PURE__ */ jsx(Segmented, {
+						label: "Kind",
+						value: d.kind,
+						options: KINDS,
+						onChange: (v) => set("kind", v)
+					}),
+					field("url", d.kind === "local" ? "Web store" : "Website", {
+						inputMode: "url",
+						placeholder: "shop.example.com"
+					}),
+					/* @__PURE__ */ jsxs(Field, { children: [
+						/* @__PURE__ */ jsx(FieldLabel, { children: "Search link" }),
+						/* @__PURE__ */ jsx(Input, {
+							value: d.search,
+							inputMode: "url",
+							onChange: (e) => set("search", e.target.value)
+						}),
+						/* @__PURE__ */ jsx(FieldDescription, { children: d.search.trim() && !tryIt ? "Needs to start with https:// and have {q} where the artist and album go." : tryIt ? /* @__PURE__ */ jsxs("a", {
+							href: tryIt,
+							target: "_blank",
+							rel: "noopener",
+							className: link,
+							children: [
+								"Try it with ",
+								sample.title,
+								" ↗"
+							]
+						}) : "The shop’s search, with {q} where the artist and album go." })
+					] }),
+					d.kind === "local" && /* @__PURE__ */ jsxs(Fragment$1, { children: [
+						field("place", "Address"),
+						/* @__PURE__ */ jsxs("div", {
+							className: "grid gap-4 sm:grid-cols-2",
+							children: [field("phone", "Phone", { inputMode: "tel" }), field("email", "Email", { inputMode: "email" })]
+						}),
+						/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "About" }), /* @__PURE__ */ jsx(Textarea, {
+							rows: 2,
+							maxLength: 400,
+							value: d.about,
+							onChange: (e) => set("about", e.target.value)
+						})] })
+					] }),
+					/* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "ghost",
+						className: "text-error-emphasis -ms-3 self-start",
+						onClick: onRemove,
+						children: "Remove this shop"
+					})
+				]
+			})
+		})]
+	});
+}
+function AddShop({ onAdd, onCancel }) {
+	const [name, setName] = useState("");
+	const [kind, setKind] = useState("local");
+	const [url, setUrl] = useState("");
+	const add = () => {
+		const u = siteUrl(url);
+		onAdd({
+			id: Math.random().toString(36).slice(2, 12),
+			name: name.trim().slice(0, 80),
+			kind,
+			...u.startsWith("https:") ? { url: u } : {}
+		});
+	};
+	return /* @__PURE__ */ jsxs("form", {
+		className: "border-border flex flex-col gap-4 rounded-md border p-4",
+		onSubmit: (e) => {
+			e.preventDefault();
+			if (name.trim()) add();
+		},
+		children: [
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Name" }), /* @__PURE__ */ jsx(Input, {
+				autoFocus: true,
+				value: name,
+				maxLength: 80,
+				onChange: (e) => setName(e.target.value)
+			})] }),
+			/* @__PURE__ */ jsx(Segmented, {
+				label: "Kind",
+				value: kind,
+				options: KINDS,
+				onChange: setKind
+			}),
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Website" }), /* @__PURE__ */ jsx(Input, {
+				value: url,
+				inputMode: "url",
+				placeholder: "shop.example.com",
+				onChange: (e) => setUrl(e.target.value)
+			})] }),
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex gap-3",
+				children: [/* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					type: "submit",
+					disabled: !name.trim(),
+					children: "Add shop"
+				}), /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					onClick: onCancel,
+					children: "Cancel"
+				})]
+			})
+		]
+	});
+}
+function ShopsSection() {
+	const { settings, saveSettings, records } = useRuntime();
+	const shops = shopsOf(settings);
+	const [openId, setOpenId] = useState(null);
+	const [adding, setAdding] = useState(false);
+	const [removing, setRemoving] = useState(null);
+	const latest = useRef(settings);
+	latest.current = settings;
+	const write = (fn) => saveSettings({ shops: fn(shopsOf(latest.current)) });
+	const live = records.filter((r) => !r.deleted && !r.example && r.title);
+	const pick = live.find((r) => kindOf$1(r) === "wish") || live[0];
+	const sample = pick ? {
+		artist: String(pick.artist || ""),
+		title: String(pick.title)
+	} : {
+		artist: "Pearl Jam",
+		title: "Ten"
+	};
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-8",
+		children: [
+			/* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "Search elsewhere on a record, and research in your Claude chat, look at these shops first, local ones first."
+			}),
+			GROUPS.map(([k, title]) => {
+				const list = shops.filter((s) => s.kind === k).sort((a, b) => a.name.localeCompare(b.name));
+				return list.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: title }), /* @__PURE__ */ jsx("div", {
+					className: "flex flex-col gap-4",
+					children: list.map((s) => /* @__PURE__ */ jsx(ShopRow, {
+						shop: s,
+						open: openId === s.id,
+						onOpenChange: (o) => setOpenId(o ? s.id : null),
+						save: (n) => write((all) => all.map((x) => x.id === n.id ? n : x)),
+						onRemove: () => setRemoving(s),
+						sample
+					}, s.id))
+				})] }, k);
+			}),
+			!shops.length && /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-sm",
+				children: "No shops yet."
+			}),
+			adding ? /* @__PURE__ */ jsx(AddShop, {
+				onCancel: () => setAdding(false),
+				onAdd: (s) => {
+					write((all) => [...all, s]);
+					setAdding(false);
+				}
+			}) : /* @__PURE__ */ jsx(Button, {
+				size: "sm",
+				variant: "outline",
+				className: "self-start",
+				onClick: () => setAdding(true),
+				children: "+ Add a shop"
+			}),
+			/* @__PURE__ */ jsx(Confirm, {
+				open: removing !== null,
+				title: `Remove ${removing?.name || "this shop"} from your shops?`,
+				yes: "Remove",
+				onYes: () => {
+					const id = removing.id;
+					setOpenId(null);
+					write((all) => all.filter((x) => x.id !== id));
+				},
+				onClose: () => setRemoving(null)
+			})
+		]
+	});
+}
 // src/settings/SettingsSheet.tsx
 var day = (d) => {
 	const s = String(d || "");
@@ -4289,6 +4739,7 @@ function SettingsSheet({ open, at, onClose }) {
 	const update = useUpdateAvailable();
 	const tabs = canEdit ? [
 		"wall",
+		"shops",
 		"library",
 		"about"
 	] : ["about"];
@@ -4409,6 +4860,10 @@ function SettingsSheet({ open, at, onClose }) {
 									value: "wall",
 									children: "Wall"
 								}),
+								/* @__PURE__ */ jsx(TabsTrigger, {
+									value: "shops",
+									children: "Shops"
+								}),
 								/* @__PURE__ */ jsxs(TabsTrigger, {
 									value: "library",
 									children: ["Library", discogsTrouble && /* @__PURE__ */ jsxs(Fragment$1, { children: [
@@ -4438,6 +4893,11 @@ function SettingsSheet({ open, at, onClose }) {
 								/* @__PURE__ */ jsx(BackgroundSection, {}),
 								/* @__PURE__ */ jsx(HangingSection, {})
 							]
+						}),
+						canEdit && /* @__PURE__ */ jsx(TabsContent, {
+							value: "shops",
+							keepMounted: true,
+							children: /* @__PURE__ */ jsx(ShopsSection, {})
 						}),
 						canEdit && /* @__PURE__ */ jsxs(TabsContent, {
 							value: "library",
@@ -6512,16 +6972,6 @@ function resPrompt(r, wallUrl, e) {
 		e ? "My follow-up: " : "My question: "
 	].join("\n");
 }
-function searchLinks(r) {
-	const q = encodeURIComponent(`${r.artist} ${r.title}`);
-	const qv = encodeURIComponent(`${r.artist} ${r.title} vinyl LP`);
-	return [
-		["Discogs releases", `https://www.discogs.com/search/?q=${q}&type=all&format_exact=Vinyl`],
-		["Discogs marketplace", `https://www.discogs.com/sell/list?q=${q}&format=Vinyl`],
-		["eBay", `https://www.ebay.com/sch/i.html?_nkw=${qv}&_sacat=176985`],
-		["Record stores near me", "https://www.google.com/maps/search/record+store"]
-	];
-}
 // src/sheet/ResearchTab.tsx
 function useCopy() {
 	const [copied, setCopied] = useState(null);
@@ -6575,6 +7025,80 @@ var Bullets = ({ items }) => /* @__PURE__ */ jsx("ul", {
 	className: "text-foreground flex list-disc flex-col gap-1 ps-5 text-sm",
 	children: items.map((x, i) => /* @__PURE__ */ jsx("li", { children: x }, i))
 });
+var GROUP = {
+	local: "Local shops",
+	online: "Online shops",
+	market: "Marketplaces"
+};
+function SearchElsewhere({ r, shops }) {
+	const { canEdit } = useRuntime();
+	const shop = (s) => {
+		const href = shopLink(s, r);
+		const reach = s.kind === "local" ? [
+			["Call", telLink(s)],
+			["Email", mailLink(s)],
+			["Map", mapLink(s)]
+		].filter(([, u]) => u) : [];
+		return /* @__PURE__ */ jsxs("li", {
+			className: "flex flex-col gap-0.5",
+			children: [/* @__PURE__ */ jsxs("span", {
+				className: "flex flex-wrap items-baseline gap-x-1.5",
+				children: [href ? /* @__PURE__ */ jsxs("a", {
+					href,
+					target: "_blank",
+					rel: "noopener",
+					className: link,
+					children: [s.name, " ↗"]
+				}) : /* @__PURE__ */ jsx("span", {
+					className: "text-foreground",
+					children: s.name
+				}), reach.map(([t, u]) => /* @__PURE__ */ jsxs(Fragment, { children: [/* @__PURE__ */ jsx("span", {
+					"aria-hidden": "true",
+					className: "text-foreground-muted",
+					children: "·"
+				}), /* @__PURE__ */ jsx("a", {
+					href: u,
+					"aria-label": `${t} ${s.name}`,
+					...t === "Map" ? {
+						target: "_blank",
+						rel: "noopener"
+					} : {},
+					className: link,
+					children: t
+				})] }, t))]
+			}), s.about && /* @__PURE__ */ jsx("span", {
+				className: "text-foreground-muted text-xs text-pretty",
+				children: s.about
+			})]
+		}, s.id);
+	};
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-5 text-sm",
+		children: [
+			/* @__PURE__ */ jsx("a", {
+				href: discogsReleases(r),
+				target: "_blank",
+				rel: "noopener",
+				className: `${link} self-start`,
+				children: "Discogs releases ↗"
+			}),
+			KINDS.map(([k]) => {
+				const list = shopOrder(shops.filter((s) => s.kind === k));
+				return list.length > 0 && /* @__PURE__ */ jsx(Section, {
+					title: GROUP[k],
+					children: /* @__PURE__ */ jsx("ul", {
+						className: "flex flex-col gap-2",
+						children: list.map(shop)
+					})
+				}, k);
+			}),
+			!shops.length && canEdit && /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted",
+				children: "Add your shops in Settings → Shops."
+			})
+		]
+	});
+}
 function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 	const { canEdit, settings, mutate } = useRuntime();
 	const k = kindOf$1(r);
@@ -6587,6 +7111,7 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 	const [del, setDel] = useState(null);
 	const { copied, copy } = useCopy();
 	const still = stillCopies(r).length > 0;
+	const shops = shopsOf(settings);
 	const pin = (key, pinned) => {
 		if (!pinned) setOpen((o) => o.includes(key) ? o : [...o, key]);
 		mutate(r.id, (latest) => pinPatch(latest, key));
@@ -6653,6 +7178,24 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 		const sm = String(e.summary || "").trim();
 		const body = e.headline ? sm : sm.slice(firstSentence(sm).length).trim();
 		const src = sourceList(e.sources);
+		const atShops = strList(e.shops).length > 0 && /* @__PURE__ */ jsx(Section, {
+			title: "At your shops",
+			children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.shops).map((x) => {
+				const { shop, name, rest } = shopLine(x, shops);
+				const href = shop ? shopLink(shop, r) : "";
+				return href ? /* @__PURE__ */ jsxs(Fragment$1, { children: [
+					/* @__PURE__ */ jsxs("a", {
+						href,
+						target: "_blank",
+						rel: "noopener",
+						className: "text-primary underline-offset-2 hover:underline",
+						children: [name, " ↗"]
+					}),
+					": ",
+					rest
+				] }) : x;
+			}) })
+		});
 		return /* @__PURE__ */ jsxs(AccordionItem, {
 			value: key,
 			children: [/* @__PURE__ */ jsx(AccordionTrigger, {
@@ -6686,6 +7229,7 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 						className: "text-foreground text-pretty",
 						children: body
 					}),
+					wish && atShops,
 					strList(e.pressings).length > 0 && /* @__PURE__ */ jsx(Section, {
 						title: "Pressings",
 						children: pressings(e, key)
@@ -6694,6 +7238,7 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 						title: "Check in a listing",
 						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.check) })
 					}),
+					!wish && atShops,
 					strList(e.where).length > 0 && /* @__PURE__ */ jsx(Section, {
 						title: "Where to look",
 						children: /* @__PURE__ */ jsx(Bullets, { items: strList(e.where) })
@@ -6776,7 +7321,10 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 					children: items.map(entry)
 				})
 			] }),
-			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx(LinkList, { links: searchLinks(r) })] }),
+			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx(SearchElsewhere, {
+				r,
+				shops
+			})] }),
 			/* @__PURE__ */ jsx(Confirm, {
 				open: del !== null,
 				title: "Remove this research for good?",
@@ -9844,6 +10392,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-bottom: calc(var(--spacing) * -1);
   }
 
+  .-mb-2 {
+    margin-bottom: calc(var(--spacing) * -2);
+  }
+
   .-mb-3 {
     margin-bottom: calc(var(--spacing) * -3);
   }
@@ -10545,6 +11097,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     column-gap: var(--spacing);
   }
 
+  .gap-x-1\.5 {
+    column-gap: calc(var(--spacing) * 1.5);
+  }
+
   .gap-x-2 {
     column-gap: calc(var(--spacing) * 2);
   }
@@ -11205,6 +11761,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .pb-1\.25 {
     padding-bottom: calc(var(--spacing) * 1.25);
+  }
+
+  .pb-2 {
+    padding-bottom: calc(var(--spacing) * 2);
   }
 
   .pb-3\.5 {

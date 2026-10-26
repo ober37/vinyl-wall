@@ -15,6 +15,7 @@ import { Confirm } from '../sheet/Confirm'
 import { APP_VERSION } from '../version'
 import { ImportView, LibrarySection, useLibrary } from './Library'
 import { BackgroundSection, HangingSection, PageSection } from './LookSections'
+import { ShopsSection } from './Shops'
 
 // a stored date as the page shows dates (Oct 23, 2026); the task's check-in time ("2026-10-25 20:05 UTC") on this
 // device's own calendar, so a check just after a save isn't dated the next day
@@ -251,13 +252,13 @@ function DiscogsSection({ focus }: { focus?: boolean }) {
 
 const REPO_URL = 'https://github.com/ober37/vinyl-wall'
 
-// Three tabs: Wall (how it looks), Library (Discogs, export and import) and About; people who can't edit see only About.
+// Four tabs: Wall (how it looks), Shops (where to look for a copy), Library (Discogs, export and import) and About; people who can't edit see only About.
 // at: 'discogs' opens it on Library with the username ready (the welcome card's Connect Discogs); 'import' on the import
 // (as does an import under way, or one finished while Settings was closed)
 export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top' | 'discogs' | 'import'; onClose: () => void }) {
   const { settings, canEdit, hasMcp, fireTask, error, notice, clearError } = useRuntime()
   const update = useUpdateAvailable()
-  const tabs = canEdit ? ['wall', 'library', 'about'] : ['about']
+  const tabs = canEdit ? ['wall', 'shops', 'library', 'about'] : ['about']
   const dz = (settings.discogs || {}) as Discogs
   const discogsTrouble = !!dz.hasToken && dz.status === 'error'
   const [copyNote, setCopyNote] = useState('')
@@ -359,6 +360,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
                 {tabs.length > 1 && (
                   <TabsList variant="line" size="sm" activateOnFocus>
                     <TabsTrigger value="wall">Wall</TabsTrigger>
+                    <TabsTrigger value="shops">Shops</TabsTrigger>
                     <TabsTrigger value="library">
                       Library
                       {discogsTrouble && (
@@ -377,6 +379,11 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
                     <PageSection />
                     <BackgroundSection />
                     <HangingSection />
+                  </TabsContent>
+                )}
+                {canEdit && (
+                  <TabsContent value="shops" keepMounted>
+                    <ShopsSection />
                   </TabsContent>
                 )}
                 {canEdit && (

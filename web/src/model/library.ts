@@ -5,6 +5,7 @@
 import { wantCopies } from './copies'
 import { aboutPending } from './task'
 import { BACKGROUNDS, HANGS } from './site'
+import { mergeShops, shopsOf } from './shops'
 import type { Rec } from './record'
 
 type Doc = Record<string, unknown> & { id: string }
@@ -48,7 +49,7 @@ const byId = (list: Doc[]) => Object.fromEntries(list.filter((x) => !x.example &
 // and the artists the records point at
 export function exportFile(p: { records: Rec[]; gear: Doc[]; setups: Doc[]; artists: Doc[]; settings: Data; app: string }): LibFile {
   const site: Data = {}
-  for (const k of ['title', 'bg', 'dim', 'hang']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
+  for (const k of ['title', 'bg', 'dim', 'hang', 'shops']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
   const records = byId(p.records as Doc[])
   const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean))
   return {
@@ -77,10 +78,12 @@ export type Plan = {
   // the artists already on the wall, as read for this plan
   known: string[]
   covers: Record<string, string>
+  // on a wall with records, the shops the file adds and fills in (an empty wall takes the file's list whole)
+  shops: { added: number; filled: number }
 }
 // what a file adds to this wall, or why it adds nothing. have: every record, including ones marked deleted (they're on
 // their way off Discogs, so they don't come back)
-export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; gear: Doc[]; setups: Doc[] }): Plan | string {
+export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; gear: Doc[]; setups: Doc[]; settings?: Data }): Plan | string {
   let snap: LibFile | null = null
   try {
     snap = JSON.parse(text)
@@ -124,13 +127,35 @@ export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; ge
     empty: !w.records.some((r) => !r.deleted),
     known: w.artists.map((a) => a.id),
     covers: snap.covers && typeof snap.covers === 'object' ? snap.covers : {},
+    shops: { added: 0, filled: 0 },
   }
-  if (p.recs.length + p.gear.length + p.setups.length === 0) return 'Everything in this file is already on the wall.'
+  if (!p.empty) {
+    const m = shopsFrom(w.settings || {}, p.site)
+    if (m) p.shops = { added: m.added, filled: m.filled }
+  }
+  if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled === 0) return 'Everything in this file is already on the wall.'
   return p
 }
-export const planSummary = (p: Plan) =>
-  `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` +
-  (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? ' is' : 's are'} already on the wall and will be skipped.` : '')
+// the file's shops merged into this wall's, or null when that changes nothing
+export function shopsFrom(settings: Data, site: Data) {
+  if (!Array.isArray(site.shops)) return null
+  const m = mergeShops(shopsOf(settings), shopsOf(site))
+  return m.added || m.filled ? m : null
+}
+// "adds 2 shops and fills in 1 of your shops", or as done ("added …, filled in …")
+const shopWords = ({ added, filled }: Plan['shops'], done = false) =>
+  [
+    added ? `${done ? 'added' : 'adds'} ${added} shop${added === 1 ? '' : 's'}` : '',
+    filled ? `${done ? 'filled' : 'fills'} in ${filled} of your shops` : '',
+  ]
+    .filter(Boolean)
+    .join(' and ')
+export const planSummary = (p: Plan) => {
+  const n = p.recs.length + p.gear.length + p.setups.length
+  const shops = shopWords(p.shops)
+  const what = n ? `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}${shops ? ', and ' + shops : ''}.` : shops.charAt(0).toUpperCase() + shops.slice(1) + '.'
+  return what + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? ' is' : 's are'} already on the wall and will be skipped.` : '')
+}
 
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
 // prettier-ignore
@@ -188,7 +213,8 @@ export function recordWrites(p: Plan, has: (id: unknown) => boolean, moved: Map<
   })
 }
 
-// an empty wall takes the file's look: title, a known preset or the photo (given its id on this wall), softening, hanging
+// an empty wall takes the file's look: title, a known preset or the photo (given its id on this wall), softening, hanging,
+// and its shops
 export function lookPatch(site: Data, photoId: string | null): Data {
   const bg = (site.bg || {}) as Data
   const patch: Data = {}
@@ -197,6 +223,7 @@ export function lookPatch(site: Data, photoId: string | null): Data {
   else if (bg.kind === 'photo' && photoId) patch.bg = { kind: 'photo', assetId: photoId }
   if (typeof site.dim === 'number') patch.dim = site.dim
   if (HANGS.some(([k]) => k === site.hang)) patch.hang = site.hang
+  if (Array.isArray(site.shops)) patch.shops = shopsOf(site)
   return patch
 }
 
@@ -206,8 +233,11 @@ export function doneMessage(p: Plan, recs: Data[]): string {
   const about = recs.some((d) => aboutPending(d as Rec))
   const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d as Rec)).length
   const what = enrich && about ? 'covers or album info' : enrich ? 'covers' : 'album info'
+  const n = p.recs.length + p.gear.length + p.setups.length
+  const shops = shopWords(p.shops, true)
   return (
-    `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` +
+    (n || !shops ? `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` : '') +
+    (shops ? (n ? ' Also ' : 'Done: ') + shops + '.' : '') +
     (lookups
       ? ` We'll look up ${what} for ${lookups === recs.length ? (lookups === 1 ? 'it' : 'them') : lookups + ' of them'}. This takes a few minutes.`
       : '')
