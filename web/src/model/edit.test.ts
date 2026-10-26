@@ -36,8 +36,9 @@ describe('patchFor', () => {
     expect(patchFor(r, f, { ...f, artist: 'Miles Davis Sextet' })).toEqual({ artist: 'Miles Davis Sextet', ...reset })
     expect(aboutPending({ ...r, aboutAt: '', aboutV: 0, about: undefined })).toBe(true)
     expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
-    // Not this artist stays off
-    expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, title: 'x' })).toEqual({ title: 'x' })
+    // Not this artist was about the old match: it comes off (#63), but not for an edit that keeps the album
+    expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, title: 'x' })).toEqual({ title: 'x', ...reset, aboutBlocked: false })
+    expect(patchFor({ ...r, aboutBlocked: true }, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
   })
 
   it('a new title or artist starts over a lookup that gave up', () => {
@@ -73,7 +74,7 @@ describe('patchFor', () => {
   it('never writes fields the form does not own', () => {
     const f = toForm(owned)
     // (a new title or artist also resets the album info: tested above)
-    const p = patchFor({ ...owned, aboutBlocked: true }, f, { ...f, title: 'a', artist: 'b', why: 'c', shop: 'd', mediaGrade: 'NM' })
+    const p = patchFor({ ...owned, about: undefined }, f, { ...f, title: 'a', artist: 'b', why: 'c', shop: 'd', mediaGrade: 'NM' })
     for (const k of ['notes', 'about', 'moreCopies', 'status', 'discogsId', 'matrix']) expect(p).not.toHaveProperty(k)
   })
 

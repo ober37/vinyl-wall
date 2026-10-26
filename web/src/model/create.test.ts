@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { coverPatch, dupeOf, enrichPatch, hasArtistInfo, newDoc, NOT_ARTIST } from './create'
+import type { Rec } from './record'
+import { coverPatch, dupeOf, enrichPatch, hasArtistInfo, newDoc, NOT_ARTIST, removeCoverPatch, UNBLOCK_ARTIST } from './create'
 import { toForm } from './edit'
 import { shrinkImage, type ImageApi } from './image'
 
@@ -41,6 +42,18 @@ describe('covers and artists', () => {
     const r = { id: 'r', aboutAt: '2026-10-01', aboutV: 3 }
     expect(enrichPatch(r)).toEqual({ needsEnrich: true, aboutAt: '', aboutV: 0 })
     expect(enrichPatch({ ...r, aboutBlocked: true })).toEqual({ needsEnrich: true })
+  })
+  it('Remove cover goes back to the sleeve until an upload or Find cover & details (#62)', () => {
+    const r: Rec = { id: 'r', coverAsset: 'a1', coverOriginal: 'o1', autoFilled: ['coverAsset', 'year'] }
+    expect(removeCoverPatch(r)).toEqual({ coverAsset: '', coverBlocked: true, coverOriginal: '', autoFilled: ['year'] })
+    expect(removeCoverPatch({ id: 'r', coverAsset: 'a1' })).toEqual({ coverAsset: '', coverBlocked: true })
+    const off: Rec = { id: 'r', coverBlocked: true }
+    expect(coverPatch(off, 'a2')).toMatchObject({ coverAsset: 'a2', coverBlocked: false })
+    expect(enrichPatch(off)).toMatchObject({ needsEnrich: true, coverBlocked: false })
+    expect(coverPatch({ id: 'r' }, 'a2')).not.toHaveProperty('coverBlocked')
+  })
+  it('Look up album & artist info again takes back Not this artist (#63)', () => {
+    expect(UNBLOCK_ARTIST).toEqual({ aboutBlocked: false, needsEnrich: true, aboutAt: '', aboutV: 0 })
   })
 })
 

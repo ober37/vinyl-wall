@@ -173,4 +173,17 @@ check("thin: Test / Test gets no cover, label or album info", got["t"]["fill"] =
 check("thin: a single store's match isn't enough", got["u"]["fill"] == {} and not got["u"]["coverUrl"], got["u"])
 check("thin: two sources that agree still match", got["m"]["fill"].get("year") == "2026" and got["m"]["coverUrl"], got["m"])
 check("thin: a two-word artist matches on one source, as before", got["a"]["coverUrl"] and got["a"]["fill"].get("year") == "2023", got["a"])
+
+check("removed cover: not waited for", not L.needs_a({"coverAsset": "", "coverBlocked": True, "runtime": 40}))
+work = tempfile.mkdtemp()
+off = {"title": "Aja", "artist": "Steely Dan", "coverAsset": "", "coverBlocked": True}
+p = {"groups": [["b"]], "records": {"b": {"data": off, "version": 1}}, "artists": {}, "left": 0}
+json.dump(p, open(os.path.join(work, "plan.json"), "w"))
+with contextlib.redirect_stdout(io.StringIO()):
+    L.fetch_group(work, 0, p, set())
+    L.save(work, 0)
+got = json.load(open(os.path.join(work, "g0", "found.json")))["found"]["b"]
+d = json.load(open(os.path.join(work, "g0", "facts", "records_b.json")))
+check("removed cover: the lookup doesn't put one back, but still fills the details", not got["coverUrl"] and got["fill"].get("runtime") == 40, got)
+check("removed cover: no \"couldn't find\" note, and not counted as a miss", "notes" not in d and "lookTries" not in d, d)
 sys.exit(1 if fails else 0)

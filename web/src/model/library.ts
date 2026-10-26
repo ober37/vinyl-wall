@@ -161,7 +161,7 @@ export const planSummary = (p: Plan) => {
 // prettier-ignore
 const IMPORT_FIELDS = ["title", "artist", "year", "label", "catalog", "pressing", "matrix", "runtime", "status", "why", "notes", "shop", "shopUrl", "acquired", "paid",
   "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
-  "discogsMatch", "coverAsset", "coverOriginal", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
+  "discogsMatch", "coverAsset", "coverOriginal", "coverBlocked", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
 // what an artist may carry in: the lookup's own fields, with the right types
 const ARTIST_FIELDS: Record<string, string> = { name: 'string', wiki: 'string', wikidata: 'string', intro: 'string', summary: 'string', source: 'string', fetchedAt: 'number' }
 export function importableArtist(d: Data): Data {
@@ -203,7 +203,7 @@ export function recordWrites(p: Plan, has: (id: unknown) => boolean, moved: Map<
     if (moved.has(r.coverAsset as string)) r.coverAsset = moved.get(r.coverAsset as string)
     else if (!has(r.coverAsset)) {
       delete r.coverAsset
-      r.needsEnrich = true
+      if (!r.coverBlocked) r.needsEnrich = true
     }
     if (!r.aboutBlocked && r.artistRef && !artistIds.has(String(r.artistRef))) {
       delete r.aboutAt

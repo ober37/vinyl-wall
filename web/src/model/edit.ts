@@ -129,9 +129,10 @@ export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unk
   // a field the person typed is no longer auto-filled
   if (Array.isArray(r.autoFilled) && keys.some((k) => r.autoFilled!.includes(k)))
     patch.autoFilled = r.autoFilled.filter((k) => !(k in patch))
-  // a new title or artist is a different album: what the lookup matched may be wrong, so it looks it up again
-  if (('title' in patch || 'artist' in patch) && !r.aboutBlocked && (r.aboutAt || r.artistRef || r.about))
-    Object.assign(patch, RELOOK_ABOUT, { artistRef: '', about: null })
+  // a new title or artist is a different album: what the lookup matched may be wrong, so it looks it up again, and a
+  // Not this artist, which was about the old match, comes off (#63)
+  if (('title' in patch || 'artist' in patch) && (r.aboutBlocked || r.aboutAt || r.artistRef || r.about))
+    Object.assign(patch, RELOOK_ABOUT, { artistRef: '', about: null }, r.aboutBlocked ? { aboutBlocked: false } : {})
   // and a lookup that gave up on the old one starts over (#69)
   if (('title' in patch || 'artist' in patch) && r.lookTries) patch.lookTries = 0
   return patch
