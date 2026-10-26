@@ -162,6 +162,7 @@ describe('settings', () => {
     const { fake, user } = setup()
     await user.click(await screen.findByRole('button', { name: 'Settings' }))
     const panel = await screen.findByRole('dialog')
+    await user.click(within(panel).getByRole('tab', { name: /^Library/ }))
     await user.type(within(panel).getByRole('textbox', { name: 'Username' }), 'ober37')
     await user.type(within(panel).getByLabelText('Personal access token'), 'short')
     await user.click(within(panel).getByRole('button', { name: 'Save token' }))

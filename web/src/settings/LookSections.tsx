@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
 import { Field, FieldLabel, FieldDescription } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
@@ -11,6 +12,7 @@ import { shrinkImage } from '../model/image'
 import { BACKGROUNDS, DEFAULT_DIM, DEFAULT_TITLE, HANGS, isStockPhoto, okAsset, presetOf, siteOf, type Background } from '../model/site'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
+import { Chevron } from '../sheet/Links'
 import { Tip, TipGroup } from '../wall/Tip'
 import { WallBackground, bgClass, bgStyle } from '../wall/Wall'
 
@@ -70,6 +72,36 @@ const SWATCH =
   'bg-wall border-border block w-full overflow-hidden rounded-md border group-data-pressed:outline-2 group-data-pressed:outline-offset-2 group-data-pressed:outline-primary group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)'
 const NAME = 'text-foreground-muted group-data-pressed:text-foreground-intense text-sm break-words'
 
+// a folded chooser: one row with the choice's picture and name that opens the tiles (they stay open to compare)
+function Chooser({
+  swatch,
+  name,
+  open,
+  onOpenChange,
+  children,
+}: {
+  swatch: React.ReactNode
+  name: string
+  open: boolean
+  onOpenChange: (o: boolean) => void
+  children: React.ReactNode
+}) {
+  return (
+    <Collapsible open={open} onOpenChange={onOpenChange}>
+      <CollapsibleTrigger className="group flex w-full cursor-pointer items-center gap-3 rounded-md text-start outline-offset-2 focus-visible:outline-2 focus-visible:outline-(--focus-ring)">
+        {swatch}
+        <span className="text-foreground-intense min-w-0 flex-1 text-sm break-words">{name}</span>
+        <span className="text-primary flex shrink-0 items-center gap-1 text-sm">
+          {open ? 'Done' : 'Change'}
+          <Chevron />
+        </span>
+      </CollapsibleTrigger>
+      <CollapsibleContent className="pt-4">{children}</CollapsibleContent>
+    </Collapsible>
+  )
+}
+const ROW_SWATCH = 'bg-wall border-border block h-15 w-20 shrink-0 overflow-hidden rounded-md border'
+
 const XIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true" className="size-3.5">
     <path d="M6 6l12 12M18 6L6 18" />
@@ -103,6 +135,7 @@ export function BackgroundSection() {
   }, [previewing])
   const [status, setStatus] = useState('')
   const [removing, setRemoving] = useState<string | null>(null)
+  const [open, setOpen] = useState(false)
   const file = useRef<HTMLInputElement>(null)
 
   // what a tile or the slider draws: the wall's own reading of that setting
@@ -155,6 +188,10 @@ export function BackgroundSection() {
     if (await saveSettings(patch)) deleteAsset(id)
   }
   const removingCurrent = removing !== null && current === 'photo:' + removing
+  const currentName = isUpload
+    ? uploads.find((u) => 'photo:' + u.id === current)?.name || 'Your photo'
+    : BACKGROUNDS.find(([k]) => 'preset:' + k === current)![1]
+  const shownLook = look(current, dim)
 
   // a tile shows its own photo at its kind's default wash, and the chosen one at the wash set
   const tile = (key: string, name: string) => {
@@ -170,59 +207,67 @@ export function BackgroundSection() {
   return (
     <Fieldset>
       <FieldsetLegend>Background</FieldsetLegend>
-      <div className="flex flex-col gap-2">
-        <TipGroup>
-          <ToggleGroup
-            value={[current]}
-            onValueChange={(v) => pick(String(v[0] || ''))}
-            className="grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-3"
-          >
-            {BACKGROUNDS.map(([k, name]) => tile('preset:' + k, name))}
-            {uploads.map((u) => (
-              <div key={u.id} className="relative min-w-0">
-                {tile('photo:' + u.id, u.name || 'Your photo')}
-                {/* beside the tile, not in it (a button can't sit inside another); 24px to see, 44px to tap. Only where the
+      {/* an upload under way or its message keeps the tiles open, so the message isn't folded away */}
+      <Chooser
+        swatch={<span className={`${ROW_SWATCH} ${bgClass(shownLook)}`} style={bgStyle(shownLook)} aria-hidden="true" />}
+        name={currentName}
+        open={open || busy || !!status}
+        onOpenChange={setOpen}
+      >
+        <div className="flex flex-col gap-2">
+          <TipGroup>
+            <ToggleGroup
+              value={[current]}
+              onValueChange={(v) => pick(String(v[0] || ''))}
+              className="grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-3"
+            >
+              {BACKGROUNDS.map(([k, name]) => tile('preset:' + k, name))}
+              {uploads.map((u) => (
+                <div key={u.id} className="relative min-w-0">
+                  {tile('photo:' + u.id, u.name || 'Your photo')}
+                  {/* beside the tile, not in it (a button can't sit inside another); 24px to see, 44px to tap. Only where the
                     stored image can go too, so nothing is left behind with no tile pointing at it */}
-                {hasAssets && (
-                  <Tip label="Remove this background">
-                    <button
-                      type="button"
-                      aria-label={`Remove ${u.name || 'this photo'}`}
-                      onClick={() => setRemoving(u.id)}
-                      className="bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
-                    >
-                      <XIcon />
-                    </button>
-                  </Tip>
-                )}
-              </div>
-            ))}
-            {hasAssets && (
-              // the list's last slot: a dashed tile the size of the others
-              <button type="button" className={TILE} disabled={busy} onClick={() => file.current?.click()}>
-                <span className="border-border-strong text-foreground-muted grid aspect-4/3 w-full place-items-center rounded-md border border-dashed text-2xl leading-none group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)">
-                  +
-                </span>
-                <span className={NAME}>Upload your own</span>
-              </button>
-            )}
-          </ToggleGroup>
-        </TipGroup>
-        <input
-          ref={file}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          hidden
-          aria-label="Upload your own background"
-          onChange={(e) => add(e.target.files?.[0]).then(() => (e.target.value = ''))}
-        />
-        {status && (
-          <p role="status" className="text-foreground-muted text-sm">
-            {status}
-          </p>
-        )}
-        {!hasAssets && <p className="text-foreground-muted text-sm">Uploading your own background isn't available in this view.</p>}
-      </div>
+                  {hasAssets && (
+                    <Tip label="Remove this background">
+                      <button
+                        type="button"
+                        aria-label={`Remove ${u.name || 'this photo'}`}
+                        onClick={() => setRemoving(u.id)}
+                        className="bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
+                      >
+                        <XIcon />
+                      </button>
+                    </Tip>
+                  )}
+                </div>
+              ))}
+              {hasAssets && (
+                // the list's last slot: a dashed tile the size of the others
+                <button type="button" className={TILE} disabled={busy} onClick={() => file.current?.click()}>
+                  <span className="border-border-strong text-foreground-muted grid aspect-4/3 w-full place-items-center rounded-md border border-dashed text-2xl leading-none group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-(--focus-ring)">
+                    +
+                  </span>
+                  <span className={NAME}>Upload your own</span>
+                </button>
+              )}
+            </ToggleGroup>
+          </TipGroup>
+          <input
+            ref={file}
+            type="file"
+            accept="image/jpeg,image/png,image/webp"
+            hidden
+            aria-label="Upload your own background"
+            onChange={(e) => add(e.target.files?.[0]).then(() => (e.target.value = ''))}
+          />
+          {status && (
+            <p role="status" className="text-foreground-muted text-sm">
+              {status}
+            </p>
+          )}
+          {!hasAssets && <p className="text-foreground-muted text-sm">Uploading your own background isn't available in this view.</p>}
+        </div>
+      </Chooser>
       {(isUpload || stock) && (
         <Field className="soften">
           <FieldLabel>Photo strength</FieldLabel>
@@ -256,35 +301,47 @@ export function BackgroundSection() {
   )
 }
 
+// a small piece of wall in a hanging style, cropped to the rail and the top of one sleeve
+const HangSwatch = ({ hang, className }: { hang: string; className: string }) => (
+  <span className={className} aria-hidden="true">
+    <span className="rack grid-cols-1" data-hang={hang}>
+      <span className="slot block">
+        <span className="hanger block">
+          <span className="hook" />
+          <span className="sleeve-box mx-auto block w-24">
+            <span className="sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" />
+          </span>
+        </span>
+      </span>
+    </span>
+  </span>
+)
+
 export function HangingSection() {
   const { site, saveSettings } = useRuntime()
+  const [open, setOpen] = useState(false)
   return (
     <Fieldset>
       <FieldsetLegend>Hanging</FieldsetLegend>
-      <ToggleGroup
-        value={[site.hang]}
-        onValueChange={(v) => v[0] && v[0] !== site.hang && saveSettings({ hang: String(v[0]) })}
-        className="grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-4"
+      <Chooser
+        swatch={<HangSwatch hang={site.hang} className={ROW_SWATCH} />}
+        name={HANGS.find(([k]) => k === site.hang)![1]}
+        open={open}
+        onOpenChange={setOpen}
       >
-        {HANGS.map(([k, name]) => (
-          <Toggle key={k} value={k} className={TILE}>
-            {/* a small piece of wall in this style, cropped to the rail and the top of one sleeve */}
-            <span className={`${SWATCH} h-20`} aria-hidden="true">
-              <span className="rack grid-cols-1" data-hang={k}>
-                <span className="slot block">
-                  <span className="hanger block">
-                    <span className="hook" />
-                    <span className="sleeve-box mx-auto block w-24">
-                      <span className="sleeve-face block bg-[linear-gradient(150deg,var(--accent),color-mix(in_oklch,var(--accent)_45%,var(--shade)))]" />
-                    </span>
-                  </span>
-                </span>
-              </span>
-            </span>
-            <span className={NAME}>{name}</span>
-          </Toggle>
-        ))}
-      </ToggleGroup>
+        <ToggleGroup
+          value={[site.hang]}
+          onValueChange={(v) => v[0] && v[0] !== site.hang && saveSettings({ hang: String(v[0]) })}
+          className="grid w-full grid-cols-2 items-start gap-3 sm:grid-cols-4"
+        >
+          {HANGS.map(([k, name]) => (
+            <Toggle key={k} value={k} className={TILE}>
+              <HangSwatch hang={k} className={`${SWATCH} h-20`} />
+              <span className={NAME}>{name}</span>
+            </Toggle>
+          ))}
+        </ToggleGroup>
+      </Chooser>
     </Fieldset>
   )
 }
