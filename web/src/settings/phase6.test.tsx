@@ -88,10 +88,10 @@ describe('Import from a file', () => {
     const { fake, user } = setup({}, false, ['k1'])
     const view = await toImport(user)
     await choose(user, fileOf(library))
-    expect(await within(view).findByText('Adds 2 records and 1 piece of equipment. 1 record is already on the wall and will be skipped.')).toBeTruthy()
+    expect(await within(view).findByText('Adds 2 records and 1 piece of equipment. Skips 1 record that has nothing new.')).toBeTruthy()
     expect(within(view).getByText('vinyl-wall-2026-10-01.json')).toBeTruthy()
     await user.click(within(view).getByRole('button', { name: 'Bring them in' }))
-    expect(await within(view).findByText(/^Brought in 2 records and 1 piece of equipment\. We'll look up covers or album info for them/)).toBeTruthy()
+    expect(await within(view).findByText(/^Added 2 records and 1 piece of equipment\. We'll look up covers or album info for them/)).toBeTruthy()
     const x1 = fake.store.records.x1
     // its cover is held here, so it stays; nothing of another wall's sync comes along
     expect(x1.coverAsset).toBe('k1')
@@ -125,7 +125,7 @@ describe('Import from a file', () => {
     const view = await toImport(user)
     await choose(user, fileOf(library))
     await user.click(await within(view).findByRole('button', { name: 'Bring them in' }))
-    await within(view).findByText(/^Brought in 3 records/)
+    await within(view).findByText(/^Added 3 records/)
     expect(fake.store.settings.site).toMatchObject({ title: 'Back Room', hang: 'peg', bg: { kind: 'preset', preset: 'walnut' } })
   })
 

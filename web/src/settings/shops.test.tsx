@@ -117,11 +117,11 @@ describe('shops: importing into a wall with records', () => {
     const p = planImport(file([siren]), wall) as Plan
     expect(p.shops).toEqual({ added: 1, filled: 0 })
     expect(planSummary(p)).toBe('Adds 1 shop.')
-    expect(doneMessage(p, [])).toBe('Done: added 1 shop.')
+    expect(doneMessage(p, [])).toBe('Added 1 shop.')
     expect(shopsFrom({}, p.site)!.list.map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Discogs Marketplace', 'eBay', 'Siren Records'])
     const q = planImport(file([siren], { r2: { title: 'Vs.', artist: 'Pearl Jam' } }), { ...wall, settings: { shops: [{ ...siren, phone: '' }] } }) as Plan
-    expect(planSummary(q)).toBe('Adds 1 record, and fills in 1 of your shops.')
-    expect(doneMessage(q, [])).toBe('Brought in 1 record. Also filled in 1 of your shops.')
+    expect(planSummary(q)).toBe('Adds 1 record. Fills in missing details on 1 shop you already have.')
+    expect(doneMessage(q, [])).toBe('Added 1 record. Filled in missing details on 1 shop.')
   })
 
   it('has nothing to do when the wall already has those shops', () => {

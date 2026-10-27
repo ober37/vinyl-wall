@@ -2903,12 +2903,13 @@ var nowUTC = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).repla
 var libNorm = (s) => String(s || "").toLowerCase().replace(/\s*\(\d+\)|\*/g, "").replace(/&/g, " and ").split(/[^a-z0-9]+/).filter((w) => w && w !== "the").join("");
 var rids = (d) => [d.discogsId, d.discogsSync?.rid].map((v) => parseInt(String(v), 10)).filter(Boolean);
 var key = (d) => libNorm(d.artist) + "|" + libNorm(d.title);
-function libCount(recs, gear, setups) {
+function libCount(recs, gear, setups, shops = 0) {
 	const part = (n, one, many) => n ? `${n} ${n === 1 ? one : many}` : "";
 	const a = [
 		part(recs, "record", "records"),
 		part(gear, "piece of equipment", "pieces of equipment"),
-		part(setups, "setup", "setups")
+		part(setups, "setup", "setups"),
+		part(shops, "shop", "shops")
 	].filter(Boolean);
 	return a.length > 1 ? a.slice(0, -1).join(", ") + " and " + a[a.length - 1] : a[0] || "nothing";
 }
@@ -2953,33 +2954,56 @@ function planImport(text, w) {
 	} catch {}
 	if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== "object" || !snap.records) return "This file wasn't made by Export on a Vinyl Wall.";
 	if (snap.vinylWall > 1) return "This file was made by a newer Vinyl Wall. Update this wall first, then import it.";
-	const ids = new Set(w.records.map((r) => r.id));
-	const R = /* @__PURE__ */ new Set();
-	const K = /* @__PURE__ */ new Set();
-	const remember = (d) => {
-		rids(d).forEach((n) => R.add(n));
-		K.add(key(d));
+	const byId = new Map(w.records.map((r) => [r.id, r]));
+	const R = /* @__PURE__ */ new Map();
+	const K = /* @__PURE__ */ new Map();
+	const remember = (d, wall) => {
+		rids(d).forEach((n) => R.has(n) || R.set(n, wall));
+		if (!K.has(key(d))) K.set(key(d), wall);
 	};
-	w.records.forEach(remember);
+	w.records.forEach((r) => remember(r, r));
 	const recs = [];
+	const fillRecs = [];
+	const filled = /* @__PURE__ */ new Set();
 	let skipped = 0;
 	for (const [id, d] of Object.entries(snap.records)) {
 		if (!d || typeof d !== "object" || d.deleted || !d.title) continue;
-		if (ids.has(id) || rids(d).some((n) => R.has(n)) || K.has(key(d))) {
-			skipped++;
+		const n = rids(d).find((x) => R.has(x));
+		const match = byId.has(id) ? byId.get(id) : n !== void 0 ? R.get(n) : K.has(key(d)) ? K.get(key(d)) : void 0;
+		if (match !== void 0) {
+			if (match && !match.deleted && !filled.has(match.id) && Object.keys(fillPatch(match, d)).length) {
+				fillRecs.push([match.id, d]);
+				filled.add(match.id);
+			} else skipped++;
 			continue;
 		}
 		recs.push([id, d]);
-		ids.add(id);
-		remember(d);
+		byId.set(id, null);
+		remember(d, null);
 	}
 	const fresh = (list, have) => Object.entries(list || {}).filter(([id, d]) => d && typeof d === "object" && !d.example && !d.deleted && !have.some((x) => x.id === id));
-	const refs = new Set(recs.map(([, d]) => d.artistRef).filter(Boolean));
+	const refs = new Set([...recs.map(([, d]) => d.artistRef), ...fillRecs.map(([id, d]) => fillPatch(byId.get(id), d).artistRef)].filter(Boolean));
+	const on = (list, have, fill) => Object.entries(list || {}).flatMap(([id, d]) => {
+		const x = have.find((h) => h.id === id);
+		return x && d && typeof d === "object" && !d.example && !d.deleted && Object.keys(fill(x, d)).length ? [[id, d]] : [];
+	});
 	const p = {
 		recs,
 		gear: fresh(snap.gear, w.gear),
 		setups: fresh(snap.setups, w.setups),
 		artists: fresh(snap.artists, w.artists).filter(([id, d]) => refs.has(id) && /^[\w.-]{1,100}$/.test(id) && typeof d.name === "string"),
+		fills: {
+			recs: fillRecs,
+			gear: on(snap.gear, w.gear, gearFill),
+			setups: on(snap.setups, w.setups, setupFill),
+			artists: on(snap.artists, w.artists, artistFill).map(([id, d]) => {
+				const { id: _, ...x } = w.artists.find((a) => a.id === id);
+				return [id, {
+					...x,
+					...artistFill(x, d)
+				}];
+			})
+		},
 		skipped,
 		site: snap.settings?.site || {},
 		empty: !w.records.some((r) => !r.deleted),
@@ -2997,7 +3021,8 @@ function planImport(text, w) {
 			filled: m.filled
 		};
 	}
-	if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled === 0) return "Everything in this file is already on the wall.";
+	const F = p.fills;
+	if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled + F.recs.length + F.gear.length + F.setups.length === 0) return "Everything in this file is already on the wall.";
 	return p;
 }
 function shopsFrom(settings, site) {
@@ -3005,12 +3030,13 @@ function shopsFrom(settings, site) {
 	const m = mergeShops(shopsOf(settings), shopsOf(site));
 	return m.added || m.filled ? m : null;
 }
-var shopWords = ({ added, filled }, done = false) => [added ? `${done ? "added" : "adds"} ${added} shop${added === 1 ? "" : "s"}` : "", filled ? `${done ? "filled" : "fills"} in ${filled} of your shops` : ""].filter(Boolean).join(" and ");
-var planSummary = (p) => {
-	const n = p.recs.length + p.gear.length + p.setups.length;
-	const shops = shopWords(p.shops);
-	return (n ? `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}${shops ? ", and " + shops : ""}.` : shops.charAt(0).toUpperCase() + shops.slice(1) + ".") + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? " is" : "s are"} already on the wall and will be skipped.` : "");
-};
+function planWords(p, done) {
+	const F = p.fills;
+	const adds = libCount(p.recs.length, p.gear.length, p.setups.length, p.shops.added);
+	const fills = libCount(F.recs.length, F.gear.length, F.setups.length, p.shops.filled);
+	return [adds !== "nothing" ? `${done ? "Added" : "Adds"} ${adds}.` : "", fills !== "nothing" ? `${done ? "Filled" : "Fills"} in missing details on ${fills}${done ? "" : " you already have"}.` : ""].filter(Boolean).join(" ");
+}
+var planSummary = (p) => planWords(p, false) + (p.skipped ? ` Skips ${p.skipped} record${p.skipped === 1 ? "" : "s"} that ${p.skipped === 1 ? "has" : "have"} nothing new.` : "");
 var IMPORT_FIELDS = [
 	"title",
 	"artist",
@@ -3098,6 +3124,125 @@ function imageFile(u) {
 	const type = head.slice(5).split(";")[0];
 	return new File([a], "cover." + type.split("/")[1], { type });
 }
+var empty = (v) => v === void 0 || v === null || v === "" || (Array.isArray(v) ? !v.length : typeof v === "object" && !Object.keys(v).length);
+var statusOf = (d) => d.status === "wish" ? "wish" : d.status === "ordered" ? "ordered" : "own";
+var ALBUM_FIELDS = [
+	"title",
+	"artist",
+	"year",
+	"label",
+	"catalog",
+	"pressing",
+	"matrix",
+	"runtime",
+	"why"
+];
+var STATUS_FIELDS = {
+	own: [
+		"acquired",
+		"paid",
+		"shop",
+		"shopUrl",
+		"mediaGrade",
+		"sleeveGrade"
+	],
+	ordered: [
+		"copyName",
+		"paid",
+		"shop",
+		"shopUrl",
+		"orderDate",
+		"orderStatus",
+		"eta",
+		"orderNum",
+		"carrier",
+		"tracking",
+		"orderNotes"
+	],
+	wish: [
+		"copyName",
+		"budget",
+		"buyLinks"
+	]
+};
+function addMissing(wall, file, k) {
+	if (!Array.isArray(file)) return null;
+	const W = Array.isArray(wall) ? wall : [];
+	const have = new Set(W.filter((x) => x && typeof x === "object").map(k));
+	const add = file.filter((x) => x && typeof x === "object" && !have.has(k(x)) && have.add(k(x)));
+	return add.length ? [...W, ...add] : null;
+}
+var noteKey = (n) => n.id ? "id:" + n.id : JSON.stringify([n.d ?? "", n.t ?? ""]);
+var entryKey$1 = (e) => e.id ? "id:" + e.id : JSON.stringify(e);
+var copyKeys = (c) => [c.discogsId ? "r:" + c.discogsId : "", c.pressing ? "p:" + libNorm(c.pressing) : ""].filter(Boolean);
+function fillPatch(w, raw) {
+	const f = importable(raw);
+	const p = {};
+	const same = statusOf(w) === statusOf(f);
+	for (const k of [...ALBUM_FIELDS, ...same ? STATUS_FIELDS[statusOf(w)] : []]) if (empty(w[k]) && !empty(f[k])) p[k] = f[k];
+	if (empty(w.discogsId) && !empty(f.discogsId)) {
+		p.discogsId = f.discogsId;
+		if (typeof f.discogsMatch === "string" && f.discogsMatch) p.discogsMatch = f.discogsMatch;
+	}
+	if (empty(w.coverAsset) && !w.coverBlocked && typeof f.coverAsset === "string" && f.coverAsset) p.coverAsset = f.coverAsset;
+	if (!w.aboutBlocked && empty(w.about) && empty(w.artistRef) && !f.aboutBlocked && (!empty(f.about) || !empty(f.artistRef))) {
+		for (const k of [
+			"about",
+			"aboutAt",
+			"aboutV",
+			"artistRef"
+		]) if (!empty(f[k])) p[k] = f[k];
+	}
+	const notes = addMissing(w.notes, f.notes, noteKey);
+	if (notes) p.notes = notes;
+	const log = addMissing(w.researchLog, f.researchLog, entryKey$1);
+	if (log) p.researchLog = log;
+	if (same) {
+		const have = new Set(wantCopies(w).flatMap(copyKeys));
+		const add = wantCopies(f).slice(1).filter((c) => copyKeys(c).length && !copyKeys(c).some((k) => have.has(k)) && copyKeys(c).every((k) => have.add(k)));
+		if (add.length) p.moreCopies = [...Array.isArray(w.moreCopies) ? w.moreCopies : [], ...add];
+	}
+	const auto = (Array.isArray(f.autoFilled) ? f.autoFilled : []).filter((k) => k in p);
+	if (auto.length) p.autoFilled = [.../* @__PURE__ */ new Set([...Array.isArray(w.autoFilled) ? w.autoFilled : [], ...auto])];
+	return p;
+}
+function gearFill(w, f) {
+	const p = {};
+	for (const [k, v] of Object.entries(f)) if (![
+		"plays",
+		"minutes",
+		"notes",
+		"example",
+		"deleted",
+		"id"
+	].includes(k) && empty(w[k]) && !empty(v)) p[k] = v;
+	const notes = addMissing(w.notes, f.notes, noteKey);
+	if (notes) p.notes = notes;
+	const plays = addMissing(w.plays, f.plays, (x) => JSON.stringify([
+		x.id ?? "",
+		x.d ?? "",
+		+x.min || 0
+	]));
+	if (plays) {
+		p.plays = plays;
+		const had = new Set((Array.isArray(w.plays) ? w.plays : []).map((x) => JSON.stringify([
+			x.id ?? "",
+			x.d ?? "",
+			+x.min || 0
+		])));
+		p.minutes = (+w.minutes || 0) + plays.filter((x) => !had.has(JSON.stringify([
+			x.id ?? "",
+			x.d ?? "",
+			+x.min || 0
+		]))).reduce((a, x) => a + (+x.min || 0), 0);
+	}
+	return p;
+}
+var setupFill = (w, f) => Object.fromEntries(["name", "note"].filter((k) => empty(w[k]) && typeof f[k] === "string" && f[k]).map((k) => [k, f[k]]));
+function artistFill(w, f) {
+	const a = importableArtist(f);
+	return Object.fromEntries(Object.entries(a).filter(([k, v]) => empty(w[k]) && !empty(v)));
+}
 function recordWrites(p, has, moved, artistIds) {
 	return p.recs.map(([id, d]) => {
 		const r = importable(d);
@@ -3136,9 +3281,8 @@ function doneMessage(p, recs) {
 	const about = recs.some((d) => aboutPending(d));
 	const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d)).length;
 	const what = enrich && about ? "covers or album info" : enrich ? "covers" : "album info";
-	const n = p.recs.length + p.gear.length + p.setups.length;
-	const shops = shopWords(p.shops, true);
-	return (n || !shops ? `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` : "") + (shops ? (n ? " Also " : "Done: ") + shops + "." : "") + (lookups ? ` We'll look up ${what} for ${lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them"}. This takes a few minutes.` : "");
+	const whom = p.fills.recs.length ? `${lookups} record${lookups === 1 ? "" : "s"}` : lookups === recs.length ? lookups === 1 ? "it" : "them" : lookups + " of them";
+	return planWords(p, true) + (lookups ? ` We'll look up ${what} for ${whom}. This takes a few minutes.` : "");
 }
 // src/settings/Library.tsx
 async function pool(n, items, fn) {
@@ -3248,7 +3392,7 @@ function useLibrary() {
 				moved.set(id, await rt.upload(await shrinkImage(imageFile(fileImage(p, id)), max, .82)));
 			} catch {}
 		};
-		const up = [...new Set(p.recs.map(([, d]) => d.coverAsset).filter((id) => typeof id === "string" && !has(id) && !!fileImage(p, id)))];
+		const up = [...new Set([...p.recs.map(([, d]) => d.coverAsset), ...p.fills.recs.map(([, d]) => d.coverAsset)].filter((id) => typeof id === "string" && !has(id) && !!fileImage(p, id)))];
 		let uploaded = 0;
 		if (rt.hasAssets) await pool(3, up, async (id) => {
 			await upload(id, 500);
@@ -3265,6 +3409,28 @@ function useLibrary() {
 				await rt.put("records", id, d);
 				if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`);
 			}
+			for (const [id, d] of p.fills.setups) {
+				const x = live.current.setups.find((s) => s.id === id);
+				const patch = x && setupFill(x, d);
+				if (patch && Object.keys(patch).length) {
+					const { id: _, ...doc } = x;
+					await rt.saveSetup(id, {
+						...doc,
+						...patch
+					});
+				}
+			}
+			for (const [id, d] of p.fills.gear) await rt.saveGear(id, (g) => g && Object.keys(gearFill(g, d)).length ? gearFill(g, d) : null);
+			for (const [id, d] of p.fills.artists) await rt.put("artists", id, d);
+			for (const [id, d] of p.fills.recs) await rt.mutate(id, (latest) => {
+				const patch = fillPatch(latest, d);
+				if (typeof patch.coverAsset === "string") {
+					const c = has(patch.coverAsset) ? patch.coverAsset : moved.get(patch.coverAsset);
+					if (c) patch.coverAsset = c;
+					else delete patch.coverAsset;
+				}
+				return Object.keys(patch).length ? patch : null;
+			});
 			if (p.empty) await takeLook(p, has, moved, upload);
 			else {
 				const m = shopsFrom(rt.settings, p.site);

@@ -2,7 +2,7 @@
 // (vinylWall: 1) both ways, so files move between this page and production's. Pure: no React, no db.
 /* The file holds records, gear, setups and the page's look. Never the Discogs token (it isn't loaded here) or anything
    tied to one wall: the task id, the Discogs connection, update state, data version. */
-import { wantCopies } from './copies'
+import { wantCopies, type Copy } from './copies'
 import { aboutPending } from './task'
 import { BACKGROUNDS, HANGS } from './site'
 import { mergeShops, shopsOf } from './shops'
@@ -36,10 +36,10 @@ export const libNorm = (s: unknown) =>
 const rids = (d: Data) => [d.discogsId, (d.discogsSync as Data | undefined)?.rid].map((v) => parseInt(String(v), 10)).filter(Boolean)
 const key = (d: Data) => libNorm(d.artist) + '|' + libNorm(d.title)
 
-// "12 records, 2 pieces of equipment and 1 setup"
-export function libCount(recs: number, gear: number, setups: number): string {
+// "12 records, 2 pieces of equipment, 1 setup and 2 shops"
+export function libCount(recs: number, gear: number, setups: number, shops = 0): string {
   const part = (n: number, one: string, many: string) => (n ? `${n} ${n === 1 ? one : many}` : '')
-  const a = [part(recs, 'record', 'records'), part(gear, 'piece of equipment', 'pieces of equipment'), part(setups, 'setup', 'setups')].filter(Boolean)
+  const a = [part(recs, 'record', 'records'), part(gear, 'piece of equipment', 'pieces of equipment'), part(setups, 'setup', 'setups'), part(shops, 'shop', 'shops')].filter(Boolean)
   return a.length > 1 ? a.slice(0, -1).join(', ') + ' and ' + a[a.length - 1] : a[0] || 'nothing'
 }
 
@@ -80,6 +80,9 @@ export type Plan = {
   covers: Record<string, string>
   // on a wall with records, the shops the file adds and fills in (an empty wall takes the file's list whole)
   shops: { added: number; filled: number }
+  // what's already on the wall and gets its missing details from the file (#90): [the wall's id, the file's doc]; an
+  // artist's is the whole doc to write
+  fills: { recs: [string, Data][]; gear: [string, Data][]; setups: [string, Data][]; artists: [string, Data][] }
 }
 // what a file adds to this wall, or why it adds nothing. have: every record, including ones marked deleted (they're on
 // their way off Discogs, so they don't come back)
@@ -93,35 +96,58 @@ export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; ge
   if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== 'object' || !snap.records)
     return "This file wasn't made by Export on a Vinyl Wall."
   if (snap.vinylWall > 1) return 'This file was made by a newer Vinyl Wall. Update this wall first, then import it.'
-  const ids = new Set(w.records.map((r) => r.id))
-  const R = new Set<number>()
-  const K = new Set<string>()
-  const remember = (d: Data) => {
-    rids(d).forEach((n) => R.add(n))
-    K.add(key(d))
+  // every record already here, or brought in by an earlier one in this file, by id, Discogs release, and artist and title
+  const byId = new Map<string, Doc | null>(w.records.map((r) => [r.id, r]))
+  const R = new Map<number, Doc | null>()
+  const K = new Map<string, Doc | null>()
+  const remember = (d: Data, wall: Doc | null) => {
+    rids(d).forEach((n) => R.has(n) || R.set(n, wall))
+    if (!K.has(key(d))) K.set(key(d), wall)
   }
-  w.records.forEach(remember)
+  w.records.forEach((r) => remember(r, r))
   const recs: [string, Data][] = []
+  const fillRecs: [string, Data][] = []
+  const filled = new Set<string>()
   let skipped = 0
   for (const [id, d] of Object.entries(snap.records)) {
     if (!d || typeof d !== 'object' || d.deleted || !d.title) continue
-    if (ids.has(id) || rids(d).some((n) => R.has(n)) || K.has(key(d))) {
-      skipped++
+    const n = rids(d).find((x) => R.has(x))
+    const match = byId.has(id) ? byId.get(id) : n !== undefined ? R.get(n) : K.has(key(d)) ? K.get(key(d)) : undefined
+    if (match !== undefined) {
+      // on the wall: it gets what it's missing, once; one this file brings in (null) or the wall deleted is skipped
+      if (match && !match.deleted && !filled.has(match.id) && Object.keys(fillPatch(match, d)).length) {
+        fillRecs.push([match.id, d])
+        filled.add(match.id)
+      } else skipped++
       continue
     }
     recs.push([id, d])
-    ids.add(id)
-    remember(d)
+    byId.set(id, null)
+    remember(d, null)
   }
   const fresh = (list: Record<string, Data> | undefined, have: Doc[]) =>
     Object.entries(list || {}).filter(([id, d]) => d && typeof d === 'object' && !d.example && !d.deleted && !have.some((x) => x.id === id))
-  // artists the wall already has stay as they are; the file's others come in only for the records being brought in
-  const refs = new Set(recs.map(([, d]) => d.artistRef).filter(Boolean))
+  // the file's artists come in for the records it brings in or gives album info; one the wall has gets what it's missing
+  const refs = new Set([...recs.map(([, d]) => d.artistRef), ...fillRecs.map(([id, d]) => fillPatch(byId.get(id)!, d).artistRef)].filter(Boolean))
+  const on = <T extends Doc>(list: Record<string, Data> | undefined, have: T[], fill: (w: T, f: Data) => Data) =>
+    Object.entries(list || {}).flatMap(([id, d]): [string, Data][] => {
+      const x = have.find((h) => h.id === id)
+      return x && d && typeof d === 'object' && !d.example && !d.deleted && Object.keys(fill(x, d)).length ? [[id, d]] : []
+    })
   const p: Plan = {
     recs,
     gear: fresh(snap.gear, w.gear),
     setups: fresh(snap.setups, w.setups),
     artists: fresh(snap.artists, w.artists).filter(([id, d]) => refs.has(id) && /^[\w.-]{1,100}$/.test(id) && typeof d.name === 'string'),
+    fills: {
+      recs: fillRecs,
+      gear: on(snap.gear, w.gear, gearFill),
+      setups: on(snap.setups, w.setups, setupFill),
+      artists: on(snap.artists, w.artists, artistFill).map(([id, d]) => {
+        const { id: _, ...x } = w.artists.find((a) => a.id === id)!
+        return [id, { ...x, ...artistFill(x, d) }]
+      }),
+    },
     skipped,
     site: snap.settings?.site || {},
     empty: !w.records.some((r) => !r.deleted),
@@ -133,7 +159,9 @@ export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; ge
     const m = shopsFrom(w.settings || {}, p.site)
     if (m) p.shops = { added: m.added, filled: m.filled }
   }
-  if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled === 0) return 'Everything in this file is already on the wall.'
+  const F = p.fills
+  if (p.recs.length + p.gear.length + p.setups.length + p.shops.added + p.shops.filled + F.recs.length + F.gear.length + F.setups.length === 0)
+    return 'Everything in this file is already on the wall.'
   return p
 }
 // the file's shops merged into this wall's, or null when that changes nothing
@@ -142,20 +170,21 @@ export function shopsFrom(settings: Data, site: Data) {
   const m = mergeShops(shopsOf(settings), shopsOf(site))
   return m.added || m.filled ? m : null
 }
-// "adds 2 shops and fills in 1 of your shops", or as done ("added …, filled in …")
-const shopWords = ({ added, filled }: Plan['shops'], done = false) =>
-  [
-    added ? `${done ? 'added' : 'adds'} ${added} shop${added === 1 ? '' : 's'}` : '',
-    filled ? `${done ? 'filled' : 'fills'} in ${filled} of your shops` : '',
+// one sentence per action: "Adds 3 records and 2 shops. Fills in missing details on 12 records and 1 shop you already
+// have. Skips 5 records that have nothing new." Done says it as "Added …. Filled in …" (#90)
+function planWords(p: Plan, done: boolean) {
+  const F = p.fills
+  const adds = libCount(p.recs.length, p.gear.length, p.setups.length, p.shops.added)
+  const fills = libCount(F.recs.length, F.gear.length, F.setups.length, p.shops.filled)
+  return [
+    adds !== 'nothing' ? `${done ? 'Added' : 'Adds'} ${adds}.` : '',
+    fills !== 'nothing' ? `${done ? 'Filled' : 'Fills'} in missing details on ${fills}${done ? '' : ' you already have'}.` : '',
   ]
     .filter(Boolean)
-    .join(' and ')
-export const planSummary = (p: Plan) => {
-  const n = p.recs.length + p.gear.length + p.setups.length
-  const shops = shopWords(p.shops)
-  const what = n ? `Adds ${libCount(p.recs.length, p.gear.length, p.setups.length)}${shops ? ', and ' + shops : ''}.` : shops.charAt(0).toUpperCase() + shops.slice(1) + '.'
-  return what + (p.skipped ? ` ${p.skipped} record${p.skipped === 1 ? ' is' : 's are'} already on the wall and will be skipped.` : '')
+    .join(' ')
 }
+export const planSummary = (p: Plan) =>
+  planWords(p, false) + (p.skipped ? ` Skips ${p.skipped} record${p.skipped === 1 ? '' : 's'} that ${p.skipped === 1 ? 'has' : 'have'} nothing new.` : '')
 
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
 // prettier-ignore
@@ -194,6 +223,87 @@ export function imageFile(u: string): File {
   return new File([a], 'cover.' + type.split('/')[1], { type })
 }
 
+// What an import fills in on what the wall already has (#90). Empty: missing, "", null, [] or {}; the wall's value always
+// wins. Lists gain what the wall lacks and never lose an entry
+const empty = (v: unknown) =>
+  v === undefined || v === null || v === '' || (Array.isArray(v) ? !v.length : typeof v === 'object' && !Object.keys(v as object).length)
+const statusOf = (d: Data) => (d.status === 'wish' ? 'wish' : d.status === 'ordered' ? 'ordered' : 'own')
+// a record's facts about the album and its pressing fill in whatever its status; what belongs to one status (what was paid,
+// grades, an order's tracking, a hunt's budget) only when the wall and the file agree on it, so a wanted record doesn't
+// pick up a price and grades from a copy owned elsewhere
+// prettier-ignore
+const ALBUM_FIELDS = ['title', 'artist', 'year', 'label', 'catalog', 'pressing', 'matrix', 'runtime', 'why']
+// prettier-ignore
+const STATUS_FIELDS: Record<string, string[]> = {
+  own: ['acquired', 'paid', 'shop', 'shopUrl', 'mediaGrade', 'sleeveGrade'],
+  ordered: ['copyName', 'paid', 'shop', 'shopUrl', 'orderDate', 'orderStatus', 'eta', 'orderNum', 'carrier', 'tracking', 'orderNotes'],
+  wish: ['copyName', 'budget', 'buyLinks'],
+}
+// the file's entries the wall's list doesn't have, after the wall's own; null when there are none
+function addMissing(wall: unknown, file: unknown, k: (x: Data) => string): Data[] | null {
+  if (!Array.isArray(file)) return null
+  const W = (Array.isArray(wall) ? wall : []) as Data[]
+  const have = new Set(W.filter((x) => x && typeof x === 'object').map(k))
+  const add = (file as Data[]).filter((x) => x && typeof x === 'object' && !have.has(k(x)) && have.add(k(x)))
+  return add.length ? [...W, ...add] : null
+}
+const noteKey = (n: Data) => (n.id ? 'id:' + n.id : JSON.stringify([n.d ?? '', n.t ?? '']))
+const entryKey = (e: Data) => (e.id ? 'id:' + e.id : JSON.stringify(e))
+const copyKeys = (c: Copy) => [c.discogsId ? 'r:' + c.discogsId : '', c.pressing ? 'p:' + libNorm(c.pressing) : ''].filter(Boolean)
+
+// a record's patch: what it's missing from the file's copy. A cover is the file's asset id, which the caller maps to this
+// wall's (or drops); album info comes only to a record with none, so a looked-up record isn't redone
+export function fillPatch(w: Data, raw: Data): Data {
+  const f = importable(raw)
+  const p: Data = {}
+  const same = statusOf(w) === statusOf(f)
+  for (const k of [...ALBUM_FIELDS, ...(same ? STATUS_FIELDS[statusOf(w)] : [])]) if (empty(w[k]) && !empty(f[k])) p[k] = f[k]
+  if (empty(w.discogsId) && !empty(f.discogsId)) {
+    p.discogsId = f.discogsId
+    if (typeof f.discogsMatch === 'string' && f.discogsMatch) p.discogsMatch = f.discogsMatch
+  }
+  if (empty(w.coverAsset) && !w.coverBlocked && typeof f.coverAsset === 'string' && f.coverAsset) p.coverAsset = f.coverAsset
+  if (!w.aboutBlocked && empty(w.about) && empty(w.artistRef) && !f.aboutBlocked && (!empty(f.about) || !empty(f.artistRef)))
+    for (const k of ['about', 'aboutAt', 'aboutV', 'artistRef']) if (!empty(f[k])) p[k] = f[k]
+  const notes = addMissing(w.notes, f.notes, noteKey)
+  if (notes) p.notes = notes
+  const log = addMissing(w.researchLog, f.researchLog, entryKey)
+  if (log) p.researchLog = log
+  if (same) {
+    const have = new Set(wantCopies(w as Rec).flatMap(copyKeys))
+    const add = wantCopies(f as Rec)
+      .slice(1)
+      .filter((c) => copyKeys(c).length && !copyKeys(c).some((k) => have.has(k)) && copyKeys(c).every((k) => have.add(k)))
+    if (add.length) p.moreCopies = [...(Array.isArray(w.moreCopies) ? w.moreCopies : []), ...add]
+  }
+  // a filled-in field the file's lookup filled stays marked, so a later lookup may still better it
+  const auto = (Array.isArray(f.autoFilled) ? f.autoFilled : []).filter((k) => k in p)
+  if (auto.length) p.autoFilled = [...new Set([...(Array.isArray(w.autoFilled) ? w.autoFilled : []), ...auto])]
+  return p
+}
+// a piece of equipment's patch: its empty fields, notes it lacks, and plays it lacks (by record, date and minutes) with
+// their minutes, so a stylus's hours count each play once
+export function gearFill(w: Data, f: Data): Data {
+  const p: Data = {}
+  for (const [k, v] of Object.entries(f)) if (!['plays', 'minutes', 'notes', 'example', 'deleted', 'id'].includes(k) && empty(w[k]) && !empty(v)) p[k] = v
+  const notes = addMissing(w.notes, f.notes, noteKey)
+  if (notes) p.notes = notes
+  const plays = addMissing(w.plays, f.plays, (x) => JSON.stringify([x.id ?? '', x.d ?? '', +(x.min as number) || 0]))
+  if (plays) {
+    p.plays = plays
+    const had = new Set(((Array.isArray(w.plays) ? w.plays : []) as Data[]).map((x) => JSON.stringify([x.id ?? '', x.d ?? '', +(x.min as number) || 0])))
+    p.minutes = (+(w.minutes as number) || 0) + plays.filter((x) => !had.has(JSON.stringify([x.id ?? '', x.d ?? '', +(x.min as number) || 0]))).reduce((a, x) => a + (+(x.min as number) || 0), 0)
+  }
+  return p
+}
+export const setupFill = (w: Data, f: Data): Data =>
+  Object.fromEntries((['name', 'note'] as const).filter((k) => empty(w[k]) && typeof f[k] === 'string' && f[k]).map((k) => [k, f[k]]))
+// an artist's: the lookup's fields it lacks
+export function artistFill(w: Data, f: Data): Data {
+  const a = importableArtist(f)
+  return Object.fromEntries(Object.entries(a).filter(([k, v]) => empty(w[k]) && !empty(v)))
+}
+
 // the records' documents as written: a cover this wall holds (or one just uploaded from the file) stays, anything else is
 // looked up again, and so is the album info of a record whose artist isn't coming and isn't here
 export function recordWrites(p: Plan, has: (id: unknown) => boolean, moved: Map<string, string>, artistIds: Set<string>): [string, Data][] {
@@ -227,19 +337,13 @@ export function lookPatch(site: Data, photoId: string | null): Data {
   return patch
 }
 
-// "Brought in 12 records. We'll look up covers for 4 of them. This takes a few minutes."
+// "Added 12 records. We'll look up covers for 4 of them. This takes a few minutes." recs: the records added
 export function doneMessage(p: Plan, recs: Data[]): string {
   const enrich = recs.some((d) => d.needsEnrich)
   const about = recs.some((d) => aboutPending(d as Rec))
   const lookups = recs.filter((d) => d.needsEnrich || aboutPending(d as Rec)).length
   const what = enrich && about ? 'covers or album info' : enrich ? 'covers' : 'album info'
-  const n = p.recs.length + p.gear.length + p.setups.length
-  const shops = shopWords(p.shops, true)
-  return (
-    (n || !shops ? `Brought in ${libCount(p.recs.length, p.gear.length, p.setups.length)}.` : '') +
-    (shops ? (n ? ' Also ' : 'Done: ') + shops + '.' : '') +
-    (lookups
-      ? ` We'll look up ${what} for ${lookups === recs.length ? (lookups === 1 ? 'it' : 'them') : lookups + ' of them'}. This takes a few minutes.`
-      : '')
-  )
+  // with records filled in too, "them" could mean either, so it counts
+  const whom = p.fills.recs.length ? `${lookups} record${lookups === 1 ? '' : 's'}` : lookups === recs.length ? (lookups === 1 ? 'it' : 'them') : lookups + ' of them'
+  return planWords(p, true) + (lookups ? ` We'll look up ${what} for ${whom}. This takes a few minutes.` : '')
 }
