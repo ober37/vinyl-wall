@@ -109,7 +109,7 @@ export function pillOf(gear: Gear[], setups: Setup[]) {
   const w = worstGear(gear)
   if (!w) {
     const n = activeGear(gear).length
-    return { label: n ? 'Gear' : '', gear: null, aria: n ? `Equipment, ${n} item${n > 1 ? 's' : ''}` : 'Add your gear' }
+    return { label: n ? 'Gear' : '', gear: null, aria: n ? `Equipment: ${n} item${n > 1 ? 's' : ''}` : 'Add your gear' }
   }
   const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w), top = hi || lo
   const type = typeOf(w).label

@@ -189,7 +189,7 @@ it('works on a wall published on an older runtime (no user.can)', async () => {
 describe('settings', () => {
   it('shows the update dot and the sentence to send when a newer release is out', async () => {
     const { user } = setup({ taskId: 't1', update: { latest: '1.0.1', checkedMs: Date.now() } })
-    await user.click(await screen.findByRole('button', { name: 'Settings (update available)' }))
+    await user.click(await screen.findByRole('button', { name: 'Settings: update available' }))
     expect(await screen.findByText('An update is available')).toBeTruthy()
     expect(screen.getByText('Update my Vinyl Wall using https://raw.githubusercontent.com/ober37/vinyl-wall/v1.0.1/SETUP.md')).toBeTruthy()
   })

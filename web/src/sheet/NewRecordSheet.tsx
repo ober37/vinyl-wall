@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerBody } from '@appica/ui-react/drawer'
+import { Drawer, DrawerHeader, DrawerTitle, DrawerBody } from '@appica/ui-react/drawer'
+import { SheetContent } from '../wall/Tip'
 import { Field, FieldLabel } from '@appica/ui-react/field'
 import { Form as FormRoot } from '@appica/ui-react/form'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
@@ -108,7 +109,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
       // the still-moving sheet off the left edge (#60)
       onOpenChangeComplete={(o) => o && album.current?.focus()}
     >
-      <DrawerContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl">
         <DrawerHeader>
           <DrawerTitle>Add a record</DrawerTitle>
         </DrawerHeader>
@@ -186,7 +187,7 @@ export function NewRecordSheet({ open, onClose, onCreated }: {
           {/* with the details open, Hang it comes after them, where the form ends */}
           {details && hangIt}
         </DrawerBody>
-      </DrawerContent>
+      </SheetContent>
     </Drawer>
   )
 }

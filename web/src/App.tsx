@@ -120,11 +120,11 @@ export function App() {
               <>
                 {canEdit && (
                   <span className="relative">
-                    <Tip label={update ? 'Settings (update available)' : 'Settings'}>
+                    <Tip label={update ? 'Settings: update available' : 'Settings'}>
                       <Button
                         size="icon-md"
                         variant="outline"
-                        aria-label={update ? 'Settings (update available)' : 'Settings'}
+                        aria-label={update ? 'Settings: update available' : 'Settings'}
                         className={ROUND}
                         onClick={() => setSettingsOpen('top')}
                       >

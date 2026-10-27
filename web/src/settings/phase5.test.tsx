@@ -68,7 +68,7 @@ describe('Settings: how the wall looks', () => {
     // an uploaded photo starts at its own scale's default
     await waitFor(() => expect(site()).toMatchObject({ bg: { kind: 'photo', assetId: 'a_1' }, uploads: [{ id: 'a_1', name: 'my den' }], dim: 70 }))
     expect(within(sheet).getByRole('button', { name: 'my den' }).getAttribute('aria-pressed')).toBe('true')
-    await user.click(within(sheet).getByRole('button', { name: 'Remove my den' }))
+    await user.click(within(sheet).getByRole('button', { name: 'Remove background: my den' }))
     const ask = await screen.findByRole('alertdialog')
     expect(within(ask).getByText(/The wall goes back to Crate digging/)).toBeTruthy()
     await user.click(within(ask).getByRole('button', { name: 'Remove' }))

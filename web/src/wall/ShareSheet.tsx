@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@appica/ui-react/button'
-import { Drawer, DrawerBody, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from '@appica/ui-react/drawer'
+import { Drawer, DrawerBody, DrawerDescription, DrawerHeader, DrawerTitle } from '@appica/ui-react/drawer'
+import { SheetContent } from './Tip'
 import { missedNote, narrowedNote, type Shown } from '../model/share'
 import { today } from '../model/record'
 import { msgOf, useRuntime } from '../runtime/runtime'
@@ -86,7 +87,7 @@ export function ShareSheet({ shown, onClose }: { shown: Shown | null; onClose: (
 
   return (
     <Drawer side="right" open={!!shown} onOpenChange={(o) => !o && onClose()} onOpenChangeComplete={done}>
-      <DrawerContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl">
         <DrawerHeader>
           <DrawerTitle>Share your wall</DrawerTitle>
           <DrawerDescription>A picture of your wall to save or post.</DrawerDescription>
@@ -124,7 +125,7 @@ export function ShareSheet({ shown, onClose }: { shown: Shown | null; onClose: (
             )}
           </div>
         </DrawerBody>
-      </DrawerContent>
+      </SheetContent>
     </Drawer>
   )
 }

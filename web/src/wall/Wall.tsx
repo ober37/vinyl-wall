@@ -96,7 +96,6 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
           data-id={id}
           onClick={() => onOpen(id)}
           aria-label={`Open ${title} by ${artist}${tag ? ', ' + tag.text.replace(/ · /g, ', ') : ''}${looking ? ', syncing' : ''}`}
-          title={looking ? 'Syncing' : undefined}
           className="group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
         >
           <div className="sleeve-box transition-transform group-active:scale-[0.975]">
@@ -234,20 +233,21 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                   className="flex-wrap gap-1.5"
                 >
                   {FKEYS.filter((k) => n[k]).map((k) => (
-                    <Toggle
-                      key={k}
-                      value={k}
-                      className={buttonVariants({
-                        variant: 'ghost',
-                        size: 'sm',
-                        // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
-                        className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
-                      })}
-                    >
-                      {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
-                      <b className="text-ink font-medium">{n[k]}</b>{' '}
-                      <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
-                    </Toggle>
+                    <Tip key={k} label={k === 'own' ? '' : `${n[k]} ${FLABEL[k]}`} narrow>
+                      <Toggle
+                        value={k}
+                        className={buttonVariants({
+                          variant: 'ghost',
+                          size: 'sm',
+                          // every chip has its outline, so the row has one left edge; a chip that's on gets a stronger one
+                          className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+                        })}
+                      >
+                        {CHIP_TONE[k] && <i aria-hidden="true" className={`ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`} />}
+                        <b className="text-ink font-medium">{n[k]}</b>{' '}
+                        <span className={k === 'own' ? '' : 'max-sm:sr-only'}>{FLABEL[k]}</span>
+                      </Toggle>
+                    </Tip>
                   ))}
                 </ToggleGroup>
               )}
@@ -275,10 +275,12 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
             )}
           </div>
           {onAdd && (
-            <Button onClick={onAdd} className="ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4">
-              <PlusIcon />
-              <span className="max-sm:sr-only">Add a record</span>
-            </Button>
+            <Tip label="Add a record" narrow>
+              <Button onClick={onAdd} className="ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4">
+                <PlusIcon />
+                <span className="max-sm:sr-only">Add a record</span>
+              </Button>
+            </Tip>
           )}
         </div>
       </header>

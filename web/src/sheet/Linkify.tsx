@@ -27,7 +27,7 @@ export function Linkify({ text }: { text: string }) {
       }
       return (
         <span key={i}>
-          <a href={u} title={u} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
+          <a href={u} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
             {shortUrl(u)}
           </a>
           {tail}

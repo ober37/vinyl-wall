@@ -3,7 +3,8 @@ import { Alert, AlertTitle, AlertDescription } from '@appica/ui-react/alert'
 import { Badge } from '@appica/ui-react/badge'
 import { Button } from '@appica/ui-react/button'
 import { CopyButton } from '@appica/ui-react/copy-button'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody } from '@appica/ui-react/drawer'
+import { Drawer, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody } from '@appica/ui-react/drawer'
+import { SheetContent } from '../wall/Tip'
 import { Field, FieldLabel, FieldDescription } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
@@ -299,7 +300,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
 
   return (
     <Drawer side="right" open={open} onOpenChange={(o) => !o && close()}>
-      <DrawerContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl">
         <DrawerHeader>
           {view === 'import' && (
             <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={back}>
@@ -413,7 +414,7 @@ export function SettingsSheet({ open, at, onClose }: { open: boolean; at?: 'top'
             </div>
           )}
         </DrawerBody>
-      </DrawerContent>
+      </SheetContent>
     </Drawer>
   )
 }
