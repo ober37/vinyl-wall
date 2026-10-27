@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 17.
+Skill version 18.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -53,6 +53,7 @@ When the person names the shop they bought or ordered a record from (`shop`) but
 
 - **Several matches:** ask which shop they mean only when the matches have different websites (the same name in two towns). A chain with several stores and one website (Amoeba: amoeba.com) needs no question.
 - **Not sure:** if you can't find the website with confidence, save `shop` only, leave `shopUrl` out, and say so; they can add it in Edit.
+- **Not on their shops yet:** the wall links a record to the shop on their list (see Their shops) with the same website, or else the same name. When the shop isn't on the list, and isn't a marketplace like Discogs or eBay, ask once after saving the record whether to add it to their shops. If they say yes, add it as in Adding a shop. If they say no, don't ask again about that shop in this chat.
 
 ## Grades
 

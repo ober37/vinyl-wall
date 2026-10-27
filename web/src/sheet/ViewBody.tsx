@@ -3,15 +3,16 @@ import { Button } from '@appica/ui-react/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@appica/ui-react/tabs'
-import { gradeText, keyInfo, kindOf, okUrl, playDate, pressingText, recordTracks, runParts, shopHref, type Rec } from '../model/record'
+import { gradeText, keyInfo, kindOf, okUrl, playDate, pressingText, recordTracks, runParts, type Rec } from '../model/record'
 import { artistOf, LINKS_SHOWN, type Artist } from '../model/artist'
 import { discogsLinks } from '../model/orders'
+import { shopShown, shopsOf, type Shop } from '../model/shops'
 import { sideOf, trackSecs } from '../model/plays'
 import { aboutPending } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
-import { OrderCard } from './OrderCard'
+import { OrderCard, shopFrom } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
 import { Chevron, LinkList, Source } from './Links'
@@ -19,29 +20,25 @@ import { hasResearch, ResearchTab, type WantMsg } from './ResearchTab'
 import { StatusActions } from './StatusActions'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
-function copyFacts(r: Rec): [string, React.ReactNode][] {
+function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
   if (kindOf(r) !== 'own') return []
   const f: [string, React.ReactNode][] = []
   const p = pressingText(r)
   if (p) f.push(['Pressing', <span className="whitespace-pre-line">{p}</span>])
-  const href = shopHref(r.shopUrl)
-  const shop = href ? (
-    <a href={href} target="_blank" rel="noopener" className="text-primary underline-offset-2 hover:underline">
-      {r.shop || new URL(href).hostname.replace(/^www\./, '')} ↗
-    </a>
-  ) : (
-    r.shop
-  )
-  const bought = [r.acquired ? playDate(r.acquired) : '', shop, r.paid ? '$' + r.paid : ''].filter(Boolean)
+  const from = shopFrom(r, shopShown(r, shops))
+  const bought = [r.acquired ? playDate(r.acquired) : '', from.name, r.paid ? '$' + r.paid : ''].filter(Boolean)
   if (bought.length)
     f.push([
       'Bought',
-      bought.map((b, i) => (
-        <span key={i}>
-          {i ? ' · ' : ''}
-          {b}
-        </span>
-      )),
+      <>
+        {bought.map((b, i) => (
+          <span key={i}>
+            {i ? ' · ' : ''}
+            {b}
+          </span>
+        ))}
+        {from.reach}
+      </>,
     ])
   const g = gradeText(r)
   if (g) f.push(['Grade', g])
@@ -233,11 +230,12 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   tab: string
   setTab: (t: string) => void
 }) {
-  const { canEdit, artists } = useRuntime()
+  const { canEdit, artists, settings } = useRuntime()
+  const shops = shopsOf(settings)
   const k = kindOf(r)
   const own = k === 'own'
   const info = keyInfo(r)
-  const copy = copyFacts(r)
+  const copy = copyFacts(r, shops)
   const hasTracks = recordTracks(r).length > 0
   const artist = artistOf(r, artists)
   const about = info.length > 0 || copy.length > 0 || hasTracks || !!artist
@@ -304,7 +302,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           )}
           {k === 'ordered' && (
             <TabsContent value="order">
-              {titled('Order', <OrderCard r={r} />)}
+              {titled('Order', <OrderCard r={r} shop={shopShown(r, shops)} />)}
             </TabsContent>
           )}
           {research && (

@@ -2824,7 +2824,7 @@ function siteUrl(v) {
 	if (!t) return "";
 	try {
 		const u = new URL(/^[a-z]+:/i.test(t) ? t : "https://" + t);
-		return u.protocol === "https:" || u.protocol === "http:" ? u.href : "";
+		return (u.protocol === "https:" || u.protocol === "http:") && /^([a-z\d-]+\.)+[a-z]{2,}$/i.test(u.hostname) ? u.href : "";
 	} catch {
 		return "";
 	}
@@ -2833,6 +2833,11 @@ var shopLink = (s, r) => s.search ? s.search.replace("{q}", encodeURIComponent(`
 var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
 var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
 var mailLink = (s) => s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? "mailto:" + s.email : "";
+var reachOf = (s) => s.kind === "local" ? [
+	["Call", telLink(s)],
+	["Email", mailLink(s)],
+	["Map", mapLink(s)]
+].filter(([, u]) => u) : [];
 function shopWhere(s) {
 	if (s.kind === "local" && s.place) {
 		const p = s.place.split(",").map((x) => x.trim()).filter(Boolean);
@@ -2897,6 +2902,43 @@ function shopLine(line, list) {
 		name,
 		rest: line.slice(i + 2)
 	};
+}
+var host = (u) => {
+	try {
+		return new URL(String(u || "")).hostname.replace(/^www\./, "").toLowerCase();
+	} catch {
+		return "";
+	}
+};
+function shopOf(r, list) {
+	const name = String(r.shop || "").trim().toLowerCase();
+	const h = host(shopHref(r.shopUrl));
+	const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : [];
+	if (same.length === 1) return same[0];
+	return name ? (same.length ? same : list).find((s) => s.name.toLowerCase() === name) : void 0;
+}
+var shopShown = (r, list) => {
+	const s = shopOf(r, list);
+	return s && s.kind !== "market" ? s : void 0;
+};
+function unlistedShops(records, list) {
+	const by = /* @__PURE__ */ new Map();
+	for (const r of records) {
+		if (r.deleted || r.example || kindOf$1(r) === "wish" || shopOf(r, list)) continue;
+		const href = shopHref(r.shopUrl);
+		const name = String(r.shop || "").trim() || host(href);
+		if (!name) continue;
+		const k = name.toLowerCase();
+		const e = by.get(k) || {
+			name,
+			url: "",
+			count: 0
+		};
+		e.count++;
+		if (!e.url && siteUrl(href)) e.url = new URL(href).origin + "/";
+		by.set(k, e);
+	}
+	return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
 // src/model/library.ts
 var nowUTC = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace("T", " ") + " UTC";
@@ -4393,6 +4435,8 @@ var draftOf = (s) => ({
 	email: s.email || "",
 	about: s.about || ""
 });
+var badSite = (v) => !!v.trim() && !siteUrl(v).startsWith("https:");
+var SITE_HINT = "Needs a web address like shop.example.com.";
 var okSearch = (v) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes("{q}");
 function fromDraft(d, was) {
 	const s = {
@@ -4478,10 +4522,16 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 						options: KINDS,
 						onChange: (v) => set("kind", v)
 					}),
-					field("url", d.kind === "local" ? "Web store" : "Website", {
-						inputMode: "url",
-						placeholder: "shop.example.com"
-					}),
+					/* @__PURE__ */ jsxs(Field, { children: [
+						/* @__PURE__ */ jsx(FieldLabel, { children: d.kind === "local" ? "Web store" : "Website" }),
+						/* @__PURE__ */ jsx(Input, {
+							value: d.url,
+							inputMode: "url",
+							placeholder: "shop.example.com",
+							onChange: (e) => set("url", e.target.value)
+						}),
+						badSite(d.url) && /* @__PURE__ */ jsx(FieldDescription, { children: SITE_HINT })
+					] }),
 					/* @__PURE__ */ jsxs(Field, { children: [
 						/* @__PURE__ */ jsx(FieldLabel, { children: "Search link" }),
 						/* @__PURE__ */ jsx(Input, {
@@ -4526,10 +4576,11 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 		})]
 	});
 }
-function AddShop({ onAdd, onCancel }) {
-	const [name, setName] = useState("");
-	const [kind, setKind] = useState("local");
-	const [url, setUrl] = useState("");
+function AddShop({ onAdd, onCancel, from }) {
+	const [name, setName] = useState(from?.name || "");
+	const [picked, setPicked] = useState(null);
+	const [url, setUrl] = useState(from?.url || "");
+	const kind = picked || (url.trim() ? "online" : "local");
 	const add = () => {
 		const u = siteUrl(url);
 		onAdd({
@@ -4543,7 +4594,7 @@ function AddShop({ onAdd, onCancel }) {
 		className: "border-border flex flex-col gap-4 rounded-md border p-4",
 		onSubmit: (e) => {
 			e.preventDefault();
-			if (name.trim()) add();
+			if (name.trim() && !badSite(url)) add();
 		},
 		children: [
 			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Name" }), /* @__PURE__ */ jsx(Input, {
@@ -4552,24 +4603,31 @@ function AddShop({ onAdd, onCancel }) {
 				maxLength: 80,
 				onChange: (e) => setName(e.target.value)
 			})] }),
-			/* @__PURE__ */ jsx(Segmented, {
-				label: "Kind",
-				value: kind,
-				options: KINDS,
-				onChange: setKind
+			/* @__PURE__ */ jsx("div", {
+				onClick: () => setPicked((p) => p || kind),
+				children: /* @__PURE__ */ jsx(Segmented, {
+					label: "Kind",
+					value: kind,
+					options: KINDS,
+					onChange: setPicked
+				})
 			}),
-			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Website" }), /* @__PURE__ */ jsx(Input, {
-				value: url,
-				inputMode: "url",
-				placeholder: "shop.example.com",
-				onChange: (e) => setUrl(e.target.value)
-			})] }),
+			/* @__PURE__ */ jsxs(Field, { children: [
+				/* @__PURE__ */ jsx(FieldLabel, { children: "Website" }),
+				/* @__PURE__ */ jsx(Input, {
+					value: url,
+					inputMode: "url",
+					placeholder: "shop.example.com",
+					onChange: (e) => setUrl(e.target.value)
+				}),
+				badSite(url) && /* @__PURE__ */ jsx(FieldDescription, { children: SITE_HINT })
+			] }),
 			/* @__PURE__ */ jsxs("div", {
 				className: "flex gap-3",
 				children: [/* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					type: "submit",
-					disabled: !name.trim(),
+					disabled: !name.trim() || badSite(url),
 					children: "Add shop"
 				}), /* @__PURE__ */ jsx(Button, {
 					size: "sm",
@@ -4599,6 +4657,10 @@ function ShopsSection() {
 		artist: "Pearl Jam",
 		title: "Ten"
 	};
+	const hidden = Array.isArray(settings.shopsHidden) ? settings.shopsHidden.filter((x) => typeof x === "string") : [];
+	const all = unlistedShops(records, shops);
+	const unlisted = all.filter((u) => !hidden.includes(u.name.toLowerCase()));
+	const hiddenN = all.length - unlisted.length;
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-8",
 		children: [
@@ -4625,18 +4687,68 @@ function ShopsSection() {
 				children: "No shops yet."
 			}),
 			adding ? /* @__PURE__ */ jsx(AddShop, {
+				from: typeof adding === "object" ? adding : void 0,
 				onCancel: () => setAdding(false),
 				onAdd: (s) => {
 					write((all) => [...all, s]);
+					if (typeof adding === "object") setOpenId(s.id);
 					setAdding(false);
 				}
-			}) : /* @__PURE__ */ jsx(Button, {
+			}, typeof adding === "object" ? adding.name : "") : /* @__PURE__ */ jsx(Button, {
 				size: "sm",
 				variant: "outline",
 				className: "self-start",
 				onClick: () => setAdding(true),
 				children: "+ Add a shop"
 			}),
+			all.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Not on your list yet" }), /* @__PURE__ */ jsxs("ul", {
+				className: "flex flex-col gap-4",
+				children: [unlisted.map((u) => /* @__PURE__ */ jsxs("li", {
+					className: "flex items-baseline gap-3 text-sm",
+					children: [/* @__PURE__ */ jsxs("span", {
+						className: "min-w-0 flex-1 break-words",
+						children: [/* @__PURE__ */ jsx("span", {
+							className: "text-foreground-intense",
+							children: u.name
+						}), /* @__PURE__ */ jsxs("span", {
+							className: "text-foreground-muted",
+							children: [" · ", u.count === 1 ? "1 record" : u.count + " records"]
+						})]
+					}), /* @__PURE__ */ jsxs("span", {
+						className: "-me-3 flex shrink-0",
+						children: [/* @__PURE__ */ jsx(Button, {
+							size: "sm",
+							variant: "ghost",
+							"aria-label": `Add ${u.name}`,
+							onClick: () => setAdding({
+								name: u.name,
+								url: u.url
+							}),
+							children: "Add"
+						}), /* @__PURE__ */ jsx(Button, {
+							size: "sm",
+							variant: "ghost",
+							className: "text-foreground-muted",
+							"aria-label": `Hide ${u.name}`,
+							onClick: () => saveSettings({ shopsHidden: [...hidden, u.name.toLowerCase()] }),
+							children: "Hide"
+						})]
+					})]
+				}, u.name)), hiddenN > 0 && /* @__PURE__ */ jsxs("li", {
+					className: "text-foreground-muted flex items-baseline gap-1 text-sm",
+					children: [
+						hiddenN,
+						" hidden ·",
+						/* @__PURE__ */ jsx(Button, {
+							size: "sm",
+							variant: "ghost",
+							className: "-ms-2",
+							onClick: () => saveSettings({ shopsHidden: [] }),
+							children: "Show them"
+						})
+					]
+				})]
+			})] }),
 			/* @__PURE__ */ jsx(Confirm, {
 				open: removing !== null,
 				title: `Remove ${removing?.name || "this shop"} from your shops?`,
@@ -7032,18 +7144,35 @@ function NotesTab({ r }) {
 	});
 }
 // src/sheet/OrderCard.tsx
-function Shop({ r }) {
-	const href = shopHref(r.shopUrl);
-	if (!href) return /* @__PURE__ */ jsx(Fragment$1, { children: r.shop });
-	return /* @__PURE__ */ jsxs("a", {
+function shopFrom(r, s) {
+	const href = shopHref(r.shopUrl) || s?.url || "";
+	const text = s?.name || r.shop || (href ? new URL(href).hostname.replace(/^www\./, "") : "");
+	const name = href ? /* @__PURE__ */ jsxs("a", {
 		href,
 		target: "_blank",
 		rel: "noopener",
 		className: link,
-		children: [r.shop || new URL(href).hostname.replace(/^www\./, ""), " ↗"]
-	});
+		children: [text, " ↗"]
+	}) : text;
+	const R = s && !r.example ? reachOf(s) : [];
+	return {
+		name,
+		reach: R.length > 0 && /* @__PURE__ */ jsx("span", {
+			className: "text-foreground-muted mt-0.5 block text-xs",
+			children: R.map(([t, u], i) => /* @__PURE__ */ jsxs(Fragment, { children: [i ? " · " : "", /* @__PURE__ */ jsx("a", {
+				href: u,
+				"aria-label": `${t} ${s.name}`,
+				...t === "Map" ? {
+					target: "_blank",
+					rel: "noopener"
+				} : {},
+				className: "text-primary underline-offset-2 hover:underline",
+				children: t
+			})] }, t))
+		})
+	};
 }
-function OrderCard({ r }) {
+function OrderCard({ r, shop }) {
 	const c = wantCopies(r)[0];
 	const first = c.pressing.split("\n")[0].trim();
 	const title = c.name || first || "Your order";
@@ -7067,7 +7196,10 @@ function OrderCard({ r }) {
 		className: "text-foreground-muted",
 		children: [c.label ? " · " : "", c.catalog]
 	})] })]);
-	if (r.shop || shopHref(r.shopUrl)) rows.push(["From", /* @__PURE__ */ jsx(Shop, { r })]);
+	if (r.shop || shopHref(r.shopUrl)) {
+		const f = shopFrom(r, shop);
+		rows.push(["From", /* @__PURE__ */ jsxs(Fragment$1, { children: [f.name, f.reach] })]);
+	}
 	if (r.paid) rows.push(["Paid", "$" + r.paid]);
 	else if (c.budget) rows.push(["Budget", "Up to $" + c.budget]);
 	if (r.orderDate) rows.push(["Ordered", playDate(String(r.orderDate))]);
@@ -7242,11 +7374,7 @@ function SearchElsewhere({ r, shops }) {
 	const { canEdit } = useRuntime();
 	const shop = (s) => {
 		const href = shopLink(s, r);
-		const reach = s.kind === "local" ? [
-			["Call", telLink(s)],
-			["Email", mailLink(s)],
-			["Map", mapLink(s)]
-		].filter(([, u]) => u) : [];
+		const reach = reachOf(s);
 		return /* @__PURE__ */ jsxs("li", {
 			className: "flex flex-col gap-0.5",
 			children: [/* @__PURE__ */ jsxs("span", {
@@ -7690,7 +7818,7 @@ function StatusActions({ r, onMoved }) {
 	});
 }
 // src/sheet/ViewBody.tsx
-function copyFacts(r) {
+function copyFacts(r, shops) {
 	if (kindOf$1(r) !== "own") return [];
 	const f = [];
 	const p = pressingText(r);
@@ -7698,20 +7826,13 @@ function copyFacts(r) {
 		className: "whitespace-pre-line",
 		children: p
 	})]);
-	const href = shopHref(r.shopUrl);
-	const shop = href ? /* @__PURE__ */ jsxs("a", {
-		href,
-		target: "_blank",
-		rel: "noopener",
-		className: "text-primary underline-offset-2 hover:underline",
-		children: [r.shop || new URL(href).hostname.replace(/^www\./, ""), " ↗"]
-	}) : r.shop;
+	const from = shopFrom(r, shopShown(r, shops));
 	const bought = [
 		r.acquired ? playDate(r.acquired) : "",
-		shop,
+		from.name,
 		r.paid ? "$" + r.paid : ""
 	].filter(Boolean);
-	if (bought.length) f.push(["Bought", bought.map((b, i) => /* @__PURE__ */ jsxs("span", { children: [i ? " · " : "", b] }, i))]);
+	if (bought.length) f.push(["Bought", /* @__PURE__ */ jsxs(Fragment$1, { children: [bought.map((b, i) => /* @__PURE__ */ jsxs("span", { children: [i ? " · " : "", b] }, i)), from.reach] })]);
 	const g = gradeText(r);
 	if (g) f.push(["Grade", g]);
 	const runs = runParts(r.matrix);
@@ -7885,11 +8006,12 @@ function ArtistAbout({ A }) {
 	})] });
 }
 function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, setTab }) {
-	const { canEdit, artists } = useRuntime();
+	const { canEdit, artists, settings } = useRuntime();
+	const shops = shopsOf(settings);
 	const k = kindOf$1(r);
 	const own = k === "own";
 	const info = keyInfo(r);
-	const copy = copyFacts(r);
+	const copy = copyFacts(r, shops);
 	const hasTracks = recordTracks(r).length > 0;
 	const artist = artistOf(r, artists);
 	const about = info.length > 0 || copy.length > 0 || hasTracks || !!artist;
@@ -7972,7 +8094,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 					}),
 					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
 						value: "order",
-						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, { r }))
+						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, {
+							r,
+							shop: shopShown(r, shops)
+						}))
 					}),
 					research && /* @__PURE__ */ jsx(TabsContent, {
 						value: "research",
@@ -10558,6 +10683,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .-ms-1 {
     margin-inline-start: calc(var(--spacing) * -1);
+  }
+
+  .-ms-2 {
+    margin-inline-start: calc(var(--spacing) * -2);
   }
 
   .-ms-3 {

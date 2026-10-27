@@ -7,7 +7,7 @@ import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { useDebouncedSave } from '../gear/useDebouncedSave'
 import { kindOf } from '../model/record'
-import { KINDS, shopLink, shopsOf, shopWhere, siteUrl, type Shop, type ShopKind } from '../model/shops'
+import { KINDS, shopLink, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
 import { Chevron, link } from '../sheet/Links'
@@ -22,6 +22,9 @@ type Draft = { name: string; kind: ShopKind; url: string; search: string; place:
 const draftOf = (s: Shop): Draft => ({
   name: s.name, kind: s.kind, url: s.url || '', search: s.search || '', place: s.place || '', phone: s.phone || '', email: s.email || '', about: s.about || '',
 })
+// a typed website that won't be saved (a link is kept only when it's an https web address)
+const badSite = (v: string) => !!v.trim() && !siteUrl(v).startsWith('https:')
+const SITE_HINT = 'Needs a web address like shop.example.com.'
 const okSearch = (v: string) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes('{q}')
 // what a draft stores: a name always (the last one when it's cleared), links only when they work, contact only for local,
 // and what the chat found that isn't edited here
@@ -85,7 +88,11 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
           {missing && <p className="text-foreground-muted text-sm">Your Claude chat can fill in the missing details.</p>}
           {field('name', 'Name', { maxLength: 80 })}
           <Segmented label="Kind" value={d.kind} options={KINDS} onChange={(v) => set('kind', v)} />
-          {field('url', d.kind === 'local' ? 'Web store' : 'Website', { inputMode: 'url', placeholder: 'shop.example.com' })}
+          <Field>
+            <FieldLabel>{d.kind === 'local' ? 'Web store' : 'Website'}</FieldLabel>
+            <Input value={d.url} inputMode="url" placeholder="shop.example.com" onChange={(e) => set('url', e.target.value)} />
+            {badSite(d.url) && <FieldDescription>{SITE_HINT}</FieldDescription>}
+          </Field>
           <Field>
             <FieldLabel>Search link</FieldLabel>
             <Input value={d.search} inputMode="url" onChange={(e) => set('search', e.target.value)} />
@@ -123,10 +130,13 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
   )
 }
 
-function AddShop({ onAdd, onCancel }: { onAdd: (s: Shop) => void; onCancel: () => void }) {
-  const [name, setName] = useState('')
-  const [kind, setKind] = useState<ShopKind>('local')
-  const [url, setUrl] = useState('')
+// from: a shop your records came from, to start it from. The kind follows the website (online with one, local without)
+// until one is picked
+function AddShop({ onAdd, onCancel, from }: { onAdd: (s: Shop) => void; onCancel: () => void; from?: { name: string; url: string } }) {
+  const [name, setName] = useState(from?.name || '')
+  const [picked, setPicked] = useState<ShopKind | null>(null)
+  const [url, setUrl] = useState(from?.url || '')
+  const kind = picked || (url.trim() ? 'online' : 'local')
   const add = () => {
     const u = siteUrl(url)
     onAdd({ id: Math.random().toString(36).slice(2, 12), name: name.trim().slice(0, 80), kind, ...(u.startsWith('https:') ? { url: u } : {}) })
@@ -136,20 +146,24 @@ function AddShop({ onAdd, onCancel }: { onAdd: (s: Shop) => void; onCancel: () =
       className="border-border flex flex-col gap-4 rounded-md border p-4"
       onSubmit={(e) => {
         e.preventDefault()
-        if (name.trim()) add()
+        if (name.trim() && !badSite(url)) add()
       }}
     >
       <Field>
         <FieldLabel>Name</FieldLabel>
         <Input autoFocus value={name} maxLength={80} onChange={(e) => setName(e.target.value)} />
       </Field>
-      <Segmented label="Kind" value={kind} options={KINDS} onChange={setKind} />
+      {/* a press on the kind already shown picks it too (Segmented reports only changes) */}
+      <div onClick={() => setPicked((p) => p || kind)}>
+        <Segmented label="Kind" value={kind} options={KINDS} onChange={setPicked} />
+      </div>
       <Field>
         <FieldLabel>Website</FieldLabel>
         <Input value={url} inputMode="url" placeholder="shop.example.com" onChange={(e) => setUrl(e.target.value)} />
+        {badSite(url) && <FieldDescription>{SITE_HINT}</FieldDescription>}
       </Field>
       <div className="flex gap-3">
-        <Button size="sm" type="submit" disabled={!name.trim()}>
+        <Button size="sm" type="submit" disabled={!name.trim() || badSite(url)}>
           Add shop
         </Button>
         <Button size="sm" variant="ghost" onClick={onCancel}>
@@ -165,7 +179,8 @@ export function ShopsSection() {
   const { settings, saveSettings, records } = useRuntime()
   const shops = shopsOf(settings)
   const [openId, setOpenId] = useState<string | null>(null)
-  const [adding, setAdding] = useState(false)
+  // true for + Add a shop, or the shop your records came from that it starts from
+  const [adding, setAdding] = useState<boolean | { name: string; url: string }>(false)
   const [removing, setRemoving] = useState<Shop | null>(null)
   const latest = useRef(settings)
   latest.current = settings
@@ -175,6 +190,11 @@ export function ShopsSection() {
   const live = records.filter((r) => !r.deleted && !r.example && r.title)
   const pick = live.find((r) => kindOf(r) === 'wish') || live[0]
   const sample = pick ? { artist: String(pick.artist || ''), title: String(pick.title) } : { artist: 'Pearl Jam', title: 'Ten' }
+  // the ones you hid from Not on your list yet, by name
+  const hidden = Array.isArray(settings.shopsHidden) ? settings.shopsHidden.filter((x): x is string => typeof x === 'string') : []
+  const all = unlistedShops(records, shops)
+  const unlisted = all.filter((u) => !hidden.includes(u.name.toLowerCase()))
+  const hiddenN = all.length - unlisted.length
   return (
     <div className="flex flex-col gap-8">
       <p className="text-foreground-muted text-sm">
@@ -206,9 +226,13 @@ export function ShopsSection() {
       {!shops.length && <p className="text-foreground-muted text-sm">No shops yet.</p>}
       {adding ? (
         <AddShop
+          key={typeof adding === 'object' ? adding.name : ''}
+          from={typeof adding === 'object' ? adding : undefined}
           onCancel={() => setAdding(false)}
           onAdd={(s) => {
             write((all) => [...all, s])
+            // one started from your records opens, for the details the quick form doesn't ask for
+            if (typeof adding === 'object') setOpenId(s.id)
             setAdding(false)
           }}
         />
@@ -216,6 +240,43 @@ export function ShopsSection() {
         <Button size="sm" variant="outline" className="self-start" onClick={() => setAdding(true)}>
           + Add a shop
         </Button>
+      )}
+      {all.length > 0 && (
+        <Fieldset>
+          <FieldsetLegend>Not on your list yet</FieldsetLegend>
+          <ul className="flex flex-col gap-4">
+            {unlisted.map((u) => (
+              <li key={u.name} className="flex items-baseline gap-3 text-sm">
+                <span className="min-w-0 flex-1 break-words">
+                  <span className="text-foreground-intense">{u.name}</span>
+                  <span className="text-foreground-muted"> · {u.count === 1 ? '1 record' : u.count + ' records'}</span>
+                </span>
+                <span className="-me-3 flex shrink-0">
+                  <Button size="sm" variant="ghost" aria-label={`Add ${u.name}`} onClick={() => setAdding({ name: u.name, url: u.url })}>
+                    Add
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-foreground-muted"
+                    aria-label={`Hide ${u.name}`}
+                    onClick={() => saveSettings({ shopsHidden: [...hidden, u.name.toLowerCase()] })}
+                  >
+                    Hide
+                  </Button>
+                </span>
+              </li>
+            ))}
+            {hiddenN > 0 && (
+              <li className="text-foreground-muted flex items-baseline gap-1 text-sm">
+                {hiddenN} hidden ·
+                <Button size="sm" variant="ghost" className="-ms-2" onClick={() => saveSettings({ shopsHidden: [] })}>
+                  Show them
+                </Button>
+              </li>
+            )}
+          </ul>
+        </Fieldset>
       )}
       <Confirm
         open={removing !== null}

@@ -9,7 +9,7 @@ import {
   alreadyWanted, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, sourceList,
   strList, undoWantPatch, wantPatch, type Research, type Wanted,
 } from '../model/research'
-import { discogsReleases, KINDS, mailLink, mapLink, shopLine, shopLink, shopOrder, shopsOf, telLink, type Shop } from '../model/shops'
+import { discogsReleases, KINDS, reachOf, shopLine, shopLink, shopOrder, shopsOf, type Shop } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
 import { CopiesView } from './Copies'
@@ -76,7 +76,7 @@ function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
   const { canEdit } = useRuntime()
   const shop = (s: Shop) => {
     const href = shopLink(s, r)
-    const reach = s.kind === 'local' ? [['Call', telLink(s)], ['Email', mailLink(s)], ['Map', mapLink(s)]].filter(([, u]) => u) : []
+    const reach = reachOf(s)
     return (
       <li key={s.id} className="flex flex-col gap-0.5">
         <span className="flex flex-wrap items-baseline gap-x-1.5">

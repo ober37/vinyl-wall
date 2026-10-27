@@ -4,10 +4,11 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
 import { doneMessage, exportFile, lookPatch, planImport, planSummary, shopsFrom, type Plan } from '../model/library'
-import { DEFAULT_SHOPS, mergeShops, shopLine, shopLink, shopOrder, shopsOf, shopWhere, siteUrl, type Shop } from '../model/shops'
+import { DEFAULT_SHOPS, mergeShops, shopLine, shopLink, shopOf, shopOrder, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop } from '../model/shops'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import type { Rec } from '../model/record'
 
 const RECKLESS: Shop = {
   id: 'rk', name: 'Reckless Records', kind: 'local', place: '1532 N Milwaukee Ave, Chicago, IL 60622', phone: '(773) 235-3727',
@@ -64,6 +65,8 @@ describe('shops: the data', () => {
     ])
     expect(siteUrl('reckless.com')).toBe('https://reckless.com/')
     expect(siteUrl('javascript:alert(1)')).toBe('')
+    for (const bad of ['https://slashorg./', 'slashorg', 'shop.c']) expect(siteUrl(bad)).toBe('')
+    expect(siteUrl('https://www.slash.org/x')).toBe('https://www.slash.org/x')
   })
 
   it("searches a shop for the album, else opens its website; Revolver's search is #59's", () => {
@@ -183,7 +186,15 @@ describe('Settings → Shops', () => {
     await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'reckless.com')
     await user.click(within(sheet).getByRole('button', { name: 'Add shop' }))
     await waitFor(() => expect((site().shops as Shop[]).length).toBe(5))
-    expect((site().shops as Shop[])[4]).toMatchObject({ name: 'Reckless Records', kind: 'local', url: 'https://reckless.com/' })
+    // a website makes it online, unless a kind is picked
+    expect((site().shops as Shop[])[4]).toMatchObject({ name: 'Reckless Records', kind: 'online', url: 'https://reckless.com/' })
+    await user.click(within(sheet).getByRole('button', { name: '+ Add a shop' }))
+    await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), 'Dusty Groove')
+    await user.click(within(sheet).getByRole('button', { name: 'Local' }))
+    await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'dustygroove.com')
+    await user.click(within(sheet).getByRole('button', { name: 'Add shop' }))
+    await waitFor(() => expect((site().shops as Shop[]).length).toBe(6))
+    expect((site().shops as Shop[])[5]).toMatchObject({ name: 'Dusty Groove', kind: 'local' })
     expect(within(sheet).getByRole('group', { name: 'Local shops' })).toBeTruthy()
   })
 
@@ -212,5 +223,126 @@ describe('Settings → Shops', () => {
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(site().shops).toEqual([]))
     expect(within(sheet).getByText('No shops yet.')).toBeTruthy()
+  })
+})
+
+// #89: records linked to the shops they came from
+const SIREN: Shop = {
+  id: 'sr', name: 'Siren Records', kind: 'local', url: 'https://sirenrecordsmchenry.com/', place: '3424 W Elm St, McHenry, IL 60050', phone: '(815) 385-1122',
+}
+const bought = {
+  b1: { title: 'Ten', artist: 'Pearl Jam', status: 'own', notes: [], added: 9, shop: 'siren', shopUrl: 'https://www.sirenrecordsmchenry.com/products/ten', paid: '30' },
+  b2: { title: 'Vs.', artist: 'Pearl Jam', status: 'ordered', notes: [], added: 10, shop: 'Siren Records' },
+  b3: { title: 'Yield', artist: 'Pearl Jam', status: 'own', notes: [], added: 11, shop: "Joe's Records", shopUrl: 'https://www.discogs.com/seller/joes' },
+}
+
+describe('shops: the shop a record came from', () => {
+  const list = [SIREN, ...DEFAULT_SHOPS]
+  it('matches by website, then by name, a shared website settled by name', () => {
+    expect(shopOf(bought.b1, list)?.id).toBe('sr')
+    expect(shopOf(bought.b2, list)?.id).toBe('sr')
+    expect(shopOf(bought.b3, list)?.id).toBe('discogs')
+    expect(shopOf({ shop: 'Nowhere' }, list)).toBeUndefined()
+    const chain = [{ ...SIREN, id: 'a', name: 'Amoeba Hollywood', url: 'https://amoeba.com/' }, { ...SIREN, id: 'b', name: 'Amoeba Berkeley', url: 'https://amoeba.com/' }]
+    expect(shopOf({ shop: 'amoeba berkeley', shopUrl: 'https://www.amoeba.com/x' }, chain)?.id).toBe('b')
+    expect(shopOf({ shop: 'Amoeba', shopUrl: 'https://www.amoeba.com/x' }, chain)).toBeUndefined()
+  })
+
+  it('lists the shops not on your list by name, with a count and a website, leaving out wanted and example records', () => {
+    const recs = [
+      ...Object.values(bought),
+      { title: 'A', artist: 'X', status: 'own', shop: 'Rough Trade', shopUrl: 'https://www.roughtrade.com/en-us/p/a' },
+      { title: 'B', artist: 'X', status: 'ordered', shop: 'rough trade' },
+      { title: 'C', artist: 'X', status: 'wish', shop: 'Elsewhere' },
+      { title: 'D', artist: 'X', status: 'own', shop: 'Example Shop', example: true },
+    ]
+    expect(unlistedShops(recs as unknown as Rec[], list)).toEqual([{ name: 'Rough Trade', url: 'https://www.roughtrade.com/', count: 2 }])
+  })
+})
+
+describe('record sheet: the shop it came from', () => {
+  it("uses the listed shop's name, keeps the record's own link, and adds Call · Map for a local shop", async () => {
+    const { user } = setup({ shops: [SIREN] }, bought)
+    await openRecord(user, 'Ten')
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    const a = screen.getByRole('link', { name: 'Siren Records ↗' })
+    expect(a.getAttribute('href')).toBe('https://www.sirenrecordsmchenry.com/products/ten')
+    expect(screen.getByRole('link', { name: 'Call Siren Records' }).getAttribute('href')).toBe('tel:8153851122')
+    expect(screen.getByRole('link', { name: 'Map Siren Records' })).toBeTruthy()
+    expect(screen.queryByRole('link', { name: 'Email Siren Records' })).toBeNull()
+  })
+
+  it("links an order to the shop's web store when it has no link of its own", async () => {
+    const { user } = setup({ shops: [SIREN] }, bought)
+    await openRecord(user, 'Vs.')
+    expect(screen.getByRole('link', { name: 'Siren Records ↗' }).getAttribute('href')).toBe('https://sirenrecordsmchenry.com/')
+    expect(screen.getByRole('link', { name: 'Call Siren Records' })).toBeTruthy()
+  })
+
+  it("keeps a marketplace seller's own name and link", async () => {
+    const { user } = setup({}, bought)
+    await openRecord(user, 'Yield')
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    expect(screen.getByRole('link', { name: "Joe's Records ↗" }).getAttribute('href')).toBe('https://www.discogs.com/seller/joes')
+    expect(linkNames()).not.toContain('Discogs Marketplace ↗')
+  })
+})
+
+describe('Settings → Shops: not on your list yet', () => {
+  it('lists the shops your records came from, and Add starts one from them and opens it', async () => {
+    const { user, site } = setup({ shops: [RECKLESS] }, bought)
+    const sheet = await openShops(user)
+    const group = within(sheet).getByRole('group', { name: 'Not on your list yet' })
+    expect(group.textContent).toContain('Siren Records · 1 record')
+    expect(group.textContent).toContain('siren · 1 record')
+    await user.click(within(group).getByRole('button', { name: 'Add Siren Records' }))
+    expect((within(sheet).getByRole('textbox', { name: 'Name' }) as HTMLInputElement).value).toBe('Siren Records')
+    await user.click(within(sheet).getByRole('button', { name: 'Add shop' }))
+    await waitFor(() => expect((site().shops as Shop[]).length).toBe(2))
+    expect((site().shops as Shop[])[1]).toMatchObject({ name: 'Siren Records', kind: 'local' })
+    expect(within(sheet).getByRole('button', { name: /Siren Records/ }).getAttribute('aria-expanded')).toBe('true')
+    // Vs. now matches it by name; Ten's "siren" doesn't, the new shop having no website
+    const left = within(sheet).getByRole('group', { name: 'Not on your list yet' }).textContent
+    expect(left).not.toContain('Siren Records')
+    expect(left).toContain('siren · 1 record')
+  })
+
+  it('starts a shop with a website as online, filled in', async () => {
+    const { user } = setup({ shops: [] }, { b1: bought.b1 })
+    const sheet = await openShops(user)
+    await user.click(within(sheet).getByRole('button', { name: 'Add siren' }))
+    expect((within(sheet).getByRole('textbox', { name: 'Website' }) as HTMLInputElement).value).toBe('https://www.sirenrecordsmchenry.com/')
+    expect(within(sheet).getByRole('button', { name: 'Online', pressed: true })).toBeTruthy()
+  })
+
+  it("won't add a website that isn't a web address", async () => {
+    const { user } = setup({ shops: [] }, { b2: bought.b2 })
+    const sheet = await openShops(user)
+    await user.click(within(sheet).getByRole('button', { name: 'Add Siren Records' }))
+    await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'https://slashorg./')
+    expect(within(sheet).getByText('Needs a web address like shop.example.com.')).toBeTruthy()
+    expect(within(sheet).getByRole('button', { name: 'Add shop' })).toHaveProperty('disabled', true)
+  })
+
+  it('turns online when a website is typed into one started without', async () => {
+    const { user } = setup({ shops: [] }, { b2: bought.b2 })
+    const sheet = await openShops(user)
+    await user.click(within(sheet).getByRole('button', { name: 'Add Siren Records' }))
+    expect(within(sheet).getByRole('button', { name: 'Local', pressed: true })).toBeTruthy()
+    await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'sirenrecordsmchenry.com')
+    expect(within(sheet).getByRole('button', { name: 'Online', pressed: true })).toBeTruthy()
+  })
+
+  it('hides one, and Show them brings it back', async () => {
+    const { user, site } = setup({ shops: [] }, bought)
+    const sheet = await openShops(user)
+    const group = () => within(sheet).getByRole('group', { name: 'Not on your list yet' })
+    await user.click(within(group()).getByRole('button', { name: 'Hide Siren Records' }))
+    await waitFor(() => expect(site().shopsHidden).toEqual(['siren records']))
+    expect(group().textContent).not.toContain('Siren Records')
+    expect(group().textContent).toContain('1 hidden')
+    await user.click(within(group()).getByRole('button', { name: 'Show them' }))
+    await waitFor(() => expect(site().shopsHidden).toEqual([]))
+    expect(group().textContent).toContain('Siren Records · 1 record')
   })
 })
