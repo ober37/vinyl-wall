@@ -46,8 +46,8 @@ import { ThemeProvider } from "@appica/ui-react/providers/theme-provider";
 import { Alert, AlertAction, AlertDescription, AlertTitle } from "@appica/ui-react/alert";
 import { Button, buttonVariants } from "@appica/ui-react/button";
 import { Fragment as Fragment$1, jsx, jsxs } from "react/jsx-runtime";
+import { Drawer, DrawerBody, DrawerClose, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@appica/ui-react/drawer";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@appica/ui-react/tooltip";
-import { Drawer, DrawerBody, DrawerContent, DrawerDescription, DrawerHeader, DrawerTitle } from "@appica/ui-react/drawer";
 import { Fieldset, FieldsetLegend } from "@appica/ui-react/fieldset";
 import { DateField } from "@appica/ui-react/date-field";
 import { Field, FieldDescription, FieldError, FieldLabel } from "@appica/ui-react/field";
@@ -133,12 +133,45 @@ var Boundary = class extends Component {
 };
 // src/wall/Tip.tsx
 var ROUND = "bg-wall/70 rounded-full before:rounded-full before:bg-transparent";
+var DELAY = 150;
 var TipGroup = ({ children }) => /* @__PURE__ */ jsx(TooltipProvider, {
-	delay: 150,
+	delay: DELAY,
 	children
 });
-function Tip({ label, children }) {
-	return /* @__PURE__ */ jsxs(Tooltip, { children: [/* @__PURE__ */ jsx(TooltipTrigger, { render: children }), /* @__PURE__ */ jsx(TooltipContent, { children: label })] });
+function Tip({ label, narrow, children }) {
+	if (!label) return children;
+	return /* @__PURE__ */ jsxs(Tooltip, { children: [/* @__PURE__ */ jsx(TooltipTrigger, {
+		delay: DELAY,
+		render: children
+	}), /* @__PURE__ */ jsx(TooltipContent, {
+		className: narrow ? "sm:hidden" : void 0,
+		children: label
+	})] });
+}
+function SheetContent({ children, ...props }) {
+	return /* @__PURE__ */ jsxs(DrawerContent, {
+		closeButton: false,
+		...props,
+		children: [children, /* @__PURE__ */ jsx(Tip, {
+			label: "Close",
+			children: /* @__PURE__ */ jsx(DrawerClose, {
+				"aria-label": "Close",
+				"data-slot": "drawer-close-button",
+				className: buttonVariants({
+					variant: "outline",
+					size: "icon-sm",
+					className: "absolute inset-e-3 top-3 z-10"
+				}),
+				children: /* @__PURE__ */ jsx("svg", {
+					xmlns: "http://www.w3.org/2000/svg",
+					viewBox: "0 0 16 16",
+					fill: "currentColor",
+					"aria-hidden": "true",
+					children: /* @__PURE__ */ jsx("path", { d: "M11.594 3.594c.225-.225.588-.225.813 0s.225.588 0 .812L8.813 8l3.594 3.594c.225.225.225.588 0 .813s-.588.225-.812 0L8 8.812l-3.594 3.594c-.225.225-.588.225-.812 0s-.225-.588 0-.812L7.188 8 3.594 4.406c-.225-.225-.225-.588 0-.812s.588-.225.813 0L8 7.187l3.594-3.594z" })
+				})
+			})
+		})]
+	});
 }
 // src/model/record.ts
 var kindOf$1 = (r) => r.status === "wish" ? "wish" : r.status === "ordered" ? "ordered" : "own";
@@ -484,7 +517,7 @@ function pillOf(gear, setups) {
 		return {
 			label: n ? "Gear" : "",
 			gear: null,
-			aria: n ? `Equipment, ${n} item${n > 1 ? "s" : ""}` : "Add your gear"
+			aria: n ? `Equipment: ${n} item${n > 1 ? "s" : ""}` : "Add your gear"
 		};
 	}
 	const S = gState(w), lo = lowOf(w), hi = highOf(w), h = gHours(w), top = hi || lo;
@@ -1623,7 +1656,6 @@ function Linkify({ text }) {
 		}
 		return /* @__PURE__ */ jsxs("span", { children: [/* @__PURE__ */ jsx("a", {
 			href: u,
-			title: u,
 			target: "_blank",
 			rel: "noopener",
 			className: "text-primary underline-offset-2 hover:underline",
@@ -2571,7 +2603,7 @@ function EquipmentSheet({ open, onClose, onRecord }) {
 		side: "right",
 		open,
 		onOpenChange: (o) => !o && onClose(),
-		children: /* @__PURE__ */ jsxs(DrawerContent, {
+		children: /* @__PURE__ */ jsxs(SheetContent, {
 			className: "w-full sm:max-w-xl",
 			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [
 				view.k !== "root" && /* @__PURE__ */ jsx(Button, {
@@ -3889,7 +3921,6 @@ var Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagText
 				"data-id": id,
 				onClick: () => onOpen(id),
 				"aria-label": `Open ${title} by ${artist}${tag ? ", " + tag.text.replace(/ · /g, ", ") : ""}${looking ? ", syncing" : ""}`,
-				title: looking ? "Syncing" : void 0,
 				className: "group block w-full cursor-pointer text-start outline-offset-4 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
 				children: [/* @__PURE__ */ jsxs("div", {
 					className: "sleeve-box transition-transform group-active:scale-[0.975]",
@@ -4017,28 +4048,32 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 						value: on,
 						onValueChange: (v) => setFilter(v),
 						className: "flex-wrap gap-1.5",
-						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsxs(Toggle, {
-							value: k,
-							className: buttonVariants({
-								variant: "ghost",
-								size: "sm",
-								className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
-							}),
-							children: [
-								CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
-									"aria-hidden": "true",
-									className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
+						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsx(Tip, {
+							label: k === "own" ? "" : `${n[k]} ${FLABEL[k]}`,
+							narrow: true,
+							children: /* @__PURE__ */ jsxs(Toggle, {
+								value: k,
+								className: buttonVariants({
+									variant: "ghost",
+									size: "sm",
+									className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
 								}),
-								/* @__PURE__ */ jsx("b", {
-									className: "text-ink font-medium",
-									children: n[k]
-								}),
-								" ",
-								/* @__PURE__ */ jsx("span", {
-									className: k === "own" ? "" : "max-sm:sr-only",
-									children: FLABEL[k]
-								})
-							]
+								children: [
+									CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
+										"aria-hidden": "true",
+										className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
+									}),
+									/* @__PURE__ */ jsx("b", {
+										className: "text-ink font-medium",
+										children: n[k]
+									}),
+									" ",
+									/* @__PURE__ */ jsx("span", {
+										className: k === "own" ? "" : "max-sm:sr-only",
+										children: FLABEL[k]
+									})
+								]
+							})
 						}, k))
 					}), below]
 				}), searching && /* @__PURE__ */ jsxs("div", {
@@ -4063,13 +4098,17 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 						children: "Clear"
 					})]
 				})]
-			}), onAdd && /* @__PURE__ */ jsxs(Button, {
-				onClick: onAdd,
-				className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
-				children: [/* @__PURE__ */ jsx(PlusIcon, {}), /* @__PURE__ */ jsx("span", {
-					className: "max-sm:sr-only",
-					children: "Add a record"
-				})]
+			}), onAdd && /* @__PURE__ */ jsx(Tip, {
+				label: "Add a record",
+				narrow: true,
+				children: /* @__PURE__ */ jsxs(Button, {
+					onClick: onAdd,
+					className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
+					children: [/* @__PURE__ */ jsx(PlusIcon, {}), /* @__PURE__ */ jsx("span", {
+						className: "max-sm:sr-only",
+						children: "Add a record"
+					})]
+				})
 			})]
 		})]
 	}), !records.length ? welcome || /* @__PURE__ */ jsx("p", {
@@ -4307,10 +4346,10 @@ function BackgroundSection() {
 							uploads.map((u) => /* @__PURE__ */ jsxs("div", {
 								className: "relative min-w-0",
 								children: [tile("photo:" + u.id, u.name || "Your photo"), hasAssets && /* @__PURE__ */ jsx(Tip, {
-									label: "Remove this background",
+									label: "Remove background",
 									children: /* @__PURE__ */ jsx("button", {
 										type: "button",
-										"aria-label": `Remove ${u.name || "this photo"}`,
+										"aria-label": `Remove background: ${u.name || "your photo"}`,
 										onClick: () => setRemoving(u.id),
 										className: "bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
 										children: /* @__PURE__ */ jsx(XIcon, {})
@@ -5095,7 +5134,7 @@ function SettingsSheet({ open, at, onClose }) {
 		side: "right",
 		open,
 		onOpenChange: (o) => !o && close(),
-		children: /* @__PURE__ */ jsxs(DrawerContent, {
+		children: /* @__PURE__ */ jsxs(SheetContent, {
 			className: "w-full sm:max-w-xl",
 			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [
 				view === "import" && /* @__PURE__ */ jsx(Button, {
@@ -6204,7 +6243,7 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		open,
 		onOpenChange: (o) => !o && onClose(),
 		onOpenChangeComplete: (o) => o && album.current?.focus(),
-		children: /* @__PURE__ */ jsxs(DrawerContent, {
+		children: /* @__PURE__ */ jsxs(SheetContent, {
 			className: "w-full sm:max-w-xl",
 			children: [/* @__PURE__ */ jsx(DrawerHeader, { children: /* @__PURE__ */ jsx(DrawerTitle, { children: "Add a record" }) }), /* @__PURE__ */ jsxs(DrawerBody, {
 				className: "flex flex-col gap-6 *:shrink-0",
@@ -7811,18 +7850,20 @@ function StatusActions({ r, onMoved }) {
 						children: "From one of these?"
 					}), /* @__PURE__ */ jsx("div", {
 						className: "flex flex-wrap gap-2",
-						children: hosts.map(([h, u], i) => /* @__PURE__ */ jsx(Button, {
-							type: "button",
-							size: "sm",
-							variant: url === u ? "primary" : "outline",
-							"aria-pressed": url === u,
-							title: u,
-							onClick: () => {
-								const on = url !== u;
-								setUrl(on ? u : "");
-								if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ""));
-							},
-							children: h
+						children: hosts.map(([h, u], i) => /* @__PURE__ */ jsx(Tip, {
+							label: u,
+							children: /* @__PURE__ */ jsx(Button, {
+								type: "button",
+								size: "sm",
+								variant: url === u ? "primary" : "outline",
+								"aria-pressed": url === u,
+								onClick: () => {
+									const on = url !== u;
+									setUrl(on ? u : "");
+									if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ""));
+								},
+								children: h
+							})
 						}, u + i))
 					})]
 				}),
@@ -8348,7 +8389,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		side: "right",
 		open: !!r,
 		onOpenChange: (o) => !o && close(),
-		children: /* @__PURE__ */ jsx(DrawerContent, {
+		children: /* @__PURE__ */ jsx(SheetContent, {
 			className: "w-full sm:max-w-xl",
 			children: r && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 				onBack && /* @__PURE__ */ jsx(Button, {
@@ -9377,7 +9418,7 @@ function ShareSheet({ shown, onClose }) {
 		open: !!shown,
 		onOpenChange: (o) => !o && onClose(),
 		onOpenChangeComplete: done,
-		children: /* @__PURE__ */ jsxs(DrawerContent, {
+		children: /* @__PURE__ */ jsxs(SheetContent, {
 			className: "w-full sm:max-w-xl",
 			children: [/* @__PURE__ */ jsxs(DrawerHeader, { children: [/* @__PURE__ */ jsx(DrawerTitle, { children: "Share your wall" }), /* @__PURE__ */ jsx(DrawerDescription, { children: "A picture of your wall to save or post." })] }), /* @__PURE__ */ jsx(DrawerBody, { children: /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-4 pb-8",
@@ -9643,11 +9684,11 @@ function App() {
 					tools: /* @__PURE__ */ jsx(Fragment$1, { children: canEdit && /* @__PURE__ */ jsxs("span", {
 						className: "relative",
 						children: [/* @__PURE__ */ jsx(Tip, {
-							label: update ? "Settings (update available)" : "Settings",
+							label: update ? "Settings: update available" : "Settings",
 							children: /* @__PURE__ */ jsx(Button, {
 								size: "icon-md",
 								variant: "outline",
-								"aria-label": update ? "Settings (update available)" : "Settings",
+								"aria-label": update ? "Settings: update available" : "Settings",
 								className: "bg-wall/70 rounded-full before:rounded-full before:bg-transparent",
 								onClick: () => setSettingsOpen("top"),
 								children: /* @__PURE__ */ jsx(GearIcon, {})
@@ -15009,6 +15050,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .sm\:mt-0 {
       margin-top: 0;
+    }
+
+    .sm\:hidden {
+      display: none;
     }
 
     .sm\:size-4 {

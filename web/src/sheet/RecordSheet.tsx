@@ -3,12 +3,12 @@ import { Badge } from '@appica/ui-react/badge'
 import { Button } from '@appica/ui-react/button'
 import {
   Drawer,
-  DrawerContent,
   DrawerHeader,
   DrawerTitle,
   DrawerDescription,
   DrawerBody,
 } from '@appica/ui-react/drawer'
+import { SheetContent } from '../wall/Tip'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
@@ -184,7 +184,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
 
   return (
     <Drawer side="right" open={!!r} onOpenChange={(o) => !o && close()}>
-      <DrawerContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl">
         {r && (
           <>
             {onBack && (
@@ -343,7 +343,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
             </DrawerBody>
           </>
         )}
-      </DrawerContent>
+      </SheetContent>
     </Drawer>
   )
 }

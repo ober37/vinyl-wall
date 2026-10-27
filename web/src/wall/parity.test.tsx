@@ -70,11 +70,20 @@ describe('the wall', () => {
     await waitFor(() => expect(news()).toBe('Sync finished'))
   })
 
-  it("gives a sleeve waiting on its lookup a tooltip, and a looked-up one none", async () => {
+  // #70: appica's tooltips only, so nothing on the wall or a record's sheet carries the browser's title
+  it("uses no browser tooltips on the wall or a record's sheet", async () => {
+    setup((s) => Object.assign(s.records.r3, { needsEnrich: true, notes: [{ d: '2026-01-01', t: 'See https://www.discogs.com/release/1' }] }))
+    const user = userEvent.setup()
+    await open(user, 'Blue Train')
+    expect(document.querySelectorAll('[title]')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Close' })).toBeTruthy()
+  })
+
+  // #70: no browser tooltip over the cover; the name says it, and the count beside the chips explains the dot
+  it('says a sleeve waiting on its lookup is syncing in its name, with no tooltip over it', async () => {
     setup((s) => Object.assign(s.records.r3, { needsEnrich: true }))
     const busy = await screen.findByRole('button', { name: 'Open Blue Train by John Coltrane, syncing' })
-    expect(busy.getAttribute('title')).toBe('Syncing')
-    expect(screen.getByRole('button', { name: 'Open Kind of Blue by Miles Davis' }).getAttribute('title')).toBeNull()
+    expect(busy.getAttribute('title')).toBeNull()
   })
 })
 

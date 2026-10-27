@@ -10,6 +10,7 @@ import { movedCopy, movePatch } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
 import { ShopInput } from './ShopInput'
+import { Tip } from '../wall/Tip'
 
 // View mode's status buttons: Ordered it / Got it on the hunt (asking which copy when it hunts several, then what was
 // paid), It arrived on an order
@@ -93,23 +94,25 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
                 From one of these?
               </p>
               <div className="flex flex-wrap gap-2">
+                {/* the full address tells two links on one site apart; on phones, which never show it, "(2)" follows the
+                    order of the record's buy links */}
                 {hosts.map(([h, u], i) => (
-                  <Button
-                    key={u + i}
-                    type="button"
-                    size="sm"
-                    variant={url === u ? 'primary' : 'outline'}
-                    aria-pressed={url === u}
-                    title={u}
-                    onClick={() => {
-                      const on = url !== u
-                      setUrl(on ? u : '')
-                      // a website on your shops list gives that shop's name, linking the record to it (#89)
-                      if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ''))
-                    }}
-                  >
-                    {h}
-                  </Button>
+                  <Tip key={u + i} label={u}>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={url === u ? 'primary' : 'outline'}
+                      aria-pressed={url === u}
+                      onClick={() => {
+                        const on = url !== u
+                        setUrl(on ? u : '')
+                        // a website on your shops list gives that shop's name, linking the record to it (#89)
+                        if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ''))
+                      }}
+                    >
+                      {h}
+                    </Button>
+                  </Tip>
                 ))}
               </div>
             </div>

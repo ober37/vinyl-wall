@@ -34,6 +34,16 @@ Run this before showing any UI change, on every screen the change touches.
 - [ ] **An add belongs to its list.** "Add another" sits at the list's spacing as the list's last slot, not tucked under the item above it.
 - [ ] **Looks alike, acts alike.** Something that isn't a control (a count, a status) doesn't wear a control's outline.
 
+## Tooltips
+- [ ] **Every control without a visible label has one,** saying what its accessible name says. The name may add a detail after a colon that the tooltip leaves out, where the screen shows it ("Remove background: my den" beside that photo's tile). That includes controls that lose their label in a narrow window (+ Add a record and the filter chips below `sm`).
+- [ ] **None on labelled controls.** A tooltip that repeats visible text is noise. A label that can't show everything (a link's full address) may add the rest.
+- [ ] **appica's tooltip only** (`Tip`), never the browser's `title`.
+- [ ] **The name first, then any detail after a colon:** "Office stylus: Healthy, 298 h remaining", "Settings: update available". No full stop at the end.
+- [ ] **Nothing only in a tooltip.** Phones never show them, so what one explains is also reachable by tapping: a count beside the dot, a sheet, a section in Settings.
+- [ ] **The same 150 ms delay everywhere.** Buttons side by side share a `TipGroup`.
+- [ ] **Never over what it describes.** Above by default. No tooltips on sleeves or covers.
+- [ ] **Inside sheets,** check at 1200px that it isn't cut off and doesn't open by itself when the sheet opens.
+
 ## Copy
 - [ ] Placeholders read as examples ("e.g. …"), not as data. Exception: a placeholder that is the value used when the field is empty (the wall's title, "My Vinyl Wall").
 - [ ] Headings and prompts match the record's status and the person's situation.

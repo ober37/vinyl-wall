@@ -233,10 +233,10 @@ export function BackgroundSection() {
                   {/* beside the tile, not in it (a button can't sit inside another); 24px to see, 44px to tap. Only where the
                     stored image can go too, so nothing is left behind with no tile pointing at it */}
                   {hasAssets && (
-                    <Tip label="Remove this background">
+                    <Tip label="Remove background">
                       <button
                         type="button"
-                        aria-label={`Remove ${u.name || 'this photo'}`}
+                        aria-label={`Remove background: ${u.name || 'your photo'}`}
                         onClick={() => setRemoving(u.id)}
                         className="bg-ink/70 text-wall absolute end-1.5 top-1.5 grid size-6 cursor-pointer place-items-center rounded-full after:absolute after:-inset-2.5 focus-visible:outline-2 focus-visible:outline-(--focus-ring)"
                       >

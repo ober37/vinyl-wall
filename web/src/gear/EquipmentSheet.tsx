@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '@appica/ui-react/button'
-import { Drawer, DrawerContent, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody } from '@appica/ui-react/drawer'
+import { Drawer, DrawerHeader, DrawerTitle, DrawerDescription, DrawerBody } from '@appica/ui-react/drawer'
+import { SheetContent } from '../wall/Tip'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Boundary } from '../Boundary'
@@ -174,7 +175,7 @@ export function EquipmentSheet({ open, onClose, onRecord }: { open: boolean; onC
 
   return (
     <Drawer side="right" open={open} onOpenChange={(o) => !o && onClose()}>
-      <DrawerContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl">
         <DrawerHeader>
           {view.k !== 'root' && (
             <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={back}>
@@ -218,7 +219,7 @@ export function EquipmentSheet({ open, onClose, onRecord }: { open: boolean; onC
             </div>
           </Boundary>
         </DrawerBody>
-      </DrawerContent>
+      </SheetContent>
     </Drawer>
   )
 }
