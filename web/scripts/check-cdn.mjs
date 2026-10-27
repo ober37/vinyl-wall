@@ -14,8 +14,9 @@ const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
 
 // headroom over today's numbers (450 KB after phase 8 dropped the older-browser colour copies, 1,102 characters, 921
 // files, 1.3 s); the time is loose because CI machines vary.
+// 500 KB from #90 (import fill-in took the page to 485 KB; the page isn't minified, so code costs its full size).
 // The import map is one long line of URLs, so it's left out of the line check.
-const BUDGET = { kb: 480, line: 1500, files: 950, seconds: 10 }
+const BUDGET = { kb: 500, line: 1500, files: 950, seconds: 10 }
 const fail = []
 const kb = Math.round(html.length / 1024)
 const line = Math.max(...html.toString().split('\n').filter((l) => !l.includes('type="importmap"')).map((l) => l.length))

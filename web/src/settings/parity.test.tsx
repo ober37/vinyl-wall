@@ -344,7 +344,7 @@ describe('Import from a file: each case', () => {
   it('uploads each photo cover once, looks up the rest, and counts each record once', async () => {
     const { fake, user } = setup({ seed: wallArtist })
     const view = await bringIn(user, fileOf(snap))
-    expect(within(view).getByText("Brought in 7 records. We'll look up covers or album info for 4 of them. This takes a few minutes.")).toBeTruthy()
+    expect(within(view).getByText("Added 7 records. We'll look up covers or album info for 4 of them. This takes a few minutes.")).toBeTruthy()
     const R = fake.store.records
     expect(fake.calls.filter((c) => c.path === 'assets' && c.op === 'upload')).toHaveLength(1)
     // the photo cover, uploaded here and shared by every record that had it
@@ -373,10 +373,43 @@ describe('Import from a file: each case', () => {
     expect(A).not.toHaveProperty('arX')
   })
 
+  it('fills in what records already here are missing, cover included, and leaves what they have (#90)', async () => {
+    const { fake, user } = setup({
+      seed: (s) => {
+        Object.assign(s.records.r3, { coverAsset: '', catalog: '' })
+        Object.assign(s.records.r5, { coverAsset: '', coverBlocked: true })
+      },
+    })
+    const file = {
+      records: {
+        a: { title: 'Blue Train', artist: 'John Coltrane', status: 'own', year: '1999', catalog: 'BLP 1577', pressing: '1957 mono', coverAsset: 'c9', notes: [{ d: '2026-02-02', t: 'Played it' }] },
+        b: { title: 'Aja', artist: 'Steely Dan', status: 'own', coverAsset: 'c9', paid: '30' },
+      },
+      covers: { c9: IMG },
+    }
+    const sheet = await openSettings(user, 'Library')
+    await user.click(within(sheet).getByRole('button', { name: 'Import from a file' }))
+    const view = await screen.findByRole('dialog', { name: 'Import your library' })
+    await user.upload(document.querySelector<HTMLInputElement>('input[type=file][accept=".json,application/json"]')!, fileOf(file))
+    // Aja is on order here and owned in the file: what was paid stays out, and its removed cover stays removed
+    expect(await within(view).findByText('Fills in missing details on 1 record you already have. Skips 1 record that has nothing new.')).toBeTruthy()
+    await user.click(within(view).getByRole('button', { name: 'Bring them in' }))
+    expect(await within(view).findByText('Filled in missing details on 1 record.')).toBeTruthy()
+    const r3 = fake.store.records.r3
+    expect(r3).toMatchObject({ year: '1957', catalog: 'BLP 1577', pressing: '1957 mono', needsSync: true })
+    expect(r3.notes).toEqual([{ d: '2026-02-02', t: 'Played it' }])
+    // the file's image, uploaded here once
+    expect(fake.calls.filter((c) => c.path === 'assets' && c.op === 'upload')).toHaveLength(1)
+    expect(r3.coverAsset).toBeTruthy()
+    expect(r3.coverAsset).not.toBe('c9')
+    expect(fake.store.records.r5).toMatchObject({ coverAsset: '', coverBlocked: true })
+    expect(fake.store.records.r5).not.toHaveProperty('paid')
+  })
+
   it('looks up a cover whose upload failed', async () => {
     const { fake, user } = setup({ opts: { assets: 'fail' } })
     const view = await bringIn(user, fileOf({ records: { i7: { title: 'Upload Fails', artist: 'Artist Seven', status: 'own', notes: [], coverAsset: 'c7', about: abt, aboutAt: '2026-10-01' } }, covers: { c7: IMG } }))
-    expect(within(view).getByText("Brought in 1 record. We'll look up covers for it. This takes a few minutes.")).toBeTruthy()
+    expect(within(view).getByText("Added 1 record. We'll look up covers for it. This takes a few minutes.")).toBeTruthy()
     expect(fake.store.records.i7.needsEnrich).toBe(true)
     expect(fake.store.records.i7).not.toHaveProperty('coverAsset')
   })

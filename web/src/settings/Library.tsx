@@ -10,6 +10,8 @@ import {
   doneMessage,
   exportFile,
   fileImage,
+  fillPatch,
+  gearFill,
   imageFile,
   importableArtist,
   libCount,
@@ -18,6 +20,7 @@ import {
   planSummary,
   shopsFrom,
   recordWrites,
+  setupFill,
   type Plan,
 } from '../model/library'
 import { today, type Rec } from '../model/record'
@@ -154,8 +157,13 @@ export function useLibrary() {
         /* looked up again instead */
       }
     }
+    // the covers of records brought in, and of records here that get one from the file (#90)
     const up = [
-      ...new Set(p.recs.map(([, d]) => d.coverAsset).filter((id): id is string => typeof id === 'string' && !has(id) && !!fileImage(p, id))),
+      ...new Set(
+        [...p.recs.map(([, d]) => d.coverAsset), ...p.fills.recs.map(([, d]) => d.coverAsset)].filter(
+          (id): id is string => typeof id === 'string' && !has(id) && !!fileImage(p, id),
+        ),
+      ),
     ]
     // three at a time, as export reads them several at a time
     let uploaded = 0
@@ -177,6 +185,28 @@ export function useLibrary() {
         await rt.put('records', id, d)
         if (++done % 5 === 0) setMsg(`Bringing in records: ${done} of ${recs.length}…`)
       }
+      // what's already here gets what it's missing, worked out again on each one as it is now, so nothing changed since
+      // the plan is written over; a cover this wall can't hold stays for the lookup (#90)
+      for (const [id, d] of p.fills.setups) {
+        const x = live.current.setups.find((s) => s.id === id)
+        const patch = x && setupFill(x, d)
+        if (patch && Object.keys(patch).length) {
+          const { id: _, ...doc } = x
+          await rt.saveSetup(id, { ...doc, ...patch })
+        }
+      }
+      for (const [id, d] of p.fills.gear) await rt.saveGear(id, (g) => (g && Object.keys(gearFill(g, d)).length ? gearFill(g, d) : null))
+      for (const [id, d] of p.fills.artists) await rt.put('artists', id, d)
+      for (const [id, d] of p.fills.recs)
+        await rt.mutate(id, (latest) => {
+          const patch = fillPatch(latest, d)
+          if (typeof patch.coverAsset === 'string') {
+            const c = has(patch.coverAsset) ? patch.coverAsset : moved.get(patch.coverAsset)
+            if (c) patch.coverAsset = c
+            else delete patch.coverAsset
+          }
+          return Object.keys(patch).length ? patch : null
+        })
       // a wall that had no records takes the file's look too; an existing wall keeps its own, and gains the file's shops
       if (p.empty) await takeLook(p, has, moved, upload)
       else {
