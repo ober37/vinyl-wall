@@ -4,7 +4,7 @@
 @import './wall/wall.css';
 
 /* only the appica components this app uses (and their shared internals), so the page doesn't carry 70 components' classes */
-@source '../node_modules/@appica/ui-react/dist/components/{accordion,alert,alert-dialog,autocomplete,badge,button,button-group,checkbox,checkbox-group,collapsible,copy-button,date-field,drawer,field,fieldset,form,input,meter,select,slider,tabs,textarea,toggle,toggle-group,tooltip}';
+@source '../node_modules/@appica/ui-react/dist/components/{accordion,alert,alert-dialog,autocomplete,badge,button,button-group,checkbox,checkbox-group,collapsible,copy-button,date-field,drawer,field,fieldset,form,input,meter,select,slider,tabs,textarea,toast,toggle,toggle-group,tooltip}';
 @source '../node_modules/@appica/ui-react/dist/lib';
 @source '../node_modules/@appica/ui-react/dist/internal';
 @source '../node_modules/@appica/ui-react/dist/providers';

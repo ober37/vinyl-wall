@@ -44,6 +44,12 @@ Run this before showing any UI change, on every screen the change touches.
 - [ ] **Never over what it describes.** Above by default. No tooltips on sleeves or covers.
 - [ ] **Inside sheets,** check at 1200px that it isn't cut off and doesn't open by itself when the sheet opens.
 
+## Messages
+- [ ] **On the wall, a message is a toast at the bottom** (`WallMessages`), never a banner above the title.
+- [ ] **In a sheet, it stays inline,** next to what it's about. What's still showing when the sheet closes moves to a toast.
+- [ ] **Errors stay until closed; notices go after 8 seconds.** An error is said at once to a screen reader, a notice when it's idle.
+- [ ] **A failed load says why in the status line,** where the wall would be.
+
 ## Copy
 - [ ] Placeholders read as examples ("e.g. …"), not as data. Exception: a placeholder that is the value used when the field is empty (the wall's title, "My Vinyl Wall").
 - [ ] Headings and prompts match the record's status and the person's situation.

@@ -16,8 +16,10 @@ const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
 // files, 1.3 s); the time is loose because CI machines vary.
 // 500 KB from #90 (import fill-in took the page to 485 KB; the page isn't minified, so code costs its full size).
 // 1,000 files from #99 (appica's Autocomplete, for your shops where a record came from, took a first visit to 981).
+// 1,050 files and 525 KB from #68 (appica's Toast, for the wall's messages, took a first visit to 1,018 and the page to
+// 505 KB, most of it the toast's animation CSS).
 // The import map is one long line of URLs, so it's left out of the line check.
-const BUDGET = { kb: 500, line: 1500, files: 1000, seconds: 10 }
+const BUDGET = { kb: 525, line: 1500, files: 1050, seconds: 10 }
 const fail = []
 const kb = Math.round(html.length / 1024)
 const line = Math.max(...html.toString().split('\n').filter((l) => !l.includes('type="importmap"')).map((l) => l.length))
