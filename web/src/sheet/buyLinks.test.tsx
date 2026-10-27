@@ -103,7 +103,7 @@ describe('buy links: the sheet', () => {
     const g = screen.getByRole('group', { name: 'From one of these?' })
     await user.click(within(g).getByRole('button', { name: 'roughtrade.com' }))
     expect(within(g).getByRole('button', { name: 'roughtrade.com' }).getAttribute('aria-pressed')).toBe('true')
-    expect((screen.getByRole('textbox', { name: 'Bought from' }) as HTMLInputElement).value).toBe('roughtrade.com')
+    expect((screen.getByRole('combobox', { name: 'Bought from' }) as HTMLInputElement).value).toBe('roughtrade.com')
     await user.click(btn('Save'))
     await waitFor(() =>
       expect(updates(fake, 'h').at(-1)).toMatchObject({

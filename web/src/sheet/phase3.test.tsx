@@ -84,7 +84,7 @@ describe('edit mode: the order', () => {
     await open(user, 'Aja')
     await user.click(btn('Edit'))
     const g = screen.getByRole('group', { name: 'The order' })
-    expect(within(g).getByRole('textbox', { name: 'From' })).toHaveProperty('value', 'Rough Trade')
+    expect(within(g).getByRole('combobox', { name: 'From' })).toHaveProperty('value', 'Rough Trade')
     expect(within(g).queryByRole('textbox', { name: 'Order notes' })).toBeNull()
   })
 })

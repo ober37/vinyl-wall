@@ -5,14 +5,16 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
 import { buyHosts, pickable } from '../model/copies'
+import { shopOf, shopSite, shopsOf } from '../model/shops'
 import { movedCopy, movePatch } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
+import { ShopInput } from './ShopInput'
 
 // View mode's status buttons: Ordered it / Got it on the hunt (asking which copy when it hunts several, then what was
 // paid), It arrived on an order
 export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) => void }) {
-  const { mutate } = useRuntime()
+  const { mutate, settings } = useRuntime()
   const [pick, setPick] = useState<'ordered' | 'own' | null>(null)
   const [ask, setAsk] = useState<'ordered' | 'own' | null>(null)
   const [ci, setCi] = useState(0)
@@ -68,7 +70,9 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
       <form
         onSubmit={(e) => {
           e.preventDefault()
-          move(ask, { paid: paid.trim().replace(/^\$\s*/, ''), shop: shop.trim(), ...(url ? { shopUrl: url } : {}) })
+          // with no link of the copy's to go by, a shop on your list gives its website (#99)
+          const site = url || (hosts.length ? '' : shopSite(shopsOf(settings), shop))
+          move(ask, { paid: paid.trim().replace(/^\$\s*/, ''), shop: shop.trim(), ...(site ? { shopUrl: site } : {}) })
         }}
       >
         <Fieldset>
@@ -80,7 +84,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
             </Field>
             <Field>
               <FieldLabel>{ask === 'own' ? 'Bought from' : 'From'}</FieldLabel>
-              <Input value={shop} onChange={(e) => setShop(e.target.value)} placeholder="e.g. Rough Trade" />
+              <ShopInput value={shop} onChange={setShop} placeholder="e.g. Rough Trade" />
             </Field>
           </div>
           {hosts.length > 1 && (
@@ -100,7 +104,8 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
                     onClick={() => {
                       const on = url !== u
                       setUrl(on ? u : '')
-                      if (on && !shop.trim()) setShop(h.replace(/ \(\d+\)$/, ''))
+                      // a website on your shops list gives that shop's name, linking the record to it (#89)
+                      if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ''))
                     }}
                   >
                     {h}
