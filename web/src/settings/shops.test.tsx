@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
 import { doneMessage, exportFile, lookPatch, planImport, planSummary, shopsFrom, type Plan } from '../model/library'
-import { DEFAULT_SHOPS, mergeShops, shopLine, shopLink, shopOf, shopOrder, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop } from '../model/shops'
+import { DEFAULT_SHOPS, mergeShops, sameSite, shopLine, shopLink, shopOf, shopOrder, shopSite, shopSuggest, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop } from '../model/shops'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
@@ -344,5 +344,83 @@ describe('Settings → Shops: not on your list yet', () => {
     await user.click(within(group()).getByRole('button', { name: 'Show them' }))
     await waitFor(() => expect(site().shopsHidden).toEqual([]))
     expect(group().textContent).toContain('Siren Records · 1 record')
+  })
+})
+
+// #99: your shops suggested where a record came from
+describe('shops: suggested as you type', () => {
+  const list = [SIREN, RECKLESS, DUSTY, ...DEFAULT_SHOPS]
+  it('suggests names with what is typed, those starting with it first, up to 5, none when empty or exact', () => {
+    expect(shopSuggest(list, '')).toEqual([])
+    expect(shopSuggest(list, 'siren records')).toEqual([])
+    expect(shopSuggest(list, 're')).toEqual(['Reckless Records', 'Revolver', 'Siren Records'])
+    expect(shopSuggest(list, 'o')).toHaveLength(5)
+    expect(shopSuggest(list, 'zzz')).toEqual([])
+  })
+
+  it('in Edit, picking one fills in its name and leaves the link as it was', async () => {
+    const { user, fake } = setup({ shops: [SIREN] }, bought)
+    await openRecord(user, 'Ten')
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    const box = screen.getByRole('combobox', { name: 'Bought from' })
+    await user.clear(box)
+    await user.type(box, 'sir')
+    await user.click(await screen.findByRole('option', { name: 'Siren Records' }))
+    expect((box as HTMLInputElement).value).toBe('Siren Records')
+    expect(screen.queryByRole('option')).toBeNull()
+    await waitFor(() => expect((fake.store.records as Record<string, Record<string, unknown>>).b1).toMatchObject({ shop: 'Siren Records', shopUrl: 'https://www.sirenrecordsmchenry.com/products/ten' }))
+  })
+
+  it("fills in a listed shop's website, not a marketplace's, and keeps a link already at the shop", () => {
+    expect(shopSite(list, 'siren records')).toBe('https://sirenrecordsmchenry.com/')
+    expect(shopSite(list, 'Discogs Marketplace')).toBe('')
+    expect(shopSite(list, 'Nowhere')).toBe('')
+    expect(sameSite('https://www.sirenrecordsmchenry.com/products/ten', 'https://sirenrecordsmchenry.com/')).toBe(true)
+    expect(sameSite('https://roughtrade.com/x', 'https://sirenrecordsmchenry.com/')).toBe(false)
+    expect(sameSite('', 'https://sirenrecordsmchenry.com/')).toBe(false)
+  })
+
+  it("in Edit, picking one on a record with another shop's link fills in the shop's website", async () => {
+    const { user, fake } = setup({ shops: [SIREN] }, { b4: { ...bought.b1, title: 'No Code', shop: 'Rough Trade', shopUrl: 'https://roughtrade.com/x' } })
+    await openRecord(user, 'No Code')
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    const box = screen.getByRole('combobox', { name: 'Bought from' })
+    await user.clear(box)
+    await user.type(box, 'sir')
+    await user.click(await screen.findByRole('option', { name: 'Siren Records' }))
+    expect((screen.getByRole('textbox', { name: 'Shop website' }) as HTMLInputElement).value).toBe('https://sirenrecordsmchenry.com/')
+    await waitFor(() => expect((fake.store.records as Record<string, Record<string, unknown>>).b4).toMatchObject({ shop: 'Siren Records', shopUrl: 'https://sirenrecordsmchenry.com/' }))
+  })
+
+  it('Ordered it: a listed shop with no link of the copy gives its website', async () => {
+    const want = { w2: { title: 'Gigaton', artist: 'Pearl Jam', status: 'wish', notes: [], added: 13 } }
+    const { user, fake } = setup({ shops: [SIREN] }, want)
+    await openRecord(user, 'Gigaton')
+    await user.click(screen.getByRole('button', { name: 'Ordered it' }))
+    await user.type(screen.getByRole('combobox', { name: 'From' }), 'sir')
+    await user.click(await screen.findByRole('option', { name: 'Siren Records' }))
+    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await waitFor(() => expect((fake.store.records as Record<string, Record<string, unknown>>).w2).toMatchObject({ status: 'ordered', shop: 'Siren Records', shopUrl: 'https://sirenrecordsmchenry.com/' }))
+  })
+
+  it('keeps what is typed when nothing is picked', async () => {
+    const { user } = setup({ shops: [SIREN] }, bought)
+    await openRecord(user, 'Vs.')
+    await user.click(screen.getByRole('button', { name: 'Edit' }))
+    const box = screen.getByRole('combobox', { name: 'From' })
+    await user.clear(box)
+    await user.type(box, 'Merch booth')
+    expect(screen.queryByRole('option')).toBeNull()
+    expect((box as HTMLInputElement).value).toBe('Merch booth')
+  })
+
+  it("Got it: a website on your list gives that shop's name", async () => {
+    const want = { w1: { title: 'Lightning Bolt', artist: 'Pearl Jam', status: 'wish', notes: [], added: 12, buyLinks: ['https://www.sirenrecordsmchenry.com/p/lb', 'https://roughtrade.com/lb'] } }
+    const { user } = setup({ shops: [SIREN] }, want)
+    await openRecord(user, 'Lightning Bolt')
+    await user.click(screen.getByRole('button', { name: 'Got it' }))
+    const g = screen.getByRole('group', { name: 'From one of these?' })
+    await user.click(within(g).getByRole('button', { name: /sirenrecordsmchenry/ }))
+    expect((screen.getByRole('combobox', { name: 'Bought from' }) as HTMLInputElement).value).toBe('Siren Records')
   })
 })

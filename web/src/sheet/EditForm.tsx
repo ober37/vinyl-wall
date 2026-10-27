@@ -13,6 +13,9 @@ import { Confirm } from './Confirm'
 import { CopiesEdit } from './CopiesEdit'
 import { DiscogsFields, Runout } from './DiscogsEdit'
 import { Segmented } from './Segmented'
+import { ShopInput } from './ShopInput'
+import { sameSite, shopSite, shopsOf } from '../model/shops'
+import { useRuntime } from '../runtime/runtime'
 
 type Key = TextKey
 type Props = {
@@ -111,6 +114,26 @@ function Paid({ form, set, placeholder }: { form: Form; set: Props['set']; place
   )
 }
 
+// where it came from, suggesting your shops (#99)
+function ShopField({ label, form, set, placeholder }: { label: string; form: Form; set: Props['set']; placeholder: string }) {
+  const { settings } = useRuntime()
+  return (
+    <Field className="sm:col-span-2">
+      <FieldLabel>{label}</FieldLabel>
+      <ShopInput
+        value={form.shop ?? ''}
+        onChange={(v) => set('shop', v)}
+        // the shop's website, unless the record's link is already at it (a product page there)
+        onPick={(n) => {
+          const site = shopSite(shopsOf(settings), n)
+          if (site && !sameSite(form.shopUrl, site)) set('shopUrl', site)
+        }}
+        placeholder={placeholder}
+      />
+    </Field>
+  )
+}
+
 function ShopUrl({ form, set, placeholder }: { form: Form; set: Props['set']; placeholder: string }) {
   // said once the field is left, not while the address is still being typed
   const [left, setLeft] = useState(false)
@@ -172,7 +195,7 @@ function OrderFields(p: { form: Form; set: Props['set'] }) {
           </Select>
         </Field>
         <DateIn k="eta" label="Expected" {...p} />
-        <Text k="shop" label="From" placeholder="e.g. the band's webstore, a Discogs seller" wide {...p} />
+        <ShopField label="From" placeholder="e.g. the band's webstore, a Discogs seller" {...p} />
         <ShopUrl placeholder="e.g. https://yourband.bandcamp.com" {...p} />
         <Paid placeholder="incl. shipping" {...p} />
         <DateIn k="orderDate" label="Ordered on" {...p} />
@@ -282,7 +305,7 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
             </Field>
             <DateIn k="acquired" label="Bought on" {...p} />
             <Paid {...p} />
-            <Text k="shop" label="Bought from" placeholder="e.g. a local record shop" wide {...p} />
+            <ShopField label="Bought from" placeholder="e.g. a local record shop" {...p} />
             <ShopUrl placeholder="e.g. https://www.roughtrade.com" {...p} />
             <Grade k="mediaGrade" label="Vinyl" {...p} />
             <Grade k="sleeveGrade" label="Sleeve" {...p} />

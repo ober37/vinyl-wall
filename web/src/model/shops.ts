@@ -171,3 +171,21 @@ export function unlistedShops(records: Rec[], list: Shop[]): { name: string; url
   }
   return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 }
+
+// the shops to suggest where a record came from (#99): up to 5 whose name has what's typed, those starting with it first,
+// then in Search elsewhere's order; none before anything's typed or once it's a shop's name exactly
+export function shopSuggest(list: Shop[], typed: string): string[] {
+  const q = typed.trim().toLowerCase()
+  if (!q || list.some((s) => s.name.toLowerCase() === q)) return []
+  const hits = shopOrder(list.filter((s) => s.name.toLowerCase().includes(q)))
+  return [...hits.filter((s) => s.name.toLowerCase().startsWith(q)), ...hits.filter((s) => !s.name.toLowerCase().startsWith(q))].slice(0, 5).map((s) => s.name)
+}
+
+// the website a shop picked where a record came from fills in (#99): a listed shop's, not a marketplace's (its link is
+// the seller's)
+export function shopSite(list: Shop[], name: string): string {
+  const s = list.find((x) => x.name.toLowerCase() === name.trim().toLowerCase())
+  return s && s.kind !== 'market' ? s.url || '' : ''
+}
+// whether a record's link is at a shop's website (a product page there), and so stays when that shop is picked
+export const sameSite = (a: unknown, b: unknown) => !!host(shopHref(a)) && host(shopHref(a)) === host(shopHref(b))

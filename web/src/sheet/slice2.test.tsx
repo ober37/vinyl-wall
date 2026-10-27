@@ -60,7 +60,7 @@ describe('status', () => {
     await open(user, 'Pet Sounds')
     await user.click(btn('Got it'))
     await user.type(screen.getByRole('textbox', { name: 'Paid' }), '$48')
-    await user.type(screen.getByRole('textbox', { name: 'Bought from' }), 'Amoeba')
+    await user.type(screen.getByRole('combobox', { name: 'Bought from' }), 'Amoeba')
     await user.click(btn('Save'))
     await screen.findByText('Moved to the wall. Acquired today.')
     const { data } = lastUpdate(fake)
