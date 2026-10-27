@@ -1,6 +1,6 @@
 // Your shops (settings.shops, #79): where Search elsewhere and research in the Claude chat look for a copy, local shops
 // first. A wall that never edited the list has the defaults; an edited one keeps exactly what it saved, even nothing.
-import type { Rec } from './record'
+import { kindOf, shopHref, type Rec } from './record'
 
 export type ShopKind = 'local' | 'online' | 'market'
 // search: the shop's search with {q} where "artist title" goes. upc (a product page by barcode, {upc}) and shopify (its
@@ -58,13 +58,14 @@ export function shopsOf(settings: Record<string, unknown>): Shop[] {
     })
 }
 
-// a typed website made linkable: https:// added when there's no scheme, anything else dropped
+// a typed website made linkable: https:// added when there's no scheme, anything else dropped, as is a name that isn't
+// a domain (like "slashorg.")
 export function siteUrl(v: string): string {
   const t = v.trim()
   if (!t) return ''
   try {
     const u = new URL(/^[a-z]+:/i.test(t) ? t : 'https://' + t)
-    return u.protocol === 'https:' || u.protocol === 'http:' ? u.href : ''
+    return (u.protocol === 'https:' || u.protocol === 'http:') && /^([a-z\d-]+\.)+[a-z]{2,}$/i.test(u.hostname) ? u.href : ''
   } catch {
     return ''
   }
@@ -76,6 +77,9 @@ export const shopLink = (s: Shop, r: { artist?: unknown; title?: unknown }) =>
 export const mapLink = (s: Shop) => (s.place ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${s.name} ${s.place}`) : '')
 export const telLink = (s: Shop) => (s.phone && /\d/.test(s.phone) ? 'tel:' + s.phone.replace(/[^\d+]/g, '') : '')
 export const mailLink = (s: Shop) => (s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? 'mailto:' + s.email : '')
+// how to reach a local shop: the links it has, of Call, Email and Map
+export const reachOf = (s: Shop): [string, string][] =>
+  s.kind === 'local' ? ([['Call', telLink(s)], ['Email', mailLink(s)], ['Map', mapLink(s)]] as [string, string][]).filter(([, u]) => u) : []
 // the town (an address's second-to-last part) or the website's domain, to tell shops apart in a list
 export function shopWhere(s: Shop): string {
   if (s.kind === 'local' && s.place) {
@@ -127,4 +131,43 @@ export function shopLine(line: string, list: Shop[]): { shop?: Shop; name: strin
   if (i < 0) return { name: '', rest: line }
   const name = line.slice(0, i)
   return { shop: list.find((s) => s.name.toLowerCase() === name.trim().toLowerCase()), name, rest: line.slice(i + 2) }
+}
+
+const host = (u: unknown) => {
+  try {
+    return new URL(String(u || '')).hostname.replace(/^www\./, '').toLowerCase()
+  } catch {
+    return ''
+  }
+}
+// the shop on your list a record came from (#89), worked out on display: by website, the name settling a website two
+// shops share, else by name. A marketplace match keeps the record's own seller and link (see shopShown)
+export function shopOf(r: { shop?: unknown; shopUrl?: unknown }, list: Shop[]): Shop | undefined {
+  const name = String(r.shop || '').trim().toLowerCase()
+  const h = host(shopHref(r.shopUrl))
+  const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : []
+  if (same.length === 1) return same[0]
+  return name ? (same.length ? same : list).find((s) => s.name.toLowerCase() === name) : undefined
+}
+export const shopShown = (r: { shop?: unknown; shopUrl?: unknown }, list: Shop[]) => {
+  const s = shopOf(r, list)
+  return s && s.kind !== 'market' ? s : undefined
+}
+
+// Settings → Shops' Not on your list yet: the shops your owned and ordered records came from that aren't on the list,
+// by name (or website), with how many records and the first website seen
+export function unlistedShops(records: Rec[], list: Shop[]): { name: string; url: string; count: number }[] {
+  const by = new Map<string, { name: string; url: string; count: number }>()
+  for (const r of records) {
+    if (r.deleted || r.example || kindOf(r) === 'wish' || shopOf(r, list)) continue
+    const href = shopHref(r.shopUrl)
+    const name = String(r.shop || '').trim() || host(href)
+    if (!name) continue
+    const k = name.toLowerCase()
+    const e = by.get(k) || { name, url: '', count: 0 }
+    e.count++
+    if (!e.url && siteUrl(href)) e.url = new URL(href).origin + '/'
+    by.set(k, e)
+  }
+  return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 }
