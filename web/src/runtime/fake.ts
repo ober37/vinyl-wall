@@ -22,9 +22,11 @@ export function fakeClaude(
   seed: { records: Data; docs?: Data; collections?: Record<string, Data>; assets?: string[] },
   // oldRuntime: a wall published on an earlier runtime, whose user capability has no can()
   // failCreate: the first set() of a new record fails (then succeeds); assets: uploads work, fail, or aren't there
+  // failLoad: the records never load
   opts: {
     canWrite?: boolean | null
     failWrites?: boolean
+    failLoad?: boolean
     userId?: string
     mcp?: 'ok' | 'denied' | 'none'
     oldRuntime?: boolean
@@ -95,7 +97,8 @@ export function fakeClaude(
       const docs = Object.keys(store[c] || {}).map((id) => snapOf(c, id))
       return { docs, size: docs.length, empty: !docs.length, docChanges: () => [], metadata: meta }
     },
-    onSnapshot(next: (s: unknown) => void) {
+    onSnapshot(next: (s: unknown) => void, fail?: (e: { code?: string; message: string }) => void) {
+      if (opts.failLoad && c === 'records') return void queueMicrotask(() => fail?.({ message: 'Database unavailable' })), () => {}
       const fire = () =>
         queueMicrotask(() => {
           if (!listeners.has(fire)) return

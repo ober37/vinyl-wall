@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from 'react'
-import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Button } from '@appica/ui-react/button'
 import { Boundary } from './Boundary'
 import { ROUND, Tip } from './wall/Tip'
@@ -13,6 +12,7 @@ import { NewRecordSheet } from './sheet/NewRecordSheet'
 import { RecordSheet } from './sheet/RecordSheet'
 import type { Shown } from './model/share'
 import { ShareSheet } from './wall/ShareSheet'
+import { WallMessages } from './wall/Messages'
 import { Wall, WallBackground } from './wall/Wall'
 import { Welcome } from './wall/Welcome'
 
@@ -44,7 +44,7 @@ function useLookupNews(n: number) {
 }
 
 export function App() {
-  const { status, records, site, error, notice: wallNotice, clearError, canEdit, gear, settings, settingsLoaded, saveSettings, hasDownloads } =
+  const { status, records, site, error, canEdit, gear, settings, settingsLoaded, saveSettings, hasDownloads } =
     useRuntime()
   const [openId, setOpenId] = useState<string | null>(null)
   // Settings: closed, open, or open on the Discogs section or the import
@@ -62,7 +62,8 @@ export function App() {
   const lookupNews = useLookupNews(looking)
 
   return (
-    <main className={`mx-auto max-w-6xl px-4 pt-7 pb-16 sm:px-6 ${site.background.kind === 'photo' ? 'photo-bg' : ''}`}>
+    // max-sm:pb-28: room for a two-line toast (#68) below the last row of covers
+    <main className={`mx-auto max-w-6xl px-4 pt-7 pb-16 max-sm:pb-28 sm:px-6 ${site.background.kind === 'photo' ? 'photo-bg' : ''}`}>
       <WallBackground bg={site.background} />
       <p role="status" className="sr-only">
         {lookupNews}
@@ -70,13 +71,11 @@ export function App() {
       {MESSAGE[status] && (
         <p role="status" className="on-photo text-ink-2 mb-4 text-sm">
           {MESSAGE[status]}
+          {/* a failed load says why here, not in a toast over an empty page */}
+          {status !== 'loading' && error && ` (${error})`}
         </p>
       )}
-      {(error || wallNotice) && !openId && !settingsOpen && !adding && !equipOpen && !sharing && (
-        <Alert variant={error ? 'error' : 'info'} className="mb-4" dismissible onOpenChange={(o) => !o && clearError()}>
-          <AlertTitle>{error || wallNotice}</AlertTitle>
-        </Alert>
-      )}
+      <WallMessages sheetOpen={!!(openId || settingsOpen || adding || equipOpen || sharing)} />
       {status === 'ready' && (
         <Boundary title="Couldn't show the wall">
           <Wall
