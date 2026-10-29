@@ -1244,7 +1244,8 @@ function RuntimeProvider({ claude, children }) {
 			fireTask();
 			return;
 		}
-		if (!records.some((r) => syncing(r, settings.discogs?.status === "ok"))) return;
+		const asked = (r) => syncing(r, settings.discogs?.status === "ok") || !!r.needsEnrich && !r.example && !r.deleted;
+		if (!records.some(asked)) return;
 		const wait = 3e5 - since("vw-sync");
 		if (wait > 0) {
 			const id = setTimeout(() => setSyncDue((n) => n + 1), wait + 1e3);
