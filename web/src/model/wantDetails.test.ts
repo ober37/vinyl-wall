@@ -44,6 +44,13 @@ describe('+ Want from research details', () => {
       discogsId: '', buyLinks: [], releaseDate: '' })
   })
 
+  it('stores the link only as where to buy the copy', () => {
+    const chosen = { ...hunt, copyName: 'Original', pressing: '1994 original' }
+    const { patch } = wantPatch(chosen, P, detailsFor(entry, P))
+    expect((patch.moreCopies as Record<string, unknown>[])[0]).toEqual({ name: '2018 reissue', pressing: P, label: 'American Recordings',
+      catalog: '19075865591', budget: '28', discogsId: '', buyLinks: ['https://roughtrade.com/us/p/x'], releaseDate: '2099-03-01' })
+  })
+
   it('research without details works as before', () => {
     expect(wantPatch(hunt, '1994 original', detailsFor(entry, '1994 original')).patch).toEqual({ pressing: '1994 original' })
     expect(wantPatch(hunt, '1994 original').patch).toEqual({ pressing: '1994 original' })

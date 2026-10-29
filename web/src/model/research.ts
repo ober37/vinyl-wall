@@ -91,7 +91,8 @@ export function wantPatch(r: Rec, p: string, det: Details = {}): { patch: Record
   const C = wantCopies(r)
   const first = !firstCopyChosen(r)
   const did = first && r.discogsId ? { discogsId: r.discogsId, discogsMatch: String(r.discogsMatch || '') } : null
-  const copy: Copy = { ...emptyCopy(), ...det, pressing: p, buyLinks: det.link ? [det.link] : [] }
+  const { link, ...rest } = det
+  const copy: Copy = { ...emptyCopy(), ...rest, pressing: p, buyLinks: link ? [link] : [] }
   if (!first) return { patch: { moreCopies: [...C.slice(1), copy] }, undo: { ci: C.length, p, did } }
   const own: Record<string, unknown> = { copyName: copy.name, label: copy.label, catalog: copy.catalog, budget: copy.budget, buyLinks: copy.buyLinks, releaseDate: copy.releaseDate }
   const patch: Record<string, unknown> = { pressing: p, ...(did ? { discogsId: '', discogsMatch: '' } : {}) }
