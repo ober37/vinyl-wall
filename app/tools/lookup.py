@@ -804,11 +804,13 @@ def fetch_group(work, g, p, done):
                 f["albumIntro"], f["albumFrom"] = text, {"name": name, "section": head}
             if released(e):
                 about["released"] = released(e)
-            for key, prop, n in (("label", "P264", 1), ("producers", "P162", 3), ("genres", "P136", 3)):
+            if wd_album_label(e, dz, dg):
+                about["label"] = wd_album_label(e, dz, dg)
+            for key, prop, n in (("producers", "P162", 3), ("genres", "P136", 3)):
                 ls = [label(v) for v in claims(e, prop) if isinstance(v, str)][:n]
                 ls = [x for x in ls if x]
                 if ls:
-                    about[key] = ls[0] if key == "label" else ls
+                    about[key] = ls
             if dg and not (about.get("released") and about.get("label") and about.get("genres")):
                 about.update({k: v for k, v in _discogs_key_info(dg).items() if not about.get(k)})  # what Wikidata lacked (#32)
             places = [label(v) for v in claims(e, "P483") if isinstance(v, str) and label(v)]
@@ -876,7 +878,7 @@ def facts(r, e, dz, it, dg, mb_year):
     free = lambda k: not r.get(k) or k in auto
     wd_year, dg_year = year4(released(e)), year4((dg or {}).get("year"))
     year = min(filter(None, (wd_year, mb_year, year4(dz.get("year")), year4(it.get("year")), dg_year)), default=None)
-    wd_label = label((claims(e, "P264") or [""])[0])
+    wd_label = wd_album_label(e, dz, dg)
     fill = {}
     if year and free("year") and year != r.get("year") and (not r.get("year") or wd_year or year < str(r["year"])):
         fill["year"] = year
@@ -919,6 +921,32 @@ def _discogs_key_info(dg):
     out = {"released": first if reissue else rel, "label": "" if reissue else _dlabel(dg),
            "genres": ((m or {}).get("styles") or (m or {}).get("genres") or dg.get("styles") or dg.get("genres") or [])[:3]}
     return {k: v for k, v in out.items() if v and (k != "released" or re.match(r"^\d{4}", v))}
+
+
+LABEL_FILLER = {"records", "record", "recordings", "recording", "music", "entertainment", "inc", "ltd", "llc", "co",
+                "company", "group", "label", "the"}
+
+
+def _label_words(s):
+    return {w for w in re.findall(r"[a-z0-9]+", (s or "").lower()) if w not in LABEL_FILLER}
+
+
+def labels_agree(a, b):
+    """Two names for the same label, loosely: they share a word that isn't filler, so "Warner Bros. Records" agrees with
+    "Rhino/Warner Records" and "Big Brother Recordings" doesn't."""
+    return bool(_label_words(a) & _label_words(b))
+
+
+def wd_album_label(e, dz, dg):
+    """Wikidata's label for the album, when no other source says otherwise (#95): Wikidata can list a wrong one first
+    (Rumours: Big Brother Recordings, not Warner Bros.). The one Deezer or the linked pressing agrees with, else the first
+    when they have none; when they name a label none of Wikidata's agree with, none. A reissue's label still counts as
+    saying otherwise here, though only an original's is ever filled in from them."""
+    wd = [x for x in (label(v) for v in claims(e, "P264") if isinstance(v, str)) if x]
+    others = [x for x in ((dz or {}).get("label"), _dlabel(dg)) if x]
+    if not others:
+        return wd[0] if wd else None
+    return next((w for w in wd if any(labels_agree(w, o) for o in others)), None)
 
 
 def _dlabel(dg):
