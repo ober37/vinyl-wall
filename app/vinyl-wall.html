@@ -7416,11 +7416,12 @@ function wantPatch(r, p, det = {}) {
 		discogsId: r.discogsId,
 		discogsMatch: String(r.discogsMatch || "")
 	} : null;
+	const { link, ...rest } = det;
 	const copy = {
 		...emptyCopy(),
-		...det,
+		...rest,
 		pressing: p,
-		buyLinks: det.link ? [det.link] : []
+		buyLinks: link ? [link] : []
 	};
 	if (!first) return {
 		patch: { moreCopies: [...C.slice(1), copy] },
