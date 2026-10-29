@@ -1507,9 +1507,9 @@ function Segmented({ label, value, options, onChange }) {
 		children: options.map(([v, l]) => /* @__PURE__ */ jsx(Toggle, {
 			value: v,
 			className: buttonVariants({
-				variant: "primary-outline",
+				variant: "outline",
 				size: "sm",
-				className: "flex-1 sm:flex-none"
+				className: "data-pressed:before:border-primary data-pressed:text-primary flex-1 sm:flex-none"
 			}),
 			children: l
 		}, v))
@@ -6827,6 +6827,7 @@ function LogCard({ r, onLogged }) {
 		setBusy(false);
 		if (ok) {
 			setPicks([]);
+			setKind("full");
 			const min = playMin(r, c.kind, c.tracks);
 			const hits = gearForPlay(gear, S, setup, r, min);
 			hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data));
@@ -6846,21 +6847,36 @@ function LogCard({ r, onLogged }) {
 	};
 	return /* @__PURE__ */ jsxs(Fieldset, { children: [
 		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Log a play" }),
-		/* @__PURE__ */ jsx(Segmented, {
-			label: "What you played",
-			value: kind,
-			onChange: setKind,
-			options: [
-				["full", "Whole album"],
-				["side", "Side"],
-				...T.length ? [["tracks", "Tracks"]] : []
-			]
+		/* @__PURE__ */ jsxs("div", {
+			className: "bg-background sticky top-0 z-10 -mx-6 flex flex-col gap-2 px-6 py-2 sm:flex-row sm:items-center sm:gap-3",
+			children: [/* @__PURE__ */ jsx("div", {
+				className: "sm:min-w-0 sm:flex-1",
+				children: /* @__PURE__ */ jsx(Segmented, {
+					label: "What you played",
+					value: kind,
+					onChange: setKind,
+					options: [
+						["full", "Whole album"],
+						["side", "Side"],
+						...T.length ? [["tracks", "Tracks"]] : []
+					]
+				})
+			}), (kind !== "tracks" || picks.length > 0) && /* @__PURE__ */ jsx(Button, {
+				className: "sm:shrink-0",
+				disabled: busy,
+				onClick: log,
+				children: kind !== "tracks" ? "Log play" : `Log ${picks.length} track${picks.length > 1 ? "s" : ""}`
+			})]
 		}),
 		kind === "side" && /* @__PURE__ */ jsx(Segmented, {
 			label: "Which side",
 			value: side,
 			onChange: setSide,
 			options: recordSides(r).map((s) => [s, "Side " + s])
+		}),
+		kind === "tracks" && !picks.length && /* @__PURE__ */ jsx("p", {
+			className: "text-foreground-muted text-sm",
+			children: "Tick the tracks you played."
 		}),
 		kind === "tracks" && /* @__PURE__ */ jsx(CheckboxGroup, {
 			"aria-label": "Tracks",
@@ -6873,7 +6889,7 @@ function LogCard({ r, onLogged }) {
 					className: "text-foreground-muted text-xs font-medium",
 					children: ["Side ", sd]
 				}), T.filter((t) => !sd || sideOf(t.pos) === sd).map((t) => /* @__PURE__ */ jsxs("label", {
-					className: "text-foreground flex items-start gap-2 text-sm",
+					className: "text-foreground flex scroll-mt-16 items-start gap-2 text-sm",
 					children: [/* @__PURE__ */ jsx(Checkbox, {
 						value: t.pos,
 						className: "mt-0.5"
@@ -6903,12 +6919,6 @@ function LogCard({ r, onLogged }) {
 					children: x.name || "Untitled setup"
 				}, x.id)) })]
 			})]
-		}),
-		/* @__PURE__ */ jsx(Button, {
-			className: "self-start",
-			disabled: busy || kind === "tracks" && !picks.length,
-			onClick: log,
-			children: kind !== "tracks" ? "Log play" : picks.length ? `Log ${picks.length} track${picks.length > 1 ? "s" : ""}` : "Pick tracks"
 		})
 	] });
 }
@@ -10983,6 +10993,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     margin-inline: calc(var(--spacing) * -5);
   }
 
+  .-mx-6 {
+    margin-inline: calc(var(--spacing) * -6);
+  }
+
   .mx-auto {
     margin-inline: auto;
   }
@@ -11642,6 +11656,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .resize-y {
     resize: vertical;
+  }
+
+  .scroll-mt-16 {
+    scroll-margin-top: calc(var(--spacing) * 16);
   }
 
   .list-disc {
@@ -14702,6 +14720,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     color: var(--ink);
   }
 
+  .data-pressed\:text-primary[data-pressed] {
+    color: var(--primary);
+  }
+
   .data-pressed\:text-primary-foreground[data-pressed] {
     color: var(--primary-foreground);
   }
@@ -14727,6 +14749,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   .data-pressed\:before\:border-border-strong[data-pressed]:before {
     content: var(--tw-content);
     border-color: var(--border-strong);
+  }
+
+  .data-pressed\:before\:border-primary[data-pressed]:before {
+    content: var(--tw-content);
+    border-color: var(--primary);
   }
 
   .data-pressed\:before\:border-white\/15[data-pressed]:before {
@@ -15521,8 +15548,20 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       max-width: var(--container-xl);
     }
 
+    .sm\:min-w-0 {
+      min-width: 0;
+    }
+
+    .sm\:flex-1 {
+      flex: 1;
+    }
+
     .sm\:flex-none {
       flex: none;
+    }
+
+    .sm\:shrink-0 {
+      flex-shrink: 0;
     }
 
     .sm\:basis-0 {
@@ -15549,8 +15588,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       flex-direction: row;
     }
 
+    .sm\:items-center {
+      align-items: center;
+    }
+
     .sm\:justify-end {
       justify-content: flex-end;
+    }
+
+    .sm\:gap-3 {
+      gap: calc(var(--spacing) * 3);
     }
 
     .sm\:self-center {
