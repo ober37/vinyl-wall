@@ -410,6 +410,7 @@ describe('research', () => {
   it('Follow up in chat hands over a prompt picking up from that entry', async () => {
     const { user } = setup()
     await open(user, 'Abbey Road')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(btn('Follow up in chat'))
     expect(await navigator.clipboard.readText()).toMatch(/^Follow up on my research from .*: "A clean UK first is worth it; the half-speed is the value pick"\nRecord: "Abbey Road" by The Beatles \(record r7\)/)
     expect(screen.getByText('Copied. Paste it into Claude to pick up from here.')).toBeTruthy()
@@ -419,6 +420,7 @@ describe('research', () => {
     const { user } = setup()
     vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'))
     await open(user, 'Abbey Road')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(btn('Copy for Claude'))
     expect(await screen.findByText("Selected: copy it with your device's copy command")).toBeTruthy()
     const prompt = screen.getByText(/^Research a record on my Vinyl Wall/)

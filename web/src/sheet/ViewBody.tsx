@@ -9,6 +9,7 @@ import { discogsLinks } from '../model/orders'
 import { shopShown, shopsOf, type Shop } from '../model/shops'
 import { sideOf, trackSecs } from '../model/plays'
 import { aboutPending } from '../model/task'
+import { stillCopies } from '../model/copies'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
@@ -16,7 +17,7 @@ import { OrderCard, shopFrom } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
 import { Chevron, LinkList, Source } from './Links'
-import { hasResearch, ResearchTab, type WantMsg } from './ResearchTab'
+import { hasResearch, ResearchTab, SearchElsewhere, type WantMsg } from './ResearchTab'
 import { StatusActions } from './StatusActions'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
@@ -242,7 +243,24 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const notesN = noteCount(r)
   const notes = canEdit || notesN > 0
   const research = hasResearch(r, canEdit)
-  const tabs = [...(own ? ['listening'] : []), ...(k === 'ordered' ? ['order'] : []), ...(research ? ['research'] : []), ...(notes ? ['notes'] : []), ...(about ? ['about'] : [])]
+  // the copies wanted, and where to look for them: on a hunt, and on other records while copies are still wanted; a
+  // viewer sees Pressings only when there are copies
+  const still = stillCopies(r).length > 0
+  const hunting = k === 'wish' || still
+  const pressings = still || (k === 'wish' && canEdit)
+  // one order for every kind (#115): About, the record's task tab (Listening, Order), Pressings, Notes, Search, Research
+  const tabs = [
+    ...(about ? ['about'] : []),
+    ...(own ? ['listening'] : []),
+    ...(k === 'ordered' ? ['order'] : []),
+    ...(pressings ? ['pressings'] : []),
+    ...(notes ? ['notes'] : []),
+    ...(hunting ? ['search'] : []),
+    ...(research ? ['research'] : []),
+  ]
+  // the sheet opens on the record's task tab: Listening, Order, or Pressings on a hunt
+  const task = own ? 'listening' : k === 'ordered' ? 'order' : pressings ? 'pressings' : 'search'
+  const first = tabs.includes(task) ? task : tabs[0]
   // with no tab bar, a lone tab's content gets its own heading (About's sections already have theirs)
   const lone = tabs.length === 1
   const titled = (name: string, node: React.ReactNode) =>
@@ -266,8 +284,8 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           </Button>
         )
       )}
-      {k === 'wish' && <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />}
-      {canEdit && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
+      {/* Ordered it / Got it sit in Pressings, above the copies they act on; It arrived stays above the tabs */}
+      {canEdit && k !== 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
       {msg && (
         <p role="status" className="text-foreground-muted text-sm">
           {msg}
@@ -275,12 +293,13 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
       )}
       {/* the tab bar sits 20px above its panel, closer than appica's default (the owner's call) */}
       {tabs.length > 0 && (
-        <Tabs className="gap-5" value={tabs.includes(tab) ? tab : tabs[0]} onValueChange={(v) => setTab(String(v))}>
+        <Tabs className="gap-5" value={tabs.includes(tab) ? tab : first} onValueChange={(v) => setTab(String(v))}>
           {tabs.length > 1 && (
             <TabsList variant="line" size="sm" activateOnFocus>
+              {about && <TabsTrigger value="about">About</TabsTrigger>}
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
               {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
-              {research && <TabsTrigger value="research">Research</TabsTrigger>}
+              {pressings && <TabsTrigger value="pressings">Pressings</TabsTrigger>}
               {notes && (
                 <TabsTrigger value="notes">
                   Notes
@@ -292,31 +311,18 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
                   )}
                 </TabsTrigger>
               )}
-              {about && <TabsTrigger value="about">About</TabsTrigger>}
+              {hunting && <TabsTrigger value="search">Search</TabsTrigger>}
+              {research && <TabsTrigger value="research">Research</TabsTrigger>}
             </TabsList>
-          )}
-          {own && (
-            <TabsContent value="listening">
-              {titled('Listening', <Listening r={r} />)}
-            </TabsContent>
-          )}
-          {k === 'ordered' && (
-            <TabsContent value="order">
-              {titled('Order', <OrderCard r={r} shop={shopShown(r, shops)} />)}
-            </TabsContent>
-          )}
-          {research && (
-            <TabsContent value="research">
-              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} lone={lone} />
-            </TabsContent>
-          )}
-          {notes && (
-            <TabsContent value="notes">
-              {titled('Notes', <NotesTab r={r} />)}
-            </TabsContent>
           )}
           {about && (
             <TabsContent value="about" className="flex flex-col gap-8">
+              {hasTracks && (
+                <Fieldset>
+                  <FieldsetLegend>Tracklist</FieldsetLegend>
+                  <Tracks r={r} />
+                </Fieldset>
+              )}
               {info.length > 0 && (
                 <Fieldset>
                   <FieldsetLegend>About the album</FieldsetLegend>
@@ -330,18 +336,43 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
                   <LinkList links={discogsLinks(r)} />
                 </Fieldset>
               )}
-              {hasTracks && (
-                <Fieldset>
-                  <FieldsetLegend>Tracklist</FieldsetLegend>
-                  <Tracks r={r} />
-                </Fieldset>
-              )}
               {artist && (
                 <Fieldset>
                   <FieldsetLegend>About the artist</FieldsetLegend>
                   <ArtistAbout key={r.id} A={artist} />
                 </Fieldset>
               )}
+            </TabsContent>
+          )}
+          {own && (
+            <TabsContent value="listening">
+              {titled('Listening', <Listening r={r} />)}
+            </TabsContent>
+          )}
+          {k === 'ordered' && (
+            <TabsContent value="order">
+              {titled('Order', <OrderCard r={r} shop={shopShown(r, shops)} />)}
+            </TabsContent>
+          )}
+          {pressings && (
+            <TabsContent value="pressings" className="flex flex-col gap-6">
+              {canEdit && k === 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
+              <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />
+            </TabsContent>
+          )}
+          {notes && (
+            <TabsContent value="notes">
+              {titled('Notes', <NotesTab r={r} />)}
+            </TabsContent>
+          )}
+          {hunting && (
+            <TabsContent value="search">
+              {titled('Search elsewhere', <SearchElsewhere r={r} shops={shops} />)}
+            </TabsContent>
+          )}
+          {research && (
+            <TabsContent value="research">
+              <ResearchTab r={r} onEditCopy={onEditCopy} want={want} setWant={setWant} lone={lone} />
             </TabsContent>
           )}
         </Tabs>

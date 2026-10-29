@@ -221,10 +221,11 @@ const researched = {
 }
 
 describe('the Research tab', () => {
-  it('opens first on a hunt, pinned entry first and open, with sources that link', async () => {
+  it('comes last on a hunt, pinned entry first and open, with sources that link', async () => {
     const { user } = setup({}, researched)
     await open(user, 'Revolver')
-    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Research', 'Notes'])
+    expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Pressings', 'Notes', 'Search', 'Research'])
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     const rows = screen.getAllByRole('button', { name: /Mono is the one|Older look/ })
     expect(rows.map((b) => b.getAttribute('aria-expanded'))).toEqual(['true', 'false'])
     expect(rows[0].textContent).toMatch(/Pinned/)
@@ -232,12 +233,14 @@ describe('the Research tab', () => {
     expect(screen.getByText('Which pressing?')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Discogs ↗' })).toBeTruthy()
     expect(screen.queryByRole('link', { name: 'Bad ↗' })).toBeNull()
+    await user.click(screen.getByRole('tab', { name: 'Search' }))
     expect(screen.getByRole('link', { name: 'eBay ↗' }).getAttribute('href')).toContain('The%20Beatles%20Revolver%20vinyl%20LP')
   })
 
   it('+ Want adds a pressing as a copy, says so with Undo, and marks one already wanted', async () => {
     const { fake, user } = setup({}, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     expect(screen.getByText('✓ Added')).toBeTruthy()
     await user.click(btn('+ Want'))
@@ -246,7 +249,7 @@ describe('the Research tab', () => {
         moreCopies: [{ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [], releaseDate: '' }], needsSync: true,
       }),
     )
-    expect(screen.getByText(/Added “Japan Odeon”/)).toBeTruthy()
+    expect(screen.getByText(/Added “Japan Odeon” to Pressings/)).toBeTruthy()
     await user.click(btn('Undo'))
     await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ moreCopies: [], needsSync: true }))
   })
@@ -254,6 +257,7 @@ describe('the Research tab', () => {
   it("+ Want's Edit opens edit mode in that copy", async () => {
     const { user } = setup({}, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     await user.click(btn('+ Want'))
     // the header's Edit, then the one beside what was added
@@ -266,6 +270,7 @@ describe('the Research tab', () => {
   it("keeps + Want's Undo through Edit and back", async () => {
     const { fake, user } = setup({}, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     await user.click(btn('+ Want'))
     await screen.findByText(/Added “Japan Odeon”/)
@@ -278,6 +283,7 @@ describe('the Research tab', () => {
   it('pins one entry at a time, and removes one after asking', async () => {
     const { fake, user } = setup({}, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     await user.click(btn('Pin'))
     await waitFor(() => expect(updates(fake, 'r8').at(-1)?.research).toBeNull())
@@ -291,6 +297,7 @@ describe('the Research tab', () => {
   it('Copy for Claude hands over a prompt naming the record', async () => {
     const { user } = setup({}, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(btn('Copy for Claude'))
     expect(await navigator.clipboard.readText()).toContain('Record: "Revolver" by The Beatles (record r8)')
     expect(screen.getByText('Copied. Paste it into Claude and add your question.')).toBeTruthy()
@@ -299,9 +306,11 @@ describe('the Research tab', () => {
   it('shows a reader the research and links, without the buttons', async () => {
     const { user } = setup({ canWrite: false }, researched)
     await open(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Mono is the one/ }))
     for (const name of ['Copy for Claude', '+ Want', 'Pin', 'Unpin', 'Remove this research', 'Follow up in chat'])
       expect(screen.queryByRole('button', { name })).toBeNull()
+    await user.click(screen.getByRole('tab', { name: 'Search' }))
     expect(screen.getByRole('link', { name: 'Discogs Marketplace ↗' })).toBeTruthy()
   })
 

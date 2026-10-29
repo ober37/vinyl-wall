@@ -208,11 +208,11 @@ describe('the design checklist pass', () => {
     expect(screen.queryByText(/^Looking up/)).toBeNull()
   })
 
-  it('names a viewer’s lone Research tab', async () => {
+  it('names a viewer’s lone Search tab, with no empty Pressings or Research', async () => {
     const { user } = setup(() => {}, { canWrite: false })
-    await open(user, 'Abbey Road')
+    await open(user, 'Pet Sounds')
     expect(screen.queryByRole('tablist')).toBeNull()
-    expect(screen.getByRole('group', { name: 'Research' })).toBeTruthy()
+    expect(screen.getByRole('group', { name: 'Search elsewhere' })).toBeTruthy()
   })
 
   it('tells an editor how to add the copy a hunt is after', async () => {
