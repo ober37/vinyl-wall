@@ -149,6 +149,28 @@ check("year: a looked-up year gives way to Wikidata's", L.facts({**looked, "year
 check("year: a typed year is never touched", L.facts({**aja, "year": "1980"}, wd(1977), {}, original, None, None) == {})
 check("year: a pressing's year 0 doesn't count", L.facts(aja, {}, {}, {}, {"year": 0}, None) == {})
 
+# #95: Wikidata's label only when no other source says otherwise
+L.ENT.update({"Q1": {"labels": {"en": {"value": "Big Brother Recordings"}}}, "Q2": {"labels": {"en": {"value": "Epic Records"}}},
+              "Q3": {"labels": {"en": {"value": "Warner Bros. Records"}}}})
+labels = lambda *qs: {"claims": {"P264": [{"rank": "normal", "mainsnak": {"datavalue": {"value": {"id": q}}}} for q in qs]}}
+rumours = {"title": "Rumours", "artist": "Fleetwood Mac"}
+remaster, first = {"year": "2004", "label": "Rhino/Warner Records"}, {"year": "1977", "label": "Rhino/Warner Records"}
+check("label: loose agreement", L.labels_agree("Warner Bros. Records", "Rhino/Warner Records")
+      and not L.labels_agree("Big Brother Recordings", "Rhino/Warner Records") and not L.labels_agree("Records", "Recordings"))
+check("label: Rumours doesn't get Big Brother Recordings", "label" not in L.facts(rumours, labels("Q1", "Q2"), remaster, {}, None, "1977"),
+      L.facts(rumours, labels("Q1", "Q2"), remaster, {}, None, "1977"))
+check("label: nor in its Key info", L.wd_album_label(labels("Q1", "Q2"), remaster, None) is None)
+check("label: an original's label from another source when Wikidata's disagree",
+      L.facts(rumours, labels("Q1", "Q2"), first, {}, None, None).get("label") == "Rhino/Warner Records")
+check("label: Wikidata's wording when another source agrees",
+      L.facts(rumours, labels("Q3"), remaster, {}, None, "1977").get("label") == "Warner Bros. Records")
+check("label: the Wikidata label that agrees, not just the first", L.wd_album_label(labels("Q1", "Q3"), remaster, None) == "Warner Bros. Records")
+check("label: the linked pressing counts as another source",
+      L.wd_album_label(labels("Q1"), {}, {"labels": [{"name": "Warner Bros. Records"}]}) is None)
+check("label: Wikidata's alone when no other source has one", L.facts(rumours, labels("Q1"), {"year": "2004"}, {}, None, "1977").get("label")
+      == "Big Brother Recordings" and L.wd_album_label(labels("Q2", "Q1"), {}, None) == "Epic Records")
+check("label: a typed label is never touched", "label" not in L.facts({**rumours, "label": "WB"}, labels("Q3"), first, {}, None, None))
+
 check("thin: one word each", L.thin({"title": "Test", "artist": "Test"}) and L.thin({"title": "Okapi", "artist": "Novelists"}))
 check("thin: a two-word artist isn't", not L.thin(aja) and not L.thin({"title": "Tusk", "artist": "Fleetwood Mac"}))
 check("thin: sources agree within a year", L.agree("2026", None, "2026") and L.agree("2025", "2024", None))
