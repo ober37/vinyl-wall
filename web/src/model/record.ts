@@ -217,25 +217,16 @@ export function recordTracks(r: Rec): Track[] {
   return T.filter((t): t is Track => !!t && typeof t === 'object' && !!(t as Track).title)
 }
 
-// key info about the album (from Wikidata, with the record's own label as a fallback)
-export function keyInfo(r: Rec): [string, string][] {
+// the album's facts as a line under its summary (from Wikidata, with the record's own label as a fallback on a record
+// you have): label · Produced by … · genre, then where and when it was recorded on a line of its own (#120)
+export function albumFacts(r: Rec): string[] {
   const ab: About = (!r.aboutBlocked && r.about) || {}
   const list = (a: unknown) => (Array.isArray(a) ? a.filter(Boolean).map(String).join(', ') : '')
-  const f: [string, string][] = []
-  if (ab.released) f.push(['Released', longDate(ab.released)])
-  const k = kindOf(r)
-  const lab = ab.label || (k !== 'wish' ? r.label : '')
-  const cat = k !== 'wish' && !(r.matrix && k !== 'ordered') ? r.catalog : ''
-  if (lab || cat) f.push(['Label', [lab, cat].filter(Boolean).join(' · ')])
-  if (list(ab.producers)) f.push(['Producer', list(ab.producers)])
-  // the place, then the dates on their own line (split at the last " · ")
-  if (ab.recorded) {
-    const t = String(ab.recorded)
-    const i = t.lastIndexOf(' · ')
-    f.push(['Recorded', i < 0 ? t : t.slice(0, i) + '\n' + t.slice(i + 3)])
-  }
-  if (list(ab.genres)) f.push(['Genre', list(ab.genres)])
-  return f
+  const lab = ab.label || (kindOf(r) !== 'wish' ? r.label : '')
+  const by = list(ab.producers)
+  const genre = list(ab.genres)
+  const line = [lab, by && 'Produced by ' + by, genre && genre[0].toUpperCase() + genre.slice(1)].filter(Boolean).join(' · ')
+  return [line, ab.recorded ? 'Recorded ' + String(ab.recorded) : ''].filter(Boolean)
 }
 
 // Sleeves. The disc label and generated cover colours come from the title and artist, as in production: per-record data

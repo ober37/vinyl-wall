@@ -329,23 +329,17 @@ var fmtH = (h) => h < 10 ? h.toFixed(1) : Math.round(h).toString();
 function recordTracks(r) {
 	return (!r.aboutBlocked && Array.isArray(r.about?.tracks) ? r.about.tracks : []).filter((t) => !!t && typeof t === "object" && !!t.title);
 }
-function keyInfo(r) {
+function albumFacts(r) {
 	const ab = !r.aboutBlocked && r.about || {};
 	const list = (a) => Array.isArray(a) ? a.filter(Boolean).map(String).join(", ") : "";
-	const f = [];
-	if (ab.released) f.push(["Released", longDate(ab.released)]);
-	const k = kindOf$1(r);
-	const lab = ab.label || (k !== "wish" ? r.label : "");
-	const cat = k !== "wish" && !(r.matrix && k !== "ordered") ? r.catalog : "";
-	if (lab || cat) f.push(["Label", [lab, cat].filter(Boolean).join(" · ")]);
-	if (list(ab.producers)) f.push(["Producer", list(ab.producers)]);
-	if (ab.recorded) {
-		const t = String(ab.recorded);
-		const i = t.lastIndexOf(" · ");
-		f.push(["Recorded", i < 0 ? t : t.slice(0, i) + "\n" + t.slice(i + 3)]);
-	}
-	if (list(ab.genres)) f.push(["Genre", list(ab.genres)]);
-	return f;
+	const lab = ab.label || (kindOf$1(r) !== "wish" ? r.label : "");
+	const by = list(ab.producers);
+	const genre = list(ab.genres);
+	return [[
+		lab,
+		by && "Produced by " + by,
+		genre && genre[0].toUpperCase() + genre.slice(1)
+	].filter(Boolean).join(" · "), ab.recorded ? "Recorded " + String(ab.recorded) : ""].filter(Boolean);
 }
 var hash = (s) => {
 	let h = 0;
@@ -8048,6 +8042,7 @@ function copyFacts(r, shops) {
 	if (bought.length) f.push(["Bought", /* @__PURE__ */ jsxs(Fragment$1, { children: [bought.map((b, i) => /* @__PURE__ */ jsxs("span", { children: [i ? " · " : "", b] }, i)), from.reach] })]);
 	const g = gradeText(r);
 	if (g) f.push(["Grade", g]);
+	if (r.catalog && !r.matrix) f.push(["Catalog", r.catalog]);
 	const runs = runParts(r.matrix);
 	if (runs.length) f.push(["Runout", /* @__PURE__ */ jsxs(Collapsible, { children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
 		className: "group text-foreground inline-flex items-center gap-1 text-start underline decoration-dotted underline-offset-2",
@@ -8161,12 +8156,26 @@ function Blurb({ text, clampAt, credit }) {
 	});
 }
 function Summary({ r }) {
-	if (r.aboutBlocked) return null;
-	const ab = r.about || {};
-	if (!ab.summary) return aboutPending(r) ? null : r.aboutAt ? /* @__PURE__ */ jsx("p", {
-		className: "text-foreground-muted text-xs",
-		children: "Wikipedia has nothing on this album."
-	}) : null;
+	const facts = albumFacts(r).map((l) => /* @__PURE__ */ jsx("p", {
+		className: "text-foreground-muted text-sm text-pretty",
+		children: l
+	}, l));
+	const ab = !r.aboutBlocked && r.about || {};
+	const none = !ab.summary && !r.aboutBlocked && !aboutPending(r) && !!r.aboutAt;
+	if (!ab.summary && !facts.length && !none) return null;
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-2",
+		children: [
+			ab.summary && /* @__PURE__ */ jsx(SummaryText, { ab }),
+			facts,
+			none && /* @__PURE__ */ jsx("p", {
+				className: "text-foreground-muted text-xs",
+				children: "Wikipedia has nothing on this album."
+			})
+		]
+	});
+}
+function SummaryText({ ab }) {
 	const wiki = okUrl(ab.wiki);
 	const via = typeof ab.via === "string" ? ab.via : "";
 	return /* @__PURE__ */ jsx(Blurb, {
@@ -8223,11 +8232,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 	const shops = shopsOf(settings);
 	const k = kindOf$1(r);
 	const own = k === "own";
-	const info = keyInfo(r);
 	const copy = copyFacts(r, shops);
 	const hasTracks = recordTracks(r).length > 0;
 	const artist = artistOf(r, artists);
-	const about = info.length > 0 || copy.length > 0 || hasTracks || !!artist;
+	const about = copy.length > 0 || hasTracks || !!artist;
 	const notesN = noteCount(r);
 	const notes = canEdit || notesN > 0;
 	const research = hasResearch(r, canEdit);
@@ -8317,13 +8325,6 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 						className: "flex flex-col gap-8",
 						children: [
 							hasTracks && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Tracklist" }), /* @__PURE__ */ jsx(Tracks, { r })] }),
-							info.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }), /* @__PURE__ */ jsx(Facts, {
-								labelCol: true,
-								rows: info.map(([k, v]) => [k, /* @__PURE__ */ jsx("span", {
-									className: "whitespace-pre-line",
-									children: v
-								})])
-							})] }),
 							copy.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [
 								/* @__PURE__ */ jsx(FieldsetLegend, { children: "Your copy" }),
 								/* @__PURE__ */ jsx(Facts, {
@@ -12846,6 +12847,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .text-white {
     color: var(--color-white);
+  }
+
+  .lowercase {
+    text-transform: lowercase;
   }
 
   .uppercase {

@@ -110,10 +110,10 @@ describe('the About tab', () => {
     expect(within(s).getByText('From MusicBrainz')).toBeTruthy()
   })
 
-  it('puts the recording dates on their own line', async () => {
+  it('puts where and when it was recorded on a line of its own', async () => {
     const { user } = setup((s) => Object.assign(s.records.r1.about as object, { recorded: 'Columbia 30th Street Studio, New York · March 2 and April 22, 1959' }))
-    const s = section(await about(user, 'Kind of Blue'), 'About the album')
-    expect(within(s).getByText(/30th Street/).textContent).toBe('Columbia 30th Street Studio, New York\nMarch 2 and April 22, 1959')
+    await open(user, 'Kind of Blue')
+    expect(screen.getByText(/30th Street/).textContent).toBe('Recorded Columbia 30th Street Studio, New York · March 2 and April 22, 1959')
   })
 
   it('folds your copy’s runout behind its sides and catalog, with your pressing’s Discogs links', async () => {

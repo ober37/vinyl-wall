@@ -3,7 +3,7 @@ import { Button } from '@appica/ui-react/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@appica/ui-react/tabs'
-import { gradeText, keyInfo, kindOf, okUrl, playDate, pressingText, recordTracks, runParts, type Rec } from '../model/record'
+import { albumFacts, gradeText, kindOf, okUrl, playDate, pressingText, recordTracks, runParts, type Rec } from '../model/record'
 import { artistOf, LINKS_SHOWN, type Artist } from '../model/artist'
 import { discogsLinks } from '../model/orders'
 import { shopShown, shopsOf, type Shop } from '../model/shops'
@@ -43,6 +43,8 @@ function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
     ])
   const g = gradeText(r)
   if (g) f.push(['Grade', g])
+  // with a runout, the catalog number sits beside it
+  if (r.catalog && !r.matrix) f.push(['Catalog', r.catalog])
   const runs = runParts(r.matrix)
   if (runs.length)
     f.push([
@@ -147,14 +149,26 @@ function Blurb({ text, clampAt, credit }: { text: string; clampAt: number; credi
   )
 }
 
-// the album summary at the top of every sheet
+// the album summary at the top of every sheet, the album's facts under it (#120); with no summary, the facts alone
 function Summary({ r }: { r: Rec }) {
-  if (r.aboutBlocked) return null
-  const ab = r.about || {}
-  if (!ab.summary)
-    return aboutPending(r) ? null : r.aboutAt ? (
-      <p className="text-foreground-muted text-xs">Wikipedia has nothing on this album.</p>
-    ) : null
+  const facts = albumFacts(r).map((l) => (
+    <p key={l} className="text-foreground-muted text-sm text-pretty">
+      {l}
+    </p>
+  ))
+  const ab = (!r.aboutBlocked && r.about) || {}
+  const none = !ab.summary && !r.aboutBlocked && !aboutPending(r) && !!r.aboutAt
+  if (!ab.summary && !facts.length && !none) return null
+  return (
+    <div className="flex flex-col gap-2">
+      {ab.summary && <SummaryText ab={ab} />}
+      {facts}
+      {none && <p className="text-foreground-muted text-xs">Wikipedia has nothing on this album.</p>}
+    </div>
+  )
+}
+
+function SummaryText({ ab }: { ab: NonNullable<Rec['about']> }) {
   const wiki = okUrl(ab.wiki)
   const via = typeof ab.via === 'string' ? ab.via : ''
   return (
@@ -235,11 +249,10 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const shops = shopsOf(settings)
   const k = kindOf(r)
   const own = k === 'own'
-  const info = keyInfo(r)
   const copy = copyFacts(r, shops)
   const hasTracks = recordTracks(r).length > 0
   const artist = artistOf(r, artists)
-  const about = info.length > 0 || copy.length > 0 || hasTracks || !!artist
+  const about = copy.length > 0 || hasTracks || !!artist
   const notesN = noteCount(r)
   const notes = canEdit || notesN > 0
   const research = hasResearch(r, canEdit)
@@ -321,12 +334,6 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
                 <Fieldset>
                   <FieldsetLegend>Tracklist</FieldsetLegend>
                   <Tracks r={r} />
-                </Fieldset>
-              )}
-              {info.length > 0 && (
-                <Fieldset>
-                  <FieldsetLegend>About the album</FieldsetLegend>
-                  <Facts labelCol rows={info.map(([k, v]) => [k, <span className="whitespace-pre-line">{v}</span>])} />
                 </Fieldset>
               )}
               {copy.length > 0 && (

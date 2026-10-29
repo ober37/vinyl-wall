@@ -196,7 +196,9 @@ describe('the tabs', () => {
     expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Blue Train')
-    expect(tabNames()).toEqual(['About', 'Listening*'])
+    // its label is in the fact line, so About has nothing and Listening stands alone
+    expect(tabNames()).toEqual([])
+    expect(screen.getByRole('group', { name: 'Listening' })).toBeTruthy()
   })
 
   it('show no tab bar when there is only one tab, and title its content', async () => {
@@ -283,19 +285,17 @@ describe('the About tab', () => {
     await user.click(screen.getByRole('tab', { name: 'About' }))
     return screen.getByRole('tabpanel')
   }
-  const released = new Date('1959-08-17T12:00').toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
   const bought = new Date('2024-03-02T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', 2024'
 
-  it('lists the album, then your copy, in production’s order, with the grade in words', async () => {
+  it('puts the album’s facts under its summary instead, and lists your copy with the grade in words', async () => {
     const { user } = setup((s) => Object.assign(s.records.r1.about as object, { recorded: 'New York · 1959' }))
-    const panel = await about(user, 'Kind of Blue')
-    expect(facts(within(panel).getByRole('group', { name: 'About the album' }))).toEqual([
-      ['Released', released],
-      ['Label', 'Columbia'],
-      ['Producer', 'Teo Macero, Irving Townsend'],
-      ['Recorded', 'New York\n1959'],
-      ['Genre', 'Modal jazz, Cool jazz'],
-    ])
+    await open(user, 'Kind of Blue')
+    // label · producers · genre, then where and when it was recorded; no full release date (the header has the year)
+    expect(screen.getByText('Columbia · Produced by Teo Macero, Irving Townsend · Modal jazz, Cool jazz')).toBeTruthy()
+    expect(screen.getByText('Recorded New York · 1959')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    const panel = screen.getByRole('tabpanel')
+    expect(within(panel).queryByRole('group', { name: 'About the album' })).toBeNull()
     expect(facts(within(panel).getByRole('group', { name: 'Your copy' })).map(([k, v]) => (k === 'Runout' ? [k] : [k, v]))).toEqual([
       ['Pressing', '2015 Analogue Productions 45rpm 2LP'],
       ['Bought', `${bought} · A local record shop · $48`],
@@ -304,17 +304,24 @@ describe('the About tab', () => {
     ])
   })
 
+  it('capitalises a lowercase genre, and shows the facts alone when there is no summary', async () => {
+    const { user } = setup((s) => Object.assign(s.records.r1, { about: { label: 'Warner Bros. Records', genres: ['alternative rock', 'funk rock'] } }))
+    await open(user, 'Kind of Blue')
+    expect(screen.getByText('Warner Bros. Records · Alternative rock, funk rock')).toBeTruthy()
+  })
+
   it('leads with the tracklist', async () => {
     const { user } = setup()
     const panel = await about(user, 'Kind of Blue')
     const tracks = within(panel).getByRole('group', { name: 'Tracklist' })
-    expect(tracks.compareDocumentPosition(within(panel).getByRole('group', { name: 'About the album' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(tracks.compareDocumentPosition(within(panel).getByRole('group', { name: 'Your copy' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
-  it('puts the catalog beside the label when there is no runout', async () => {
+  it('puts the catalog in your copy when there is no runout, the label in the fact line', async () => {
     const { user } = setup((s) => Object.assign(s.records.r3, { catalog: 'BLP 1577' }))
     const panel = await about(user, 'Blue Train')
-    expect(facts(within(panel).getByRole('group', { name: 'About the album' }))).toEqual([['Label', 'Blue Note · BLP 1577']])
+    expect(facts(within(panel).getByRole('group', { name: 'Your copy' }))).toEqual([['Catalog', 'BLP 1577']])
+    expect(screen.getByText('Blue Note')).toBeTruthy()
   })
 
   it('links the shop you bought from to its website', async () => {
