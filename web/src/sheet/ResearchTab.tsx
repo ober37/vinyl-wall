@@ -6,8 +6,8 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { stillCopies } from '../model/copies'
 import { kindOf, shortDate, type Rec } from '../model/record'
 import {
-  alreadyWanted, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, sourceList,
-  strList, undoWantPatch, wantPatch, type Research, type Wanted,
+  alreadyWanted, detailsFor, entryKey, firstSentence, pinPatch, pressOf, removeResearchPatch, researchEntries, resPrompt, sourceList,
+  strList, undoWantPatch, wantPatch, type Details, type Research, type Wanted,
 } from '../model/research'
 import { discogsReleases, KINDS, reachOf, shopLine, shopLink, shopOrder, shopsOf, type Shop } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
@@ -154,10 +154,10 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
     if (!pinned) setOpen((o) => (o.includes(key) ? o : [...o, key]))
     mutate(r.id, (latest) => pinPatch(latest, key))
   }
-  const addWant = (key: string, p: string) => {
+  const addWant = (key: string, p: string, det: Details) => {
     let undo: Wanted | null = null
     mutate(r.id, (latest) => {
-      const w = wantPatch(latest, p)
+      const w = wantPatch(latest, p, det)
       undo = w.undo
       return w.patch
     }).then((ok) => ok && undo && setWant({ key, undo }))
@@ -177,13 +177,15 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
           items={L.map((x) => {
             const p = pressOf(x)
             return (
-              <span className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-                <span>{x}</span>
+              // the button stays beside the pressing, a long one wrapping in its own column
+              <span className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 flex-1 break-words">{x}</span>
                 {p &&
                   (alreadyWanted(r, x) ? (
-                    <span className="text-foreground-muted text-xs whitespace-nowrap">✓ Added</span>
+                    // the small button's box without its border, so the words line up with + Want's
+                    <span className="text-foreground-muted inline-flex h-8 shrink-0 items-center px-4 text-xs whitespace-nowrap">✓ Added</span>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => addWant(key, p)}>
+                    <Button size="sm" variant="outline" className="shrink-0" onClick={() => addWant(key, p, detailsFor(e, p))}>
                       + Want
                     </Button>
                   ))}
