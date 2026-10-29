@@ -624,6 +624,16 @@ def has_cover(r):
     return bool(r.get("coverAsset") or r.get("coverBlocked"))
 
 
+def stale(r, k):
+    """A value the lookup filled in for the album before its title or artist changed (relook): the new lookup may replace
+    it with whatever it finds for the new one, and a cover it found counts as none (#94)."""
+    return bool(r.get("relook")) and k in (r.get("autoFilled") or [])
+
+
+def wants_cover(r):
+    return not has_cover(r) or (stale(r, "coverAsset") and not r.get("coverBlocked"))
+
+
 def needs_a(r):
     return not r.get("deleted") and bool(r.get("needsEnrich") or not has_cover(r) or not r.get("runtime"))
 
@@ -686,7 +696,9 @@ def fetch_group(work, g, p, done):
     def _per_record(rid):
         r = recs[rid]
         out = {"discogs": discogs_release(r.get("discogsId")) if r.get("discogsId") else None}
-        if rid in A and (not has_cover(r) or not r.get("runtime") or not r.get("year") or not r.get("label")) \
+        if r.get("relook") and out["discogs"] and not pressing_ok(out["discogs"], r):
+            out["discogs"] = None  # still linked to the old album's pressing (#94)
+        if rid in A and (wants_cover(r) or not r.get("runtime") or not r.get("year") or not r.get("label") or r.get("relook")) \
                 or (thin(r) and not out["discogs"]):  # a thin record needs them to check the match (#65)
             out["deezer"] = deezer(r)
             if not out["deezer"] or not out["deezer"].get("cover") or not out["deezer"].get("runtime"):
@@ -711,7 +723,7 @@ def fetch_group(work, g, p, done):
         r, s = recs[rid], src[rid]
         want_q = rid in F and rid not in album_q
         want_tracks = rid in F and not s["discogs"]
-        want_cover = rid in A and not has_cover(r) and not r.get("coverHint") and not _discogs_image(s["discogs"]) \
+        want_cover = rid in A and wants_cover(r) and not r.get("coverHint") and not _discogs_image(s["discogs"]) \
             and not (s.get("deezer") or {}).get("cover") and not (s.get("itunes") or {}).get("cover")
         want_check = thin(r) and rid not in album_q and not s["discogs"]
         if not (want_q or want_tracks or want_cover or want_check):
@@ -785,7 +797,7 @@ def fetch_group(work, g, p, done):
 
         if rid in A:
             f["fill"] = facts(r, e, dz, it, dg, m.get("year"))
-            if not has_cover(r):
+            if wants_cover(r):
                 gid = m.get("gid")
                 f["coverUrl"] = r.get("coverHint") or _discogs_image(dg) or dz.get("cover") or it.get("cover") \
                     or (f"https://coverartarchive.org/release-group/{gid}/front-500" if gid else None)
@@ -873,17 +885,18 @@ def facts(r, e, dz, it, dg, mb_year):
     """Year, label and runtime to fill, from the album's Wikidata entity, Deezer, iTunes, the linked pressing and the
     MusicBrainz release group. Stores and pressings are often a reissue, so the year is the earliest any of them gives,
     and a store's or pressing's label counts only when its own year is that one. A looked-up year or label is replaced
-    only by an earlier year or by Wikidata's; a typed one never (#64)."""
+    only by an earlier year or by Wikidata's, or by any once the title or artist changed (#94); a typed one never (#64)."""
     auto = set(r.get("autoFilled") or [])
     free = lambda k: not r.get(k) or k in auto
+    gone = lambda k: not r.get(k) or stale(r, k)  # a retitled record's looked-up value belongs to the old album (#94)
     wd_year, dg_year = year4(released(e)), year4((dg or {}).get("year"))
     year = min(filter(None, (wd_year, mb_year, year4(dz.get("year")), year4(it.get("year")), dg_year)), default=None)
     wd_label = wd_album_label(e, dz, dg)
     fill = {}
-    if year and free("year") and year != r.get("year") and (not r.get("year") or wd_year or year < str(r["year"])):
+    if year and free("year") and year != r.get("year") and (gone("year") or wd_year or year < str(r["year"])):
         fill["year"] = year
     lab = wd_label or (dz.get("label") if year4(dz.get("year")) == year else None) or (_dlabel(dg) if dg_year == year else None)
-    if lab and free("label") and lab != r.get("label") and (not r.get("label") or wd_label or "year" in fill):
+    if lab and free("label") and lab != r.get("label") and (gone("label") or wd_label or "year" in fill):
         fill["label"] = lab
     rt = next((x for x in (_discogs_runtime(dg), dz.get("runtime"), it.get("runtime")) if x), None)
     if rt and free("runtime") and rt != r.get("runtime"):
@@ -903,6 +916,11 @@ def _discogs_runtime(dg):
     if len(tr) < 6 or not all(secs(t.get("duration")) for t in tr):
         return None
     return round(sum(secs(t["duration"]) for t in tr) / 60) or None
+
+
+def pressing_ok(dg, r):
+    """The linked pressing is still this album's: its title and first artist match the record's."""
+    return title_ok(dg.get("title"), r.get("title")) and artist_ok(_clean(((dg.get("artists") or [{}])[0]).get("name")), r.get("artist"))
 
 
 def _dartist(dg):
@@ -1068,12 +1086,14 @@ def save(work, g, *pairs):
         r, d = p["records"][rid]["data"], {}
         if f["needA"]:
             filled = dict(f["fill"])
-            if not r.get("coverAsset") and uploaded.get(rid):
+            if (not r.get("coverAsset") or wants_cover(r)) and uploaded.get(rid):
                 filled["coverAsset"] = uploaded[rid]
             d.update(filled)
             if filled:
                 d["autoFilled"] = sorted(set(r.get("autoFilled") or []) | set(filled))
             d["needsEnrich"], d["coverHint"] = DEL, DEL
+            if "relook" in r:
+                d["relook"] = DEL
             notes = list(r.get("notes") or [])
             has = any((n or {}).get("t") == NO_COVER for n in notes)
             if "coverAsset" in filled and has:

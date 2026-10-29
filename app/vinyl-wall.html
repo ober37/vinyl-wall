@@ -919,6 +919,12 @@ function stored(f) {
 	if (f.shopUrl !== void 0) o.shopUrl = shopHref(f.shopUrl.trim()) || f.shopUrl.trim();
 	return o;
 }
+var LOOKED_UP = [
+	"year",
+	"label",
+	"runtime",
+	"coverAsset"
+];
 function patchFor(r, baseline, form) {
 	const a = stored(baseline);
 	const b = stored(form);
@@ -932,6 +938,11 @@ function patchFor(r, baseline, form) {
 		about: null
 	}, r.aboutBlocked ? { aboutBlocked: false } : {});
 	if (("title" in patch || "artist" in patch) && r.lookTries) patch.lookTries = 0;
+	const auto = patch.autoFilled ?? r.autoFilled;
+	if (("title" in patch || "artist" in patch) && auto?.some((k) => LOOKED_UP.includes(k))) Object.assign(patch, {
+		needsEnrich: true,
+		relook: true
+	});
 	return patch;
 }
 // src/model/site.ts
