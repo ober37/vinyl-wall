@@ -55,6 +55,8 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
     setBusy(false)
     if (ok) {
       setPicks([])
+      // back to Whole album, so the tracklist folds and the play just logged is in reach
+      setKind('full')
       const min = playMin(r, c.kind, c.tracks)
       const hits = gearForPlay(gear, S, setup, r, min)
       // each piece's minutes and plays are added to it as it is when its write is made
@@ -66,22 +68,36 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
   return (
     <Fieldset>
       <FieldsetLegend>Log a play</FieldsetLegend>
-      <Segmented
-        label="What you played"
-        value={kind}
-        onChange={setKind}
-        options={[['full', 'Whole album'], ['side', 'Side'], ...(T.length ? [['tracks', 'Tracks'] as [PlayKind, string]] : [])]}
-      />
+      {/* the choice and its action on one row, kept at the top of the sheet while the card is on screen, so the button
+          stays in reach down a long tracklist; with Tracks chosen it shows once a track is ticked, with the count. On a
+          phone the choices take the width and the button its own row under them */}
+      <div className="bg-background sticky top-0 z-10 -mx-6 flex flex-col gap-2 px-6 py-2 sm:flex-row sm:items-center sm:gap-3">
+        <div className="sm:min-w-0 sm:flex-1">
+          <Segmented
+            label="What you played"
+            value={kind}
+            onChange={setKind}
+            options={[['full', 'Whole album'], ['side', 'Side'], ...(T.length ? [['tracks', 'Tracks'] as [PlayKind, string]] : [])]}
+          />
+        </div>
+        {(kind !== 'tracks' || picks.length > 0) && (
+          <Button className="sm:shrink-0" disabled={busy} onClick={log}>
+            {kind !== 'tracks' ? 'Log play' : `Log ${picks.length} track${picks.length > 1 ? 's' : ''}`}
+          </Button>
+        )}
+      </div>
       {kind === 'side' && (
         <Segmented label="Which side" value={side} onChange={setSide} options={recordSides(r).map((s) => [s, 'Side ' + s])} />
       )}
+      {kind === 'tracks' && !picks.length && <p className="text-foreground-muted text-sm">Tick the tracks you played.</p>}
       {kind === 'tracks' && (
         <CheckboxGroup aria-label="Tracks" value={picks} onValueChange={(v) => setPicks(v as string[])} className="gap-3">
           {bySide.map((sd) => (
             <div key={sd} className="flex flex-col gap-2">
               {sd && <span className="text-foreground-muted text-xs font-medium">Side {sd}</span>}
               {T.filter((t) => !sd || sideOf(t.pos) === sd).map((t) => (
-                <label key={t.pos} className="text-foreground flex items-start gap-2 text-sm">
+                // clear of the sticky row when a checkbox takes focus
+                <label key={t.pos} className="text-foreground flex scroll-mt-16 items-start gap-2 text-sm">
                   <Checkbox value={t.pos} className="mt-0.5" />
                   <span>
                     {/* its number on the side ("1 - So What"), or its position when the tracks have no sides */}
@@ -111,9 +127,6 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
           </Select>
         </Field>
       )}
-      <Button className="self-start" disabled={busy || (kind === 'tracks' && !picks.length)} onClick={log}>
-        {kind !== 'tracks' ? 'Log play' : picks.length ? `Log ${picks.length} track${picks.length > 1 ? 's' : ''}` : 'Pick tracks'}
-      </Button>
     </Fieldset>
   )
 }

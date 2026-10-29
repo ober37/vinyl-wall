@@ -141,11 +141,27 @@ describe('plays', () => {
     const { fake, user } = setup()
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('button', { name: 'Tracks' }))
-    expect(btn('Pick tracks')).toHaveProperty('disabled', true)
+    // a hint, not a disabled button, until a track is ticked; then the count beside the button
+    expect(screen.getByText('Tick the tracks you played.')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Log/ })).toBeNull()
     await user.click(screen.getByRole('checkbox', { name: /Freddie Freeloader/ }))
     await user.click(screen.getByRole('checkbox', { name: /Blue in Green/ }))
     await user.click(btn('Log 2 tracks'))
     await waitFor(() => expect(notes(fake, 'r1').at(-1)).toMatchObject({ t: 'Played one side (~23 min)', side: 'B' }))
+    // back to Whole album, the tracklist folded
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Whole album' }).getAttribute('aria-pressed')).toBe('true'))
+    expect(screen.queryByRole('checkbox', { name: /Freddie Freeloader/ })).toBeNull()
+  })
+
+  it('keeps Log play the only filled button in the card, on the choice row that sticks in reach', async () => {
+    const { user } = setup()
+    await open(user, 'Kind of Blue')
+    const card = screen.getByRole('group', { name: 'Log a play' })
+    // the chosen option is outlined in mint, never filled like the action
+    for (const t of within(card).getAllByRole('button', { name: /Whole album|Side|Tracks/ })) expect(t.className).not.toMatch(/before:bg-primary/)
+    expect(btn('Log play').parentElement!.className).toMatch(/\bsticky\b/)
+    await user.click(screen.getByRole('button', { name: 'Side' }))
+    expect(btn('Log play')).toBeTruthy()
   })
 })
 
