@@ -208,4 +208,43 @@ got = json.load(open(os.path.join(work, "g0", "found.json")))["found"]["b"]
 d = json.load(open(os.path.join(work, "g0", "facts", "records_b.json")))
 check("removed cover: the lookup doesn't put one back, but still fills the details", not got["coverUrl"] and got["fill"].get("runtime") == 40, got)
 check("removed cover: no \"couldn't find\" note, and not counted as a miss", "notes" not in d and "lookTries" not in d, d)
+
+# #94: a retitled record (relook) looks up again what was filled in for the old album; typed values and uploaded or
+# removed covers stay, and a lookup that finds nothing keeps what was there
+done = {"aboutAt": "2026-10-01", "aboutV": 3, "about": {"summary": "s"}}  # album info already looked up: pass 1 only
+was = {"artist": "Fleetwood Mac", "year": "1977", "label": "Warner Bros. Records", "runtime": 40, "coverAsset": "old",
+       "autoFilled": ["coverAsset", "label", "runtime", "year"], "discogsId": 1, "needsEnrich": True, "relook": True, **done}
+rumours_dg = {"title": "Rumours", "artists": [{"name": "Fleetwood Mac"}], "year": 1977, "labels": [{"name": "Warner Bros. Records"}],
+              "images": [{"type": "primary", "uri": "https://dg/rumours.jpg"}]}
+SRC.update({"Tango in the Night": ({"year": "1987", "runtime": 45, "cover": "https://dz/tango.jpg", "label": "Warner Bros."}, None, None),
+            "Rumors": (None, None, None)})
+L.discogs_release = lambda rid: rumours_dg
+check("relook: the linked pressing still counts when it's the album's", L.pressing_ok(rumours_dg, {"title": "Rumours (Deluxe)", "artist": "Fleetwood Mac"})
+      and not L.pressing_ok(rumours_dg, {"title": "Tango in the Night", "artist": "Fleetwood Mac"})
+      and not L.pressing_ok(rumours_dg, {"title": "Rumours", "artist": "The Corrs"}))
+relooks = {"new": {**was, "title": "Tango in the Night"},
+           "typed": {**was, "title": "Tango in the Night", "autoFilled": ["label", "runtime"]},  # typed year, uploaded cover
+           "removed": {**was, "title": "Tango in the Night", "coverAsset": "", "coverBlocked": True},
+           "typo": {**was, "title": "Rumors"},
+           "plain": {**{k: v for k, v in was.items() if k != "relook"}, "title": "Tango in the Night"}}  # asked again, not retitled
+work = tempfile.mkdtemp()
+p = {"groups": [list(relooks)], "records": {k: {"data": r, "version": 1} for k, r in relooks.items()}, "artists": {}, "left": 0}
+json.dump(p, open(os.path.join(work, "plan.json"), "w"))
+with contextlib.redirect_stdout(io.StringIO()):
+    L.fetch_group(work, 0, p, set())
+    L.save(work, 0, "new=asset2", "plain=asset3")
+got = json.load(open(os.path.join(work, "g0", "found.json")))["found"]
+d = {rid: json.load(open(os.path.join(work, "g0", "facts", f"records_{rid}.json"))) for rid in relooks}
+check("relook: a new album's year, label and runtime replace the old one's, even a later year",
+      got["new"]["fill"] == {"year": "1987", "label": "Warner Bros.", "runtime": 45}, got["new"]["fill"])
+check("relook: a looked-up cover is replaced, not from the old album's linked pressing",
+      got["new"]["coverUrl"] == "https://dz/tango.jpg" and d["new"].get("coverAsset") == "asset2", (got["new"]["coverUrl"], d["new"]))
+check("relook: the flag comes off with needsEnrich", d["new"]["relook"] == L.DEL and d["new"]["needsEnrich"] == L.DEL, d["new"])
+check("relook: a typed year and an uploaded cover stay", "year" not in got["typed"]["fill"] and not got["typed"]["coverUrl"]
+      and "coverAsset" not in d["typed"] and got["typed"]["fill"].get("runtime") == 45, (got["typed"], d["typed"]))
+check("relook: a removed cover stays removed", not got["removed"]["coverUrl"] and "coverAsset" not in d["removed"], got["removed"])
+check("relook: a typo fix that finds nothing keeps what was there", got["typo"]["fill"] == {} and not got["typo"]["coverUrl"]
+      and not {"year", "label", "runtime", "coverAsset", "notes"} & set(d["typo"]) and d["typo"]["relook"] == L.DEL, (got["typo"], d["typo"]))
+check("relook: without it, a looked-up year and cover stay as before (#64)", "year" not in got["plain"]["fill"]
+      and not got["plain"]["coverUrl"] and "coverAsset" not in d["plain"] and "relook" not in d["plain"], (got["plain"], d["plain"]))
 sys.exit(1 if fails else 0)

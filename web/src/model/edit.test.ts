@@ -24,12 +24,12 @@ describe('patchFor', () => {
   it('writes only changed fields', () => {
     const f = toForm(owned)
     expect(patchFor(owned, f, { ...f, title: 'Kind of Blue ' })).toEqual({})
-    expect(patchFor({ ...owned, about: undefined }, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
+    expect(patchFor({ ...owned, about: undefined, autoFilled: [] }, f, { ...f, title: 'Kind Of Blue' })).toEqual({ title: 'Kind Of Blue' })
     expect(patchFor(owned, f, { ...f, catalog: 'CS 8163' })).toEqual({ catalog: 'CS 8163' })
   })
 
   it('a new title or artist looks the album info up again', () => {
-    const r = { ...owned, aboutAt: '2026-10-01', aboutV: 3, artistRef: 'mb-1', about: {} }
+    const r = { ...owned, aboutAt: '2026-10-01', aboutV: 3, artistRef: 'mb-1', about: {}, autoFilled: [] }
     const f = toForm(r)
     const reset = { aboutAt: '', aboutV: 0, artistRef: '', about: null }
     expect(patchFor(r, f, { ...f, title: 'Kind of Blue (Legacy)' })).toEqual({ title: 'Kind of Blue (Legacy)', ...reset })
@@ -42,10 +42,22 @@ describe('patchFor', () => {
   })
 
   it('a new title or artist starts over a lookup that gave up', () => {
-    const r = { ...owned, about: undefined, lookTries: 3, lookV: 1, lookedAt: Date.now() }
+    const r = { ...owned, about: undefined, lookTries: 3, lookV: 1, lookedAt: Date.now(), autoFilled: [] }
     const f = toForm(r)
     expect(patchFor(r, f, { ...f, title: 'Kind of Blue (Legacy)' })).toEqual({ title: 'Kind of Blue (Legacy)', lookTries: 0 })
     expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
+  })
+
+  it("a new title or artist looks up again what the lookup filled in for the old album (#94)", () => {
+    const r = { ...owned, about: undefined, autoFilled: ['year', 'runtime', 'coverAsset'] }
+    const f = toForm(r)
+    const relook = { needsEnrich: true, relook: true }
+    expect(patchFor(r, f, { ...f, title: 'Sketches of Spain' })).toEqual({ title: 'Sketches of Spain', ...relook })
+    expect(patchFor(r, f, { ...f, artist: 'John Coltrane' })).toEqual({ artist: 'John Coltrane', ...relook })
+    expect(patchFor(r, f, { ...f, why: 'hi' })).toEqual({ why: 'hi' })
+    // nothing looked up, or only what the person then typed over: nothing to look up again
+    expect(patchFor({ ...r, autoFilled: [] }, f, { ...f, title: 'x' })).toEqual({ title: 'x' })
+    expect(patchFor({ ...r, autoFilled: ['year'] }, f, { ...f, title: 'x', year: '1960' })).toEqual({ title: 'x', year: '1960', autoFilled: [] })
   })
 
   it('flags Discogs sync only for synced fields', () => {

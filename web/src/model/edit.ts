@@ -120,6 +120,8 @@ export function stored(f: Form): Record<string, unknown> {
   return o
 }
 
+const LOOKED_UP = ['year', 'label', 'runtime', 'coverAsset']
+
 // what to write: the fields that differ from the baseline, plus the autoFilled bookkeeping (needsSync is withSync's)
 export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unknown> {
   const a = stored(baseline)
@@ -137,6 +139,10 @@ export function patchFor(r: Rec, baseline: Form, form: Form): Record<string, unk
     Object.assign(patch, RELOOK_ABOUT, { artistRef: '', about: null }, r.aboutBlocked ? { aboutBlocked: false } : {})
   // and a lookup that gave up on the old one starts over (#69)
   if (('title' in patch || 'artist' in patch) && r.lookTries) patch.lookTries = 0
+  // and what the lookup filled in for the old album (year, label, runtime, cover) is looked up again, replaced only by what
+  // it finds for the new one (#94)
+  const auto = (patch.autoFilled ?? r.autoFilled) as string[] | undefined
+  if (('title' in patch || 'artist' in patch) && auto?.some((k) => LOOKED_UP.includes(k))) Object.assign(patch, { needsEnrich: true, relook: true })
   return patch
 }
 
