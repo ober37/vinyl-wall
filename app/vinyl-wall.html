@@ -2984,10 +2984,11 @@ var shopShown = (r, list) => {
 	const s = shopOf(r, list);
 	return s && s.kind !== "market" ? s : void 0;
 };
+var atShow = (shop) => /\b(merch|tour|concert|festival|show)\b/i.test(String(shop || ""));
 function unlistedShops(records, list) {
 	const by = /* @__PURE__ */ new Map();
 	for (const r of records) {
-		if (r.deleted || r.example || kindOf$1(r) === "wish" || shopOf(r, list)) continue;
+		if (r.deleted || r.example || kindOf$1(r) === "wish" || atShow(r.shop) || shopOf(r, list)) continue;
 		const href = shopHref(r.shopUrl);
 		const name = String(r.shop || "").trim() || host(href);
 		if (!name) continue;

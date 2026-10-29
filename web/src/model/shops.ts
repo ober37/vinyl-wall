@@ -166,12 +166,16 @@ export const shopShown = (r: { shop?: unknown; shopUrl?: unknown }, list: Shop[]
   return s && s.kind !== 'market' ? s : undefined
 }
 
+// a record bought at a show (a tour's merch booth, a concert, a festival), from the words where it came from: not a shop
+// anyone goes back to, so never offered for the list (#117)
+export const atShow = (shop: unknown) => /\b(merch|tour|concert|festival|show)\b/i.test(String(shop || ''))
+
 // Settings → Shops' Not on your list yet: the shops your owned and ordered records came from that aren't on the list,
-// by name (or website), with how many records and the first website seen
+// by name (or website), with how many records and the first website seen; not a show's merch booth
 export function unlistedShops(records: Rec[], list: Shop[]): { name: string; url: string; count: number }[] {
   const by = new Map<string, { name: string; url: string; count: number }>()
   for (const r of records) {
-    if (r.deleted || r.example || kindOf(r) === 'wish' || shopOf(r, list)) continue
+    if (r.deleted || r.example || kindOf(r) === 'wish' || atShow(r.shop) || shopOf(r, list)) continue
     const href = shopHref(r.shopUrl)
     const name = String(r.shop || '').trim() || host(href)
     if (!name) continue
