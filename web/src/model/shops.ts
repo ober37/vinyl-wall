@@ -140,14 +140,26 @@ const host = (u: unknown) => {
     return ''
   }
 }
+const words = (v: unknown) => String(v || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || []
+// a record's shop named as the listed one, or as it with words from its place added ("Siren Records McHenry",
+// "Siren Records (McHenry, IL)") (#114)
+const sameName = (s: Shop, name: string) => {
+  const n = words(s.name)
+  const w = words(name)
+  if (w.length < n.length || n.some((x, i) => w[i] !== x)) return false
+  const place = new Set(words(s.place))
+  return w.slice(n.length).every((x) => place.has(x))
+}
 // the shop on your list a record came from (#89), worked out on display: by website, the name settling a website two
 // shops share, else by name. A marketplace match keeps the record's own seller and link (see shopShown)
 export function shopOf(r: { shop?: unknown; shopUrl?: unknown }, list: Shop[]): Shop | undefined {
-  const name = String(r.shop || '').trim().toLowerCase()
+  const name = String(r.shop || '').trim()
   const h = host(shopHref(r.shopUrl))
   const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : []
   if (same.length === 1) return same[0]
-  return name ? (same.length ? same : list).find((s) => s.name.toLowerCase() === name) : undefined
+  if (!name) return undefined
+  const pool = same.length ? same : list
+  return pool.find((s) => s.name.toLowerCase() === name.toLowerCase()) || pool.find((s) => sameName(s, name))
 }
 export const shopShown = (r: { shop?: unknown; shopUrl?: unknown }, list: Shop[]) => {
   const s = shopOf(r, list)

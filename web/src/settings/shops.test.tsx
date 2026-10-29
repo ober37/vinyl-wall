@@ -248,6 +248,14 @@ describe('shops: the shop a record came from', () => {
     expect(shopOf({ shop: 'Amoeba', shopUrl: 'https://www.amoeba.com/x' }, chain)).toBeUndefined()
   })
 
+  it('matches a name with words from the shop\'s place added, and nothing else (#114)', () => {
+    for (const shop of ['Siren Records McHenry', 'Siren Records, McHenry', 'Siren Records (McHenry)', 'Siren Records - McHenry', 'siren records mchenry il'])
+      expect(shopOf({ shop }, list)?.id, shop).toBe('sr')
+    for (const shop of ['Siren Records Annex', 'Siren', 'Records McHenry', 'McHenry Siren Records'])
+      expect(shopOf({ shop }, list), shop).toBeUndefined()
+    expect(unlistedShops([{ ...bought.b2, shop: 'Siren Records McHenry' }] as unknown as Rec[], list)).toEqual([])
+  })
+
   it('lists the shops not on your list by name, with a count and a website, leaving out wanted and example records', () => {
     const recs = [
       ...Object.values(bought),
