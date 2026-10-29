@@ -319,14 +319,14 @@
   .cap {
     padding-inline: 0.125rem;
   }
-  /* light mode: a record's caption sits on a frosted label, so it reads over any photo or pattern; padded like the
-     filter chips */
+  /* light mode: a record's caption sits on a paper label, so it reads over any photo or pattern; padded like the
+     filter chips. No blur behind it (#97: in Brave on macOS it made the sleeves flicker under the mouse); 85% is the
+     least that keeps the artist line at 4.5:1 over a black patch of a full-strength photo */
   :root:not(.dark) .cap {
     border-radius: var(--radius-sm);
-    --frost: color-mix(in srgb, var(--sheet) 55%, transparent);
+    --frost: color-mix(in srgb, var(--sheet) 85%, transparent);
     background: var(--frost);
     box-shadow: 0 0 0.5rem 0.125rem var(--frost); /* feathers the edge into the wall */
-    backdrop-filter: blur(6px);
     padding: 0.375rem 0.625rem;
   }
   /* small text stays readable over a photo: darker secondary ink, and a halo in the wall colour */
