@@ -153,6 +153,34 @@ describe('starting the background task', () => {
     }
   })
 
+  it("starts a lookup asked for from chat after the usual wait, not the album info's 30 minutes (#112)", async () => {
+    localStorage.setItem('vw-lookup', String(Date.now()))
+    const { fake } = setup()
+    await screen.findByRole('button', { name: /Open Blue Train/ })
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      await act(async () => vi.advanceTimersByTime(20500))
+      expect(fires(fake)).toHaveLength(0) // album info alone waits out its 30 minutes
+      await act(async () => fake.remote('r3', { needsEnrich: true }))
+      expect(fires(fake)).toHaveLength(0)
+      await act(async () => vi.advanceTimersByTime(20500))
+      await waitFor(() => expect(fires(fake)).toHaveLength(1))
+      expect(fires(fake)[0].data!.text).toMatch(/look up covers, details and album info \(Part L\)/)
+      // the run ends, its lookup done; another is asked for a minute later and waits out the 5 minutes
+      await act(async () => fake.remote('r3', { needsEnrich: false }))
+      await act(async () => fake.remoteDoc('settings/site', { run: { startedMs: 0 } }))
+      await act(async () => vi.advanceTimersByTime(60000))
+      await act(async () => fake.remote('r2', { needsEnrich: true }))
+      await act(async () => vi.advanceTimersByTime(2 * 60000))
+      expect(fires(fake)).toHaveLength(1)
+      await act(async () => vi.advanceTimersByTime(2 * 60000))
+      await act(async () => vi.advanceTimersByTime(20500))
+      await waitFor(() => expect(fires(fake)).toHaveLength(2))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("doesn't start on its own for a record the lookup stopped on (#69)", async () => {
     const seed = sample()
     for (const r of Object.values(seed.records))

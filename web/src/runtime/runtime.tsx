@@ -283,9 +283,9 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, quiet])
 
-  // records waiting for album info start the task on their own at most every 30 minutes across reloads; a sync marked
-  // elsewhere (chat, another device) has its own clock, at most every 5 minutes, and waits the usual 20 seconds, so the
-  // page's own edits still finish first (#77)
+  // records waiting for album info start the task on their own at most every 30 minutes across reloads; a sync or a
+  // lookup asked for elsewhere (chat, another device: needsEnrich) has its own clock, at most every 5 minutes, and waits
+  // the usual 20 seconds, so the page's own edits still finish first (#77, #112)
   const [syncDue, setSyncDue] = useState(0)
   useEffect(() => {
     if (status !== 'ready' || !settingsLoaded || !canEdit || !hasMcp || !settings.taskId || runActive(settings)) return
@@ -307,7 +307,8 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       mark('vw-lookup')
       return void fireTask()
     }
-    if (!records.some((r) => syncing(r, settings.discogs?.status === 'ok'))) return
+    const asked = (r: Rec) => syncing(r, settings.discogs?.status === 'ok') || (!!r.needsEnrich && !r.example && !r.deleted)
+    if (!records.some(asked)) return
     const wait = 5 * 60000 - since('vw-sync')
     if (wait > 0) {
       const id = setTimeout(() => setSyncDue((n) => n + 1), wait + 1000)
