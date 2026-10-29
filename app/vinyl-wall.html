@@ -2969,12 +2969,22 @@ var host = (u) => {
 		return "";
 	}
 };
+var words$1 = (v) => String(v || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+var sameName = (s, name) => {
+	const n = words$1(s.name);
+	const w = words$1(name);
+	if (w.length < n.length || n.some((x, i) => w[i] !== x)) return false;
+	const place = new Set(words$1(s.place));
+	return w.slice(n.length).every((x) => place.has(x));
+};
 function shopOf(r, list) {
-	const name = String(r.shop || "").trim().toLowerCase();
+	const name = String(r.shop || "").trim();
 	const h = host(shopHref(r.shopUrl));
 	const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : [];
 	if (same.length === 1) return same[0];
-	return name ? (same.length ? same : list).find((s) => s.name.toLowerCase() === name) : void 0;
+	if (!name) return void 0;
+	const pool = same.length ? same : list;
+	return pool.find((s) => s.name.toLowerCase() === name.toLowerCase()) || pool.find((s) => sameName(s, name));
 }
 var shopShown = (r, list) => {
 	const s = shopOf(r, list);
