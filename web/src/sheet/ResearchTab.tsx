@@ -12,7 +12,6 @@ import {
 import { discogsReleases, KINDS, reachOf, shopLine, shopLink, shopOrder, shopsOf, type Shop } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from './Confirm'
-import { CopiesView } from './Copies'
 import { link } from './Links'
 
 // The prompt for Claude, copied; when the clipboard is blocked it shows selected, to copy by hand
@@ -70,9 +69,9 @@ const Bullets = ({ items }: { items: React.ReactNode[] }) => (
 )
 
 const GROUP: Record<string, string> = { local: 'Local shops', online: 'Online shops', market: 'Marketplaces' }
-// Search elsewhere: Discogs releases, then your shops under their kind. A shop's name searches it for the album (a local
+// Search elsewhere: every pressing on Discogs, then your shops under their kind. A shop's name searches it for the album (a local
 // shop without a web store isn't a link); a local shop adds how to reach it and its line about it
-function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
+export function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
   const { canEdit } = useRuntime()
   const shop = (s: Shop) => {
     const href = shopLink(s, r)
@@ -104,9 +103,19 @@ function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
   }
   return (
     <div className="flex flex-col gap-5 text-sm">
-      <a href={discogsReleases(r)} target="_blank" rel="noopener" className={`${link} self-start`}>
-        Discogs releases ↗
-      </a>
+      {/* the album's pressings first: choosing one comes before shopping for it */}
+      <Section title="Pressings">
+        <ul className="flex flex-col gap-2">
+          <li className="flex flex-col gap-0.5">
+            <a href={discogsReleases(r)} target="_blank" rel="noopener" className={`${link} self-start`}>
+              Every pressing on Discogs ↗
+            </a>
+            <span className="text-foreground-muted text-xs text-pretty">
+              Compare every vinyl release of this album (year, country, label, color) before you shop for one.
+            </span>
+          </li>
+        </ul>
+      </Section>
       {KINDS.map(([k]) => {
         const list = shopOrder(shops.filter((s) => s.kind === k))
         return (
@@ -126,9 +135,8 @@ function SearchElsewhere({ r, shops }: { r: Rec; shops: Shop[] }) {
 // Edit, another tab or a remote change doesn't lose the Undo
 export type WantMsg = { key: string; undo: Wanted }
 
-// The Research tab, as production's: on owned and ordered records the copies still wanted first; then the research log
-// from Claude chats (pinned first and open) with Copy for Claude to start one; then Search elsewhere, on a hunt or while
-// copies are still wanted. A reader sees what's there without the buttons.
+// The Research tab: the research log from Claude chats (pinned first and open) with Copy for Claude to start one. A reader
+// sees what's there without the buttons. The copies wanted and Search elsewhere have their own tabs (#115).
 export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
   r: Rec
   onEditCopy: (ci: number) => void
@@ -147,7 +155,6 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
   const [open, setOpen] = useState<string[]>(() => [...items.filter((x) => x.e.pinned).map((x) => x.key), ...(want ? [want.key] : [])])
   const [del, setDel] = useState<string | null>(null)
   const { copied, copy } = useCopy()
-  const still = stillCopies(r).length > 0
   const shops = shopsOf(settings)
 
   const pin = (key: string, pinned: boolean) => {
@@ -195,7 +202,7 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
         />
         {want?.key === key && (
           <p role="status" className="text-foreground-muted flex flex-wrap items-center gap-x-1 text-xs">
-            Added “{want.undo.p}” ·
+            Added “{want.undo.p}” to Pressings ·
             <Button size="sm" variant="ghost" className="px-1.5" onClick={() => onEditCopy(want.undo.ci)}>
               Edit
             </Button>
@@ -312,11 +319,10 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
 
   return (
     <div className="flex flex-col gap-6">
-      {!wish && <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />}
       {(canEdit || items.length > 0) && (
         <Fieldset>
-          {/* the tab says Research; a heading when the copies still wanted sit above it, or when there's no tab bar */}
-          {(lone || (!wish && still)) && <FieldsetLegend>Research</FieldsetLegend>}
+          {/* the tab says Research; a heading when there's no tab bar */}
+          {lone && <FieldsetLegend>Research</FieldsetLegend>}
           {canEdit && (
             <div className="flex flex-col gap-3">
               <p className="text-foreground-muted text-sm">
@@ -341,12 +347,6 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
           )}
         </Fieldset>
       )}
-      {(wish || still) && (
-        <Fieldset>
-          <FieldsetLegend>Search elsewhere</FieldsetLegend>
-          <SearchElsewhere r={r} shops={shops} />
-        </Fieldset>
-      )}
       <Confirm
         open={del !== null}
         title="Remove this research for good?"
@@ -361,9 +361,9 @@ export function ResearchTab({ r, onEditCopy, want, setWant, lone = false }: {
   )
 }
 
-// whether a record has a Research tab: a hunt always; an owned record for an editor or once it has research; an ordered
-// record while it still wants other copies
+// whether a record has a Research tab: a hunt or an owned record for an editor or once it has research; an ordered record
+// while it still wants other copies
 export function hasResearch(r: Rec, canEdit: boolean) {
   const k = kindOf(r)
-  return k === 'wish' || (k === 'own' && (canEdit || researchEntries(r).length > 0)) || (k === 'ordered' && stillCopies(r).length > 0)
+  return (k !== 'ordered' && (canEdit || researchEntries(r).length > 0)) || (k === 'ordered' && stillCopies(r).length > 0)
 }

@@ -7607,12 +7607,24 @@ function SearchElsewhere({ r, shops }) {
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-5 text-sm",
 		children: [
-			/* @__PURE__ */ jsx("a", {
-				href: discogsReleases(r),
-				target: "_blank",
-				rel: "noopener",
-				className: `${link} self-start`,
-				children: "Discogs releases ↗"
+			/* @__PURE__ */ jsx(Section, {
+				title: "Pressings",
+				children: /* @__PURE__ */ jsx("ul", {
+					className: "flex flex-col gap-2",
+					children: /* @__PURE__ */ jsxs("li", {
+						className: "flex flex-col gap-0.5",
+						children: [/* @__PURE__ */ jsx("a", {
+							href: discogsReleases(r),
+							target: "_blank",
+							rel: "noopener",
+							className: `${link} self-start`,
+							children: "Every pressing on Discogs ↗"
+						}), /* @__PURE__ */ jsx("span", {
+							className: "text-foreground-muted text-xs text-pretty",
+							children: "Compare every vinyl release of this album (year, country, label, color) before you shop for one."
+						})]
+					})
+				})
 			}),
 			KINDS.map(([k]) => {
 				const list = shopOrder(shops.filter((s) => s.kind === k));
@@ -7642,7 +7654,6 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 	const [open, setOpen] = useState(() => [...items.filter((x) => x.e.pinned).map((x) => x.key), ...want ? [want.key] : []]);
 	const [del, setDel] = useState(null);
 	const { copied, copy } = useCopy();
-	const still = stillCopies(r).length > 0;
 	const shops = shopsOf(settings);
 	const pin = (key, pinned) => {
 		if (!pinned) setOpen((o) => o.includes(key) ? o : [...o, key]);
@@ -7691,7 +7702,7 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 			children: [
 				"Added “",
 				want.undo.p,
-				"” ·",
+				"” to Pressings ·",
 				/* @__PURE__ */ jsx(Button, {
 					size: "sm",
 					variant: "ghost",
@@ -7830,56 +7841,45 @@ function ResearchTab({ r, onEditCopy, want, setWant, lone = false }) {
 	};
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-6",
-		children: [
-			!wish && /* @__PURE__ */ jsx(CopiesView, {
-				r,
-				onEditCopy: canEdit ? onEditCopy : void 0
+		children: [(canEdit || items.length > 0) && /* @__PURE__ */ jsxs(Fieldset, { children: [
+			lone && /* @__PURE__ */ jsx(FieldsetLegend, { children: "Research" }),
+			canEdit && /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-3",
+				children: [/* @__PURE__ */ jsx("p", {
+					className: "text-foreground-muted text-sm",
+					children: "Research this record in your Claude chat. It can search the web, and with the Vinyl Wall skill it saves what it finds here."
+				}), /* @__PURE__ */ jsxs("div", {
+					className: "flex flex-wrap items-center gap-3",
+					children: [/* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: items.length || wish ? "outline" : "primary",
+						onClick: () => copy("new", resPrompt(r, settings.url), "Copied. Paste it into Claude and add your question."),
+						children: "Copy for Claude"
+					}), copied?.key === "new" && /* @__PURE__ */ jsx(CopyStatus, { c: copied })]
+				})]
 			}),
-			(canEdit || items.length > 0) && /* @__PURE__ */ jsxs(Fieldset, { children: [
-				(lone || !wish && still) && /* @__PURE__ */ jsx(FieldsetLegend, { children: "Research" }),
-				canEdit && /* @__PURE__ */ jsxs("div", {
-					className: "flex flex-col gap-3",
-					children: [/* @__PURE__ */ jsx("p", {
-						className: "text-foreground-muted text-sm",
-						children: "Research this record in your Claude chat. It can search the web, and with the Vinyl Wall skill it saves what it finds here."
-					}), /* @__PURE__ */ jsxs("div", {
-						className: "flex flex-wrap items-center gap-3",
-						children: [/* @__PURE__ */ jsx(Button, {
-							size: "sm",
-							variant: items.length || wish ? "outline" : "primary",
-							onClick: () => copy("new", resPrompt(r, settings.url), "Copied. Paste it into Claude and add your question."),
-							children: "Copy for Claude"
-						}), copied?.key === "new" && /* @__PURE__ */ jsx(CopyStatus, { c: copied })]
-					})]
-				}),
-				items.length > 0 && /* @__PURE__ */ jsx(Accordion, {
-					variant: "flush",
-					multiple: true,
-					value: open,
-					onValueChange: (v) => setOpen(v),
-					children: items.map(entry)
-				})
-			] }),
-			(wish || still) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Search elsewhere" }), /* @__PURE__ */ jsx(SearchElsewhere, {
-				r,
-				shops
-			})] }),
-			/* @__PURE__ */ jsx(Confirm, {
-				open: del !== null,
-				title: "Remove this research for good?",
-				yes: "Remove",
-				onYes: () => {
-					const key = del;
-					mutate(r.id, (latest) => removeResearchPatch(latest, key));
-				},
-				onClose: () => setDel(null)
+			items.length > 0 && /* @__PURE__ */ jsx(Accordion, {
+				variant: "flush",
+				multiple: true,
+				value: open,
+				onValueChange: (v) => setOpen(v),
+				children: items.map(entry)
 			})
-		]
+		] }), /* @__PURE__ */ jsx(Confirm, {
+			open: del !== null,
+			title: "Remove this research for good?",
+			yes: "Remove",
+			onYes: () => {
+				const key = del;
+				mutate(r.id, (latest) => removeResearchPatch(latest, key));
+			},
+			onClose: () => setDel(null)
+		})]
 	});
 }
 function hasResearch(r, canEdit) {
 	const k = kindOf$1(r);
-	return k === "wish" || k === "own" && (canEdit || researchEntries(r).length > 0) || k === "ordered" && stillCopies(r).length > 0;
+	return k !== "ordered" && (canEdit || researchEntries(r).length > 0) || k === "ordered" && stillCopies(r).length > 0;
 }
 // src/sheet/StatusActions.tsx
 function StatusActions({ r, onMoved }) {
@@ -8221,13 +8221,20 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 	const notesN = noteCount(r);
 	const notes = canEdit || notesN > 0;
 	const research = hasResearch(r, canEdit);
+	const still = stillCopies(r).length > 0;
+	const hunting = k === "wish" || still;
+	const pressings = still || k === "wish" && canEdit;
 	const tabs = [
+		...about ? ["about"] : [],
 		...own ? ["listening"] : [],
 		...k === "ordered" ? ["order"] : [],
-		...research ? ["research"] : [],
+		...pressings ? ["pressings"] : [],
 		...notes ? ["notes"] : [],
-		...about ? ["about"] : []
+		...hunting ? ["search"] : [],
+		...research ? ["research"] : []
 	];
+	const task = own ? "listening" : k === "ordered" ? "order" : pressings ? "pressings" : "search";
+	const first = tabs.includes(task) ? task : tabs[0];
 	const lone = tabs.length === 1;
 	const titled = (name, node) => lone ? /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: name }), node] }) : node;
 	return /* @__PURE__ */ jsxs("div", {
@@ -8243,11 +8250,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 				onClick: onAddWhy,
 				children: own ? "Why is this one on the wall? Add a few words…" : "Why do you want this one? Add a few words…"
 			}),
-			k === "wish" && /* @__PURE__ */ jsx(CopiesView, {
-				r,
-				onEditCopy: canEdit ? onEditCopy : void 0
-			}),
-			canEdit && /* @__PURE__ */ jsx(StatusActions, {
+			canEdit && k !== "wish" && /* @__PURE__ */ jsx(StatusActions, {
 				r,
 				onMoved
 			}, "status" + r.id + k),
@@ -8258,7 +8261,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 			}),
 			tabs.length > 0 && /* @__PURE__ */ jsxs(Tabs, {
 				className: "gap-5",
-				value: tabs.includes(tab) ? tab : tabs[0],
+				value: tabs.includes(tab) ? tab : first,
 				onValueChange: (v) => setTab(String(v)),
 				children: [
 					tabs.length > 1 && /* @__PURE__ */ jsxs(TabsList, {
@@ -8266,6 +8269,10 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 						size: "sm",
 						activateOnFocus: true,
 						children: [
+							about && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "about",
+								children: "About"
+							}),
 							own && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "listening",
 								children: "Listening"
@@ -8274,9 +8281,9 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 								value: "order",
 								children: "Order"
 							}),
-							research && /* @__PURE__ */ jsx(TabsTrigger, {
-								value: "research",
-								children: "Research"
+							pressings && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "pressings",
+								children: "Pressings"
 							}),
 							notes && /* @__PURE__ */ jsxs(TabsTrigger, {
 								value: "notes",
@@ -8285,41 +8292,21 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 									children: notesN
 								})] })]
 							}),
-							about && /* @__PURE__ */ jsx(TabsTrigger, {
-								value: "about",
-								children: "About"
+							hunting && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "search",
+								children: "Search"
+							}),
+							research && /* @__PURE__ */ jsx(TabsTrigger, {
+								value: "research",
+								children: "Research"
 							})
 						]
-					}),
-					own && /* @__PURE__ */ jsx(TabsContent, {
-						value: "listening",
-						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
-					}),
-					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
-						value: "order",
-						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, {
-							r,
-							shop: shopShown(r, shops)
-						}))
-					}),
-					research && /* @__PURE__ */ jsx(TabsContent, {
-						value: "research",
-						children: /* @__PURE__ */ jsx(ResearchTab, {
-							r,
-							onEditCopy,
-							want,
-							setWant,
-							lone
-						})
-					}),
-					notes && /* @__PURE__ */ jsx(TabsContent, {
-						value: "notes",
-						children: titled("Notes", /* @__PURE__ */ jsx(NotesTab, { r }))
 					}),
 					about && /* @__PURE__ */ jsxs(TabsContent, {
 						value: "about",
 						className: "flex flex-col gap-8",
 						children: [
+							hasTracks && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Tracklist" }), /* @__PURE__ */ jsx(Tracks, { r })] }),
 							info.length > 0 && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the album" }), /* @__PURE__ */ jsx(Facts, {
 								labelCol: true,
 								rows: info.map(([k, v]) => [k, /* @__PURE__ */ jsx("span", {
@@ -8335,9 +8322,51 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 								}),
 								/* @__PURE__ */ jsx(LinkList, { links: discogsLinks(r) })
 							] }),
-							hasTracks && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Tracklist" }), /* @__PURE__ */ jsx(Tracks, { r })] }),
 							artist && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "About the artist" }), /* @__PURE__ */ jsx(ArtistAbout, { A: artist }, r.id)] })
 						]
+					}),
+					own && /* @__PURE__ */ jsx(TabsContent, {
+						value: "listening",
+						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
+					}),
+					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
+						value: "order",
+						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, {
+							r,
+							shop: shopShown(r, shops)
+						}))
+					}),
+					pressings && /* @__PURE__ */ jsxs(TabsContent, {
+						value: "pressings",
+						className: "flex flex-col gap-6",
+						children: [canEdit && k === "wish" && /* @__PURE__ */ jsx(StatusActions, {
+							r,
+							onMoved
+						}, "status" + r.id + k), /* @__PURE__ */ jsx(CopiesView, {
+							r,
+							onEditCopy: canEdit ? onEditCopy : void 0
+						})]
+					}),
+					notes && /* @__PURE__ */ jsx(TabsContent, {
+						value: "notes",
+						children: titled("Notes", /* @__PURE__ */ jsx(NotesTab, { r }))
+					}),
+					hunting && /* @__PURE__ */ jsx(TabsContent, {
+						value: "search",
+						children: titled("Search elsewhere", /* @__PURE__ */ jsx(SearchElsewhere, {
+							r,
+							shops
+						}))
+					}),
+					research && /* @__PURE__ */ jsx(TabsContent, {
+						value: "research",
+						children: /* @__PURE__ */ jsx(ResearchTab, {
+							r,
+							onEditCopy,
+							want,
+							setWant,
+							lone
+						})
 					})
 				]
 			})

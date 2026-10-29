@@ -178,25 +178,25 @@ describe('the record sheet', () => {
 })
 
 describe('the tabs', () => {
-  it('put the task tab first: Listening on an owned record, Order on an order, Research on a hunt', async () => {
+  it('keep one order, opening on the task tab: Listening on an owned record, Order on an order, Pressings on a hunt', async () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['Listening*', 'Research', 'Notes 1', 'About'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Aja')
     expect(tabNames()).toEqual(['Order*', 'Notes'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Abbey Road')
-    expect(tabNames()[0]).toBe('Research*')
+    expect(tabNames()).toEqual(['Pressings*', 'Notes', 'Search', 'Research'])
   })
 
   it('show a viewer Notes only when there are notes, with their count', async () => {
     const { user } = setup(() => {}, { canWrite: false })
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['Listening*', 'Notes 1', 'About'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Blue Train')
-    expect(tabNames()).toEqual(['Listening*', 'About'])
+    expect(tabNames()).toEqual(['About', 'Listening*'])
   })
 
   it('show no tab bar when there is only one tab, and title its content', async () => {
@@ -210,10 +210,10 @@ describe('the tabs', () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('tab', { name: 'About' }))
-    expect(tabNames()).toEqual(['Listening', 'Research', 'Notes 1', 'About*'])
+    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes 1', 'Research'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['Listening*', 'Research', 'Notes 1', 'About'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
   })
 
   it('keep the tab chosen through Edit and Done', async () => {
@@ -222,17 +222,17 @@ describe('the tabs', () => {
     await user.click(screen.getByRole('tab', { name: 'About' }))
     await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
     await user.click(screen.getByRole('button', { name: 'Done' }))
-    expect(tabNames()).toEqual(['Listening', 'Research', 'Notes 1', 'About*'])
+    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes 1', 'Research'])
   })
 
   it('move focus with the arrow keys, round from the last to the first', async () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
-    await user.click(screen.getByRole('tab', { name: 'About' }))
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.keyboard('{ArrowRight}')
-    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Listening' }))
-    await user.keyboard('{ArrowLeft}')
     expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'About' }))
+    await user.keyboard('{ArrowLeft}')
+    expect(document.activeElement).toBe(screen.getByRole('tab', { name: 'Research' }))
   })
 
   it('show the tab an arrow key moves to', async () => {
@@ -240,7 +240,28 @@ describe('the tabs', () => {
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('tab', { name: 'About' }))
     await user.keyboard('{ArrowRight}')
-    expect(tabNames()).toEqual(['Listening*', 'Research', 'Notes 1', 'About'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
+  })
+
+  it('put a hunt’s copies and Ordered it / Got it in Pressings, and Search elsewhere in Search', async () => {
+    const { user } = setup()
+    await open(user, 'Abbey Road')
+    const pressings = screen.getByRole('tabpanel')
+    expect(within(pressings).getByRole('button', { name: 'Ordered it' })).toBeTruthy()
+    expect(within(pressings).getByRole('button', { name: 'Got it' })).toBeTruthy()
+    expect(within(pressings).getByText('Half-speed reissue')).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Search' }))
+    expect(within(screen.getByRole('tabpanel')).getByRole('link', { name: 'Every pressing on Discogs ↗' })).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
+    expect(within(screen.getByRole('tabpanel')).queryByRole('link', { name: 'Every pressing on Discogs ↗' })).toBeNull()
+  })
+
+  it('give an owned record Pressings and Search while copies are still wanted', async () => {
+    const { user } = setup((s) => Object.assign(s.records.r1, { moreCopies: [{ name: 'Mono', pressing: '1959 mono', budget: '200' }] }))
+    await open(user, 'Kind of Blue')
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Pressings', 'Notes 1', 'Search', 'Research'])
+    await user.click(screen.getByRole('tab', { name: 'Pressings' }))
+    expect(within(screen.getByRole('tabpanel')).getByText('Mono')).toBeTruthy()
   })
 
   it('keep the plays on Listening and the written notes on Notes', async () => {
@@ -281,6 +302,13 @@ describe('the About tab', () => {
       ['Grade', 'Near mint vinyl · VG+ sleeve'],
       ['Runout'],
     ])
+  })
+
+  it('leads with the tracklist', async () => {
+    const { user } = setup()
+    const panel = await about(user, 'Kind of Blue')
+    const tracks = within(panel).getByRole('group', { name: 'Tracklist' })
+    expect(tracks.compareDocumentPosition(within(panel).getByRole('group', { name: 'About the album' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
   })
 
   it('puts the catalog beside the label when there is no runout', async () => {

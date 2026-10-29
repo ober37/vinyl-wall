@@ -133,11 +133,13 @@ describe('shops: importing into a wall with records', () => {
 })
 
 describe('Search elsewhere', () => {
-  it('lists Discogs releases, then your shops under their kind, a local shop without a web store with Call · Email · Map', async () => {
+  it('lists every pressing on Discogs, then your shops under their kind, a local shop without a web store with Call · Email · Map', async () => {
     const { user } = setup({ shops: [DEFAULT_SHOPS[3], RECKLESS, DUSTY] }, hunt)
     await openRecord(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Search' }))
     const names = linkNames()
-    expect(names.slice(names.indexOf('Discogs releases ↗'))).toEqual(['Discogs releases ↗', 'Dusty Groove ↗', 'Map', 'Call', 'Email', 'Map', 'eBay ↗'])
+    expect(names.slice(names.indexOf('Every pressing on Discogs ↗'))).toEqual(['Every pressing on Discogs ↗', 'Dusty Groove ↗', 'Map', 'Call', 'Email', 'Map', 'eBay ↗'])
+    expect(screen.getByRole('heading', { name: 'Pressings' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Local shops' })).toBeTruthy()
     expect(screen.getByRole('heading', { name: 'Marketplaces' })).toBeTruthy()
     expect(screen.queryByRole('heading', { name: 'Online shops' })).toBeNull()
@@ -152,6 +154,7 @@ describe('Search elsewhere', () => {
   it("shows what research found at your shops, the shop's name searching it", async () => {
     const { user } = setup({}, hunt)
     await openRecord(user, 'Revolver')
+    await user.click(screen.getByRole('tab', { name: 'Research' }))
     await user.click(screen.getByRole('button', { name: /Revolver has it/ }))
     const shops = screen.getByRole('heading', { name: 'At your shops' }).parentElement!
     expect(within(shops).getByRole('link', { name: 'Revolver ↗' }).getAttribute('href')).toBe('https://shop.revolvermag.com/search?q=The%20Beatles%20Revolver')
@@ -160,10 +163,11 @@ describe('Search elsewhere', () => {
 })
 
 describe('Search elsewhere with no shops', () => {
-  it('shows Discogs releases and points an editor to Settings', async () => {
+  it('shows every pressing on Discogs and points an editor to Settings', async () => {
     const { user } = setup({ shops: [] }, hunt)
     await openRecord(user, 'Revolver')
-    expect(screen.getByRole('link', { name: 'Discogs releases ↗' })).toBeTruthy()
+    await user.click(screen.getByRole('tab', { name: 'Search' }))
+    expect(screen.getByRole('link', { name: 'Every pressing on Discogs ↗' })).toBeTruthy()
     expect(screen.getByText('Add your shops in Settings → Shops.')).toBeTruthy()
     expect(screen.queryByRole('link', { name: /near me/ })).toBeNull()
   })
