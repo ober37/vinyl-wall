@@ -214,8 +214,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                 className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
               />
               <div className="flex min-w-0 flex-1 flex-col gap-1">
-                <DrawerTitle className="break-words">{r.title || 'Untitled'}</DrawerTitle>
-                <DrawerDescription>{by}</DrawerDescription>
+                {/* a drag here selects the text to copy, not swipes the sheet shut (#110) */}
+                <DrawerTitle className="break-words" data-base-ui-swipe-ignore="">
+                  {r.title || 'Untitled'}
+                </DrawerTitle>
+                <DrawerDescription data-base-ui-swipe-ignore="">{by}</DrawerDescription>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <Badge size="sm" variant={k === 'own' ? 'success' : k === 'ordered' ? 'info' : 'secondary'}>
                     {k === 'wish' ? PRIORITY[r.priority == 1 ? 0 : r.priority == 3 ? 2 : 1] : KIND_LABEL[k]}

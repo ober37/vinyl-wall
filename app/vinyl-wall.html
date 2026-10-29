@@ -8523,9 +8523,13 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 						children: [
 							/* @__PURE__ */ jsx(DrawerTitle, {
 								className: "break-words",
+								"data-base-ui-swipe-ignore": "",
 								children: r.title || "Untitled"
 							}),
-							/* @__PURE__ */ jsx(DrawerDescription, { children: by }),
+							/* @__PURE__ */ jsx(DrawerDescription, {
+								"data-base-ui-swipe-ignore": "",
+								children: by
+							}),
 							/* @__PURE__ */ jsxs("div", {
 								className: "mt-1 flex flex-wrap items-center gap-2",
 								children: [

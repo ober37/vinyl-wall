@@ -27,6 +27,14 @@ describe('record sheet', () => {
     expect(screen.getByRole('tab', { name: 'Listening' })).toBeTruthy()
   })
 
+  it('lets the title and artist line be selected, not swiped (#110)', async () => {
+    const { user } = setup()
+    await open(user, /Open Kind of Blue/)
+    const title = await screen.findByRole('heading', { name: 'Kind of Blue' })
+    expect(title.hasAttribute('data-base-ui-swipe-ignore')).toBe(true)
+    expect(screen.getByText(/^Miles Davis · 1959/).hasAttribute('data-base-ui-swipe-ignore')).toBe(true)
+  })
+
   it('shows no edit controls to a read-only viewer', async () => {
     const { user } = setup({ canWrite: false })
     await open(user, /Open Kind of Blue/)
