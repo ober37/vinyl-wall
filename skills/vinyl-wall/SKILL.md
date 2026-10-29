@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 18.
+Skill version 19.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -20,7 +20,7 @@ The wall is a published artifact. Its records are documents in the page's `recor
 - The pressing, often from photos of the record: `pressing` (e.g. "2015 Analogue Productions 45rpm reissue"), `label`, `catalog` (the catalog number), `discogsId` (the Discogs release number, as a number) and `matrix`, the runouts as `"Side A: <runout> · Side B: <runout>"`, one entry per side, joined by " · ".
 - Owned: `acquired` (`YYYY-MM-DD`, only when they give a date or say today; otherwise leave it out), `paid` (a number as text, `"48"`), `shop`, `shopUrl`, `mediaGrade`, `sleeveGrade`.
 - Ordered: `copyName` (a short name for the copy, like "MoFi one-step"), `shop`, `shopUrl`, `paid`, `orderDate`, `eta` (`YYYY-MM-DD`), `orderStatus` (`"preorder"`, `"ordered"`, `"shipped"` or `"delayed"`), `orderNum`, `carrier`, `tracking`.
-- Wish: `copyName`, `budget`, `buyLinks` (see Where to buy a copy).
+- Wish: `copyName`, `budget`, `buyLinks` (see Where to buy a copy), `releaseDate` (see Release dates).
 
 Write only what the person said or the photos show; leave the rest out. Before adding, `list` `records` and check it isn't already there (same artist and title); if it is, ask whether this is another copy or a change to the one there.
 
@@ -37,6 +37,10 @@ A record with `coverBlocked: true` had its cover removed on purpose: don't give 
 Each copy they want can keep the shop pages where that exact copy is sold: `buyLinks`, a list of `https://` addresses. The first copy's is the record's own `buyLinks`; each other copy's is on its entry in `moreCopies`. When they give you a shop page for a copy, `get` the record, add the link to that copy's `buyLinks` (skip it if it's already there), and `update` with `if_version`.
 
 When they point at links in a note, move each link onto the copy it's for, asking which copy when it's unclear. A link for a variant that isn't one of their copies yet: ask whether to add it as a copy they want (append it to `moreCopies` with its `buyLinks`, and add `needsSync: true`). Leave the note as it is unless they ask you to change it.
+
+## Release dates
+
+A copy they want that's a pre-order can keep the day it comes out: `releaseDate` (`YYYY-MM-DD`), the first copy's on the record, each other copy's on its entry in `moreCopies`. When a shop page for the copy gives a release day still to come, set it with the link (`update` with `if_version`; it doesn't need `needsSync`). If the page gives only a month or a season, don't guess a day: add a note instead (`"Out March 2027 (per <shop>)"`). When a wanted copy moves to ordered, the wall turns an upcoming `releaseDate` into the order's `eta` and `orderStatus: "preorder"` itself; when you add an order directly, set those instead of `releaseDate`.
 
 ## An order that arrived
 
@@ -140,7 +144,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 
 - **A pressing worth hunting** (wanted records, `status: "wish"`): when you recommend one, ask once whether to add it to the copies they want ("Add the 2019 half-speed to the copies you want?"), and add it if they say yes, as below.
 
-To add a copy they want, `get` the record and skip it if one of its copies already has that pressing or Discogs release. The record's own fields are its first copy: if `copyName`, `pressing`, `catalog`, `budget` and `discogsId` are all empty, fill those (`copyName` for the name). Two things don't count as a copy they chose: a `label` listed in `autoFilled` (looked up for the album), and a `discogsId` the wall's sync matched by itself, which it marks with a `discogsMatch` of exactly `"master main release"`, `"vinyl: master main release"`, `"vinyl: earliest original pressing"`, `"vinyl: first matching release"`, `"catalog"` or `"catalog+pressing"`. Any other `discogsMatch` (an import, or a release someone confirmed) is a copy they chose. When you fill the first copy over a matched release, replace `discogsId` with the release you found (or `""`) and set `discogsMatch` to `""`. Otherwise append `{"name", "pressing", "label", "catalog", "budget", "discogsId"}` to `moreCopies` (empty strings for what you don't know, `discogsId` as a number). Fill in what you found: a short name, the pressing (word for word the `<pressing>` part you used, or will use, in the research entry's `pressings`, so the wall shows it as added; put extra detail in the name, label or catalog number instead), label, catalog number, the Discogs release, and a `budget` (a number as text) from the price you discussed. When you found the copy on a shop's product page, put that page in the copy's `buyLinks`. `update` with `if_version` and `needsSync: true`.
+To add a copy they want, `get` the record and skip it if one of its copies already has that pressing or Discogs release. The record's own fields are its first copy: if `copyName`, `pressing`, `catalog`, `budget` and `discogsId` are all empty, fill those (`copyName` for the name). Two things don't count as a copy they chose: a `label` listed in `autoFilled` (looked up for the album), and a `discogsId` the wall's sync matched by itself, which it marks with a `discogsMatch` of exactly `"master main release"`, `"vinyl: master main release"`, `"vinyl: earliest original pressing"`, `"vinyl: first matching release"`, `"catalog"` or `"catalog+pressing"`. Any other `discogsMatch` (an import, or a release someone confirmed) is a copy they chose. When you fill the first copy over a matched release, replace `discogsId` with the release you found (or `""`) and set `discogsMatch` to `""`. Otherwise append `{"name", "pressing", "label", "catalog", "budget", "discogsId"}` to `moreCopies` (empty strings for what you don't know, `discogsId` as a number). Fill in what you found: a short name, the pressing (word for word the `<pressing>` part you used, or will use, in the research entry's `pressings`, so the wall shows it as added; put extra detail in the name, label or catalog number instead), label, catalog number, the Discogs release, and a `budget` (a number as text) from the price you discussed. When you found the copy on a shop's product page, put that page in the copy's `buyLinks`, and its release day in `releaseDate` when it's a pre-order (see Release dates). `update` with `if_version` and `needsSync: true`.
 
 To save, `get` the record and `update` it (pass its `version` as `if_version`; on a conflict, `get` it again and redo) with:
 

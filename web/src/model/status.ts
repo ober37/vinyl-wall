@@ -45,6 +45,12 @@ export function movePatch(r: Rec, to: Kind, det?: Paid, ci?: number): { patch: R
     if (det?.shopUrl) patch.shopUrl = det.shopUrl
     else if (L.length === 1 && !had) patch.shopUrl = L[0][1]
   }
+  // a pre-order's release date becomes the order's expected date; the copy keeps no date of its own once it's had (#75)
+  if (from === 'wish' && to !== 'wish') {
+    const rd = movedCopy(r, ci).releaseDate
+    if (to === 'ordered' && rd > t) Object.assign(patch, { orderStatus: 'preorder', eta: rd })
+    if (rd || r.releaseDate) patch.releaseDate = ''
+  }
   if (to !== 'wish') patch.notes = notes
   return { patch, msg }
 }

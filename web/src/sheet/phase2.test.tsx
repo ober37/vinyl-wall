@@ -49,7 +49,7 @@ describe('edit mode: priority and copies', () => {
     await user.click(btn('Done'))
     await waitFor(() =>
       expect(updates(fake, 'r7').at(-1)).toEqual({
-        moreCopies: [{ name: 'Half-speed reissue', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '45', discogsId: '', buyLinks: [] }],
+        moreCopies: [{ name: 'Half-speed reissue', pressing: '2019 half-speed', label: 'Apple', catalog: '', budget: '45', discogsId: '', buyLinks: [], releaseDate: '' }],
         needsSync: true,
       }),
     )
@@ -243,7 +243,7 @@ describe('the Research tab', () => {
     await user.click(btn('+ Want'))
     await waitFor(() =>
       expect(updates(fake, 'r8').at(-1)).toEqual({
-        moreCopies: [{ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [] }], needsSync: true,
+        moreCopies: [{ name: '', pressing: 'Japan Odeon', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [], releaseDate: '' }], needsSync: true,
       }),
     )
     expect(screen.getByText(/Added “Japan Odeon”/)).toBeTruthy()

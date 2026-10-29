@@ -1,10 +1,19 @@
 // The copies a wanted record hunts, ported from app/vinyl-wall.html. The first lives in the record's own fields (copyName,
-// pressing, label, catalog, budget, discogsId, buyLinks), so Discogs sync and older walls read it as before; any others are
+// pressing, label, catalog, budget, discogsId, buyLinks, releaseDate), so Discogs sync and older walls read it as before; any others are
 // in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted.
-import { kindOf, pressingText, shopHref, type Rec } from './record'
+import { kindOf, playDate, pressingText, shopHref, type Rec } from './record'
 
-// buyLinks: where the copy is sold, one address each
-export type Copy = { name: string; pressing: string; label: string; catalog: string; budget: string; discogsId: number | ''; buyLinks: string[] }
+// buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75)
+export type Copy = {
+  name: string
+  pressing: string
+  label: string
+  catalog: string
+  budget: string
+  discogsId: number | ''
+  buyLinks: string[]
+  releaseDate: string
+}
 export const COPY_KEYS = ['name', 'pressing', 'label', 'catalog', 'budget'] as const
 
 const s = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
@@ -13,20 +22,29 @@ const did = (v: unknown): number | '' => {
   return n > 0 ? n : ''
 }
 const links = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
-export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [] })
+const day = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v) ? v : '')
+export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [], releaseDate: '' })
 
 export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
-    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks) },
-    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks) })),
+    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate) },
+    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate) })),
   ]
 }
 
 // a copy's name for headings and the copy picker: its name, else its pressing, else its Discogs release, else "Copy N"
 export const copyTitle = (c: Copy, i: number) =>
   c.name || c.pressing.split('\n')[0].trim() || (c.discogsId ? 'Discogs release ' + c.discogsId : 'Copy ' + (i + 1))
-export const copyHas = (c: Copy) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0
+export const copyHas = (c: Copy) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0 || !!c.releaseDate
+
+// a release date on the copy card: "Out Nov 20" before it, "Out today" on it, "Out now" for 30 days after, then nothing
+export function releaseText(d: string, today: string): string {
+  if (!day(d)) return ''
+  if (d > today) return 'Out ' + playDate(d)
+  if (d === today) return 'Out today'
+  return (Date.parse(today) - Date.parse(d)) / 864e5 <= 30 ? 'Out now' : ''
+}
 
 // a copy's links that open, each named by its site: "roughtrade.com", then "roughtrade.com (2)" for another on the same site
 export function buyHosts(L: string[]): [string, string][] {
@@ -53,7 +71,7 @@ export function firstCopyChosen(r: Rec): boolean {
   const c = wantCopies(r)[0]
   const auto = AUTO_MATCH.includes(String(r.discogsMatch))
   const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes('label'))
-  return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || (c.discogsId && !auto) || (typed && c.label && c.label !== origLabel(r)))
+  return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate || (c.discogsId && !auto) || (typed && c.label && c.label !== origLabel(r)))
 }
 
 // the copies still wanted, with their index in wantCopies: a hunt's own, or an owned or ordered record's moreCopies
@@ -69,7 +87,7 @@ export const copiesLegend = (r: Rec) =>
 export function copyLabelShown(r: Rec, c: Copy, i: number): boolean {
   const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes('label'))
   return (
-    i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length) || (!!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch))) ||
+    i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate) || (!!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch))) ||
     (typed && !!c.label && c.label !== origLabel(r))
   )
 }
@@ -79,7 +97,7 @@ export function copyLabelShown(r: Rec, c: Copy, i: number): boolean {
 export function copiesPatch(r: Rec, L: Copy[]): Record<string, unknown> {
   const [a, ...rest] = L
   return kindOf(r) === 'wish'
-    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, buyLinks: a.buyLinks, moreCopies: rest }
+    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, buyLinks: a.buyLinks, releaseDate: a.releaseDate, moreCopies: rest }
     : { moreCopies: rest }
 }
 
@@ -94,6 +112,7 @@ export function pickPatch(r: Rec, ci: number): Record<string, unknown> {
   const c = C[k]
   return {
     copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId || '', buyLinks: c.buyLinks,
+    releaseDate: c.releaseDate,
     moreCopies: C.filter((_, j) => j !== k),
   }
 }

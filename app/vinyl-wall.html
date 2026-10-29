@@ -666,6 +666,7 @@ var did = (v) => {
 	return n > 0 ? n : "";
 };
 var links = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
+var day$1 = (v) => typeof v === "string" && /^\d{4}-\d\d-\d\d$/.test(v) ? v : "";
 var emptyCopy = () => ({
 	name: "",
 	pressing: "",
@@ -673,7 +674,8 @@ var emptyCopy = () => ({
 	catalog: "",
 	budget: "",
 	discogsId: "",
-	buyLinks: []
+	buyLinks: [],
+	releaseDate: ""
 });
 function wantCopies(r) {
 	const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c) => !!c && typeof c === "object");
@@ -684,7 +686,8 @@ function wantCopies(r) {
 		catalog: s$1(r.catalog),
 		budget: s$1(r.budget),
 		discogsId: did(r.discogsId),
-		buyLinks: links(r.buyLinks)
+		buyLinks: links(r.buyLinks),
+		releaseDate: day$1(r.releaseDate)
 	}, ...more.map((c) => ({
 		name: s$1(c.name),
 		pressing: s$1(c.pressing),
@@ -692,11 +695,18 @@ function wantCopies(r) {
 		catalog: s$1(c.catalog),
 		budget: s$1(c.budget),
 		discogsId: did(c.discogsId),
-		buyLinks: links(c.buyLinks)
+		buyLinks: links(c.buyLinks),
+		releaseDate: day$1(c.releaseDate)
 	}))];
 }
 var copyTitle = (c, i) => c.name || c.pressing.split("\n")[0].trim() || (c.discogsId ? "Discogs release " + c.discogsId : "Copy " + (i + 1));
-var copyHas = (c) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0;
+var copyHas = (c) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0 || !!c.releaseDate;
+function releaseText(d, today) {
+	if (!day$1(d)) return "";
+	if (d > today) return "Out " + playDate(d);
+	if (d === today) return "Out today";
+	return (Date.parse(today) - Date.parse(d)) / 864e5 <= 30 ? "Out now" : "";
+}
 function buyHosts(L) {
 	const seen = {};
 	return L.map(shopHref).filter(Boolean).map((u) => {
@@ -718,7 +728,7 @@ function firstCopyChosen(r) {
 	const c = wantCopies(r)[0];
 	const auto = AUTO_MATCH.includes(String(r.discogsMatch));
 	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
-	return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.discogsId && !auto || typed && c.label && c.label !== origLabel(r));
+	return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate || c.discogsId && !auto || typed && c.label && c.label !== origLabel(r));
 }
 function stillCopies(r) {
 	const C = wantCopies(r);
@@ -727,7 +737,7 @@ function stillCopies(r) {
 var copiesLegend = (r) => (stillCopies(r).length > 1 ? "The copies you " : "The copy you ") + (kindOf$1(r) === "wish" ? "want" : "still want");
 function copyLabelShown(r, c, i) {
 	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
-	return i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length) || !!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch)) || typed && !!c.label && c.label !== origLabel(r);
+	return i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate) || !!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch)) || typed && !!c.label && c.label !== origLabel(r);
 }
 var pickable = (r) => kindOf$1(r) === "wish" ? wantCopies(r).filter(copyHas) : [];
 function pickPatch(r, ci) {
@@ -743,6 +753,7 @@ function pickPatch(r, ci) {
 		budget: c.budget,
 		discogsId: c.discogsId || "",
 		buyLinks: c.buyLinks,
+		releaseDate: c.releaseDate,
 		moreCopies: C.filter((_, j) => j !== k)
 	};
 }
@@ -868,7 +879,8 @@ function toForm(r) {
 	}
 	if (k === "wish") Object.assign(f, {
 		priority: String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2),
-		buyLinks: c0.buyLinks
+		buyLinks: c0.buyLinks,
+		releaseDate: c0.releaseDate
 	});
 	if (k === "own") Object.assign(f, {
 		label: s(r.label),
@@ -898,7 +910,8 @@ function stored(f) {
 		catalog: c.catalog.trim(),
 		budget: c.budget.trim(),
 		discogsId: c.discogsId,
-		buyLinks: tidyLinks(c.buyLinks)
+		buyLinks: tidyLinks(c.buyLinks),
+		releaseDate: c.releaseDate
 	}));
 	const n = parseInt(f.runtime, 10);
 	o.runtime = isNaN(n) ? "" : n;
@@ -3146,6 +3159,7 @@ var IMPORT_FIELDS = [
 	"budget",
 	"copyName",
 	"buyLinks",
+	"releaseDate",
 	"moreCopies",
 	"orderDate",
 	"orderStatus",
@@ -3199,6 +3213,10 @@ function importable(d) {
 		id: "",
 		buyLinks: r.buyLinks
 	})[0].buyLinks;
+	if (r.releaseDate !== void 0) r.releaseDate = wantCopies({
+		id: "",
+		releaseDate: r.releaseDate
+	})[0].releaseDate;
 	r.needsSync = "check";
 	return r;
 }
@@ -3249,7 +3267,8 @@ var STATUS_FIELDS = {
 	wish: [
 		"copyName",
 		"budget",
-		"buyLinks"
+		"buyLinks",
+		"releaseDate"
 	]
 };
 function addMissing(wall, file, k) {
@@ -5467,6 +5486,13 @@ function CopyFields({ c, ph, on, auto, focus, links }) {
 			}),
 			text("label", "Label"),
 			text("catalog", "Catalog no.", true),
+			links && /* @__PURE__ */ jsxs(Field, {
+				className: "sm:col-start-1",
+				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Release date" }), /* @__PURE__ */ jsx(DateField, {
+					value: toDate(c.releaseDate),
+					onValueChange: (d) => on("releaseDate", fromDate(d))
+				})]
+			}),
 			links && /* @__PURE__ */ jsx(BuyLinks, {
 				c,
 				on: (v) => on("buyLinks", v)
@@ -5481,7 +5507,8 @@ var FLAT = {
 	catalog: "catalog",
 	budget: "budget",
 	discogsId: "discogsId",
-	buyLinks: "buyLinks"
+	buyLinks: "buyLinks",
+	releaseDate: "releaseDate"
 };
 var firstOf = (f) => ({
 	name: f.copyName ?? "",
@@ -5490,7 +5517,8 @@ var firstOf = (f) => ({
 	catalog: f.catalog ?? "",
 	budget: f.budget ?? "",
 	discogsId: f.discogsId ?? "",
-	buyLinks: f.buyLinks ?? []
+	buyLinks: f.buyLinks ?? [],
+	releaseDate: f.releaseDate ?? ""
 });
 var asFlat = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k], v]));
 function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
@@ -6432,6 +6460,14 @@ function movePatch(r, to, det, ci) {
 		if (det?.shopUrl) patch.shopUrl = det.shopUrl;
 		else if (L.length === 1 && !had) patch.shopUrl = L[0][1];
 	}
+	if (from === "wish" && to !== "wish") {
+		const rd = movedCopy(r, ci).releaseDate;
+		if (to === "ordered" && rd > t) Object.assign(patch, {
+			orderStatus: "preorder",
+			eta: rd
+		});
+		if (rd || r.releaseDate) patch.releaseDate = "";
+	}
 	if (to !== "wish") patch.notes = notes;
 	return {
 		patch,
@@ -6451,6 +6487,10 @@ var labelRow = (c, label) => label || c.catalog ? [["Label", /* @__PURE__ */ jsx
 	className: "text-foreground-muted",
 	children: [label ? " · " : "", c.catalog]
 })] })]] : [];
+var releaseRow = (c) => {
+	const t = releaseText(c.releaseDate, today());
+	return t ? [["Release", t]] : [];
+};
 var budgetRow = (c) => c.budget ? [["Budget", "Up to $" + c.budget]] : [];
 var buyRow = (c) => {
 	const L = buyHosts(c.buyLinks);
@@ -6469,6 +6509,7 @@ function CopiesView({ r, onEditCopy }) {
 		const rows = [
 			...pressRow(c),
 			...labelRow(c, copyLabelShown(r, c, i) ? c.label : ""),
+			...releaseRow(c),
 			...budgetRow(c),
 			...buyRow(c)
 		];
@@ -6487,6 +6528,7 @@ function CopiesView({ r, onEditCopy }) {
 			const rows = [
 				...c.name ? pressRow(c) : [],
 				...labelRow(c, c.label),
+				...releaseRow(c),
 				...budgetRow(c),
 				...buyRow(c)
 			];
@@ -15324,6 +15366,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
   @media (width >= 40rem) {
     .sm\:col-span-2 {
       grid-column: span 2 / span 2;
+    }
+
+    .sm\:col-start-1 {
+      grid-column-start: 1;
     }
 
     .sm\:col-start-3 {

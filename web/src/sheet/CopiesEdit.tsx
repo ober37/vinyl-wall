@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
+import { DateField } from '@appica/ui-react/date-field'
 import { Field, FieldDescription, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { copyHas, copyTitle, emptyCopy, type Copy } from '../model/copies'
+import { fromDate, toDate } from '../model/dates'
 import type { Form } from '../model/edit'
 import { shopHref, type Kind } from '../model/record'
 import { Confirm } from './Confirm'
@@ -41,7 +43,8 @@ function BuyLinks({ c, on }: { c: Copy; on: (v: string) => void }) {
   )
 }
 
-// one copy's fields: Name and Budget, Pressing across, Label and Catalog no., then where to buy it (not on the copy ordered)
+// one copy's fields: Name and Budget, Pressing across, Label and Catalog no., then a pre-order's release date and where to
+// buy it (not on the copy ordered, which has the order's Expected)
 function CopyFields({ c, ph, on, auto, focus, links }: {
   c: Copy
   ph: Ph
@@ -79,17 +82,24 @@ function CopyFields({ c, ph, on, auto, focus, links }: {
       </Field>
       {text('label', 'Label')}
       {text('catalog', 'Catalog no.', true)}
+      {links && (
+        <Field className="sm:col-start-1">
+          <FieldLabel>Release date</FieldLabel>
+          <DateField value={toDate(c.releaseDate)} onValueChange={(d) => on('releaseDate', fromDate(d))} />
+        </Field>
+      )}
       {links && <BuyLinks c={c} on={(v) => on('buyLinks', v)} />}
     </div>
   )
 }
 
 const FLAT: Record<keyof Copy, keyof Form> = {
-  name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks',
+  name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks', releaseDate: 'releaseDate',
 }
 export const firstOf = (f: Form): Copy => ({
   name: f.copyName ?? '', pressing: f.pressing ?? '', label: f.label ?? '', catalog: f.catalog ?? '', budget: f.budget ?? '', discogsId: f.discogsId ?? '',
   buyLinks: f.buyLinks ?? [],
+  releaseDate: f.releaseDate ?? '',
 })
 const asFlat = (c: Copy): Partial<Form> => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k as keyof Copy], v]))
 

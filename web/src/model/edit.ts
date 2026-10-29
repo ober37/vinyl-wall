@@ -26,8 +26,9 @@ export type Form = {
   // wanted and ordered records: the first copy's own fields (label, catalog and pressing above too)
   copyName?: string
   budget?: string
-  // wanted records: the first copy's links, a line each while editing
+  // wanted records: the first copy's links, a line each while editing, and its release date
   buyLinks?: string[]
+  releaseDate?: string
   // wanted records: 1 Top, 2 Want, 3 Someday
   priority?: string
   // ordered records: the order (paid, shop and shopUrl above too); orderNotes only when an older record has some
@@ -80,7 +81,7 @@ export function toForm(r: Rec): Form {
     })
     if (r.orderNotes) f.orderNotes = s(r.orderNotes)
   }
-  if (k === 'wish') Object.assign(f, { priority: String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2), buyLinks: c0.buyLinks })
+  if (k === 'wish') Object.assign(f, { priority: String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2), buyLinks: c0.buyLinks, releaseDate: c0.releaseDate })
   if (k === 'own')
     Object.assign(f, {
       label: s(r.label),
@@ -110,6 +111,7 @@ export function stored(f: Form): Record<string, unknown> {
     o.moreCopies = f.moreCopies.map((c) => ({
       name: c.name.trim(), pressing: c.pressing.trim(), label: c.label.trim(), catalog: c.catalog.trim(), budget: c.budget.trim(), discogsId: c.discogsId,
       buyLinks: tidyLinks(c.buyLinks),
+      releaseDate: c.releaseDate,
     }))
   const n = parseInt(f.runtime, 10)
   o.runtime = isNaN(n) ? '' : n
