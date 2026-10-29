@@ -189,7 +189,7 @@ export const planSummary = (p: Plan) =>
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
 // prettier-ignore
 const IMPORT_FIELDS = ["title", "artist", "year", "label", "catalog", "pressing", "matrix", "runtime", "status", "why", "notes", "shop", "shopUrl", "acquired", "paid",
-  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
+  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "releaseDate", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
   "discogsMatch", "coverAsset", "coverOriginal", "coverBlocked", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
 // what an artist may carry in: the lookup's own fields, with the right types
 const ARTIST_FIELDS: Record<string, string> = { name: 'string', wiki: 'string', wikidata: 'string', intro: 'string', summary: 'string', source: 'string', fetchedAt: 'number' }
@@ -207,6 +207,7 @@ export function importable(d: Data): Data {
   if (r.copyName !== undefined && typeof r.copyName !== 'string') delete r.copyName
   if (r.moreCopies !== undefined) r.moreCopies = wantCopies({ id: '', moreCopies: r.moreCopies } as Rec).slice(1)
   if (r.buyLinks !== undefined) r.buyLinks = wantCopies({ id: '', buyLinks: r.buyLinks } as Rec)[0].buyLinks
+  if (r.releaseDate !== undefined) r.releaseDate = wantCopies({ id: '', releaseDate: r.releaseDate } as Rec)[0].releaseDate
   r.needsSync = 'check' // checked against this wall's Discogs account, if it has one (quietly: see syncing)
   return r
 }
@@ -237,7 +238,7 @@ const ALBUM_FIELDS = ['title', 'artist', 'year', 'label', 'catalog', 'pressing',
 const STATUS_FIELDS: Record<string, string[]> = {
   own: ['acquired', 'paid', 'shop', 'shopUrl', 'mediaGrade', 'sleeveGrade'],
   ordered: ['copyName', 'paid', 'shop', 'shopUrl', 'orderDate', 'orderStatus', 'eta', 'orderNum', 'carrier', 'tracking', 'orderNotes'],
-  wish: ['copyName', 'budget', 'buyLinks'],
+  wish: ['copyName', 'budget', 'buyLinks', 'releaseDate'],
 }
 // the file's entries the wall's list doesn't have, after the wall's own; null when there are none
 function addMissing(wall: unknown, file: unknown, k: (x: Data) => string): Data[] | null {

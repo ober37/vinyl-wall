@@ -1,8 +1,8 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
-import { buyHosts, copiesLegend, copyLabelShown, copyTitle, pickable, stillCopies, type Copy } from '../model/copies'
-import { kindOf, type Rec } from '../model/record'
+import { buyHosts, copiesLegend, copyLabelShown, copyTitle, pickable, releaseText, stillCopies, type Copy } from '../model/copies'
+import { kindOf, today, type Rec } from '../model/record'
 import { Facts } from './Facts'
 import { LinkList } from './Links'
 
@@ -12,6 +12,11 @@ const labelRow = (c: Copy, label: string): Row[] =>
   label || c.catalog
     ? [['Label', <>{label}{c.catalog && <span className="text-foreground-muted">{label ? ' · ' : ''}{c.catalog}</span>}</>]]
     : []
+// a pre-order's release date (#75)
+const releaseRow = (c: Copy): Row[] => {
+  const t = releaseText(c.releaseDate, today())
+  return t ? [['Release', t]] : []
+}
 const budgetRow = (c: Copy): Row[] => (c.budget ? [['Budget', 'Up to $' + c.budget]] : [])
 // where to buy it: each link by its site, one a line, opening in a new tab
 const buyRow = (c: Copy): Row[] => {
@@ -30,7 +35,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
   let body: React.ReactNode
   if (L.length === 1 && kindOf(r) === 'wish') {
     const [c, i] = L[0]
-    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...budgetRow(c), ...buyRow(c)]
+    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c)]
     if (!rows.length && !c.name) return none
     body = (
       <div className="flex flex-col gap-2">
@@ -42,7 +47,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
     body = (
       <Accordion variant="flush" multiple>
         {L.map(([c, i]) => {
-          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...budgetRow(c), ...buyRow(c)]
+          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...releaseRow(c), ...budgetRow(c), ...buyRow(c)]
           return (
             <AccordionItem key={i} value={String(i)}>
               <AccordionTrigger className="text-foreground text-sm font-medium">
