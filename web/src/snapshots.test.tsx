@@ -8,7 +8,7 @@ import { App } from './App'
 import { patchFor, toForm } from './model/edit'
 import { shownList } from './model/filter'
 import { writtenNotes } from './model/notes'
-import { isPlay, keyInfo, playMonths, tagOf, type Rec } from './model/record'
+import { albumFacts, isPlay, playMonths, tagOf, type Rec } from './model/record'
 import { siteOf } from './model/site'
 import { copiesLegend, pickable, stillCopies } from './model/copies'
 import { researchEntries } from './model/research'
@@ -34,7 +34,7 @@ describe.each(files)('%s', (file: string) => {
       const f = toForm(r)
       expect(patchFor(r, f, { ...f }), r.id).toEqual({})
       playMonths(r)
-      keyInfo(r)
+      albumFacts(r)
       tagOf(r)
       writtenNotes(r, isPlay)
       for (const to of ['own', 'ordered', 'wish'] as const)
