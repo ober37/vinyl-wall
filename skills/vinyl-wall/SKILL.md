@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 19.
+Skill version 20.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -55,9 +55,12 @@ When they say an ordered record arrived, `update` it the way the wall's It arriv
 
 When the person names the shop they bought or ordered a record from (`shop`) but gives no website, look the shop's website up and save it in `shopUrl` as a full `https://` link. Never save a link that isn't http(s).
 
+- **One of their shops:** when the shop is on their list (see Their shops), even said differently ("Siren in McHenry" for Siren Records), save that shop's exact `name` as `shop` and its `url` as `shopUrl`, without looking anything up.
+
 - **Several matches:** ask which shop they mean only when the matches have different websites (the same name in two towns). A chain with several stores and one website (Amoeba: amoeba.com) needs no question.
 - **Not sure:** if you can't find the website with confidence, save `shop` only, leave `shopUrl` out, and say so; they can add it in Edit.
 - **Not on their shops yet:** the wall links a record to the shop on their list (see Their shops) with the same website, or else the same name. When the shop isn't on the list, and isn't a marketplace like Discogs or eBay, ask once after saving the record whether to add it to their shops. If they say yes, add it as in Adding a shop. If they say no, don't ask again about that shop in this chat.
+- **Bought at a show:** a record bought from an artist's merch booth or table, at a concert or a festival, isn't from a shop. Save `shop` as `"Merch booth at <artist>, <tour or show>, <venue>, <city>"`, leaving out what you don't know, and no `shopUrl`. Don't look up a website, and don't offer to add it to their shops: the wall knows a show from those words and keeps it off its shop list.
 
 ## Grades
 

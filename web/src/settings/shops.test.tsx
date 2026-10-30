@@ -1,10 +1,11 @@
 // #59 + #79: your shops, in Settings, Search elsewhere and research
+import { readFileSync } from 'node:fs'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, describe, expect, it } from 'vitest'
 import { App } from '../App'
 import { doneMessage, exportFile, lookPatch, planImport, planSummary, shopsFrom, type Plan } from '../model/library'
-import { DEFAULT_SHOPS, mergeShops, sameSite, shopLine, shopLink, shopOf, shopOrder, shopSite, shopSuggest, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop } from '../model/shops'
+import { atShow, DEFAULT_SHOPS, mergeShops, sameSite, shopLine, shopLink, shopOf, shopOrder, shopSite, shopSuggest, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop } from '../model/shops'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
@@ -269,6 +270,40 @@ describe('shops: the shop a record came from', () => {
       { title: 'D', artist: 'X', status: 'own', shop: 'Example Shop', example: true },
     ]
     expect(unlistedShops(recs as unknown as Rec[], list)).toEqual([{ name: 'Rough Trade', url: 'https://www.roughtrade.com/', count: 2 }])
+  })
+})
+
+describe('shops: a record bought at a show (#117)', () => {
+  const list = [SIREN, ...DEFAULT_SHOPS]
+  const booth = 'Merch booth at Bilmuri - Kinda Hard Tour in Landmark Credit Union Live — Milwaukee, WI'
+  it('knows a show from its words, and not a shop that only looks like one', () => {
+    for (const shop of [booth, 'Merch table, Riot Fest', 'Concert in Chicago', 'Pitchfork Music Festival', 'At the show', 'Sleep Token tour'])
+      expect(atShow(shop), shop).toBe(true)
+    for (const shop of ['Siren Records', 'The Record Showroom', 'Tourist Trap Vinyl', '', undefined]) expect(atShow(shop), String(shop)).toBe(false)
+  })
+
+  it('never offers a show for the list, while an ordinary unlisted shop still is', () => {
+    const recs = [
+      { title: 'A', artist: 'Bilmuri', status: 'own', shop: booth },
+      { title: 'B', artist: 'X', status: 'own', shop: 'Rough Trade' },
+    ]
+    expect(unlistedShops(recs as unknown as Rec[], list)).toEqual([{ name: 'Rough Trade', url: '', count: 1 }])
+  })
+
+  it("is what the chat skill saves for one, and the skill saves a listed shop's exact name and website", () => {
+    const skill = readFileSync(`${import.meta.dirname}/../../../skills/vinyl-wall/SKILL.md`, 'utf8')
+    const saved = skill.match(/Save `shop` as `"(Merch booth at [^"]+)"`/)?.[1]
+    expect(saved).toBeTruthy()
+    expect(atShow(saved)).toBe(true)
+    expect(skill).toMatch(/don't offer to add it to their shops/)
+    expect(skill).toMatch(/save that shop's exact `name` as `shop` and its `url` as `shopUrl`/)
+  })
+
+  it('shows where it was bought on the sheet, as written and not as a link', async () => {
+    const { user } = setup({}, { s1: { title: 'Kinda Hard', artist: 'Bilmuri', status: 'own', notes: [], added: 1, shop: booth, paid: '30' } })
+    await openRecord(user, 'Kinda Hard')
+    await user.click(screen.getByRole('tab', { name: 'About' }))
+    expect(screen.getByText(booth).tagName).toBe('SPAN')
   })
 })
 
