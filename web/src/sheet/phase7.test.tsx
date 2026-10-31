@@ -87,7 +87,7 @@ describe('About the artist', () => {
     expect(within(panel).getByRole('group', { name: 'About the artist' })).toBeTruthy()
   })
 
-  it('is not shown when Not this artist was used', async () => {
+  it('is not shown when artist info was turned off', async () => {
     const { user } = setup((s) => Object.assign(s.records.r1, { aboutBlocked: true }))
     await open(user, 'Kind of Blue')
     const tab = screen.queryByRole('tab', { name: 'About' })

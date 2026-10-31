@@ -12,7 +12,7 @@ import { SheetContent } from '../wall/Tip'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
-import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST, removeCoverPatch, UNBLOCK_ARTIST } from '../model/create'
+import { coverPatch, enrichPatch, removeCoverPatch } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
@@ -102,7 +102,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 // onBack: the record was opened from Equipment, so its header offers the way back there
 // onDiscogs: open Settings on its Discogs section (the release line's way to connect)
 export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | null; onClose: () => void; onBack?: () => void; onDiscogs?: () => void }) {
-  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime()
+  const { records, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -170,11 +170,6 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     // and its full-size original, when it has one
     for (const id of [coverAsset, coverOriginal])
       if (typeof id === 'string' && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id)
-  }
-  // Look up album & artist info again: takes back Not this artist (#63)
-  const relook = () => {
-    if (!r) return
-    update(r.id, UNBLOCK_ARTIST).then((ok) => ok && fireTask({ asked: true }))
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
@@ -276,21 +271,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   </Alert>
                 )}
                 {editing && (
-                  // the lookups, on one quiet line: the cover's own actions are on the cover (#129)
+                  // the lookup, on a quiet line: the cover's own actions are on the cover (#129)
                   <div className="-ms-3 mb-6 flex flex-wrap items-center gap-1">
                     <Button size="sm" variant="ghost" disabled={!!r.needsEnrich} onClick={enrich}>
                       Find cover & details
                     </Button>
-                    {hasArtistInfo(r, new Set(artists.map((a) => a.id))) && (
-                      <Button size="sm" variant="ghost" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
-                        Not this artist
-                      </Button>
-                    )}
-                    {r.aboutBlocked && (
-                      <Button size="sm" variant="ghost" onClick={relook}>
-                        Bring back artist info
-                      </Button>
-                    )}
                     <Confirm
                       open={uncover}
                       title={`Remove this cover${ownUpload ? ' for good' : ''}? The record goes back to its plain sleeve.`}

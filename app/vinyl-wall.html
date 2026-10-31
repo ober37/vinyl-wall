@@ -5363,22 +5363,11 @@ var removeCoverPatch = (r) => ({
 	...r.coverOriginal ? { coverOriginal: "" } : {},
 	...r.autoFilled?.includes("coverAsset") ? { autoFilled: r.autoFilled.filter((k) => k !== "coverAsset") } : {}
 });
-var NOT_ARTIST = {
-	artistRef: "",
-	about: null,
-	aboutBlocked: true
-};
 var enrichPatch = (r) => ({
 	needsEnrich: true,
 	...r.aboutBlocked ? {} : RELOOK_ABOUT,
 	...r.coverBlocked ? { coverBlocked: false } : {}
 });
-var UNBLOCK_ARTIST = {
-	aboutBlocked: false,
-	needsEnrich: true,
-	...RELOOK_ABOUT
-};
-var hasArtistInfo = (r, artistIds) => !r.aboutBlocked && (!!r.artistRef && artistIds.has(String(r.artistRef)) || !!r.about?.summary);
 // src/sheet/CoverButton.tsx
 function useCoverPick(hasCover, onUploaded, onStatus) {
 	const { hasAssets, upload } = useRuntime();
@@ -8505,7 +8494,7 @@ function useAutosave(r, editing) {
 	};
 }
 function RecordSheet({ id, onClose, onBack, onDiscogs }) {
-	const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime();
+	const { records, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime();
 	const r = records.find((x) => x.id === id);
 	const [editing, setEditing] = useState(false);
 	const [focusWhy, setFocusWhy] = useState(false);
@@ -8570,10 +8559,6 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		if (!await update(r.id, removeCoverPatch(r))) return;
 		setSaved("Saved");
 		for (const id of [coverAsset, coverOriginal]) if (typeof id === "string" && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id);
-	};
-	const relook = () => {
-		if (!r) return;
-		update(r.id, UNBLOCK_ARTIST).then((ok) => ok && fireTask({ asked: true }));
 	};
 	const k = r ? kindOf$1(r) : "own";
 	const by = r ? [
@@ -8683,34 +8668,19 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 						}),
 						editing && /* @__PURE__ */ jsxs("div", {
 							className: "-ms-3 mb-6 flex flex-wrap items-center gap-1",
-							children: [
-								/* @__PURE__ */ jsx(Button, {
-									size: "sm",
-									variant: "ghost",
-									disabled: !!r.needsEnrich,
-									onClick: enrich,
-									children: "Find cover & details"
-								}),
-								hasArtistInfo(r, new Set(artists.map((a) => a.id))) && /* @__PURE__ */ jsx(Button, {
-									size: "sm",
-									variant: "ghost",
-									onClick: async () => await update(r.id, NOT_ARTIST) && setSaved("Saved"),
-									children: "Not this artist"
-								}),
-								r.aboutBlocked && /* @__PURE__ */ jsx(Button, {
-									size: "sm",
-									variant: "ghost",
-									onClick: relook,
-									children: "Bring back artist info"
-								}),
-								/* @__PURE__ */ jsx(Confirm, {
-									open: uncover,
-									title: `Remove this cover${ownUpload ? " for good" : ""}? The record goes back to its plain sleeve.`,
-									yes: "Remove",
-									onYes: uncoverIt,
-									onClose: () => setUncover(false)
-								})
-							]
+							children: [/* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								disabled: !!r.needsEnrich,
+								onClick: enrich,
+								children: "Find cover & details"
+							}), /* @__PURE__ */ jsx(Confirm, {
+								open: uncover,
+								title: `Remove this cover${ownUpload ? " for good" : ""}? The record goes back to its plain sleeve.`,
+								yes: "Remove",
+								onYes: uncoverIt,
+								onClose: () => setUncover(false)
+							})]
 						}),
 						editing && pick && /* @__PURE__ */ jsx("div", {
 							className: "mb-6",
@@ -11172,10 +11142,6 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .mb-1\.5 {
     margin-bottom: calc(var(--spacing) * 1.5);
-  }
-
-  .mb-2 {
-    margin-bottom: calc(var(--spacing) * 2);
   }
 
   .mb-4 {

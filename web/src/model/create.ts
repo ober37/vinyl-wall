@@ -38,16 +38,10 @@ export const removeCoverPatch = (r: Rec) => ({
   ...(r.autoFilled?.includes('coverAsset') ? { autoFilled: r.autoFilled.filter((k) => k !== 'coverAsset') } : {}),
 })
 
-// "Not this artist": drop the artist and album info the lookup matched, and don't look it up again
-export const NOT_ARTIST = { artistRef: '', about: null, aboutBlocked: true }
-// "Find cover & details" looks the album info up again too, unless it's been turned off with Not this artist, and
-// lifts a Remove cover
+// "Find cover & details" looks the album info up again too, unless it's been turned off (aboutBlocked, set from the chat),
+// and lifts a Remove cover
 export const enrichPatch = (r: Rec) => ({
   needsEnrich: true,
   ...(r.aboutBlocked ? {} : RELOOK_ABOUT),
   ...(r.coverBlocked ? { coverBlocked: false } : {}),
 })
-// "Look up album & artist info again": takes back Not this artist and matches the album afresh (#63)
-export const UNBLOCK_ARTIST = { aboutBlocked: false, needsEnrich: true, ...RELOOK_ABOUT }
-export const hasArtistInfo = (r: Rec, artistIds: Set<string>) =>
-  !r.aboutBlocked && ((!!r.artistRef && artistIds.has(String(r.artistRef))) || !!r.about?.summary)

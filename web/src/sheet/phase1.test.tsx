@@ -192,26 +192,12 @@ describe('edit mode', () => {
     expect(await screen.findByText('Upload failed: That image is too big to store. Try a smaller one.')).toBeTruthy()
   })
 
-  it('Not this artist drops the matched artist and album info', async () => {
-    const { fake, user } = setup()
-    await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
-    // the sheet's own Edit comes first (play rows have Edit buttons too)
-    await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
-    await user.click(screen.getByRole('button', { name: 'Not this artist' }))
-    await waitFor(() => expect(fake.records.r1).toMatchObject({ artistRef: '', about: null, aboutBlocked: true }))
-    expect(screen.queryByRole('button', { name: 'Not this artist' })).toBeNull()
-  })
-
-  it('Bring back artist info takes back Not this artist (#63, #129)', async () => {
-    const { fake, user } = setup()
+  it('offers only Find cover & details for the lookups, and nothing to turn artist info off (#129)', async () => {
+    const { user } = setup()
     await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
     await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
-    expect(screen.queryByRole('button', { name: 'Bring back artist info' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Not this artist' }))
-    await user.click(await screen.findByRole('button', { name: 'Bring back artist info' }))
-    await waitFor(() => expect(fake.records.r1).toMatchObject({ aboutBlocked: false, needsEnrich: true, aboutAt: '', aboutV: 0 }))
-    expect(fires(fake).length).toBeGreaterThan(0)
-    expect(screen.queryByRole('button', { name: 'Bring back artist info' })).toBeNull()
+    expect(screen.getByRole('button', { name: 'Find cover & details' })).toBeTruthy()
+    for (const name of ['Not this artist', 'Bring back artist info', 'Look up album & artist info again']) expect(screen.queryByRole('button', { name })).toBeNull()
   })
 
   it('Remove cover asks, goes back to the sleeve, and keeps an image another record shows (#62)', async () => {
