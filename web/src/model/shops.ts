@@ -74,12 +74,13 @@ export function siteUrl(v: string): string {
   }
 }
 
-// where a shop looks for this album: its search, else a web search within its website until its search is found (#118)
+// where a shop looks for this album: its search, else a web search naming its website until its search is found (#118).
+// The site's name, not site:, which finds only the pages Google has indexed there, and few are on a store drawn by script
 export function shopLink(s: Shop, r: { artist?: unknown; title?: unknown }) {
   const q = `${r.artist || ''} ${r.title || ''}`.trim()
   if (s.search) return s.search.replace('{q}', encodeURIComponent(q))
   if (!s.url) return ''
-  return 'https://www.google.com/search?q=' + encodeURIComponent(`site:${new URL(s.url).hostname.replace(/^www\./, '')} ${q}`)
+  return 'https://www.google.com/search?q=' + encodeURIComponent(`${new URL(s.url).hostname.replace(/^www\./, '')} ${q}`)
 }
 export const mapLink = (s: Shop) => (s.place ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${s.name} ${s.place}`) : '')
 export const telLink = (s: Shop) => (s.phone && /\d/.test(s.phone) ? 'tel:' + s.phone.replace(/[^\d+]/g, '') : '')

@@ -70,11 +70,11 @@ describe('shops: the data', () => {
     expect(siteUrl('https://www.slash.org/x')).toBe('https://www.slash.org/x')
   })
 
-  it("searches a shop for the album, else the web within its website until its search is found; Revolver's search is #59's", () => {
+  it("searches a shop for the album, else the web for its website and the album until its search is found; Revolver's search is #59's", () => {
     const r = { artist: 'The Beatles', title: 'Revolver' }
     expect(shopLink(DEFAULT_SHOPS[0], r)).toBe('https://shop.revolvermag.com/search?q=The%20Beatles%20Revolver')
     expect(shopLink({ id: 'x', name: 'X', kind: 'online', url: 'https://www.storeus.example.com/shop' }, r)).toBe(
-      'https://www.google.com/search?q=site%3Astoreus.example.com%20The%20Beatles%20Revolver',
+      'https://www.google.com/search?q=storeus.example.com%20The%20Beatles%20Revolver',
     )
     expect(shopLink(RECKLESS, r)).toBe('')
   })
