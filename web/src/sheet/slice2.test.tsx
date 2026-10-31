@@ -7,6 +7,7 @@ import { today } from '../model/record'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openOrders } from './openCopies'
 
 function setup(opts: Parameters<typeof fakeClaude>[1] = {}) {
   const fake = fakeClaude(sample(), opts)
@@ -80,6 +81,7 @@ describe('status', () => {
   it('It arrived hangs an order on the wall', async () => {
     const { fake, user } = setup()
     await open(user, 'Aja')
+    await openOrders(user)
     await user.click(btn('It arrived'))
     await waitFor(() => expect(fake.records.r5.status).toBe('own'))
     expect(fake.records.r5).toMatchObject({ orderStatus: 'delivered', acquired: today() })

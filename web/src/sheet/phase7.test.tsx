@@ -6,7 +6,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
-import { openCopies } from './openCopies'
+import { openCopies, openOrders } from './openCopies'
 
 type C = Record<string, Record<string, unknown>>
 // the wall's filter is remembered in this browser; one test's filter isn't the next one's
@@ -206,6 +206,8 @@ describe('the design checklist pass', () => {
     const { user } = setup()
     await open(user, 'Aja')
     await user.click(screen.getByRole('tab', { name: /Notes/ }))
+    await user.click(screen.getByRole('tab', { name: 'Order' }))
+    await openOrders(user)
     await user.click(screen.getByRole('button', { name: 'It arrived' }))
     await waitFor(() => expect(screen.getByRole('tab', { name: 'Listening' }).getAttribute('aria-selected')).toBe('true'))
   })

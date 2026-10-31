@@ -5,7 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
-import { openCopies } from './openCopies'
+import { openCopies, openOrders } from './openCopies'
 
 function setup(opts: Parameters<typeof fakeClaude>[1] = {}, extra: Record<string, Record<string, unknown>> = {}) {
   const data = sample()
@@ -36,13 +36,16 @@ const tracked = {
 }
 
 describe('the Order tab', () => {
-  it('opens first on an ordered record: the copy as one card, where it is, and its Discogs links', async () => {
+  it('opens first on an ordered record: the copy as one fold, where it is, and its Discogs links', async () => {
     const { user } = setup({}, tracked)
     await open(user, 'Rumours')
     expect(screen.getByRole('tab', { name: 'Order' }).getAttribute('aria-selected')).toBe('true')
     const panel = screen.getByRole('tabpanel')
-    expect(within(panel).getByRole('heading', { name: 'Rhino high fidelity' })).toBeTruthy()
-    expect(within(panel).getByText(/^Shipped, expected Oct 30/)).toBeTruthy()
+    // folded to start, as every copy is, with where it's at on its row (#139)
+    expect(within(panel).getByRole('button', { name: 'Rhino high fidelity Shipped, expected Oct 30' }).getAttribute('aria-expanded')).toBe('false')
+    await openOrders(user)
+    // said once, on the fold's row: inside, only the way to track it
+    expect(within(panel).getAllByText(/^Shipped, expected Oct 30/)).toHaveLength(1)
     expect(within(panel).getByRole('link', { name: 'Track ↗' }).getAttribute('href')).toBe('https://www.ups.com/track?tracknum=1Z999')
     expect(within(panel).getByRole('link', { name: 'Rhino ↗' }).getAttribute('href')).toBe('https://www.rhino.com/')
     expect(within(panel).getByText('Up to $45')).toBeTruthy()
@@ -55,7 +58,8 @@ describe('the Order tab', () => {
     await open(user, 'Aja')
     const panel = screen.getByRole('tabpanel')
     // named as the copy is everywhere else: an order with no name or pressing is Copy 1 (#121)
-    expect(within(panel).getByRole('heading', { name: 'Copy 1' })).toBeTruthy()
+    expect(within(panel).getByRole('button', { name: /^Copy 1/ })).toBeTruthy()
+    await openOrders(user)
     expect(within(panel).queryByRole('link', { name: 'Track ↗' })).toBeNull()
     expect(within(panel).getByText('Rough Trade')).toBeTruthy()
   })

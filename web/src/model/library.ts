@@ -1,9 +1,10 @@
 // Export and import of a library file, ported from exportLibrary/readLibrary/applyLibrary in app/vinyl-wall.html. Same file
 // (vinylWall: 1) both ways, so files move between this page and production's. A file holding other copies you own
-// (ownedCopies, #121) is vinylWall: 2, so an older wall refuses it rather than dropping them. Pure: no React, no db.
+// (ownedCopies, #121) is vinylWall: 2, and one holding a copy on order (#139) vinylWall: 3, so an older wall refuses it rather
+// than dropping them. Pure: no React, no db.
 /* The file holds records, gear, setups and the page's look. Never the Discogs token (it isn't loaded here) or anything
    tied to one wall: the task id, the Discogs connection, update state, data version. */
-import { wantCopies, type Copy } from './copies'
+import { copyOrdered, wantCopies, type Copy } from './copies'
 import { firstAsCopy, moreOwned } from './owned'
 import { aboutPending } from './task'
 import { BACKGROUNDS, HANGS } from './site'
@@ -54,9 +55,10 @@ export function exportFile(p: { records: Rec[]; gear: Doc[]; setups: Doc[]; arti
   for (const k of ['title', 'bg', 'dim', 'hang', 'shops']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
   const records = byId(p.records as Doc[])
   const owned = Object.values(records).some((r) => Array.isArray(r.ownedCopies) && r.ownedCopies.length)
+  const ordered = Object.values(records).some((r) => wantCopies(r as Rec).slice(1).some(copyOrdered))
   const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean))
   return {
-    vinylWall: owned ? 2 : 1, exportedAt: nowUTC(), app: p.app, settings: { site }, setups: byId(p.setups), gear: byId(p.gear), records,
+    vinylWall: ordered ? 3 : owned ? 2 : 1, exportedAt: nowUTC(), app: p.app, settings: { site }, setups: byId(p.setups), gear: byId(p.gear), records,
     artists: byId(p.artists.filter((a) => refs.has(a.id))), covers: {},
   }
 }
@@ -98,7 +100,7 @@ export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; ge
   }
   if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== 'object' || !snap.records)
     return "This file wasn't made by Export on a Vinyl Wall."
-  if (snap.vinylWall > 2) return 'This file was made by a newer Vinyl Wall. Update this wall first, then import it.'
+  if (snap.vinylWall > 3) return 'This file was made by a newer Vinyl Wall. Update this wall first, then import it.'
   // every record already here, or brought in by an earlier one in this file, by id, Discogs release, and artist and title
   const byId = new Map<string, Doc | null>(w.records.map((r) => [r.id, r]))
   const R = new Map<number, Doc | null>()

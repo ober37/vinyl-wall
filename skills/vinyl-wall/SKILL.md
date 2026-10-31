@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 23.
+Skill version 24.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -28,6 +28,12 @@ Write only what the person said or the photos show; leave the rest out. Before a
 
 An owned record holds every copy of the album they have: its own fields are the first copy, and `ownedCopies` lists the others. When they have another copy of an owned record (a second pressing, or a second copy of the same one), `get` the record and append `{"name", "pressing", "label", "catalog", "matrix", "discogsId", "mediaGrade", "sleeveGrade", "paid", "shop", "shopUrl", "acquired"}` to `ownedCopies` (create the list if it isn't there; empty strings for what you don't know, `discogsId` as a number), filled in as for a new record's pressing and owned fields. A `name` tells two copies of the same pressing apart ("Sealed", "Player"); ask for one only then. When the copy they got is one the record lists in `moreCopies` (a copy still wanted), take it out of `moreCopies` in the same write and carry over its name, pressing, label, catalog and `discogsId`. `update` with `if_version` and `needsSync: true`. Never make a second record for an album they already own.
 
+## Another copy on order
+
+A record they own or have on order can have other copies on order too, each with its own order. A copy on order is an entry in `moreCopies` that has an `orderStatus`; its order uses the record's own order fields by the same names: `orderStatus` (`"preorder"`, `"ordered"`, `"shipped"` or `"delayed"`), `orderDate`, `eta`, `paid`, `shop`, `shopUrl`, `orderNum`, `carrier`, `tracking`. When they order another copy of an album on the wall as owned or ordered, `get` the record and either add those fields to the copy's entry in `moreCopies` (when it's a copy they already want) or append a new entry `{"name", "pressing", "label", "catalog", "discogsId", ...the order fields}`; drop the copy's `releaseDate` (an upcoming one becomes `eta` with `orderStatus: "preorder"`). Add a note `"Ordered another copy · $<paid> from <shop>"` and `update` with `if_version` and `needsSync: true`. Never make a second record for the album. A record they only want (`status: "wish"`) has no copies on order: ordering one of its copies makes the record `"ordered"` with that copy in its own fields.
+
+When a copy on order arrives, on a record they own: take its entry out of `moreCopies` and append it to `ownedCopies` as another copy they own (its name, pressing, label, catalog, `discogsId`, `paid`, `shop`, `shopUrl`, `acquired`, grades as below), with a note `"Another copy arrived from <shop>."`. On a record still on order: the copy that arrived becomes the record's own (its fields in the record's, `status: "own"`, `acquired`, the record's own order fields cleared to `""`), and the record's own order moves into `moreCopies` as a copy on order. `update` with `if_version` and `needsSync: true`.
+
 Ask either/or questions as a yes/no where you can ("Is it new or sealed?", not "New or used?"), so a "yes" is never ambiguous.
 
 If a shop listing shows a release date still to come (a pre-order), ask whether they have it in hand before adding it as owned rather than ordered.
@@ -48,7 +54,7 @@ A copy they want that's a pre-order can keep the day it comes out: `releaseDate`
 
 ## An order that arrived
 
-When they say an ordered record arrived, `update` it the way the wall's It arrived does:
+When they say an ordered record arrived (its own order, not a copy on order: see Another copy on order), `update` it the way the wall's It arrived does:
 
 - `status: "own"`, `orderStatus: "delivered"`, `needsSync: true`.
 - `acquired`: the date, under the same rule as a new record (today when they say it came today).

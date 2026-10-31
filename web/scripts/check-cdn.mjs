@@ -20,8 +20,10 @@ const html = readFileSync(join(import.meta.dirname, '../dist/index.html'))
 // 505 KB, most of it the toast's animation CSS).
 // 1,150 files, 560 KB and 1,600 characters from #129 (appica's DropdownMenu, for the cover's actions, took a first visit
 // to 1,114, the page to 541 KB and its longest line to 1,519: the owner chose the menu over a toggle at 514 KB).
+// 580 KB from #139 (copies on order, their actions, the Order tab's folds and edit mode's ordered copies took the page from
+// 552 KB to 562 KB).
 // The import map is one long line of URLs, so it's left out of the line check.
-const BUDGET = { kb: 560, line: 1600, files: 1150, seconds: 10 }
+const BUDGET = { kb: 580, line: 1600, files: 1150, seconds: 10 }
 const fail = []
 const kb = Math.round(html.length / 1024)
 const line = Math.max(...html.toString().split('\n').filter((l) => !l.includes('type="importmap"')).map((l) => l.length))

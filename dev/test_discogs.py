@@ -277,6 +277,46 @@ S.sync_one({**mine, "status": "wish"}, set(), sync)
 check("sync: back on the hunt, the other copies' items come off", ("DELETE", "/users/u/collection/folders/1/releases/31/instances/77", None) in calls
       and "ownedInsts" not in sync, calls)
 
+# --- copies on order (#139): each is on the wantlist with its order's note, read back onto the copy on import
+placed = {"name": "Blue vinyl", "orderStatus": "shipped", "shop": "Rough Trade", "orderDate": "2026-10-01", "eta": "2026-11-02"}
+rt = I.read_want(S.copy_notes({"priority": 2}, placed))
+check("round trip: a copy's order", rt == {"status": "ordered", "shop": "Rough Trade", "orderDate": "2026-10-01", "orderStatus": "shipped",
+                                          "eta": "2026-11-02", "pressing": "Blue vinyl"}, rt)
+calls.clear()
+insts[50] = [{"instance_id": 500, "folder_id": 1}]
+sync = {"rid": 50, "where": "collection", "state": "synced", "instanceId": 500}
+S.sync_one({"title": "Blue", "artist": "Joni Mitchell", "status": "own", "discogsId": 50, "moreCopies": [{**placed, "discogsId": 51}]}, set(), sync)
+check("sync: an owned record's copy on order is on the wantlist with its order",
+      ("PUT", "/users/u/wants/51", None) in calls
+      and ("POST", "/users/u/wants/51", "On order from Rough Trade (ordered 2026-10-01). Shipped, expected 2026-11-02. Edition: Blue vinyl") in calls
+      and sync.get("copyRids") == [51], calls)
+# an ordered record's second order arrives first: that copy is the record's now, and its first order a copy on order
+calls.clear()
+insts[52] = []
+sync = {"rid": 51, "where": "wantlist", "state": "synced", "copyRids": [52]}
+S.sync_one({"title": "Blue", "artist": "Joni Mitchell", "status": "own", "discogsId": 52, "moreCopies": [{**placed, "discogsId": 51}]}, {51, 52}, sync)
+check("sync: the copy that came goes in the collection and off the wantlist",
+      ("POST", "/users/u/collection/folders/1/releases/52", None) in calls and ("DELETE", "/users/u/wants/52", None) in calls, calls)
+check("sync: the order still on its way stays on the wantlist with its note",
+      not any(c[0] == "DELETE" and c[1] == "/users/u/wants/51" for c in calls)
+      and ("POST", "/users/u/wants/51", "On order from Rough Trade (ordered 2026-10-01). Shipped, expected 2026-11-02. Edition: Blue vinyl") in calls, calls)
+
+coll = [rel(60, "Blue", "Joni Mitchell", "Reprise", "MS 2038")]
+wants = [{**rel(61, "Blue", "Joni Mitchell", "Rhino", "R1 2038"), "notes": "On order from Rough Trade (ordered 2026-10-01). Shipped. Edition: Blue vinyl"},
+         rel(62, "Court and Spark", "Joni Mitchell", "Asylum", "7E-1001"),
+         {**rel(63, "Court and Spark", "Joni Mitchell", "Asylum", "RE 2"), "notes": "On order from Rough Trade"}]
+I.pages = lambda path, key: coll if key == "releases" else wants
+os.makedirs(os.path.join(tmp, "empty139"))
+sys.argv = ["x", os.path.join(tmp, "empty139"), os.path.join(tmp, "out2.json")]
+I.main()
+out = {w["doc_id"]: w["data"] for w in json.load(open(os.path.join(tmp, "out2.json"))) if w["collection"] == "records"}
+bc = out.get("dg-60", {}).get("moreCopies", [])
+check("import: an owned album's pressing on order comes back as a copy on order",
+      len(bc) == 1 and bc[0].get("orderStatus") == "shipped" and bc[0].get("shop") == "Rough Trade" and bc[0].get("orderDate") == "2026-10-01"
+      and bc[0].get("name") == "Blue vinyl", bc)
+cs = out.get("dg-62", {}).get("moreCopies", [])
+check("import: a hunt's other pressing stays a copy it wants, even with an order's note", len(cs) == 1 and "orderStatus" not in cs[0], cs)
+
 # --- sync: a run with a lot to sync stops starting records after its budget, and says how many wait
 for i in range(3):
     with open(os.path.join(tmp, "wall", f"s{i}.json"), "w") as fh:

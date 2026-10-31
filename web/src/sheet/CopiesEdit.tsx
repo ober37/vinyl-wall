@@ -6,9 +6,10 @@ import { Field, FieldDescription, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
-import { copyHas, copyTitle, emptyCopy, type Copy } from '../model/copies'
+import { copyHas, copyOrdered, copyTitle, emptyCopy, ORDER_KEYS, type Copy } from '../model/copies'
 import { fromDate, toDate } from '../model/dates'
-import type { Form } from '../model/edit'
+import type { Form, TextKey } from '../model/edit'
+import { orderState as stateOf } from '../model/orders'
 import { shopHref, type Kind, type Rec } from '../model/record'
 import { Confirm } from './Confirm'
 import { DiscogsFields } from './DiscogsEdit'
@@ -101,6 +102,7 @@ function CopyFields({ c, ph, on, auto, focus, links, discogs }: {
 // a copy's own fields as the record's (its barcodes aren't edited: a copy moved into first place has its own read again)
 const FLAT: Record<Exclude<keyof Copy, 'barcodes'>, keyof Form> = {
   name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks', releaseDate: 'releaseDate',
+  ...(Object.fromEntries(ORDER_KEYS.map((k) => [k, k])) as Record<(typeof ORDER_KEYS)[number], keyof Form>),
 }
 export const firstOf = (f: Form): Copy => ({
   name: f.copyName ?? '', pressing: f.pressing ?? '', label: f.label ?? '', catalog: f.catalog ?? '', budget: f.budget ?? '', discogsId: f.discogsId ?? '',
@@ -111,11 +113,12 @@ const asFlat = (c: Copy): Partial<Form> =>
   Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'barcodes').map(([k, v]) => [FLAT[k as keyof typeof FLAT], v]))
 
 // Edit mode's copies, as production's edit form has them. A hunt's copies are one group, the first in the record's own
-// fields; an ordered record's first copy is the one ordered; owned and ordered records list the copies still wanted
-// after ("None yet." when there are none). Each copy is a fold under its title (and budget), all folded to start, as Your copies
+// fields; an ordered record's first copy is the one ordered, and the copies on order (#139) follow it (on an owned record
+// they're a group of their own, when there are any), each with its Order details and Cancelled, still want it; owned and
+// ordered records list the copies still wanted after ("None yet." when there are none). Each copy is a fold under its title (and budget), all folded to start, as Your copies
 // are (#121); a copy just added, or one asked for (focusCopy), opens with the cursor in its name, and a new record's one
 // copy starts open. Removing a hunt's only copy clears it back to a blank one; a new record shows only the first.
-export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, connected = false, onConnect, order, orderState = '' }: {
+export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, connected = false, onConnect, order, orderState = '', orderFor, onCancel }: {
   form: Form
   kind: Kind
   change: (p: Partial<Form>, now?: boolean) => void
@@ -132,11 +135,18 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
   // the copy's folded row
   order?: React.ReactNode
   orderState?: string
+  // a copy's own Order details, edited as the record's are (#139)
+  orderFor?: (f: Form, set: (k: TextKey, v: string) => void) => React.ReactNode
+  // Cancelled, still want it: an order (0 the record's own) comes off, saved at once
+  onCancel?: (ci: number) => void
 }) {
   const [confirm, setConfirm] = useState<number | null>(null)
   const more = form.moreCopies ?? []
   const wish = kind === 'wish'
   const all = isNew ? [firstOf(form)] : [firstOf(form), ...more]
+  // owned and ordered records: their copies on order (#139) and the ones still wanted, each by its place in all
+  const onOrder = all.map((c, i) => [c, i] as const).filter(([c, i]) => i > 0 && copyOrdered(c))
+  const wanted = all.map((c, i) => [c, i] as const).filter(([c, i]) => i > 0 && !copyOrdered(c))
   // each copy's fold, kept by a key that stays with the copy as others are added or removed
   const [keys, setKeys] = useState(() => all.map((_, i) => i))
   const [open, setOpen] = useState<string[]>(() => (isNew ? ['0'] : focusCopy != null ? [String(focusCopy)] : []))
@@ -177,10 +187,10 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
   // a hunt's lone copy can be removed once it has something in it
   const canRemove = (i: number) => !isNew && (i > 0 || (wish && (all.length > 1 || copyHas(all[0]) || !!all[0].discogsId)))
   // trail: muted beside the title (a copy wanted's budget, where an order's at)
-  const fold = (i: number, title: string, fields: React.ReactNode, trail = '') => (
+  const fold = (i: number, title: string, fields: React.ReactNode, trail = '', ordered = false) => (
     <AccordionItem key={keys[i]} value={String(keys[i])}>
       <AccordionTrigger className="text-foreground text-sm font-medium">
-        <span className="flex w-full items-baseline justify-between gap-3">
+        <span className="flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <span className="min-w-0">{title}</span>
           {trail && <span className="text-foreground-muted shrink-0 font-normal">{trail}</span>}
         </span>
@@ -189,6 +199,11 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
       <AccordionContent className="-mx-1 px-1">
         <div className="flex flex-col gap-4 pt-1 pb-1">
           {fields}
+          {ordered && onCancel && (
+            <Button size="sm" variant="outline" className="self-start" onClick={() => onCancel(i)}>
+              Cancelled, still want it
+            </Button>
+          )}
           {canRemove(i) && (
             <Button size="sm" variant="ghost" className="text-error-emphasis -ms-3 self-start" onClick={() => ask(i)}>
               Remove this copy
@@ -224,6 +239,34 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
       />,
       c.budget && 'Up to $' + c.budget,
     )
+  // a copy's order, after its fields; folded unless it's being entered on a new record (where it's at shows on the copy's row)
+  const orderFold = (node: React.ReactNode) => (
+    <Accordion variant="flush" defaultValue={isNew ? ['order'] : []}>
+      <AccordionItem value="order">
+        <AccordionTrigger className="text-foreground text-sm font-medium">Order details</AccordionTrigger>
+        <AccordionContent className="-mx-1 px-1">
+          <div className="pt-1 pb-1">{node}</div>
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
+  )
+  // a copy on order: its fields as the copy ordered has them, its release, then its own Order details
+  const orderedBlock = (c: Copy, i: number) =>
+    fold(
+      i,
+      copyTitle(c, i),
+      <>
+        <CopyFields c={c} ph={ORDERED} on={(k, v) => setMore(i, k, v)} discogs={release(c, i)} />
+        {orderFor &&
+          orderFold(
+            orderFor({ title: '', artist: '', why: '', year: '', runtime: '', ...Object.fromEntries(ORDER_KEYS.map((k) => [k, c[k] ?? ''])) }, (k, v) =>
+              setMore(i, k as keyof Copy, v),
+            ),
+          )}
+      </>,
+      stateOf({ id: '', orderStatus: c.orderStatus, eta: c.eta }),
+      true,
+    )
   const folds = (L: React.ReactNode) => (
     <Accordion variant="flush" multiple value={open} onValueChange={(v) => setOpen(v as string[])}>
       {L}
@@ -234,7 +277,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
   const addBtn = !isNew && (
     <div className="border-border-subtle border-t pt-4">
       <Button size="sm" variant="outline" onClick={add}>
-        {wish ? '+ Add another copy' : more.length ? '+ Add another copy you want' : '+ Add a copy you want'}
+        {wish ? '+ Add another copy' : wanted.length ? '+ Add another copy you want' : '+ Add a copy you want'}
       </Button>
     </div>
   )
@@ -249,37 +292,34 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
           {addBtn}
         </Fieldset>
       ) : (
-        kind === 'ordered' && (
+        (kind === 'ordered' || (onOrder.length > 0 && !isNew)) && (
           <Fieldset>
-            <FieldsetLegend>The copy you ordered</FieldsetLegend>
-            {folds(
-              fold(
-                0,
-                copyTitle(firstOf(form), 0),
-                <>
-                  <CopyFields c={firstOf(form)} ph={ORDERED} on={setFirst} auto={auto} discogs={discogs} />
-                  {/* the order for this copy, after its fields; folded unless it's being entered on a new record (where it's at
-                      shows on the copy's row) */}
-                  <Accordion variant="flush" defaultValue={isNew ? ['order'] : []}>
-                    <AccordionItem value="order">
-                      <AccordionTrigger className="text-foreground text-sm font-medium">Order details</AccordionTrigger>
-                      <AccordionContent className="-mx-1 px-1">
-                        <div className="pt-1 pb-1">{order}</div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  </Accordion>
-                </>,
-                orderState,
-              ),
-            )}
+            <FieldsetLegend>{plural(onOrder.length + (kind === 'ordered' ? 1 : 0), 'ordered')}</FieldsetLegend>
+            {folds([
+              ...(kind === 'ordered'
+                ? [
+                    fold(
+                      0,
+                      copyTitle(firstOf(form), 0),
+                      <>
+                        <CopyFields c={firstOf(form)} ph={ORDERED} on={setFirst} auto={auto} discogs={discogs} />
+                        {orderFold(order)}
+                      </>,
+                      orderState,
+                      !isNew,
+                    ),
+                  ]
+                : []),
+              ...(isNew ? [] : onOrder.map(([c, i]) => orderedBlock(c, i))),
+            ])}
           </Fieldset>
         )
       )}
       {/* owned and ordered records always have it, saying when there are none, so wanting another pressing starts here */}
       {!wish && !isNew && (
         <Fieldset>
-          <FieldsetLegend>{plural(more.length || 2, 'still want')}</FieldsetLegend>
-          {more.length ? folds(more.map((c, j) => block(c, j + 1, MORE))) : <p className="text-foreground-muted text-sm">None yet.</p>}
+          <FieldsetLegend>{plural(wanted.length || 2, 'still want')}</FieldsetLegend>
+          {wanted.length ? folds(wanted.map(([c, i]) => block(c, i, MORE))) : <p className="text-foreground-muted text-sm">None yet.</p>}
           {addBtn}
         </Fieldset>
       )}

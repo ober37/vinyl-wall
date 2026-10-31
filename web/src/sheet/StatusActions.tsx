@@ -5,7 +5,7 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
 import { buyHosts, pickable, wantCopies } from '../model/copies'
-import { gotPatch } from '../model/owned'
+import { arrivedPatch, gotCopyPatch, orderCopyPatch } from '../model/copyOrders'
 import { shopOf, shopSite, shopsOf } from '../model/shops'
 import { movedCopy, movePatch, type Paid } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
@@ -13,8 +13,8 @@ import { CopyPicker } from './Copies'
 import { ShopInput } from './ShopInput'
 import { Tip } from '../wall/Tip'
 
-// View mode's status buttons: Ordered it / Got it on the hunt (asking which copy when it hunts several, then what was
-// paid), It arrived on an order
+// View mode's status buttons on the hunt: Ordered it / Got it (asking which copy when it hunts several, then what was
+// paid). An order's It arrived is in its fold on the Order tab (#139)
 export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) => void }) {
   const { mutate } = useRuntime()
   const [pick, setPick] = useState<'ordered' | 'own' | null>(null)
@@ -22,7 +22,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
   const [ci, setCi] = useState(0)
   const [busy, setBusy] = useState(false)
   const k = kindOf(r)
-  if (k === 'own') return null
+  if (k !== 'wish') return null
 
   const move = async (to: 'ordered' | 'own', det?: Paid) => {
     setBusy(true)
@@ -63,7 +63,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     return (
       <PaidForm
         shopLabel={ask === 'own' ? 'Bought from' : 'From'}
-        hosts={k === 'wish' ? buyHosts(movedCopy(r, ci).buyLinks) : []}
+        hosts={buyHosts(movedCopy(r, ci).buyLinks)}
         init={{ paid: String(r.paid || ''), shop: String(r.shop || '') }}
         busy={busy}
         onSave={(det) => move(ask, det)}
@@ -73,20 +73,12 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
 
   return (
     <div className="flex flex-wrap gap-3">
-      {k === 'ordered' ? (
-        <Button disabled={busy} onClick={() => move('own')}>
-          It arrived
-        </Button>
-      ) : (
-        <>
-          <Button disabled={busy} onClick={() => start('ordered')}>
-            Ordered it
-          </Button>
-          <Button variant="outline" disabled={busy} onClick={() => start('own')}>
-            Got it
-          </Button>
-        </>
-      )}
+      <Button disabled={busy} onClick={() => start('ordered')}>
+        Ordered it
+      </Button>
+      <Button variant="outline" disabled={busy} onClick={() => start('own')}>
+        Got it
+      </Button>
     </div>
   )
 }
@@ -168,37 +160,67 @@ export function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }: {
   )
 }
 
-// Got this copy (#121): a copy an owned record still wants, bought; asks what was paid and where, then it joins your copies
-export function GotCopy({ r, ci, onMoved }: { r: Rec; ci: number; onMoved: (msg: string) => void }) {
+// A copy an owned or ordered record still wants: Ordered this copy (it goes on order, #139) or Got this copy (#121: it joins
+// your copies, or becomes an ordered record's own). Each asks what was paid and where, as the hunt's do. onOrdered: the
+// copy's gone on order (the sheet shows it on the Order tab)
+export function CopyActions({ r, ci, onMoved, onOrdered }: { r: Rec; ci: number; onMoved: (msg: string) => void; onOrdered?: () => void }) {
   const { mutate } = useRuntime()
-  const [ask, setAsk] = useState(false)
+  const [ask, setAsk] = useState<'ordered' | 'own' | null>(null)
   const [busy, setBusy] = useState(false)
   if (!ask)
     return (
-      <Button size="sm" variant="outline" className="self-start" onClick={() => setAsk(true)}>
-        Got this copy
-      </Button>
+      <div className="flex flex-wrap gap-3">
+        <Button size="sm" onClick={() => setAsk('ordered')}>
+          Ordered this copy
+        </Button>
+        <Button size="sm" variant="outline" onClick={() => setAsk('own')}>
+          Got this copy
+        </Button>
+      </div>
     )
   const save = async (det: Paid) => {
     setBusy(true)
     let msg = ''
     const ok = await mutate(r.id, (latest) => {
-      const m = gotPatch(latest, ci, det)
+      const m = ask === 'ordered' ? orderCopyPatch(latest, ci, det) : gotCopyPatch(latest, ci, det)
       msg = m?.msg || ''
       return m?.patch ?? null
     })
     setBusy(false)
-    setAsk(false)
+    setAsk(null)
     if (ok) onMoved(msg)
+    if (ok && ask === 'ordered') onOrdered?.()
   }
   return (
     <PaidForm
-      shopLabel="Bought from"
+      shopLabel={ask === 'own' ? 'Bought from' : 'From'}
       hosts={buyHosts(wantCopies(r)[ci]?.buyLinks ?? [])}
       init={{ paid: '', shop: '' }}
       busy={busy}
       onSave={save}
-      onCancel={() => setAsk(false)}
+      onCancel={() => setAsk(null)}
     />
+  )
+}
+
+// It arrived, on one order (0 the record's own, else a copy's index in wantCopies)
+export function Arrived({ r, ci, onMoved }: { r: Rec; ci: number; onMoved: (msg: string) => void }) {
+  const { mutate } = useRuntime()
+  const [busy, setBusy] = useState(false)
+  const go = async () => {
+    setBusy(true)
+    let msg = ''
+    const ok = await mutate(r.id, (latest) => {
+      const m = arrivedPatch(latest, ci)
+      msg = m?.msg || ''
+      return m?.patch ?? null
+    })
+    setBusy(false)
+    if (ok) onMoved(msg)
+  }
+  return (
+    <Button size="sm" className="self-start" disabled={busy} onClick={go}>
+      It arrived
+    </Button>
   )
 }

@@ -17,6 +17,7 @@ import { coverPatch, enrichPatch, removeCoverPatch } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
+import { cancelPatch, ordersOf } from '../model/copyOrders'
 import { SYNC_FAILED, syncProblem } from '../model/discogs'
 import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
@@ -145,7 +146,19 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     setPick(null)
     let m = ''
     mutate(r.id, (latest) => {
-      const x = movePatch(latest, to, undefined, ci)
+      // an ordered record moved back to the hunt while a copy is on order keeps that order as its own (#139)
+      const x = to === 'wish' && kindOf(latest) === 'ordered' && ordersOf(latest).length > 1 ? cancelPatch(latest, 0) : movePatch(latest, to, undefined, ci)
+      m = x?.msg || ''
+      return x?.patch ?? null
+    }).then((ok) => ok && setSaved(m))
+  }
+  // Cancelled, still want it, on one order (#139)
+  const cancelOrder = (ci: number) => {
+    if (!r) return
+    flush()
+    let m = ''
+    mutate(r.id, (latest) => {
+      const x = cancelPatch(latest, ci)
       m = x?.msg || ''
       return x?.patch ?? null
     }).then((ok) => ok && setSaved(m))
@@ -250,6 +263,12 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   <Badge size="sm" variant={k === 'own' ? 'success' : k === 'ordered' ? 'info' : 'secondary'}>
                     {k === 'wish' ? PRIORITY[r.priority == 1 ? 0 : r.priority == 3 ? 2 : 1] : KIND_LABEL[k]}
                   </Badge>
+                  {/* an owned record's copies on order (#139) */}
+                  {k === 'own' && ordersOf(r).length > 0 && (
+                    <Badge size="sm" variant="info">
+                      {ordersOf(r).length} on order
+                    </Badge>
+                  )}
                   {canEdit && (
                     <Button
                       size="sm"
@@ -338,6 +357,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                     title={r.title || 'this record'}
                     focusWhy={focusWhy}
                     onStatus={(to) => moveTo(to)}
+                    onCancel={cancelOrder}
                     onRemove={removeIt}
                     autoFilled={Array.isArray(r.autoFilled) ? r.autoFilled : []}
                     focusCopy={focusCopy}

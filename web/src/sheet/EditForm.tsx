@@ -43,6 +43,8 @@ type Props = {
   // Discogs is connected, and the way to Settings when it isn't
   connected?: boolean
   onConnect?: () => void
+  // Cancelled, still want it, on an order (0 the record's own, else a copy's index in wantCopies), saved at once (#139)
+  onCancel?: (ci: number) => void
 }
 
 
@@ -274,7 +276,7 @@ function YourCopiesEdit({ form, set, auto, change, r, isNew, discogs, connected,
   const block = (i: number, fields: React.ReactNode) => (
     <AccordionItem key={keys[i]} value={String(keys[i])}>
       <AccordionTrigger className="text-foreground text-sm font-medium">
-        <span className="flex w-full items-baseline justify-between gap-3">
+        <span className="flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
           <span className="min-w-0">{titles[i]}</span>
           {grades[i] && <span className="text-foreground-muted shrink-0 font-normal">{grades[i]}</span>}
         </span>
@@ -388,7 +390,7 @@ function OrderFields(p: { form: Form; set: Props['set'] }) {
   )
 }
 
-export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy, r, connected, onConnect }: Props) {
+export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy, r, connected, onConnect, onCancel }: Props) {
   const p = { form, set, auto: autoFilled }
   const own = kind === 'own'
   const [confirm, setConfirm] = useState(false)
@@ -469,11 +471,25 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
           onConnect={onConnect}
           order={kind === 'ordered' && <OrderFields {...p} />}
           orderState={kind === 'ordered' ? orderState({ id: '', orderStatus: form.orderStatus, eta: form.eta }) : ''}
+          orderFor={(f, s) => <OrderFields form={f} set={s} />}
+          onCancel={onCancel}
         />
       )}
 
       {own && <YourCopiesEdit {...p} r={r} change={change} isNew={isNew} discogs={discogs} connected={!!connected} onConnect={onConnect} />}
-      {own && !isNew && <CopiesEdit form={form} kind={kind} change={change} auto={autoFilled} r={r} connected={!!connected} onConnect={onConnect} />}
+      {own && !isNew && (
+        <CopiesEdit
+          form={form}
+          kind={kind}
+          change={change}
+          auto={autoFilled}
+          r={r}
+          connected={!!connected}
+          onConnect={onConnect}
+          orderFor={(f, s) => <OrderFields form={f} set={s} />}
+          onCancel={onCancel}
+        />
+      )}
 
       {!isNew && (
         <>
