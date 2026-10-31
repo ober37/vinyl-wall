@@ -34,7 +34,7 @@ describe('what the background task is started with', () => {
     expect(lookDue(miss(2, 7 * DAY - 1), now)).toBe(false)
     expect(lookDue(miss(2, 7 * DAY), now)).toBe(true)
     expect(lookDue(miss(3, 999 * DAY), now)).toBe(false)
-    // asked for again (Find cover & details, a chat) always runs; a newer lookup gives it one more try
+    // asked for again (Look up… in edit mode, a chat) always runs; a newer lookup gives it one more try
     expect(lookDue({ ...miss(3, 0), needsEnrich: true }, now)).toBe(true)
     expect(lookDue(miss(3, 7 * DAY, 0), now)).toBe(true)
     // a stopped record isn't waiting for the task, for a lookup run or as a busy album

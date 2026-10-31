@@ -222,7 +222,7 @@ describe('the welcome card', () => {
 })
 
 describe('starts the page makes on its own', () => {
-  it("say nothing when background updates can't run here, and Find cover & details still says why", async () => {
+  it("say nothing when background updates can't run here, and Look up… still says why", async () => {
     const { user } = setup({}, { mcp: 'none' })
     await user.click(await screen.findByRole('button', { name: 'Add a record' }))
     const sheet = await screen.findByRole('dialog')
@@ -237,7 +237,7 @@ describe('starts the page makes on its own', () => {
     await user.keyboard('{Escape}')
     await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
     await user.click(await screen.findByRole('button', { name: 'Edit' }))
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: /^Look up (the cover and details|details again)$/ }))
     expect(await screen.findByText(/Background updates aren't available in this view/)).toBeTruthy()
   })
 })

@@ -160,9 +160,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     flushSync()
     onClose()
   }
-  // edit mode's manual lookup: mark the record and start the task
+  // edit mode's manual lookup: mark the record and start the task. Focus goes to the status line that takes its place
+  const statusLine = useRef<HTMLParagraphElement>(null)
   const enrich = () => {
     if (!r) return
+    statusLine.current?.focus()
     update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }))
   }
   // Remove cover: the image goes too when no other record shows it; an upload of their own is gone for good (#62)
@@ -260,12 +262,26 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                 </div>
                 {/* what it's earned, owned records in view only, on a row of its own so phones don't crowd the one above */}
                 {k === 'own' && !editing && <Badges r={r} records={records} />}
-                {/* waiting on the background task: the record's one lookup line, gone when the task fills it in */}
-                {status && (
-                  <p role="status" className="text-foreground-muted mt-1 flex items-center gap-2 text-xs">
-                    <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                    {status}
-                  </p>
+                {/* waiting on the background task: the record's one lookup line, gone when the task fills it in. Always there
+                    (out of the way when empty), so a screen reader hears it start */}
+                <p
+                  ref={statusLine}
+                  role="status"
+                  tabIndex={-1}
+                  className={status ? 'text-foreground-muted mt-1 flex items-center gap-2 text-xs outline-none' : 'sr-only'}
+                >
+                  {status && (
+                    <>
+                      <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
+                      {status}
+                    </>
+                  )}
+                </p>
+                {/* edit mode, nothing running: the same line starts the lookup, in the words its status will use (#135) */}
+                {editing && !status && (
+                  <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={enrich}>
+                    {r.coverAsset ? 'Look up details again' : 'Look up the cover and details'}
+                  </Button>
                 )}
               </div>
             </DrawerHeader>
@@ -277,19 +293,14 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   </Alert>
                 )}
                 {editing && (
-                  // the lookup, on a quiet line: the cover's own actions are on the cover (#129)
-                  <div className="-ms-3 mb-6 flex flex-wrap items-center gap-1">
-                    <Button size="sm" variant="ghost" disabled={!!r.needsEnrich} onClick={enrich}>
-                      Find cover & details
-                    </Button>
-                    <Confirm
-                      open={uncover}
-                      title={`Remove this cover${ownUpload ? ' for good' : ''}? The record goes back to its plain sleeve.`}
-                      yes="Remove"
-                      onYes={uncoverIt}
-                      onClose={() => setUncover(false)}
-                    />
-                  </div>
+                  // Remove cover, from the cover's menu (#129)
+                  <Confirm
+                    open={uncover}
+                    title={`Remove this cover${ownUpload ? ' for good' : ''}? The record goes back to its plain sleeve.`}
+                    yes="Remove"
+                    onYes={uncoverIt}
+                    onClose={() => setUncover(false)}
+                  />
                 )}
                 {editing && pick && (
                   <div className="mb-6">

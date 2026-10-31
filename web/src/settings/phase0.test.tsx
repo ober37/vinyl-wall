@@ -31,10 +31,10 @@ const openEdit = async (user: ReturnType<typeof userEvent.setup>, title: string)
 afterEach(() => localStorage.clear())
 
 describe('starting the background task', () => {
-  it('Find cover & details marks the record and starts the task with what is waiting', async () => {
+  it('Look up details again marks the record and starts the task with what is waiting', async () => {
     const { fake, user } = setup()
     await openEdit(user, 'Blue Train')
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: 'Look up details again' }))
     await waitFor(() => expect(fires(fake)).toHaveLength(1))
     expect(fake.records.r3.needsEnrich).toBe(true)
     expect(fires(fake)[0]).toMatchObject({
@@ -43,13 +43,15 @@ describe('starting the background task', () => {
     })
     expect((fake.store.settings.site.run as { startedMs: number }).startedMs).toBeGreaterThan(0)
     expect(await screen.findByText(/^Looking up (the cover and )?details…$/)).toBeTruthy()
-    expect(screen.getByRole('button', { name: 'Find cover & details' })).toHaveProperty('disabled', true)
+    // the status takes the button's place, with focus on it
+    expect(screen.queryByRole('button', { name: /^Look up/ })).toBeNull()
+    expect(document.activeElement?.getAttribute('role')).toBe('status')
   })
 
   it('waits for a run under way instead of starting a second', async () => {
     const { fake, user } = setup({ taskId: 't1', run: { startedMs: Date.now() }, update: { checkedMs: Date.now() } })
     await openEdit(user, 'Blue Train')
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: 'Look up details again' }))
     await new Promise((r) => setTimeout(r, 50))
     expect(fires(fake)).toHaveLength(0)
     // the run ends with the record still waiting: the start that waited goes now
@@ -60,7 +62,7 @@ describe('starting the background task', () => {
   it('lets a run that has stopped checking in go after 20 minutes', async () => {
     const { fake, user } = setup({ taskId: 't1', run: { startedMs: Date.now() - 30 * 60000, beatMs: Date.now() - 20 * 60000 + 300 }, update: { checkedMs: Date.now() } })
     await openEdit(user, 'Blue Train')
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: 'Look up details again' }))
     await new Promise((r) => setTimeout(r, 50))
     expect(fires(fake)).toHaveLength(0)
     // no word from it since: the start that waited goes once its time is up, without a reload
@@ -85,14 +87,14 @@ describe('starting the background task', () => {
   it("says so when the page can't start tasks", async () => {
     const { user } = setup(undefined, { mcp: 'denied' })
     await openEdit(user, 'Blue Train')
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: 'Look up details again' }))
     expect(await screen.findByText('Background updates need permission to start Claude tasks. Allow it for this page and try again.')).toBeTruthy()
   })
 
   it("says so when the task isn't set up", async () => {
     const { user } = setup({})
     await openEdit(user, 'Blue Train')
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    await user.click(screen.getByRole('button', { name: 'Look up details again' }))
     expect(await screen.findByText("Background updates aren't set up yet. Ask Claude to finish setting up your Vinyl Wall.")).toBeTruthy()
   })
 

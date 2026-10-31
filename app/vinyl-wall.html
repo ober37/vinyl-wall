@@ -8584,8 +8584,10 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		flushSync();
 		onClose();
 	};
+	const statusLine = useRef(null);
 	const enrich = () => {
 		if (!r) return;
+		statusLine.current?.focus();
 		update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }));
 	};
 	const shared = !!r?.coverAsset && records.some((x) => x.id !== r.id && x.coverAsset === r.coverAsset);
@@ -8682,13 +8684,22 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 								r,
 								records
 							}),
-							status && /* @__PURE__ */ jsxs("p", {
+							/* @__PURE__ */ jsx("p", {
+								ref: statusLine,
 								role: "status",
-								className: "text-foreground-muted mt-1 flex items-center gap-2 text-xs",
-								children: [/* @__PURE__ */ jsx("span", {
+								tabIndex: -1,
+								className: status ? "text-foreground-muted mt-1 flex items-center gap-2 text-xs outline-none" : "sr-only",
+								children: status && /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx("span", {
 									"aria-hidden": "true",
 									className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
-								}), status]
+								}), status] })
+							}),
+							editing && !status && /* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								className: "-ms-3 self-start",
+								onClick: enrich,
+								children: r.coverAsset ? "Look up details again" : "Look up the cover and details"
 							})
 						]
 					})]
@@ -8704,21 +8715,12 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 							onOpenChange: (o) => !o && clearError(),
 							children: /* @__PURE__ */ jsx(AlertTitle, { children: error || notice })
 						}),
-						editing && /* @__PURE__ */ jsxs("div", {
-							className: "-ms-3 mb-6 flex flex-wrap items-center gap-1",
-							children: [/* @__PURE__ */ jsx(Button, {
-								size: "sm",
-								variant: "ghost",
-								disabled: !!r.needsEnrich,
-								onClick: enrich,
-								children: "Find cover & details"
-							}), /* @__PURE__ */ jsx(Confirm, {
-								open: uncover,
-								title: `Remove this cover${ownUpload ? " for good" : ""}? The record goes back to its plain sleeve.`,
-								yes: "Remove",
-								onYes: uncoverIt,
-								onClose: () => setUncover(false)
-							})]
+						editing && /* @__PURE__ */ jsx(Confirm, {
+							open: uncover,
+							title: `Remove this cover${ownUpload ? " for good" : ""}? The record goes back to its plain sleeve.`,
+							yes: "Remove",
+							onYes: uncoverIt,
+							onClose: () => setUncover(false)
 						}),
 						editing && pick && /* @__PURE__ */ jsx("div", {
 							className: "mb-6",
