@@ -7,8 +7,8 @@ The owner never types a shop's search link: this tries the usual store searches 
 first that answers. A Shopify store's /search/suggest.json (which also marks it shopify), the site's OpenSearch
 description, WooCommerce's and BigCommerce's search pages when the home page names the platform, then a search box on
 the home page that submits as a plain link. A store whose search box is drawn by JavaScript has none of these. A shop where
-none works is marked searchTried and tried again after SEARCH_RETRY_DAYS; the wall searches the web within its site
-meanwhile. out.json is {"shops": [the whole list]} to `update` settings/site with, or {} when nothing changed.
+none works is marked searchTried and tried again after SEARCH_RETRY_DAYS; the wall searches the web for the site and
+the album meanwhile. out.json is {"shops": [the whole list]} to `update` settings/site with, or {} when nothing changed.
 """
 import html, json, re, sys, time, urllib.error, urllib.parse, urllib.request
 

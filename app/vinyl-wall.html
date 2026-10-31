@@ -2903,7 +2903,7 @@ function shopLink(s, r) {
 	const q = `${r.artist || ""} ${r.title || ""}`.trim();
 	if (s.search) return s.search.replace("{q}", encodeURIComponent(q));
 	if (!s.url) return "";
-	return "https://www.google.com/search?q=" + encodeURIComponent(`site:${new URL(s.url).hostname.replace(/^www\./, "")} ${q}`);
+	return "https://www.google.com/search?q=" + encodeURIComponent(`${new URL(s.url).hostname.replace(/^www\./, "")} ${q}`);
 }
 var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
 var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
