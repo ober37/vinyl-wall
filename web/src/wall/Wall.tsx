@@ -41,6 +41,12 @@ function useWallFilter() {
   return [filter, set] as const
 }
 
+// where focus goes when what had it leaves the wall (a sleeve the syncing filter drops, the chip when syncing ends):
+// the syncing chip while it's there, otherwise the first count
+export const wallFocus = () =>
+  document.querySelector<HTMLElement>('[data-slot="syncing-chip"]') ??
+  document.querySelector<HTMLElement>('[aria-label="Show on the wall"] button')
+
 const PlusIcon = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true" className="size-5 sm:size-4">
     <path d="M12 5v14M5 12h14" />
@@ -134,11 +140,11 @@ const Sleeve = memo(function Sleeve({ id, title, artist, meta, cover, hue, tagTe
   )
 })
 
-export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear, below, welcome }: {
+export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear, welcome }: {
   records: Rec[]
   title: string
   hang: string
-  // a record waiting on the background task, shown with the busy dot
+  // a record waiting on the background task, shown with the busy dot and counted by the syncing chip (owners only)
   busy: (r: Rec) => boolean
   onOpen: (id: string) => void
   // editors only: opens the new-record sheet
@@ -148,8 +154,6 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
   tools?: React.ReactNode
   // the Equipment button, first of the round buttons beside the title
   gear?: React.ReactNode
-  // at the end of the filter row: how many records are being looked up (owners only)
-  below?: React.ReactNode
   // an owner's first visit: shown in place of the empty wall
   welcome?: React.ReactNode
 }) {
@@ -158,7 +162,24 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
   const [query, setQuery] = useState('')
   const q = useDeferredValue(query)
   const searchBtn = useRef<HTMLButtonElement>(null)
-  const { n, on, list } = shownList(records, filter, searching ? q : '')
+  // the syncing chip: for this visit only, and off again once nothing is syncing
+  const syncingN = records.filter(busy).length
+  const [syncPick, setSyncPick] = useState(false)
+  const syncOnly = syncPick && syncingN > 0
+  useEffect(() => {
+    if (!syncingN) setSyncPick(false)
+  }, [syncingN])
+  const { n, on, list } = shownList(records, filter, searching ? q : '', syncOnly ? busy : undefined)
+  // what had focus, so focus that the filter takes off the wall lands on a chip rather than the page
+  const focused = useRef<Element | null>(null)
+  useEffect(() => {
+    const track = (e: FocusEvent) => (focused.current = e.target as Element)
+    document.addEventListener('focusin', track)
+    return () => document.removeEventListener('focusin', track)
+  }, [])
+  useEffect(() => {
+    if (focused.current && !focused.current.isConnected && document.activeElement === document.body) wallFocus()?.focus()
+  })
   // on phones the first row sits as far below the header as the title sits below the buttons; Cork's pins and Floating's
   // sleeves start lower in their slots than a rail does, so those two lose the header's margin and the rack's top padding
   const lowHang = hang === 'cork' || hang === 'float'
@@ -208,7 +229,7 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                     variant="outline"
                     aria-label="Share your wall"
                     className={ROUND}
-                    onClick={() => onShare({ list, total: records.length, filtered: on.length > 0, searched: searching && !!q.trim() })}
+                    onClick={() => onShare({ list, total: records.length, filtered: on.length > 0 || syncOnly, searched: searching && !!q.trim() })}
                   >
                     <ShareIcon />
                   </Button>
@@ -218,7 +239,7 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
             </div>
           </TipGroup>
         </div>
-        {/* the filters, the lookup count after them and search under them, and Add a record held to the right edge under
+        {/* the filters, the syncing chip after them and search under them, and Add a record held to the right edge under
             Settings (just "+" on phones) */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
@@ -251,7 +272,25 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                   ))}
                 </ToggleGroup>
               )}
-              {below}
+              {syncingN > 0 && (
+                // after the counts and apart from them: it narrows within them rather than adding to them, and isn't remembered
+                <Toggle
+                  data-slot="syncing-chip"
+                  pressed={syncOnly}
+                  onPressedChange={setSyncPick}
+                  className={buttonVariants({
+                    variant: 'ghost',
+                    size: 'sm',
+                    className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+                  })}
+                >
+                  <i aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
+                  <b className="text-ink font-medium">{syncingN}</b>
+                  <span>
+                    <span className="sr-only"> record{syncingN === 1 ? '' : 's'}</span> syncing
+                  </span>
+                </Toggle>
+              )}
             </div>
             {searching && (
               <div role="search" id="wall-search" className="mt-3 flex max-w-md items-center gap-2">
@@ -293,7 +332,13 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
         )
       ) : !list.length ? (
         <div className="on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm">
-          <span>Nothing on the wall matches “{q}”{on.length ? ' with this filter' : ''}.</span>
+          <span>
+            {syncOnly
+              ? q.trim() && searching
+                ? `Nothing syncing matches “${q}”${on.length ? ' with this filter' : ''}.`
+                : 'Nothing syncing with this filter.'
+              : `Nothing on the wall matches “${q}”${on.length ? ' with this filter' : ''}.`}
+          </span>
         </div>
       ) : (
         <ul className={`rack ${lowHang ? 'max-sm:pt-0' : ''}`} data-hang={hang} aria-label="Records">

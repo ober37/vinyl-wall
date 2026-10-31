@@ -31,11 +31,15 @@ export function countByKey(list: Rec[]) {
 }
 
 // the counts, the badges actually filtering (chosen ones some record has), and the records shown in wall order.
-// Nothing chosen, or only badges no record has, shows them all.
-export function shownList(records: Rec[], filter: FKey[], query: string) {
+// Nothing chosen, or only badges no record has, shows them all. `only` (the syncing chip) narrows within the badges.
+export function shownList(records: Rec[], filter: FKey[], query: string, only?: (r: Rec) => boolean) {
   const all = wallOrder(records)
   const n = countByKey(all)
   const on = FKEYS.filter((k) => filter.includes(k) && n[k])
   const w = words(query)
-  return { n, on, list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!w.length || matches(r, w))) }
+  return {
+    n,
+    on,
+    list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!only || only(r)) && (!w.length || matches(r, w))),
+  }
 }

@@ -87,18 +87,6 @@ export function App() {
             onAdd={canEdit ? () => setAdding(true) : undefined}
             // viewers too: the picture shows nothing they can't already see
             onShare={hasDownloads ? setSharing : undefined}
-            below={
-              looking > 0 && (
-                // a count, not a filter: the chips' type, count first and padding, but no outline, so it doesn't read as one
-                <span className="text-ink-2 flex h-8 items-center gap-1.5 px-2.5 font-mono max-sm:px-0 text-[0.8125rem] max-sm:h-auto">
-                  <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                  <span>
-                    <b className="text-ink font-medium">{looking}</b>
-                    <span className="sr-only"> record{looking === 1 ? '' : 's'}</span> syncing
-                  </span>
-                </span>
-              )
-            }
             welcome={
               canEdit &&
               settingsLoaded &&
