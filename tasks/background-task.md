@@ -47,6 +47,12 @@ PART C — Discogs sync (one-way, wall → Discogs)
 11. Unless the script said more wait for the next run, `list` once more; if any non-deleted doc still has needsSync true, repeat steps 8–10 one time.
 12. If the sync script reports 401/403 errors, update settings/site discogs status "error" with the rejected-token message above.
 
+PART K — barcodes
+K1. `list` the "records" collection with out_dir "<workdir>/db-bar" (follow next_cursor), and write <workdir>/versions-bar.json mapping each doc_id to its version.
+K2. In ONE turn, fetch the script with the Artifact tool (action "read", url the artifact URL above, path "tools/barcodes.py", out_dir <workdir>/tools), then run: python3 -I <workdir>/tools/barcodes.py <workdir>/db-bar/records <workdir>/versions-bar.json <workdir>/barcodes.json
+    If discogs.hasToken is true, prefix it with DISCOGS_TOKEN="$(cat <workdir>/tokfile)" (see TOKEN HANDLING); it only raises Discogs' rate limit. It reads each copy's Discogs release once, keeps its barcodes with that copy, and prints one line.
+K3. Apply barcodes.json with ArtifactData action "batch" (up to 50 entries per call; pass each entry's op, collection, doc_id, if_version and data exactly). If a batch fails on a version conflict (the owner edited that record meanwhile), drop the entry it names and send the rest; that record waits for the next run.
+
 PART S — shop search links
 S1. `get` "settings"/"site" with out_dir "<workdir>/site". If it has no "shops" list, skip part S.
 S2. In ONE turn, fetch the script with the Artifact tool (action "read", url the artifact URL above, path "tools/shop_search.py", out_dir <workdir>/tools), then run: python3 -I <workdir>/tools/shop_search.py <workdir>/site/settings/site.json <workdir>/shops.json
@@ -57,4 +63,4 @@ PART E — check for updates (last)
 E1. Check for a newer release: GET https://api.github.com/repos/ober37/vinyl-wall/releases/latest (User-Agent "VinylWall/1.0"). Take tag_name (e.g. "v0.3.0") and drop the leading "v". Only accept tags shaped like vX.Y.Z. `get` "settings"/"site"; if update.latest differs or update.checkedMs is older than a day, `update` it (if_version = its version) with update fields only: latest = that version, checkedMs = now in milliseconds since the epoch. On any error, skip quietly.
 Installing an update replaces the page, which only Claude in chat can do; the page tells the owner what to send. Do nothing else here.
 
-Finally `get` "settings"/"site" and `update` it (if_version = its version) with only {"run": {"__delete__": true}}, so the page can start the next run; do this even when a part failed. Then delete the token file and working directory. End with a one-line summary (update available, records imported, covers filled, runtimes filled, artist and album info found, connection status, records synced, shop search links found, errors, and part L's DONE line with its timeline, word for word) that never contains the token.
+Finally `get` "settings"/"site" and `update` it (if_version = its version) with only {"run": {"__delete__": true}}, so the page can start the next run; do this even when a part failed. Then delete the token file and working directory. End with a one-line summary (update available, records imported, covers filled, runtimes filled, artist and album info found, connection status, records synced, barcodes stored, shop search links found, errors, and part L's DONE line with its timeline, word for word) that never contains the token.

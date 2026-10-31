@@ -364,7 +364,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           {pressings && (
             <TabsContent value="pressings" className="flex flex-col gap-6">
               {canEdit && k === 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
-              <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} />
+              <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} shops={shops} />
             </TabsContent>
           )}
           {notes && (

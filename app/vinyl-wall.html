@@ -661,6 +661,17 @@ var did = (v) => {
 };
 var links = (v) => Array.isArray(v) ? v.filter((x) => typeof x === "string") : [];
 var day$1 = (v) => typeof v === "string" && /^\d{4}-\d\d-\d\d$/.test(v) ? v : "";
+var bars = (v) => {
+	const b = v;
+	return b && typeof b === "object" && typeof b.rid === "number" && Array.isArray(b.codes) ? { barcodes: {
+		rid: b.rid,
+		codes: b.codes.filter((x) => typeof x === "string" && /^\d+$/.test(x))
+	} } : {};
+};
+function copyBarcode(c) {
+	const L = c.barcodes && c.discogsId && c.barcodes.rid === c.discogsId ? c.barcodes.codes : [];
+	return L.find((x) => x.length === 12 || x.length === 13) || L[0] || "";
+}
 var emptyCopy = () => ({
 	name: "",
 	pressing: "",
@@ -681,7 +692,8 @@ function wantCopies(r) {
 		budget: s$1(r.budget),
 		discogsId: did(r.discogsId),
 		buyLinks: links(r.buyLinks),
-		releaseDate: day$1(r.releaseDate)
+		releaseDate: day$1(r.releaseDate),
+		...bars(r.barcodes)
 	}, ...more.map((c) => ({
 		name: s$1(c.name),
 		pressing: s$1(c.pressing),
@@ -690,7 +702,8 @@ function wantCopies(r) {
 		budget: s$1(c.budget),
 		discogsId: did(c.discogsId),
 		buyLinks: links(c.buyLinks),
-		releaseDate: day$1(c.releaseDate)
+		releaseDate: day$1(c.releaseDate),
+		...bars(c.barcodes)
 	}))];
 }
 var copyTitle = (c, i) => c.name || c.pressing.split("\n")[0].trim() || (c.discogsId ? "Discogs release " + c.discogsId : "Copy " + (i + 1));
@@ -733,6 +746,7 @@ function copyLabelShown(r, c, i) {
 	const typed = !(Array.isArray(r.autoFilled) && r.autoFilled.includes("label"));
 	return i > 0 || !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate) || !!c.discogsId && !AUTO_MATCH.includes(String(r.discogsMatch)) || typed && !!c.label && c.label !== origLabel(r);
 }
+var barsOf = (c) => c.barcodes ? { barcodes: c.barcodes } : {};
 var pickable = (r) => kindOf$1(r) === "wish" ? wantCopies(r).filter(copyHas) : [];
 function pickPatch(r, ci) {
 	const C = pickable(r);
@@ -748,6 +762,7 @@ function pickPatch(r, ci) {
 		discogsId: c.discogsId || "",
 		buyLinks: c.buyLinks,
 		releaseDate: c.releaseDate,
+		...barsOf(c),
 		moreCopies: C.filter((_, j) => j !== k)
 	};
 }
@@ -905,7 +920,8 @@ function stored(f) {
 		budget: c.budget.trim(),
 		discogsId: c.discogsId,
 		buyLinks: tidyLinks(c.buyLinks),
-		releaseDate: c.releaseDate
+		releaseDate: c.releaseDate,
+		...c.barcodes ? { barcodes: c.barcodes } : {}
 	}));
 	const n = parseInt(f.runtime, 10);
 	o.runtime = isNaN(n) ? "" : n;
@@ -5514,7 +5530,7 @@ var firstOf = (f) => ({
 	buyLinks: f.buyLinks ?? [],
 	releaseDate: f.releaseDate ?? ""
 });
-var asFlat = (c) => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k], v]));
+var asFlat = (c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "barcodes").map(([k, v]) => [FLAT[k], v]));
 function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 	const [added, setAdded] = useState(null);
 	const [confirm, setConfirm] = useState(null);
@@ -5523,7 +5539,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }) {
 	const all = isNew ? [firstOf(form)] : [firstOf(form), ...more];
 	const focus = added ?? focusCopy ?? null;
 	const val = (k, v) => k === "buyLinks" ? v.split("\n") : v;
-	const setFirst = (k, v) => change({ [FLAT[k]]: val(k, v) });
+	const setFirst = (k, v) => k !== "barcodes" && change({ [FLAT[k]]: val(k, v) });
 	const setMore = (i, k, v) => change({ moreCopies: more.map((c, j) => j === i - 1 ? {
 		...c,
 		[k]: val(k, v)
@@ -6490,7 +6506,12 @@ var buyRow = (c) => {
 	const L = buyHosts(c.buyLinks);
 	return L.length ? [["Where to buy", /* @__PURE__ */ jsx(LinkList, { links: L })]] : [];
 };
-function CopiesView({ r, onEditCopy }) {
+var barcodeRow = (c, shops) => {
+	const code = copyBarcode(c);
+	const L = code ? shopOrder(shops.filter((s) => s.upc)).map((s) => [s.name, s.upc.replace("{upc}", code)]) : [];
+	return L.length ? [["This pressing at", /* @__PURE__ */ jsx(LinkList, { links: L })]] : [];
+};
+function CopiesView({ r, onEditCopy, shops = [] }) {
 	const L = stillCopies(r);
 	const none = onEditCopy && kindOf$1(r) === "wish" ? /* @__PURE__ */ jsx("p", {
 		className: "text-foreground-muted text-sm",
@@ -6505,7 +6526,8 @@ function CopiesView({ r, onEditCopy }) {
 			...labelRow(c, copyLabelShown(r, c, i) ? c.label : ""),
 			...releaseRow(c),
 			...budgetRow(c),
-			...buyRow(c)
+			...buyRow(c),
+			...barcodeRow(c, shops)
 		];
 		if (!rows.length && !c.name) return none;
 		body = /* @__PURE__ */ jsxs("div", {
@@ -6524,7 +6546,8 @@ function CopiesView({ r, onEditCopy }) {
 				...labelRow(c, c.label),
 				...releaseRow(c),
 				...budgetRow(c),
-				...buyRow(c)
+				...buyRow(c),
+				...barcodeRow(c, shops)
 			];
 			return /* @__PURE__ */ jsxs(AccordionItem, {
 				value: String(i),
@@ -8333,7 +8356,8 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 							onMoved
 						}, "status" + r.id + k), /* @__PURE__ */ jsx(CopiesView, {
 							r,
-							onEditCopy: canEdit ? onEditCopy : void 0
+							onEditCopy: canEdit ? onEditCopy : void 0,
+							shops
 						})]
 					}),
 					notes && /* @__PURE__ */ jsx(TabsContent, {

@@ -93,7 +93,8 @@ function CopyFields({ c, ph, on, auto, focus, links }: {
   )
 }
 
-const FLAT: Record<keyof Copy, keyof Form> = {
+// a copy's own fields as the record's (its barcodes aren't edited: a copy moved into first place has its own read again)
+const FLAT: Record<Exclude<keyof Copy, 'barcodes'>, keyof Form> = {
   name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks', releaseDate: 'releaseDate',
 }
 export const firstOf = (f: Form): Copy => ({
@@ -101,7 +102,8 @@ export const firstOf = (f: Form): Copy => ({
   buyLinks: f.buyLinks ?? [],
   releaseDate: f.releaseDate ?? '',
 })
-const asFlat = (c: Copy): Partial<Form> => Object.fromEntries(Object.entries(c).map(([k, v]) => [FLAT[k as keyof Copy], v]))
+const asFlat = (c: Copy): Partial<Form> =>
+  Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'barcodes').map(([k, v]) => [FLAT[k as keyof typeof FLAT], v]))
 
 // Edit mode's copies, as production's edit form has them. A hunt's copies are one group, the first in the record's own
 // fields; an ordered record's first copy is the one ordered; owned and ordered records list the copies still wanted
@@ -125,7 +127,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy }: {
 
   // the links box's text is kept a line each, blank lines too, so typing a new line works
   const val = (k: keyof Copy, v: string) => (k === 'buyLinks' ? v.split('\n') : v)
-  const setFirst = (k: keyof Copy, v: string) => change({ [FLAT[k]]: val(k, v) })
+  const setFirst = (k: keyof Copy, v: string) => k !== 'barcodes' && change({ [FLAT[k]]: val(k, v) })
   const setMore = (i: number, k: keyof Copy, v: string) => change({ moreCopies: more.map((c, j) => (j === i - 1 ? { ...c, [k]: val(k, v) } : c)) })
   const add = () => {
     setAdded(more.length + 1)
