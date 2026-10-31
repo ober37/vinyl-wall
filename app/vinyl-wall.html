@@ -4599,7 +4599,7 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 		searchBtn.current?.focus();
 	};
 	return /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsxs("header", {
-		className: `mb-8 flex flex-col gap-2 ${lowHang ? "max-sm:mb-3" : "max-sm:mb-4"}`,
+		className: `mb-8 flex flex-col gap-2 max-sm:gap-3 ${lowHang ? "max-sm:mb-3" : "max-sm:mb-4"}`,
 		children: [/* @__PURE__ */ jsxs("div", {
 			className: "flex items-start justify-between gap-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4",
 			children: [/* @__PURE__ */ jsx("h1", {
@@ -4647,7 +4647,7 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 			children: [/* @__PURE__ */ jsxs("div", {
 				className: "min-w-0 flex-1",
 				children: [/* @__PURE__ */ jsxs("div", {
-					className: "on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1",
+					className: "on-photo flex flex-wrap items-center gap-1.5 py-0.5 sm:py-1",
 					children: [records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
 						multiple: true,
 						"aria-label": "Show on the wall",
@@ -4727,7 +4727,7 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 				narrow: true,
 				children: /* @__PURE__ */ jsxs(Button, {
 					onClick: onAdd,
-					className: "ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4",
+					className: "ms-auto size-9 shrink-0 rounded-full p-0 max-sm:after:absolute max-sm:after:-inset-1 sm:h-10 sm:w-auto sm:px-4",
 					children: [/* @__PURE__ */ jsx(PlusIcon, {}), /* @__PURE__ */ jsx("span", {
 						className: "max-sm:sr-only",
 						children: "Add a record"
@@ -12190,6 +12190,11 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
     height: calc(var(--spacing) * 8);
   }
 
+  .size-9 {
+    width: calc(var(--spacing) * 9);
+    height: calc(var(--spacing) * 9);
+  }
+
   .size-10 {
     width: calc(var(--spacing) * 10);
     height: calc(var(--spacing) * 10);
@@ -16999,6 +17004,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       align-items: stretch;
     }
 
+    .max-sm\:gap-3 {
+      gap: calc(var(--spacing) * 3);
+    }
+
     .max-sm\:gap-4 {
       gap: calc(var(--spacing) * 4);
     }
@@ -17013,6 +17022,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .max-sm\:pb-28 {
       padding-bottom: calc(var(--spacing) * 28);
+    }
+
+    .max-sm\:after\:absolute:after {
+      content: var(--tw-content);
+      position: absolute;
+    }
+
+    .max-sm\:after\:-inset-1:after {
+      content: var(--tw-content);
+      inset: calc(var(--spacing) * -1);
     }
   }
 
