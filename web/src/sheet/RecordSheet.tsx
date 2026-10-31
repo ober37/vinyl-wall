@@ -20,7 +20,7 @@ import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { Confirm } from './Confirm'
-import { CoverButton } from './CoverButton'
+import { CoverMenu } from './CoverMenu'
 import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
 import type { WantMsg } from './ResearchTab'
@@ -178,6 +178,17 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
+  const face = r && (
+    <Face
+      key={r.id}
+      title={r.title || ''}
+      artist={r.artist || ''}
+      hue={hueOf(r)}
+      cover={coverUrl(r)}
+      small
+      className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
+    />
+  )
   // a lookup says what it's doing; an edit waiting for Discogs says so too, except in edit, where the Discogs section does
   // for editors only, like the wall's busy dots: a viewer can't act on it
   const status = r && canEdit ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
@@ -204,15 +215,19 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
             {/* one cover size for every record: as tall as a full set of lines beside it (badges and a lookup line) from sm
                 up, 96px on phones, where a bigger one would squeeze the title */}
             <DrawerHeader className="flex-row items-start gap-4">
-              <Face
-                key={r.id}
-                title={r.title || ''}
-                artist={r.artist || ''}
-                hue={hueOf(r)}
-                cover={coverUrl(r)}
-                small
-                className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
-              />
+              {editing ? (
+                <CoverMenu
+                  face={face}
+                  hasCover={!!r.coverAsset}
+                  onStatus={setSaved}
+                  onUploaded={async (a) => {
+                    if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
+                  }}
+                  onRemove={() => setUncover(true)}
+                />
+              ) : (
+                face
+              )}
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 {/* a drag here selects the text to copy, not swipes the sheet shut (#110) */}
                 <DrawerTitle className="break-words" data-base-ui-swipe-ignore="">
@@ -261,30 +276,19 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   </Alert>
                 )}
                 {editing && (
-                  <div className="mb-6 flex flex-wrap items-center gap-3">
-                    <CoverButton
-                      hasCover={!!r.coverAsset}
-                      onStatus={setSaved}
-                      onUploaded={async (a) => {
-                        if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
-                      }}
-                    />
-                    {r.coverAsset && (
-                      <Button size="sm" variant="outline" onClick={() => setUncover(true)}>
-                        Remove cover
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" disabled={!!r.needsEnrich} onClick={enrich}>
+                  // the lookups, on one quiet line: the cover's own actions are on the cover (#129)
+                  <div className="-ms-3 mb-6 flex flex-wrap items-center gap-1">
+                    <Button size="sm" variant="ghost" disabled={!!r.needsEnrich} onClick={enrich}>
                       Find cover & details
                     </Button>
                     {hasArtistInfo(r, new Set(artists.map((a) => a.id))) && (
-                      <Button size="sm" variant="outline" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
+                      <Button size="sm" variant="ghost" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
                         Not this artist
                       </Button>
                     )}
                     {r.aboutBlocked && (
-                      <Button size="sm" variant="outline" onClick={relook}>
-                        Look up album & artist info again
+                      <Button size="sm" variant="ghost" onClick={relook}>
+                        Bring back artist info
                       </Button>
                     )}
                     <Confirm
