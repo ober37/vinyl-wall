@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { Badge } from '@appica/ui-react/badge'
 import { Button } from '@appica/ui-react/button'
 import {
@@ -9,6 +9,7 @@ import {
   DrawerBody,
 } from '@appica/ui-react/drawer'
 import { SheetContent } from '../wall/Tip'
+import { wallFocus } from '../wall/Wall'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
@@ -119,6 +120,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
   const [pick, setPick] = useState<'own' | 'ordered' | null>(null)
   const [uncover, setUncover] = useState(false)
   const { form, set, change, saved, setSaved, flush, cancel } = useAutosave(r, editing && canEdit)
+  // what opened the sheet: when the syncing filter has taken its sleeve off the wall, closing puts focus on a chip
+  const opener = useRef<Element | null>(null)
+  useLayoutEffect(() => {
+    if (id) opener.current = document.activeElement
+  }, [id])
 
   useEffect(() => {
     setEditing(false)
@@ -190,7 +196,7 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
 
   return (
     <Drawer side="right" open={!!r} onOpenChange={(o) => !o && close()}>
-      <SheetContent className="w-full sm:max-w-xl">
+      <SheetContent className="w-full sm:max-w-xl" finalFocus={() => opener.current?.isConnected !== false || wallFocus() || true}>
         {r && (
           <>
             {onBack && (
