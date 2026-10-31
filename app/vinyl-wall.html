@@ -668,6 +668,7 @@ var bars = (v) => {
 		codes: b.codes.filter((x) => typeof x === "string" && /^\d+$/.test(x))
 	} } : {};
 };
+var guessedRelease = (r) => /^(master main release|vinyl: )/.test(String(r.discogsMatch || ""));
 function copyBarcode(c) {
 	const L = c.barcodes && c.discogsId && c.barcodes.rid === c.discogsId ? c.barcodes.codes : [];
 	return L.find((x) => x.length === 12 || x.length === 13) || L[0] || "";
@@ -693,7 +694,7 @@ function wantCopies(r) {
 		discogsId: did(r.discogsId),
 		buyLinks: links(r.buyLinks),
 		releaseDate: day$1(r.releaseDate),
-		...bars(r.barcodes)
+		...guessedRelease(r) ? {} : bars(r.barcodes)
 	}, ...more.map((c) => ({
 		name: s$1(c.name),
 		pressing: s$1(c.pressing),

@@ -8,12 +8,20 @@ raw doc); versions.json maps doc_id -> its version. A copy's barcodes live with 
 discogsId: the record's own fields for its first copy (its copy, on a record you have), each entry of moreCopies for
 the rest. They're kept as {"rid": <the release they came from>, "codes": [digits, …]}, so a copy whose release changed
 (or whose barcodes were moved beside the wrong copy) is read again; a release with none keeps "codes": [] and isn't
-asked again. At most MAX_RELEASES releases a run; the rest wait for the next one. out.json is a list of batch writes.
+asked again. A release the sync guessed for the record (discogsMatch "master main release" or "vinyl: …", often the
+original pressing, not the one wanted) isn't the copy's pressing: it gets no barcodes, and any saved from it go. At most MAX_RELEASES releases a run; the rest wait for the next one. out.json is a list of batch writes.
 """
 import glob, json, os, re, sys, time, urllib.error, urllib.request
 
 UA = "VinylWall/1.0 (https://github.com/ober37/vinyl-wall)"
 MAX_RELEASES = 40
+DEL = {"__delete__": True}
+
+
+def guessed(r):
+    """The record's release is the sync's guess (tools/discogs_sync.py), not a pressing someone chose or matched by catalog."""
+    m = str(r.get("discogsMatch") or "")
+    return m == "master main release" or m.startswith("vinyl: ")
 
 
 def rid_of(v):
@@ -69,8 +77,10 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
         more = r.get("moreCopies") if isinstance(r.get("moreCopies"), list) else []
         copies = [r] + [c for c in more if isinstance(c, dict)]
         data = {}
+        if guessed(r) and "barcodes" in r:
+            data["barcodes"] = DEL
         for c in copies:
-            if not stale(c):
+            if (c is r and guessed(r)) or not stale(c):
                 continue
             rid = rid_of(c["discogsId"])
             if rid not in got:
