@@ -1,0 +1,65 @@
+"""Offline checks for app/tools/barcodes.py, with canned Discogs releases. Run by dev/test.sh."""
+import copy, os, sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "tools"))
+import barcodes as B
+
+fails = 0
+
+
+def check(name, ok, got=""):
+    global fails
+    print(("PASS " if ok else "FAIL ") + name + ("" if ok else f" — {got!r}"))
+    fails += not ok
+
+
+def releases(by_id):
+    asked = []
+
+    def fetch(rid):
+        asked.append(rid)
+        return by_id.get(rid, {})
+    fetch.asked = asked
+    return fetch
+
+
+REL = {
+    1: {"identifiers": [{"type": "Barcode", "value": "0 602547 67023 3"}, {"type": "Matrix / Runout", "value": "A1"},
+                        {"type": "Barcode", "value": "602547670233"}, {"type": "Barcode", "value": "Text only"}]},
+    2: {"identifiers": [{"type": "Barcode", "value": "8717931357418"}]},
+    3: {"identifiers": []},
+}
+
+check("codes: barcodes only, digits only, each once, text without digits left out", B.codes_of(REL[1]) == ["0602547670233", "602547670233"], B.codes_of(REL[1]))
+
+records = {
+    "own": {"title": "A", "status": "own", "discogsId": 1, "moreCopies": [{"pressing": "Mono", "discogsId": "2"}, {"pressing": "No release"}]},
+    "wish": {"title": "B", "status": "wish", "discogsId": 3},
+    "done": {"title": "C", "status": "wish", "discogsId": 2, "barcodes": {"rid": 2, "codes": ["8717931357418"]}},
+    "moved": {"title": "D", "status": "wish", "discogsId": 2, "barcodes": {"rid": 1, "codes": ["0602547670233"]}},
+    "gone": {"title": "E", "status": "wish", "discogsId": 1, "deleted": True},
+    "example": {"title": "F", "status": "wish", "discogsId": 1, "example": True},
+}
+versions = {k: i + 1 for i, k in enumerate(records)}
+f = releases(REL)
+writes, lines = B.plan(copy.deepcopy(records), versions, f)
+by = {w["doc_id"]: w for w in writes}
+check("each release read once, none for a copy already done or a deleted or example record", sorted(f.asked) == [1, 2, 3], f.asked)
+check("the record's own copy gets its barcodes beside its release", by["own"]["data"]["barcodes"] == {"rid": 1, "codes": ["0602547670233", "602547670233"]}, by.get("own"))
+check("another copy gets its own, in its entry, the copy without a release left as it is",
+      by["own"]["data"]["moreCopies"] == [{"pressing": "Mono", "discogsId": "2", "barcodes": {"rid": 2, "codes": ["8717931357418"]}}, {"pressing": "No release"}], by["own"]["data"].get("moreCopies"))
+check("a release with no barcode keeps an empty list, so it isn't asked again", by["wish"]["data"] == {"barcodes": {"rid": 3, "codes": []}})
+check("barcodes from another release are read again for this one", by["moved"]["data"] == {"barcodes": {"rid": 2, "codes": ["8717931357418"]}})
+check("pinned to each record's version, and nothing for the rest", by["own"]["if_version"] == 1 and set(by) == {"own", "wish", "moved"}, sorted(by))
+check("a line on what was done", lines == ["3 Discogs releases read, 2 with barcodes, 3 records to update."], lines)
+
+f = releases(REL)
+writes, lines = B.plan(copy.deepcopy(records), versions, f, limit=1)
+check("at most the limit of releases a run, one read serving every copy of it; the rest wait",
+      f.asked == [2] and sorted(w["doc_id"] for w in writes) == ["moved", "own"] and "2 copies wait for the next run" in lines[0], (f.asked, writes, lines))
+
+writes, _ = B.plan({"x": {"title": "X", "discogsId": 9}}, {"x": 1}, lambda rid: None)
+check("a release that couldn't be read writes nothing, so it's tried next run", writes == [])
+
+print(f"{fails} failed" if fails else "all passed")
+sys.exit(1 if fails else 0)

@@ -3,7 +3,10 @@
 // in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted.
 import { kindOf, playDate, pressingText, shopHref, type Rec } from './record'
 
-// buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75)
+// buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75);
+// barcodes: its Discogs release's, with that release's id, filled in by the background task (tools/barcodes.py, #88).
+// They stay with the copy wherever it goes; ones beside a release they didn't come from are read again, never used
+export type Barcodes = { rid: number; codes: string[] }
 export type Copy = {
   name: string
   pressing: string
@@ -13,6 +16,7 @@ export type Copy = {
   discogsId: number | ''
   buyLinks: string[]
   releaseDate: string
+  barcodes?: Barcodes
 }
 export const COPY_KEYS = ['name', 'pressing', 'label', 'catalog', 'budget'] as const
 
@@ -23,13 +27,25 @@ const did = (v: unknown): number | '' => {
 }
 const links = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [])
 const day = (v: unknown) => (typeof v === 'string' && /^\d{4}-\d\d-\d\d$/.test(v) ? v : '')
+const bars = (v: unknown): { barcodes?: Barcodes } => {
+  const b = v as Barcodes | undefined
+  return b && typeof b === 'object' && typeof b.rid === 'number' && Array.isArray(b.codes)
+    ? { barcodes: { rid: b.rid, codes: b.codes.filter((x) => typeof x === 'string' && /^\d+$/.test(x)) } }
+    : {}
+}
+// the barcode a shop's barcode page opens this copy by: the first UPC or EAN (12 or 13 digits) of its own release, else
+// its first; '' when it has none from this release
+export function copyBarcode(c: Copy): string {
+  const L = c.barcodes && c.discogsId && c.barcodes.rid === c.discogsId ? c.barcodes.codes : []
+  return L.find((x) => x.length === 12 || x.length === 13) || L[0] || ''
+}
 export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catalog: '', budget: '', discogsId: '', buyLinks: [], releaseDate: '' })
 
 export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
-    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate) },
-    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate) })),
+    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate), ...bars(r.barcodes) },
+    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes) })),
   ]
 }
 
@@ -92,12 +108,15 @@ export function copyLabelShown(r: Rec, c: Copy, i: number): boolean {
   )
 }
 
+// a copy's barcodes for the record's own fields, so they move with it (none: the old ones stay, unused beside another release)
+const barsOf = (c: Copy) => (c.barcodes ? { barcodes: c.barcodes } : {})
+
 // the copies as a list (from edit mode) back into the record: a hunt's first goes into its own fields, the rest into
 // moreCopies; an owned or ordered record writes only moreCopies (its own fields are its copy)
 export function copiesPatch(r: Rec, L: Copy[]): Record<string, unknown> {
   const [a, ...rest] = L
   return kindOf(r) === 'wish'
-    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, buyLinks: a.buyLinks, releaseDate: a.releaseDate, moreCopies: rest }
+    ? { copyName: a.name, pressing: a.pressing, label: a.label, catalog: a.catalog, budget: a.budget, discogsId: a.discogsId, buyLinks: a.buyLinks, releaseDate: a.releaseDate, ...barsOf(a), moreCopies: rest }
     : { moreCopies: rest }
 }
 
@@ -113,6 +132,7 @@ export function pickPatch(r: Rec, ci: number): Record<string, unknown> {
   return {
     copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId || '', buyLinks: c.buyLinks,
     releaseDate: c.releaseDate,
+    ...barsOf(c),
     moreCopies: C.filter((_, j) => j !== k),
   }
 }

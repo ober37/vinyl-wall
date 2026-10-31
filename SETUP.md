@@ -41,6 +41,7 @@ app/tools/discogs_sync.py
 app/tools/discogs_import.py
 app/tools/lookup.py
 app/tools/shop_search.py
+app/tools/barcodes.py
 app/backgrounds/listening-room.jpg
 app/backgrounds/crate-digging.jpg
 app/backgrounds/record-shop.jpg
@@ -64,6 +65,7 @@ Publish `app/vinyl-wall.html` as a **new** artifact:
     "tools/discogs_import.py": {"from": "app/tools/discogs_import.py", "contentType": "text/plain"},
     "tools/lookup.py": {"from": "app/tools/lookup.py", "contentType": "text/plain"},
     "tools/shop_search.py": {"from": "app/tools/shop_search.py", "contentType": "text/plain"},
+    "tools/barcodes.py": {"from": "app/tools/barcodes.py", "contentType": "text/plain"},
     "backgrounds/listening-room.jpg": "app/backgrounds/listening-room.jpg",
     "backgrounds/crate-digging.jpg": "app/backgrounds/crate-digging.jpg",
     "backgrounds/record-shop.jpg": "app/backgrounds/record-shop.jpg",

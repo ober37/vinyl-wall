@@ -4,6 +4,7 @@
 # (npm ci --prefix web) and Chrome; set CHROME to your Chrome binary if it isn't in the usual macOS place.
 cd "$(dirname "$0")" || exit 1
 python3 -I test_lookup.py || exit 1
+python3 -I test_barcodes.py >/dev/null || { python3 -I test_barcodes.py | grep -v "^PASS"; exit 1; }
 python3 -I test_shop_search.py >/dev/null || { python3 -I test_shop_search.py | grep -v "^PASS"; exit 1; }
 python3 -I test_discogs.py >/dev/null || { python3 -I test_discogs.py | grep -v "^PASS"; exit 1; }
 # the React page in web/, and its built page in Chrome (needs the network: React and appica load from jsdelivr)

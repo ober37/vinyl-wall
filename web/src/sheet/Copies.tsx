@@ -1,8 +1,9 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
-import { buyHosts, copiesLegend, copyLabelShown, copyTitle, pickable, releaseText, stillCopies, type Copy } from '../model/copies'
+import { buyHosts, copiesLegend, copyBarcode, copyLabelShown, copyTitle, pickable, releaseText, stillCopies, type Copy } from '../model/copies'
 import { kindOf, today, type Rec } from '../model/record'
+import { shopOrder, type Shop } from '../model/shops'
 import { Facts } from './Facts'
 import { LinkList } from './Links'
 
@@ -24,10 +25,19 @@ const buyRow = (c: Copy): Row[] => {
   return L.length ? [['Where to buy', <LinkList links={L} />]] : []
 }
 
+// this exact pressing at each shop that opens a product by barcode (#88), from the copy's own Discogs release: a page that
+// only exists while the shop carries it, so the row asks to check rather than promising it's there
+const barcodeRow = (c: Copy, shops: Shop[]): Row[] => {
+  const code = copyBarcode(c)
+  const L = code ? shopOrder(shops.filter((s) => s.upc)).map((s): [string, string] => [s.name, s.upc!.replace('{upc}', code)]) : []
+  return L.length ? [['Check this pressing at', <LinkList links={L} />]] : []
+}
+
 // The copies a record hunts, as production's wantCopyHTML shows them: one copy on a hunt is an open card (name, pressing,
 // label, budget); several, or the copies an owned or ordered record still wants, are folded rows under each copy's title.
 // Nothing when there are none.
-export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number) => void }) {
+// shops: the owner's, for the barcode shops' links
+export function CopiesView({ r, onEditCopy, shops = [] }: { r: Rec; onEditCopy?: (ci: number) => void; shops?: Shop[] }) {
   const L = stillCopies(r)
   // a hunt with no copy chosen yet says how to add one, to whoever can
   const none = onEditCopy && kindOf(r) === 'wish' ? <p className="text-foreground-muted text-sm">No copies yet. Add the pressing you're after in Edit.</p> : null
@@ -35,7 +45,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
   let body: React.ReactNode
   if (L.length === 1 && kindOf(r) === 'wish') {
     const [c, i] = L[0]
-    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c)]
+    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops)]
     if (!rows.length && !c.name) return none
     body = (
       <div className="flex flex-col gap-2">
@@ -47,7 +57,7 @@ export function CopiesView({ r, onEditCopy }: { r: Rec; onEditCopy?: (ci: number
     body = (
       <Accordion variant="flush" multiple>
         {L.map(([c, i]) => {
-          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...releaseRow(c), ...budgetRow(c), ...buyRow(c)]
+          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops)]
           return (
             <AccordionItem key={i} value={String(i)}>
               <AccordionTrigger className="text-foreground text-sm font-medium">

@@ -112,6 +112,7 @@ export function stored(f: Form): Record<string, unknown> {
       name: c.name.trim(), pressing: c.pressing.trim(), label: c.label.trim(), catalog: c.catalog.trim(), budget: c.budget.trim(), discogsId: c.discogsId,
       buyLinks: tidyLinks(c.buyLinks),
       releaseDate: c.releaseDate,
+      ...(c.barcodes ? { barcodes: c.barcodes } : {}),
     }))
   const n = parseInt(f.runtime, 10)
   o.runtime = isNaN(n) ? '' : n

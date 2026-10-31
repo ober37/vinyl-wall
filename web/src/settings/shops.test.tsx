@@ -327,6 +327,28 @@ describe('shops: a record bought at a show (#117)', () => {
   })
 })
 
+describe('record sheet: this pressing at a barcode shop (#88)', () => {
+  const nevermind = (more: Record<string, unknown> = {}) => ({
+    n1: { title: 'Nevermind', artist: 'Nirvana', status: 'wish', notes: [], added: 1, pressing: 'US original', discogsId: 7097051, barcodes: { rid: 7097051, codes: ['720642442517'] }, ...more },
+  })
+  it('links each barcode shop straight to the copy’s pressing', async () => {
+    const { user } = setup({ shops: [{ ...SIREN, upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }, ...DEFAULT_SHOPS] }, nevermind())
+    await openRecord(user, 'Nevermind')
+    expect(screen.getByText('Check this pressing at')).toBeTruthy()
+    expect(screen.getByRole('link', { name: 'Siren Records ↗' }).getAttribute('href')).toBe('https://sirenrecordsmchenry.com/UPC/720642442517')
+  })
+
+  it('shows no row without a barcode shop, or with barcodes from another release', async () => {
+    const { user } = setup({ shops: DEFAULT_SHOPS }, nevermind())
+    await openRecord(user, 'Nevermind')
+    expect(screen.queryByText('Check this pressing at')).toBeNull()
+    await user.keyboard('{Escape}')
+    const other = setup({ shops: [{ ...SIREN, upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }] }, nevermind({ discogsId: 1 }))
+    await openRecord(other.user, 'Nevermind')
+    expect(screen.queryByText('Check this pressing at')).toBeNull()
+  })
+})
+
 describe('record sheet: the shop it came from', () => {
   it("uses the listed shop's name, keeps the record's own link, and adds Call · Map for a local shop", async () => {
     const { user } = setup({ shops: [SIREN] }, bought)
