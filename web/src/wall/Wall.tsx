@@ -196,7 +196,7 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
 
   return (
     <>
-      <header className={`mb-8 flex flex-col gap-2 ${lowHang ? 'max-sm:mb-3' : 'max-sm:mb-4'}`}>
+      <header className={`mb-8 flex flex-col gap-2 max-sm:gap-3 ${lowHang ? 'max-sm:mb-3' : 'max-sm:mb-4'}`}>
         {/* on phones the round buttons get their own row above the title, so the title has the full width */}
         <div className="flex items-start justify-between gap-6 max-sm:flex-col-reverse max-sm:items-stretch max-sm:gap-4">
           {/* the display face sets its first letter in a little; pulled back so the letters start on the chips' edge.
@@ -244,8 +244,8 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
             Settings (just "+" on phones) */}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
-            {/* centred on the round + beside it (44px on phones, 40 from sm up) */}
-            <div className="on-photo flex flex-wrap items-center gap-1.5 py-1.5 sm:py-1">
+            {/* centred on the round + beside it (36px on phones, 40 from sm up) */}
+            <div className="on-photo flex flex-wrap items-center gap-1.5 py-0.5 sm:py-1">
               {records.length > 0 && (
                 <ToggleGroup
                   multiple
@@ -313,7 +313,11 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
           </div>
           {onAdd && (
             <Tip label="Add a record" narrow>
-              <Button onClick={onAdd} className="ms-auto size-11 shrink-0 rounded-full p-0 sm:h-10 sm:w-auto sm:px-4">
+              {/* on phones 36px to see, so a long title has room (#145), and 44px to tap */}
+              <Button
+                onClick={onAdd}
+                className="ms-auto size-9 shrink-0 rounded-full p-0 max-sm:after:absolute max-sm:after:-inset-1 sm:h-10 sm:w-auto sm:px-4"
+              >
                 <PlusIcon />
                 <span className="max-sm:sr-only">Add a record</span>
               </Button>

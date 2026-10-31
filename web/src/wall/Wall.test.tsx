@@ -69,6 +69,14 @@ describe('the wall', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Search the wall' }))
   })
 
+  it('keeps + small on phones but 44px to tap, so a long title has room (#145)', async () => {
+    setup()
+    await screen.findAllByTestId('sleeve')
+    const add = screen.getByRole('button', { name: 'Add a record' }).className.split(' ')
+    expect(add).toEqual(expect.arrayContaining(['size-9', 'max-sm:after:absolute', 'max-sm:after:-inset-1', 'sm:h-10']))
+    expect(add).not.toContain('size-11')
+  })
+
   it("keeps a sleeve's cover in place when another record changes", async () => {
     const seed = sample()
     seed.records.r3.coverAsset = 'abc'
