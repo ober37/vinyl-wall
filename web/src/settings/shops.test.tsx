@@ -70,10 +70,12 @@ describe('shops: the data', () => {
     expect(siteUrl('https://www.slash.org/x')).toBe('https://www.slash.org/x')
   })
 
-  it("searches a shop for the album, else opens its website; Revolver's search is #59's", () => {
+  it("searches a shop for the album, else the web within its website until its search is found; Revolver's search is #59's", () => {
     const r = { artist: 'The Beatles', title: 'Revolver' }
     expect(shopLink(DEFAULT_SHOPS[0], r)).toBe('https://shop.revolvermag.com/search?q=The%20Beatles%20Revolver')
-    expect(shopLink({ id: 'x', name: 'X', kind: 'online', url: 'https://x.com/' }, r)).toBe('https://x.com/')
+    expect(shopLink({ id: 'x', name: 'X', kind: 'online', url: 'https://www.storeus.example.com/shop' }, r)).toBe(
+      'https://www.google.com/search?q=site%3Astoreus.example.com%20The%20Beatles%20Revolver',
+    )
     expect(shopLink(RECKLESS, r)).toBe('')
   })
 
@@ -203,21 +205,39 @@ describe('Settings → Shops', () => {
     expect(within(sheet).getByRole('group', { name: 'Local shops' })).toBeTruthy()
   })
 
-  it("edits a shop in place, checks its search link, and Try it searches for a record on the wall", async () => {
-    const { user, site } = setup({ shops: [{ ...RECKLESS, upc: 'https://www.reckless.com/UPC/{upc}' }] }, hunt)
+  it('edits a shop in place with no search link to type, keeping what was found for it', async () => {
+    const found = { url: 'https://www.reckless.com/', search: 'https://www.reckless.com/search?q={q}', upc: 'https://www.reckless.com/UPC/{upc}', shopify: true, searchTried: 5 }
+    const { user, site } = setup({ shops: [{ ...RECKLESS, ...found }] }, hunt)
     const sheet = await openShops(user)
     await user.click(within(sheet).getByRole('button', { name: /Reckless Records · Chicago/ }))
-    expect(within(sheet).getByText('Your Claude chat can fill in the missing details.')).toBeTruthy()
-    const search = within(sheet).getByRole('textbox', { name: 'Search link' })
-    await user.type(search, 'https://www.reckless.com/search')
-    expect(within(sheet).getByText(/Needs to start with https:\/\//)).toBeTruthy()
-    await user.type(search, '?q={{q}')
-    const tryIt = within(sheet).getByRole('link', { name: /Try it with/ })
-    expect(tryIt.getAttribute('href')).toMatch(/^https:\/\/www\.reckless\.com\/search\?q=/)
-    await waitFor(() => expect((site().shops as Shop[])[0].search).toBe('https://www.reckless.com/search?q={q}'))
+    expect(within(sheet).queryByRole('textbox', { name: 'Search link' })).toBeNull()
     expect(within(sheet).queryByText('Your Claude chat can fill in the missing details.')).toBeNull()
-    // what the chat found, and isn't edited here, stays
-    expect((site().shops as Shop[])[0]).toMatchObject({ phone: RECKLESS.phone, email: RECKLESS.email, about: RECKLESS.about, upc: 'https://www.reckless.com/UPC/{upc}' })
+    await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), ' Wicker Park')
+    await waitFor(() => expect((site().shops as Shop[])[0].name).toBe('Reckless Records Wicker Park'))
+    // what the chat or the background task found, and isn't edited here, stays
+    expect((site().shops as Shop[])[0]).toMatchObject({ ...found, phone: RECKLESS.phone, email: RECKLESS.email, about: RECKLESS.about })
+  })
+
+  it('leaves finding a search link to the chat skill and the background task', () => {
+    const skill = readFileSync(`${import.meta.dirname}/../../../skills/vinyl-wall/SKILL.md`, 'utf8')
+    expect(skill).toMatch(/A shop with a website but no `search`: find its search .*and save it to the shop/)
+    expect(skill).toMatch(/When you save a `search`, write the shop without `searchTried`/)
+    expect(skill).toMatch(/\*\*Re-checking a shop's search:\*\*/)
+    const task = readFileSync(`${import.meta.dirname}/../../../tasks/background-task.md`, 'utf8')
+    expect(task).toMatch(/path "tools\/shop_search\.py"/)
+    const setup = readFileSync(`${import.meta.dirname}/../../../SETUP.md`, 'utf8')
+    expect(setup).toMatch(/"tools\/shop_search\.py": \{"from": "app\/tools\/shop_search\.py"/)
+  })
+
+  it('drops what was found for a shop when its website changes, so it is found again', async () => {
+    const { user, site } = setup({ shops: [{ ...DUSTY, upc: 'https://www.dustygroove.com/UPC/{upc}', searchTried: 1 }] }, hunt)
+    const sheet = await openShops(user)
+    await user.click(within(sheet).getByRole('button', { name: /Dusty Groove/ }))
+    const web = within(sheet).getByRole('textbox', { name: 'Web store' })
+    await user.clear(web)
+    await user.type(web, 'dustygroove.net')
+    await waitFor(() => expect((site().shops as Shop[])[0].url).toBe('https://dustygroove.net/'))
+    for (const k of ['search', 'upc', 'searchTried']) expect((site().shops as Shop[])[0], k).not.toHaveProperty(k)
   })
 
   it('removes a shop after asking, and an empty list stays empty', async () => {

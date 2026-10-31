@@ -2860,6 +2860,7 @@ function shopsOf(settings) {
 		const upc = https(s.upc);
 		if (upc.includes("{upc}")) shop.upc = upc;
 		if (s.shopify === true) shop.shopify = true;
+		if (typeof s.searchTried === "number") shop.searchTried = s.searchTried;
 		if (kind === "local") for (const k of [
 			"place",
 			"phone",
@@ -2882,7 +2883,12 @@ function siteUrl(v) {
 		return "";
 	}
 }
-var shopLink = (s, r) => s.search ? s.search.replace("{q}", encodeURIComponent(`${r.artist || ""} ${r.title || ""}`.trim())) : s.url || "";
+function shopLink(s, r) {
+	const q = `${r.artist || ""} ${r.title || ""}`.trim();
+	if (s.search) return s.search.replace("{q}", encodeURIComponent(q));
+	if (!s.url) return "";
+	return "https://www.google.com/search?q=" + encodeURIComponent(`site:${new URL(s.url).hostname.replace(/^www\./, "")} ${q}`);
+}
 var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
 var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
 var mailLink = (s) => s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? "mailto:" + s.email : "";
@@ -4517,7 +4523,6 @@ var draftOf = (s) => ({
 	name: s.name,
 	kind: s.kind,
 	url: s.url || "",
-	search: s.search || "",
 	place: s.place || "",
 	phone: s.phone || "",
 	email: s.email || "",
@@ -4525,18 +4530,23 @@ var draftOf = (s) => ({
 });
 var badSite = (v) => !!v.trim() && !siteUrl(v).startsWith("https:");
 var SITE_HINT = "Needs a web address like shop.example.com.";
-var okSearch = (v) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes("{q}");
+var hostOf = (u) => u ? new URL(u).hostname.replace(/^www\./, "") : "";
 function fromDraft(d, was) {
 	const s = {
 		id: was.id,
 		name: d.name.trim() || was.name,
 		kind: d.kind
 	};
-	if (was.upc) s.upc = was.upc;
-	if (was.shopify) s.shopify = true;
 	const url = siteUrl(d.url);
 	if (url.startsWith("https:")) s.url = url;
-	if (okSearch(d.search)) s.search = d.search.trim();
+	if (hostOf(s.url) === hostOf(was.url)) {
+		for (const k of [
+			"search",
+			"upc",
+			"shopify",
+			"searchTried"
+		]) if (was[k] !== void 0) Object.assign(s, { [k]: was[k] });
+	}
 	if (d.kind === "local") {
 		for (const k of [
 			"place",
@@ -4547,7 +4557,7 @@ function fromDraft(d, was) {
 	}
 	return s;
 }
-function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
+function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 	const [d, setD] = useState(() => draftOf(shop));
 	const [saved, setSaved] = useState("");
 	const live = useRef(d);
@@ -4561,11 +4571,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 		schedule();
 	};
 	const where = shopWhere(shop);
-	const missing = !okSearch(d.search) || d.kind === "local" && !(d.place.trim() && d.phone.trim() && d.about.trim());
-	const tryIt = okSearch(d.search) ? shopLink({
-		...shop,
-		search: d.search.trim()
-	}, sample) : "";
+	const missing = d.kind === "local" && !(d.place.trim() && d.phone.trim() && d.about.trim());
 	const field = (k, label, props = {}) => /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: label }), /* @__PURE__ */ jsx(Input, {
 		value: d[k],
 		onChange: (e) => set(k, e.target.value),
@@ -4619,25 +4625,6 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }) {
 							onChange: (e) => set("url", e.target.value)
 						}),
 						badSite(d.url) && /* @__PURE__ */ jsx(FieldDescription, { children: SITE_HINT })
-					] }),
-					/* @__PURE__ */ jsxs(Field, { children: [
-						/* @__PURE__ */ jsx(FieldLabel, { children: "Search link" }),
-						/* @__PURE__ */ jsx(Input, {
-							value: d.search,
-							inputMode: "url",
-							onChange: (e) => set("search", e.target.value)
-						}),
-						/* @__PURE__ */ jsx(FieldDescription, { children: d.search.trim() && !tryIt ? "Needs to start with https:// and have {q} where the artist and album go." : tryIt ? /* @__PURE__ */ jsxs("a", {
-							href: tryIt,
-							target: "_blank",
-							rel: "noopener",
-							className: link,
-							children: [
-								"Try it with ",
-								sample.title,
-								" ↗"
-							]
-						}) : "The shop’s search, with {q} where the artist and album go." })
 					] }),
 					d.kind === "local" && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 						field("place", "Address"),
@@ -4736,15 +4723,6 @@ function ShopsSection() {
 	const latest = useRef(settings);
 	latest.current = settings;
 	const write = (fn) => saveSettings({ shops: fn(shopsOf(latest.current)) });
-	const live = records.filter((r) => !r.deleted && !r.example && r.title);
-	const pick = live.find((r) => kindOf$1(r) === "wish") || live[0];
-	const sample = pick ? {
-		artist: String(pick.artist || ""),
-		title: String(pick.title)
-	} : {
-		artist: "Pearl Jam",
-		title: "Ten"
-	};
 	const hidden = Array.isArray(settings.shopsHidden) ? settings.shopsHidden.filter((x) => typeof x === "string") : [];
 	const all = unlistedShops(records, shops);
 	const unlisted = all.filter((u) => !hidden.includes(u.name.toLowerCase()));
@@ -4765,8 +4743,7 @@ function ShopsSection() {
 						open: openId === s.id,
 						onOpenChange: (o) => setOpenId(o ? s.id : null),
 						save: (n) => write((all) => all.map((x) => x.id === n.id ? n : x)),
-						onRemove: () => setRemoving(s),
-						sample
+						onRemove: () => setRemoving(s)
 					}, s.id))
 				})] }, k);
 			}),

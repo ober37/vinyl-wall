@@ -6,11 +6,10 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { useDebouncedSave } from '../gear/useDebouncedSave'
-import { kindOf } from '../model/record'
-import { KINDS, shopLink, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
+import { KINDS, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
-import { Chevron, link } from '../sheet/Links'
+import { Chevron } from '../sheet/Links'
 import { Segmented } from '../sheet/Segmented'
 
 const GROUPS: [ShopKind, string][] = [
@@ -18,35 +17,34 @@ const GROUPS: [ShopKind, string][] = [
   ['online', 'Online shops'],
   ['market', 'Marketplaces'],
 ]
-type Draft = { name: string; kind: ShopKind; url: string; search: string; place: string; phone: string; email: string; about: string }
+type Draft = { name: string; kind: ShopKind; url: string; place: string; phone: string; email: string; about: string }
 const draftOf = (s: Shop): Draft => ({
-  name: s.name, kind: s.kind, url: s.url || '', search: s.search || '', place: s.place || '', phone: s.phone || '', email: s.email || '', about: s.about || '',
+  name: s.name, kind: s.kind, url: s.url || '', place: s.place || '', phone: s.phone || '', email: s.email || '', about: s.about || '',
 })
 // a typed website that won't be saved (a link is kept only when it's an https web address)
 const badSite = (v: string) => !!v.trim() && !siteUrl(v).startsWith('https:')
 const SITE_HINT = 'Needs a web address like shop.example.com.'
-const okSearch = (v: string) => /^https:\/\/\S+$/i.test(v.trim()) && v.includes('{q}')
+const hostOf = (u?: string) => (u ? new URL(u).hostname.replace(/^www\./, '') : '')
 // what a draft stores: a name always (the last one when it's cleared), links only when they work, contact only for local,
-// and what the chat found that isn't edited here
+// and what the chat or the background task found that isn't edited here (#118), unless the website changed, so it's found
+// again for the new one
 function fromDraft(d: Draft, was: Shop): Shop {
   const s: Shop = { id: was.id, name: d.name.trim() || was.name, kind: d.kind }
-  if (was.upc) s.upc = was.upc
-  if (was.shopify) s.shopify = true
   const url = siteUrl(d.url)
   if (url.startsWith('https:')) s.url = url
-  if (okSearch(d.search)) s.search = d.search.trim()
+  if (hostOf(s.url) === hostOf(was.url))
+    for (const k of ['search', 'upc', 'shopify', 'searchTried'] as const) if (was[k] !== undefined) Object.assign(s, { [k]: was[k] })
   if (d.kind === 'local') for (const k of ['place', 'phone', 'email', 'about'] as const) if (d[k].trim()) s[k] = d[k].trim()
   return s
 }
 
 // a shop as a folded row: its name and town or domain, opening to its details, which save as they're typed
-function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
+function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
   shop: Shop
   open: boolean
   onOpenChange: (o: boolean) => void
   save: (s: Shop) => Promise<boolean>
   onRemove: () => void
-  sample: { artist: string; title: string }
 }) {
   const [d, setD] = useState(() => draftOf(shop))
   const [saved, setSaved] = useState('')
@@ -58,9 +56,8 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
     schedule()
   }
   const where = shopWhere(shop)
-  // what the chat can look up for a shop: its search, and for a local shop where it is, its phone and a line about it
-  const missing = !okSearch(d.search) || (d.kind === 'local' && !(d.place.trim() && d.phone.trim() && d.about.trim()))
-  const tryIt = okSearch(d.search) ? shopLink({ ...shop, search: d.search.trim() }, sample) : ''
+  // what the chat can look up for a local shop: where it is, its phone and a line about it (its search is found for it)
+  const missing = d.kind === 'local' && !(d.place.trim() && d.phone.trim() && d.about.trim())
   const field = (k: keyof Draft, label: string, props: React.ComponentProps<typeof Input> = {}) => (
     <Field>
       <FieldLabel>{label}</FieldLabel>
@@ -92,21 +89,6 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove, sample }: {
             <FieldLabel>{d.kind === 'local' ? 'Web store' : 'Website'}</FieldLabel>
             <Input value={d.url} inputMode="url" placeholder="shop.example.com" onChange={(e) => set('url', e.target.value)} />
             {badSite(d.url) && <FieldDescription>{SITE_HINT}</FieldDescription>}
-          </Field>
-          <Field>
-            <FieldLabel>Search link</FieldLabel>
-            <Input value={d.search} inputMode="url" onChange={(e) => set('search', e.target.value)} />
-            <FieldDescription>
-              {d.search.trim() && !tryIt ? (
-                'Needs to start with https:// and have {q} where the artist and album go.'
-              ) : tryIt ? (
-                <a href={tryIt} target="_blank" rel="noopener" className={link}>
-                  Try it with {sample.title} ↗
-                </a>
-              ) : (
-                'The shop’s search, with {q} where the artist and album go.'
-              )}
-            </FieldDescription>
           </Field>
           {d.kind === 'local' && (
             <>
@@ -186,10 +168,6 @@ export function ShopsSection() {
   latest.current = settings
   // a change writes the whole list, read from the latest settings so a change elsewhere isn't lost
   const write = (fn: (list: Shop[]) => Shop[]) => saveSettings({ shops: fn(shopsOf(latest.current)) })
-  // Try it searches for a record on the wall, a wanted one first
-  const live = records.filter((r) => !r.deleted && !r.example && r.title)
-  const pick = live.find((r) => kindOf(r) === 'wish') || live[0]
-  const sample = pick ? { artist: String(pick.artist || ''), title: String(pick.title) } : { artist: 'Pearl Jam', title: 'Ten' }
   // the ones you hid from Not on your list yet, by name
   const hidden = Array.isArray(settings.shopsHidden) ? settings.shopsHidden.filter((x): x is string => typeof x === 'string') : []
   const all = unlistedShops(records, shops)
@@ -215,7 +193,6 @@ export function ShopsSection() {
                     onOpenChange={(o) => setOpenId(o ? s.id : null)}
                     save={(n) => write((all) => all.map((x) => (x.id === n.id ? n : x)))}
                     onRemove={() => setRemoving(s)}
-                    sample={sample}
                   />
                 ))}
               </div>
