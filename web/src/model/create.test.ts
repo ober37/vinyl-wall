@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Rec } from './record'
-import { coverPatch, dupeOf, enrichPatch, hasArtistInfo, newDoc, NOT_ARTIST, removeCoverPatch, UNBLOCK_ARTIST } from './create'
+import { coverPatch, dupeOf, enrichPatch, newDoc, removeCoverPatch } from './create'
 import { toForm } from './edit'
 import { shrinkImage, type ImageApi } from './image'
 
@@ -30,15 +30,7 @@ describe('covers and artists', () => {
   it('an uploaded cover stops the lookup and is no longer auto-filled', () => {
     expect(coverPatch({ id: 'r', autoFilled: ['coverAsset', 'year'] }, 'a9')).toEqual({ coverAsset: 'a9', needsEnrich: false, autoFilled: ['year'] })
   })
-  it('Not this artist is offered for a matched artist or a summary', () => {
-    const ids = new Set(['mb-1'])
-    expect(hasArtistInfo({ id: 'r', artistRef: 'mb-1' }, ids)).toBe(true)
-    expect(hasArtistInfo({ id: 'r', about: { summary: 's' } }, ids)).toBe(true)
-    expect(hasArtistInfo({ id: 'r', artistRef: 'mb-2' }, ids)).toBe(false)
-    expect(hasArtistInfo({ id: 'r', artistRef: 'mb-1', aboutBlocked: true }, ids)).toBe(false)
-    expect(NOT_ARTIST).toEqual({ artistRef: '', about: null, aboutBlocked: true })
-  })
-  it('Find cover & details looks the album info up again, unless Not this artist turned it off', () => {
+  it('Find cover & details looks the album info up again, unless it was turned off', () => {
     const r = { id: 'r', aboutAt: '2026-10-01', aboutV: 3 }
     expect(enrichPatch(r)).toEqual({ needsEnrich: true, aboutAt: '', aboutV: 0 })
     expect(enrichPatch({ ...r, aboutBlocked: true })).toEqual({ needsEnrich: true })
@@ -51,9 +43,6 @@ describe('covers and artists', () => {
     expect(coverPatch(off, 'a2')).toMatchObject({ coverAsset: 'a2', coverBlocked: false })
     expect(enrichPatch(off)).toMatchObject({ needsEnrich: true, coverBlocked: false })
     expect(coverPatch({ id: 'r' }, 'a2')).not.toHaveProperty('coverBlocked')
-  })
-  it('Look up album & artist info again takes back Not this artist (#63)', () => {
-    expect(UNBLOCK_ARTIST).toEqual({ aboutBlocked: false, needsEnrich: true, aboutAt: '', aboutV: 0 })
   })
 })
 

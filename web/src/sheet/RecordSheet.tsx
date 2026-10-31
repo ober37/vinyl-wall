@@ -12,7 +12,7 @@ import { SheetContent } from '../wall/Tip'
 import { Alert, AlertTitle } from '@appica/ui-react/alert'
 import { Boundary } from '../Boundary'
 import { patchFor, stored, toForm, type Form, type TextKey } from '../model/edit'
-import { coverPatch, enrichPatch, hasArtistInfo, NOT_ARTIST, removeCoverPatch, UNBLOCK_ARTIST } from '../model/create'
+import { coverPatch, enrichPatch, removeCoverPatch } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
@@ -20,7 +20,7 @@ import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
 import { Confirm } from './Confirm'
-import { CoverButton } from './CoverButton'
+import { CoverMenu } from './CoverMenu'
 import { CopyPicker } from './Copies'
 import { EditForm } from './EditForm'
 import type { WantMsg } from './ResearchTab'
@@ -102,7 +102,7 @@ function useAutosave(r: Rec | undefined, editing: boolean) {
 // onBack: the record was opened from Equipment, so its header offers the way back there
 // onDiscogs: open Settings on its Discogs section (the release line's way to connect)
 export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | null; onClose: () => void; onBack?: () => void; onDiscogs?: () => void }) {
-  const { records, artists, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime()
+  const { records, canEdit, error, notice, clearError, mutate, remove, update, fireTask, flushSync, settings, deleteAsset } = useRuntime()
   const r = records.find((x) => x.id === id)
   const [editing, setEditing] = useState(false)
   const [focusWhy, setFocusWhy] = useState(false)
@@ -171,13 +171,19 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     for (const id of [coverAsset, coverOriginal])
       if (typeof id === 'string' && id && !records.some((x) => x.id !== r.id && (x.coverAsset === id || x.coverOriginal === id))) deleteAsset(id)
   }
-  // Look up album & artist info again: takes back Not this artist (#63)
-  const relook = () => {
-    if (!r) return
-    update(r.id, UNBLOCK_ARTIST).then((ok) => ok && fireTask({ asked: true }))
-  }
   const k = r ? kindOf(r) : 'own'
   const by = r ? [r.artist, r.year, r.runtime ? r.runtime + ' min' : ''].filter(Boolean).join(' · ') : ''
+  const face = r && (
+    <Face
+      key={r.id}
+      title={r.title || ''}
+      artist={r.artist || ''}
+      hue={hueOf(r)}
+      cover={coverUrl(r)}
+      small
+      className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
+    />
+  )
   // a lookup says what it's doing; an edit waiting for Discogs says so too, except in edit, where the Discogs section does
   // for editors only, like the wall's busy dots: a viewer can't act on it
   const status = r && canEdit ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
@@ -204,15 +210,19 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
             {/* one cover size for every record: as tall as a full set of lines beside it (badges and a lookup line) from sm
                 up, 96px on phones, where a bigger one would squeeze the title */}
             <DrawerHeader className="flex-row items-start gap-4">
-              <Face
-                key={r.id}
-                title={r.title || ''}
-                artist={r.artist || ''}
-                hue={hueOf(r)}
-                cover={coverUrl(r)}
-                small
-                className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
-              />
+              {editing ? (
+                <CoverMenu
+                  face={face}
+                  hasCover={!!r.coverAsset}
+                  onStatus={setSaved}
+                  onUploaded={async (a) => {
+                    if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
+                  }}
+                  onRemove={() => setUncover(true)}
+                />
+              ) : (
+                face
+              )}
               <div className="flex min-w-0 flex-1 flex-col gap-1">
                 {/* a drag here selects the text to copy, not swipes the sheet shut (#110) */}
                 <DrawerTitle className="break-words" data-base-ui-swipe-ignore="">
@@ -261,32 +271,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                   </Alert>
                 )}
                 {editing && (
-                  <div className="mb-6 flex flex-wrap items-center gap-3">
-                    <CoverButton
-                      hasCover={!!r.coverAsset}
-                      onStatus={setSaved}
-                      onUploaded={async (a) => {
-                        if (await update(r.id, coverPatch(r, a))) setSaved('Saved')
-                      }}
-                    />
-                    {r.coverAsset && (
-                      <Button size="sm" variant="outline" onClick={() => setUncover(true)}>
-                        Remove cover
-                      </Button>
-                    )}
-                    <Button size="sm" variant="outline" disabled={!!r.needsEnrich} onClick={enrich}>
+                  // the lookup, on a quiet line: the cover's own actions are on the cover (#129)
+                  <div className="-ms-3 mb-6 flex flex-wrap items-center gap-1">
+                    <Button size="sm" variant="ghost" disabled={!!r.needsEnrich} onClick={enrich}>
                       Find cover & details
                     </Button>
-                    {hasArtistInfo(r, new Set(artists.map((a) => a.id))) && (
-                      <Button size="sm" variant="outline" onClick={async () => (await update(r.id, NOT_ARTIST)) && setSaved('Saved')}>
-                        Not this artist
-                      </Button>
-                    )}
-                    {r.aboutBlocked && (
-                      <Button size="sm" variant="outline" onClick={relook}>
-                        Look up album & artist info again
-                      </Button>
-                    )}
                     <Confirm
                       open={uncover}
                       title={`Remove this cover${ownUpload ? ' for good' : ''}? The record goes back to its plain sleeve.`}
