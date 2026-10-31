@@ -6509,7 +6509,7 @@ var buyRow = (c) => {
 var barcodeRow = (c, shops) => {
 	const code = copyBarcode(c);
 	const L = code ? shopOrder(shops.filter((s) => s.upc)).map((s) => [s.name, s.upc.replace("{upc}", code)]) : [];
-	return L.length ? [["This pressing at", /* @__PURE__ */ jsx(LinkList, { links: L })]] : [];
+	return L.length ? [["Check this pressing at", /* @__PURE__ */ jsx(LinkList, { links: L })]] : [];
 };
 function CopiesView({ r, onEditCopy, shops = [] }) {
 	const L = stillCopies(r);

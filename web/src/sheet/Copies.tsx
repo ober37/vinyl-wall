@@ -25,11 +25,12 @@ const buyRow = (c: Copy): Row[] => {
   return L.length ? [['Where to buy', <LinkList links={L} />]] : []
 }
 
-// this exact pressing at each shop that opens a product by barcode (#88), from the copy's own Discogs release
+// this exact pressing at each shop that opens a product by barcode (#88), from the copy's own Discogs release: a page that
+// only exists while the shop carries it, so the row asks to check rather than promising it's there
 const barcodeRow = (c: Copy, shops: Shop[]): Row[] => {
   const code = copyBarcode(c)
   const L = code ? shopOrder(shops.filter((s) => s.upc)).map((s): [string, string] => [s.name, s.upc!.replace('{upc}', code)]) : []
-  return L.length ? [['This pressing at', <LinkList links={L} />]] : []
+  return L.length ? [['Check this pressing at', <LinkList links={L} />]] : []
 }
 
 // The copies a record hunts, as production's wantCopyHTML shows them: one copy on a hunt is an open card (name, pressing,

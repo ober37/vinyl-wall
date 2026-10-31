@@ -334,18 +334,18 @@ describe('record sheet: this pressing at a barcode shop (#88)', () => {
   it('links each barcode shop straight to the copy’s pressing', async () => {
     const { user } = setup({ shops: [{ ...SIREN, upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }, ...DEFAULT_SHOPS] }, nevermind())
     await openRecord(user, 'Nevermind')
-    expect(screen.getByText('This pressing at')).toBeTruthy()
+    expect(screen.getByText('Check this pressing at')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Siren Records ↗' }).getAttribute('href')).toBe('https://sirenrecordsmchenry.com/UPC/720642442517')
   })
 
   it('shows no row without a barcode shop, or with barcodes from another release', async () => {
     const { user } = setup({ shops: DEFAULT_SHOPS }, nevermind())
     await openRecord(user, 'Nevermind')
-    expect(screen.queryByText('This pressing at')).toBeNull()
+    expect(screen.queryByText('Check this pressing at')).toBeNull()
     await user.keyboard('{Escape}')
     const other = setup({ shops: [{ ...SIREN, upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }] }, nevermind({ discogsId: 1 }))
     await openRecord(other.user, 'Nevermind')
-    expect(screen.queryByText('This pressing at')).toBeNull()
+    expect(screen.queryByText('Check this pressing at')).toBeNull()
   })
 })
 
