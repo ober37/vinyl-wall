@@ -67,6 +67,7 @@ The sync only writes to *your* collection and wantlist, and the import only adds
 | `app/vinyl-wall.html` | The wall itself: one self-contained page |
 | `app/tools/discogs_sync.py` | One-way sync from the wall to your Discogs collection and wantlist |
 | `app/tools/discogs_import.py` | One-time import of an existing Discogs collection and wantlist onto the wall |
+| `app/tools/shop_search.py` | Finds the search link of each of your shops, so Search elsewhere searches the shop for the album |
 | `app/tools/lookup.py` | Looks up covers, details and album and artist info for new records, a few at a time |
 | `app/backgrounds/` | The photo backgrounds |
 | `tasks/background-task.md` | Instructions for the background task (covers, runtimes, Discogs) |

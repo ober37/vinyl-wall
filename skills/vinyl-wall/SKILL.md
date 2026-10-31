@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 20.
+Skill version 21.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -95,10 +95,10 @@ Each shop has:
   - `email`: only an address the shop publishes.
   - `about`: one or two sentences on what makes it worth the trip, like what it's known for. Leave out opening hours, because they change.
 
-Leave out anything you can't find. The wall doesn't show `upc` or `shopify`, and keeps them when the person edits a shop there.
+Leave out anything you can't find. The wall doesn't show `search`, `upc` or `shopify`, so the person never types them; it keeps them when the person edits a shop there, and drops them when they change its website, so they're found again for the new one.
 
 **What a shop supports:** whenever you add a shop, fill one in, or list shops near them, work out what its web store supports, and save what works:
-- **Search:** search its site for an album and note the results page's address, with `{q}` in place of the words.
+- **Search:** search its site for an album and note the results page's address, with `{q}` in place of the words. The wall's background task already tries the usual store searches (Shopify, WooCommerce, BigCommerce, the site's OpenSearch description, a search box that submits as a link); a shop with `searchTried` is one it couldn't place, so the store's search is likely drawn by JavaScript. When you save a `search`, write the shop without `searchTried`.
 - **Barcode pages:** many record-shop storefronts open a product by barcode at `<store>/UPC/<barcode>`. Try it with the barcode of a record they're likely to stock (a Discogs release's barcode, from `https://api.discogs.com/releases/<id>`, `identifiers` of type "Barcode"), and save `upc` if it opens a product page. Also save it without opening a page when:
   - the store's pages load files from `cdn.broadtime.com`, which means it's a Broadtime storefront, and those always open products at `/UPC/<barcode>`;
   - the person gives you one of the store's barcode links (like `https://sirenrecordsmchenry.com/UPC/8717931357418`): save it with `{upc}` in place of the digits.
@@ -111,6 +111,7 @@ To change the list, `get` `settings/site`, then `update` it with the whole `shop
 - **Adding a shop:** look it up: the website, the search link, and for a local shop the address, phone, email and about. If a shop with that name is already on the list, fill in that one instead (next point). Tell them in a line what you added and what you couldn't find.
 - **Filling in a shop:** when they ask you to fill in or update a shop already on the list (often one they added on the wall with just a name or a website), look up what's missing and fill only the empty fields. Never change what they typed, and keep its `id`. Tell them in a line what you filled in and what you couldn't find.
 - **Finding shops near them:** when they ask for record shops near a place (a ZIP code, town or neighborhood), search the web. List up to 8 shops, nearest first. For each, give its town, one line about it, and whether its stock can be searched online (a web store you can search for an album). Ask which ones to add, and add only the ones they pick, as local shops. That includes shops without online stock, which you save with no `url` or `search`; the wall shows those with call, email and map links.
+- **Re-checking a shop's search:** when they say a shop's search on the wall doesn't work or finds the wrong thing, find it again as above and replace its `search` (keep `shopify` only if it's still a Shopify store).
 - **Removing a shop:** take it out of the list.
 
 ## Research
@@ -131,7 +132,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 - **Answer the question asked.** `get` the record first for context (its pressing, notes and `about`). Search the web for anything recent or factual, such as awards, charts, prices or pressing details, rather than answering from memory. Keep it short and give your sources.
 - **Finding or buying a copy:** when the question is about finding or buying a copy (which pressing to hunt, where it's available, what it costs), check their shops first.
   - **Order:** `get` `settings/site` for `shops` (if it's missing, use the defaults above). Check local shops first, then online shops, then marketplaces.
-  - **Matching:** look up the album at each shop that has a `search`, and match only this album by this artist on vinyl. Skip CDs, tapes, merch and other albums.
+  - **Matching:** look up the album at each shop that has a `search`, and match only this album by this artist on vinyl. Skip CDs, tapes, merch and other albums. A shop with a website but no `search`: find its search as in What a shop supports, use it, and save it to the shop (see Missing shop details).
   - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`): read the release's barcodes from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only) and put each in `upc`. A page found that way is that exact pressing. If a shop's bot check stops you opening its pages, don't report it as having nothing: its line reads `"<shop>: couldn't check from here"`, and the pressing's barcode page goes in `sources` so they can open it themselves.
   - **Shopify stores (`shopify: true`, like Revolver):** they have structured data. `<shop>/search/suggest.json?q=<artist title>&resources[type]=product` lists matching products with `available`, `price` and `url`. `<shop>/products/<handle>.json` gives each variant's `price` and `available`.
   - **What to report:**
@@ -140,7 +141,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
     - A local shop whose stock isn't online: say they can call or email to ask.
   - **Exclusive variants:** an exclusive variant ("Limited to 200", a colour) is a pressing in its own right. Name it that way so it can be added as a copy.
   - **Sources:** cite product pages.
-  - **Missing shop details:** when a local shop you check is missing its search link, address, phone, email or about, and you come across them along the way, fill in the empty ones as in Filling in a shop. Mention it in a line ("I also filled in Siren Records' address and phone").
+  - **Missing shop details:** when a shop you check is missing its search link (or, for a local shop, its address, phone, email or about), and you find them along the way, fill in the empty ones as in Filling in a shop. Mention it in a line ("I also saved Siren Records' search and filled in its address").
   - **Writing it up:** lead with the shops that have it, and sum up the rest in one line ("Nothing at Amazon or eBay"). Then cover other places on the web as usual.
 - **Nothing found:** say so in one line. Don't pad the answer with things they didn't ask about, like what their copy is worth, unless they ask.
 - **Saving:** when they seem done, ask once whether to save it to the record, and save only if they say yes. A follow-up prompt (starting `Follow up on my research from <date>: "<headline>"`, ending `My follow-up: …`) names an earlier entry: read it from `researchLog` first, and save the follow-up as a new entry.

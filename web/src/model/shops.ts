@@ -3,7 +3,8 @@
 import { kindOf, shopHref, type Rec } from './record'
 
 export type ShopKind = 'local' | 'online' | 'market'
-// search: the shop's search with {q} where "artist title" goes. upc (a product page by barcode, {upc}) and shopify (its
+// search: the shop's search with {q} where "artist title" goes, found by the chat or the background task, never typed
+// (#118); searchTried: when the background task last found none. upc (a product page by barcode, {upc}) and shopify (its
 // product data can be read) are found and used by the chat, not shown. A local shop also keeps how to reach it and a line about it
 export type Shop = {
   id: string
@@ -13,6 +14,7 @@ export type Shop = {
   search?: string
   upc?: string
   shopify?: boolean
+  searchTried?: number
   place?: string
   phone?: string
   email?: string
@@ -49,6 +51,7 @@ export function shopsOf(settings: Record<string, unknown>): Shop[] {
       const upc = https(s.upc)
       if (upc.includes('{upc}')) shop.upc = upc
       if (s.shopify === true) shop.shopify = true
+      if (typeof s.searchTried === 'number') shop.searchTried = s.searchTried
       if (kind === 'local')
         for (const k of ['place', 'phone', 'email', 'about'] as const) {
           const v = text(s[k], k === 'about' ? 400 : 120)
@@ -71,9 +74,13 @@ export function siteUrl(v: string): string {
   }
 }
 
-// where a shop looks for this album: its search, else its website
-export const shopLink = (s: Shop, r: { artist?: unknown; title?: unknown }) =>
-  s.search ? s.search.replace('{q}', encodeURIComponent(`${r.artist || ''} ${r.title || ''}`.trim())) : s.url || ''
+// where a shop looks for this album: its search, else a web search within its website until its search is found (#118)
+export function shopLink(s: Shop, r: { artist?: unknown; title?: unknown }) {
+  const q = `${r.artist || ''} ${r.title || ''}`.trim()
+  if (s.search) return s.search.replace('{q}', encodeURIComponent(q))
+  if (!s.url) return ''
+  return 'https://www.google.com/search?q=' + encodeURIComponent(`site:${new URL(s.url).hostname.replace(/^www\./, '')} ${q}`)
+}
 export const mapLink = (s: Shop) => (s.place ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(`${s.name} ${s.place}`) : '')
 export const telLink = (s: Shop) => (s.phone && /\d/.test(s.phone) ? 'tel:' + s.phone.replace(/[^\d+]/g, '') : '')
 export const mailLink = (s: Shop) => (s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? 'mailto:' + s.email : '')

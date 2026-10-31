@@ -47,8 +47,14 @@ PART C — Discogs sync (one-way, wall → Discogs)
 11. Unless the script said more wait for the next run, `list` once more; if any non-deleted doc still has needsSync true, repeat steps 8–10 one time.
 12. If the sync script reports 401/403 errors, update settings/site discogs status "error" with the rejected-token message above.
 
+PART S — shop search links
+S1. `get` "settings"/"site" with out_dir "<workdir>/site". If it has no "shops" list, skip part S.
+S2. In ONE turn, fetch the script with the Artifact tool (action "read", url the artifact URL above, path "tools/shop_search.py", out_dir <workdir>/tools), then run: python3 -I <workdir>/tools/shop_search.py <workdir>/site/settings/site.json <workdir>/shops.json
+    It tries the usual store searches on each shop's own website (only shops with a website and no search link) and prints a line per shop. Don't look shops up yourself.
+S3. If shops.json isn't {}, `update` "settings"/"site" with file_path <workdir>/shops.json and if_version = the version from S1. If the version moved (the page saved settings meanwhile), do S1–S3 once more; if it fails again, skip part S.
+
 PART E — check for updates (last)
 E1. Check for a newer release: GET https://api.github.com/repos/ober37/vinyl-wall/releases/latest (User-Agent "VinylWall/1.0"). Take tag_name (e.g. "v0.3.0") and drop the leading "v". Only accept tags shaped like vX.Y.Z. `get` "settings"/"site"; if update.latest differs or update.checkedMs is older than a day, `update` it (if_version = its version) with update fields only: latest = that version, checkedMs = now in milliseconds since the epoch. On any error, skip quietly.
 Installing an update replaces the page, which only Claude in chat can do; the page tells the owner what to send. Do nothing else here.
 
-Finally `get` "settings"/"site" and `update` it (if_version = its version) with only {"run": {"__delete__": true}}, so the page can start the next run; do this even when a part failed. Then delete the token file and working directory. End with a one-line summary (update available, records imported, covers filled, runtimes filled, artist and album info found, connection status, records synced, errors, and part L's DONE line with its timeline, word for word) that never contains the token.
+Finally `get` "settings"/"site" and `update` it (if_version = its version) with only {"run": {"__delete__": true}}, so the page can start the next run; do this even when a part failed. Then delete the token file and working directory. End with a one-line summary (update available, records imported, covers filled, runtimes filled, artist and album info found, connection status, records synced, shop search links found, errors, and part L's DONE line with its timeline, word for word) that never contains the token.
