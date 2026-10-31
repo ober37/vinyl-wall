@@ -277,9 +277,9 @@ var vibeOf = (n) => {
 	const v = +(n.vibe ?? MOOD_VIBE[String(n.mood)] ?? 0);
 	return v >= 1 && v <= 5 ? v : 0;
 };
-function playMonths(r) {
-	const T = recordTracks(r);
-	const title = (p) => T.find((t) => t.pos === p)?.title || String(p);
+function playMonths(r, copies = []) {
+	const tracksOf = (n) => recordTracks(copies.find(([name]) => name === n.copy)?.[1] ?? r);
+	const title = (n, p) => tracksOf(n).find((t) => t.pos === p)?.title || String(p);
 	const rows = noteList(r).map((n, i) => ({
 		n,
 		i
@@ -294,7 +294,7 @@ function playMonths(r) {
 		const on = /^(?: on (.+))? $/.exec(m[2]);
 		const whole = m[1] === "the whole album";
 		const side = m[1] === "one side";
-		const what = !on ? t : whole ? "Whole album" : side ? n.side ? "Side " + n.side : "One side" : `${cnt} track${cnt === 1 ? "" : "s"}${tp.length ? " · " + tp.slice(0, 2).map(title).join(", ") + (tp.length > 2 ? ` +${tp.length - 2}` : "") : ""}`;
+		const what = !on ? t : whole ? "Whole album" : side ? n.side ? "Side " + n.side : "One side" : `${cnt} track${cnt === 1 ? "" : "s"}${tp.length ? " · " + tp.slice(0, 2).map((p) => title(n, p)).join(", ") + (tp.length > 2 ? ` +${tp.length - 2}` : "") : ""}`;
 		const play = {
 			key: i,
 			ref: {
@@ -304,7 +304,7 @@ function playMonths(r) {
 			},
 			day: d,
 			date: d ? playDate(d) : "",
-			what,
+			what: copies.length > 1 && typeof n.copy === "string" && n.copy ? what + " · " + n.copy : what,
 			icon: whole ? "●" : side ? "◐" : "◔",
 			setup: on?.[1] || "",
 			min: +m[3] || 0,
@@ -685,6 +685,10 @@ var bars = (v) => {
 		codes: b.codes.filter((x) => typeof x === "string" && /^\d+$/.test(x))
 	} } : {};
 };
+var relTracks = (v) => {
+	const t = v;
+	return t && typeof t === "object" && typeof t.rid === "number" && Array.isArray(t.tracks) ? { releaseTracks: t } : {};
+};
 var guessedRelease = (r) => /^(master main release|vinyl: )/.test(String(r.discogsMatch || ""));
 var orderOf = (c) => typeof c.orderStatus === "string" && c.orderStatus ? Object.fromEntries(ORDER_KEYS.map((k) => [k, s$2(c[k])])) : {};
 var copyOrdered = (c) => !!c.orderStatus;
@@ -724,8 +728,30 @@ function wantCopies(r) {
 		buyLinks: links(c.buyLinks),
 		releaseDate: day$1(c.releaseDate),
 		...bars(c.barcodes),
+		...relTracks(c.releaseTracks),
 		...orderOf(c)
 	}))];
+}
+function copyAlbum(r, c) {
+	const t = c.releaseTracks && c.discogsId && c.releaseTracks.rid === c.discogsId ? c.releaseTracks : void 0;
+	const T = recordTracks({
+		id: "",
+		about: { tracks: t?.tracks }
+	});
+	return {
+		runtime: parseInt(c.runtime || "", 10) || T.length && t?.runtime || r.runtime || "",
+		about: T.length ? {
+			...r.about,
+			tracks: T,
+			tracksSource: "copy",
+			tracksUrl: "https://www.discogs.com/release/" + c.discogsId
+		} : r.about
+	};
+}
+function ownTracks(album, copy) {
+	if (copy.about?.tracksSource !== "copy") return false;
+	const key = (x) => JSON.stringify(recordTracks(x).map((t) => [t.pos, t.title]));
+	return key(copy) !== key(album);
 }
 var copyTitle = (c, i) => c.name || c.pressing.split("\n")[0].trim() || (c.discogsId ? "Discogs release " + c.discogsId : "Copy " + (i + 1));
 var copyHas = (c) => COPY_KEYS.some((k) => c[k]) || c.buyLinks.length > 0 || !!c.releaseDate;
@@ -841,7 +867,8 @@ var TEXT = [
 	"paid",
 	"shop",
 	"shopUrl",
-	"acquired"
+	"acquired",
+	"runtime"
 ];
 var s$1 = (v) => typeof v === "string" || typeof v === "number" ? String(v) : "";
 var did = (v) => {
@@ -861,7 +888,8 @@ var emptyOwned = () => ({
 	paid: "",
 	shop: "",
 	shopUrl: "",
-	acquired: ""
+	acquired: "",
+	runtime: ""
 });
 function moreOwned(r) {
 	return (Array.isArray(r.ownedCopies) ? r.ownedCopies : []).filter((c) => !!obj$1(c)).map((c) => {
@@ -872,7 +900,10 @@ function moreOwned(r) {
 		for (const k of TEXT) o[k] = s$1(c[k]);
 		const b = obj$1(c.barcodes);
 		if (b && typeof b.rid === "number" && Array.isArray(b.codes)) o.barcodes = b;
-		return o;
+		return {
+			...o,
+			...relTracks(c.releaseTracks)
+		};
 	});
 }
 var syncedRids = (r) => {
@@ -885,20 +916,21 @@ function firstAsCopy(r) {
 		discogsId: did(r.discogsId),
 		name: s$1(r.copyName)
 	};
-	for (const k of TEXT) if (k !== "name") o[k] = s$1(r[k]);
+	for (const k of TEXT) if (k !== "name" && k !== "runtime") o[k] = s$1(r[k]);
 	o.pressing = pressingText(r);
 	const b = obj$1(r.barcodes);
 	if (b && typeof b.rid === "number" && Array.isArray(b.codes)) o.barcodes = b;
 	return o;
 }
 function copyRec(r, c) {
-	const { name, ...rest } = c;
+	const { name, runtime, releaseTracks, ...rest } = c;
 	const sync = obj$1(r.discogsSync);
 	const synced = !!c.discogsId && syncedRids(r).includes(c.discogsId);
 	return {
 		...r,
 		copyName: name,
 		...rest,
+		...copyAlbum(r, c),
 		discogsMatch: "",
 		ownedCopies: void 0,
 		discogsSync: synced ? {
@@ -924,6 +956,7 @@ function gotPatch(r, ci, det) {
 		catalog: c.catalog,
 		discogsId: c.discogsId,
 		...c.barcodes ? { barcodes: c.barcodes } : {},
+		...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 		paid: det.paid,
 		shop: det.shop,
 		shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : ""),
@@ -1103,6 +1136,7 @@ function stored(f) {
 		buyLinks: tidyLinks(c.buyLinks),
 		releaseDate: c.releaseDate,
 		...c.barcodes ? { barcodes: c.barcodes } : {},
+		...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 		...c.orderStatus ? {
 			...Object.fromEntries(ORDER_KEYS.map((k) => [k, k === "orderNotes" ? c[k] ?? "" : (c[k] ?? "").trim()])),
 			paid: (c.paid ?? "").trim().replace(/^\$\s*/, ""),
@@ -1111,7 +1145,7 @@ function stored(f) {
 	}));
 	if (f.ownedCopies) o.ownedCopies = f.ownedCopies.map((c) => {
 		return {
-			...Object.fromEntries(Object.entries(c).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])),
+			...Object.fromEntries(Object.entries(c).filter(([k, v]) => k !== "runtime" || String(v).trim()).map(([k, v]) => [k, typeof v === "string" ? v.trim() : v])),
 			paid: c.paid.trim().replace(/^\$\s*/, ""),
 			shopUrl: shopHref(c.shopUrl.trim()) || c.shopUrl.trim()
 		};
@@ -2356,6 +2390,7 @@ function GearEdit({ g, onStatus, onGone }) {
 					/* @__PURE__ */ jsxs(Field, {
 						className: "sm:col-span-2",
 						children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Setup notes" }), /* @__PURE__ */ jsx(Textarea, {
+							className: "field-sizing-content max-h-80",
 							rows: 3,
 							value: f.specs,
 							onChange: text("specs"),
@@ -2600,6 +2635,7 @@ function SetupView({ x, onStatus, onGone }) {
 						typed();
 					}
 				})] }), /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Notes" }), /* @__PURE__ */ jsx(Textarea, {
+					className: "field-sizing-content max-h-80",
 					rows: 3,
 					value: note,
 					placeholder: "Where it lives, what's connected to what…",
@@ -4168,6 +4204,7 @@ function ordersOf(r) {
 				discogsId: c.discogsId,
 				buyLinks: c.buyLinks,
 				releaseDate: c.releaseDate,
+				...copyAlbum(r, c),
 				...Object.fromEntries(ORDER_KEYS.map((x) => [x, c[x] ?? ""])),
 				discogsMatch: "",
 				moreCopies: void 0,
@@ -4254,6 +4291,7 @@ var owned = (c, det) => ({
 	catalog: c.catalog,
 	discogsId: c.discogsId,
 	...c.barcodes ? { barcodes: c.barcodes } : {},
+	...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 	paid: det.paid || "",
 	shop: det.shop || "",
 	shopUrl: det.shopUrl || "",
@@ -5170,6 +5208,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 							children: [field("phone", "Phone", { inputMode: "tel" }), field("email", "Email", { inputMode: "email" })]
 						}),
 						/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "About" }), /* @__PURE__ */ jsx(Textarea, {
+							className: "field-sizing-content max-h-80",
 							rows: 2,
 							maxLength: 400,
 							value: d.about,
@@ -6153,7 +6192,7 @@ function BuyLinks({ c, on }) {
 					on(e.target.value);
 				},
 				onBlur: () => setLeft(true),
-				className: "field-sizing-content",
+				className: "field-sizing-content max-h-80",
 				autoCapitalize: "off",
 				autoComplete: "off",
 				placeholder: "One link per line, e.g. https://www.roughtrade.com/…"
@@ -6192,6 +6231,7 @@ function CopyFields({ c, ph, on, auto, focus, links, discogs }) {
 			/* @__PURE__ */ jsxs(Field, {
 				className: "sm:col-span-2",
 				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Pressing" }), /* @__PURE__ */ jsx(Textarea, {
+					className: "field-sizing-content max-h-80",
 					rows: 2,
 					value: c.pressing,
 					onChange: (e) => on("pressing", e.target.value),
@@ -6236,7 +6276,7 @@ var firstOf = (f) => ({
 	buyLinks: f.buyLinks ?? [],
 	releaseDate: f.releaseDate ?? ""
 });
-var asFlat = (c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "barcodes").map(([k, v]) => [FLAT[k], v]));
+var asFlat = (c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "barcodes" && k !== "releaseTracks").map(([k, v]) => [FLAT[k], v]));
 function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, connected = false, onConnect, order, orderState: orderState$1 = "", orderFor, onCancel }) {
 	const [confirm, setConfirm] = useState(null);
 	const more = form.moreCopies ?? [];
@@ -6253,7 +6293,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 		setAdded(null);
 	}
 	const val = (k, v) => k === "buyLinks" ? v.split("\n") : v;
-	const setFirst = (k, v) => k !== "barcodes" && change({ [FLAT[k]]: val(k, v) });
+	const setFirst = (k, v) => k !== "barcodes" && k !== "releaseTracks" && change({ [FLAT[k]]: val(k, v) });
 	const setMore = (i, k, v) => change({ moreCopies: more.map((c, j) => j === i - 1 ? {
 		...c,
 		[k]: val(k, v)
@@ -6542,7 +6582,7 @@ function DateIn({ k, label, form, set }) {
 		onValueChange: (d) => set(k, fromDate(d))
 	})] });
 }
-function OwnedFields({ form, set, discogs, auto, focus }) {
+function OwnedFields({ form, set, discogs, auto, focus, album }) {
 	const p = {
 		form,
 		set
@@ -6561,6 +6601,7 @@ function OwnedFields({ form, set, discogs, auto, focus }) {
 			/* @__PURE__ */ jsxs(Field, {
 				className: "sm:col-span-2",
 				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Pressing" }), /* @__PURE__ */ jsx(Textarea, {
+					className: "field-sizing-content max-h-80",
 					rows: 2,
 					value: form.pressing ?? "",
 					onChange: (e) => set("pressing", e.target.value),
@@ -6606,6 +6647,14 @@ function OwnedFields({ form, set, discogs, auto, focus }) {
 				mono: true,
 				...p
 			}),
+			album !== void 0 && /* @__PURE__ */ jsx(Text, {
+				k: "runtime",
+				label: "Runtime (min)",
+				placeholder: album ? album + " (the album's)" : "e.g. 46",
+				mono: true,
+				numeric: true,
+				...p
+			}),
 			/* @__PURE__ */ jsx(Runout, {
 				form,
 				set
@@ -6625,7 +6674,8 @@ var OWN_FORM = {
 	paid: "paid",
 	shop: "shop",
 	shopUrl: "shopUrl",
-	acquired: "acquired"
+	acquired: "acquired",
+	runtime: "runtime"
 };
 var asForm = (c) => ({
 	title: "",
@@ -6744,7 +6794,8 @@ function YourCopiesEdit({ form, set, auto, change, r, isNew, discogs, connected,
 					form: cf,
 					set: setC,
 					discogs: disc,
-					focus: added === keys[j + 1]
+					focus: added === keys[j + 1],
+					album: form.runtime
 				}));
 			})]
 		}),
@@ -6832,6 +6883,7 @@ function OrderFields(p) {
 			form.orderNotes !== void 0 && /* @__PURE__ */ jsxs(Field, {
 				className: "sm:col-span-2",
 				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Order notes" }), /* @__PURE__ */ jsx(Textarea, {
+					className: "field-sizing-content max-h-80",
 					rows: 2,
 					value: form.orderNotes,
 					onChange: (e) => set("orderNotes", e.target.value)
@@ -6900,6 +6952,7 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 				]
 			})] }),
 			/* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: own ? "Why it's on the wall" : "Why you want it" }), /* @__PURE__ */ jsx(Textarea, {
+				className: "field-sizing-content max-h-80",
 				"aria-label": "Why",
 				rows: 3,
 				autoFocus: focusWhy,
@@ -7188,6 +7241,159 @@ function CoverMenu({ face, hasCover, onUploaded, onStatus, onRemove }) {
 		})
 	] })] }), c.input] });
 }
+// src/model/plays.ts
+var sideOf = (pos) => (/^([A-Z])/.exec(String(pos || "")) || [])[1] || "";
+var trackSecs = (dur) => {
+	const m = /^(\d+):(\d\d)$/.exec(String(dur || ""));
+	return m ? +m[1] * 60 + +m[2] : 0;
+};
+function recordSides(r) {
+	const S = [...new Set(recordTracks(r).map((t) => sideOf(t.pos)).filter(Boolean))];
+	return S.length ? S : ["A", "B"];
+}
+function tracksMin(r, pos) {
+	const T = recordTracks(r);
+	const known = T.map((t) => trackSecs(t.dur)).filter(Boolean);
+	const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : (+r.runtime || 40) * 60 / Math.max(T.length, 1);
+	return Math.max(1, Math.ceil(pos.reduce((n, p) => n + (trackSecs(T.find((t) => t.pos === p)?.dur) || avg), 0) / 60));
+}
+function collapsePick(r, kind, side, picks) {
+	if (kind !== "tracks") return {
+		kind,
+		side: kind === "side" ? side : "",
+		tracks: []
+	};
+	const T = recordTracks(r);
+	const sides = [...new Set(picks.map(sideOf))];
+	if (picks.length === T.length) return {
+		kind: "full",
+		side: "",
+		tracks: []
+	};
+	if (sides.length === 1 && sides[0] && T.filter((t) => sideOf(t.pos) === sides[0]).every((t) => picks.includes(t.pos))) return {
+		kind: "side",
+		side: sides[0],
+		tracks: []
+	};
+	return {
+		kind,
+		side: "",
+		tracks: picks
+	};
+}
+function playMin(r, kind, tracks) {
+	const rt = +r.runtime || 40;
+	return kind === "tracks" ? tracksMin(r, tracks) : kind === "side" ? Math.round(rt / 2) : rt;
+}
+function playNote(r, kind, side, tracks, on = "", copy = "") {
+	const t = (kind === "tracks" ? `Played ${tracks.length} track${tracks.length > 1 ? "s" : ""}` : kind === "side" ? "Played one side" : "Played the whole album") + (on ? ` on ${on}` : "") + ` (~${playMin(r, kind, tracks)} min)`;
+	return {
+		d: today(),
+		t,
+		...side ? { side } : {},
+		...tracks.length ? { tracks } : {},
+		...copy ? { copy } : {}
+	};
+}
+function saveJournal(r, ref, j) {
+	const notes = notesOf(r);
+	const i = findNote(notes, ref);
+	if (i < 0) return null;
+	const n = {
+		...notes[i],
+		j: j.text.trim()
+	};
+	delete n.mood;
+	if (j.vibe) n.vibe = j.vibe;
+	else delete n.vibe;
+	if (j.date && /^\d{4}-\d\d-\d\d$/.test(j.date)) n.d = j.date;
+	notes[i] = n;
+	return notes;
+}
+function lastCopy(r, names) {
+	const n = [...notesOf(r)].reverse().find((x) => typeof x?.copy === "string" && names.includes(x.copy));
+	return n ? names.indexOf(n.copy) : 0;
+}
+// src/sheet/Tracks.tsx
+function Tracks({ r }) {
+	const T = recordTracks(r);
+	const [all, setAll] = useState(false);
+	if (!T.length) return null;
+	const shown = all || T.length <= 12 ? T : T.slice(0, 8);
+	const sided = T.every((t) => sideOf(t.pos));
+	const sideTime = (s) => {
+		const n = T.filter((t) => sideOf(t.pos) === s).reduce((n, t) => n + trackSecs(t.dur), 0);
+		return n ? ` · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` : "";
+	};
+	const ab = r.about || {};
+	const src = okUrl(ab.tracksUrl);
+	const srcName = ab.tracksSource === "copy" ? "this copy's Discogs release" : ab.tracksSource === "discogs" ? "your Discogs pressing" : "MusicBrainz";
+	return /* @__PURE__ */ jsxs(Fragment$1, { children: [
+		/* @__PURE__ */ jsx("ol", {
+			className: "flex flex-col gap-1 text-sm",
+			children: shown.map((t, i) => /* @__PURE__ */ jsxs(Fragment, { children: [sided && sideOf(t.pos) !== sideOf(shown[i - 1]?.pos) && /* @__PURE__ */ jsxs("li", {
+				role: "presentation",
+				className: `text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? "pt-3" : ""}`,
+				children: [
+					"Side ",
+					sideOf(t.pos),
+					sideTime(sideOf(t.pos))
+				]
+			}), /* @__PURE__ */ jsxs("li", {
+				className: "grid grid-cols-[2.5rem_1fr_auto] gap-2",
+				children: [
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted font-mono text-xs leading-5",
+						children: t.pos
+					}),
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground",
+						children: t.title
+					}),
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted font-mono text-xs leading-5",
+						children: t.dur
+					})
+				]
+			})] }, i))
+		}),
+		shown.length < T.length && /* @__PURE__ */ jsxs(Button, {
+			variant: "ghost",
+			size: "sm",
+			className: "-ms-4 self-start",
+			onClick: () => setAll(true),
+			children: [
+				"Show all ",
+				T.length,
+				" tracks"
+			]
+		}),
+		/* @__PURE__ */ jsxs("p", {
+			className: "text-foreground-muted text-xs",
+			children: ["From ", /* @__PURE__ */ jsx(Source, {
+				name: srcName,
+				href: src
+			})]
+		})
+	] });
+}
+function tracksRow(album, copy) {
+	if (!ownTracks(album, copy)) return [];
+	const n = recordTracks(copy).length;
+	return [["Tracklist", /* @__PURE__ */ jsxs(Collapsible, { children: [/* @__PURE__ */ jsxs(CollapsibleTrigger, {
+		className: "group text-foreground inline-flex items-center gap-1 text-start underline decoration-dotted underline-offset-2",
+		children: [/* @__PURE__ */ jsxs("span", { children: [
+			n,
+			" track",
+			n > 1 ? "s" : "",
+			copy.runtime ? " · " + copy.runtime + " min" : ""
+		] }), /* @__PURE__ */ jsx(Chevron, { className: "size-3.5 shrink-0" })]
+	}), /* @__PURE__ */ jsx(CollapsibleContent, {
+		className: "flex flex-col gap-2 pt-2",
+		children: /* @__PURE__ */ jsx(Tracks, { r: copy })
+	})] })]];
+}
+var runtimeRow = (album, copy) => copy.runtime && String(copy.runtime) !== String(album.runtime || "") && !ownTracks(album, copy) ? [["Runtime", copy.runtime + " min"]] : [];
 // src/sheet/Copies.tsx
 var pressRow = (c) => c.pressing ? [["Pressing", /* @__PURE__ */ jsx("span", {
 	className: "whitespace-pre-line",
@@ -7224,7 +7430,11 @@ function CopiesView({ r, onEditCopy, shops = [], got }) {
 		...releaseRow(c),
 		...budgetRow(c),
 		...buyRow(c),
-		...barcodeRow(c, shops)
+		...barcodeRow(c, shops),
+		...tracksRow(r, {
+			...r,
+			...copyAlbum(r, c)
+		})
 	];
 	if (L.length === 1 && kindOf$1(r) === "wish" && !L[0][0].name && !rowsOf(...L[0]).length) return none;
 	const body = /* @__PURE__ */ jsx(Accordion, {
@@ -7388,92 +7598,44 @@ function artistOf(r, artists) {
 		links
 	};
 }
-// src/model/plays.ts
-var sideOf = (pos) => (/^([A-Z])/.exec(String(pos || "")) || [])[1] || "";
-var trackSecs = (dur) => {
-	const m = /^(\d+):(\d\d)$/.exec(String(dur || ""));
-	return m ? +m[1] * 60 + +m[2] : 0;
-};
-function recordSides(r) {
-	const S = [...new Set(recordTracks(r).map((t) => sideOf(t.pos)).filter(Boolean))];
-	return S.length ? S : ["A", "B"];
-}
-function tracksMin(r, pos) {
-	const T = recordTracks(r);
-	const known = T.map((t) => trackSecs(t.dur)).filter(Boolean);
-	const avg = known.length ? known.reduce((a, b) => a + b, 0) / known.length : (+r.runtime || 40) * 60 / Math.max(T.length, 1);
-	return Math.max(1, Math.ceil(pos.reduce((n, p) => n + (trackSecs(T.find((t) => t.pos === p)?.dur) || avg), 0) / 60));
-}
-function collapsePick(r, kind, side, picks) {
-	if (kind !== "tracks") return {
-		kind,
-		side: kind === "side" ? side : "",
-		tracks: []
-	};
-	const T = recordTracks(r);
-	const sides = [...new Set(picks.map(sideOf))];
-	if (picks.length === T.length) return {
-		kind: "full",
-		side: "",
-		tracks: []
-	};
-	if (sides.length === 1 && sides[0] && T.filter((t) => sideOf(t.pos) === sides[0]).every((t) => picks.includes(t.pos))) return {
-		kind: "side",
-		side: sides[0],
-		tracks: []
-	};
-	return {
-		kind,
-		side: "",
-		tracks: picks
-	};
-}
-function playMin(r, kind, tracks) {
-	const rt = +r.runtime || 40;
-	return kind === "tracks" ? tracksMin(r, tracks) : kind === "side" ? Math.round(rt / 2) : rt;
-}
-function playNote(r, kind, side, tracks, on = "") {
-	const t = (kind === "tracks" ? `Played ${tracks.length} track${tracks.length > 1 ? "s" : ""}` : kind === "side" ? "Played one side" : "Played the whole album") + (on ? ` on ${on}` : "") + ` (~${playMin(r, kind, tracks)} min)`;
-	return {
-		d: today(),
-		t,
-		...side ? { side } : {},
-		...tracks.length ? { tracks } : {}
-	};
-}
-function saveJournal(r, ref, j) {
-	const notes = notesOf(r);
-	const i = findNote(notes, ref);
-	if (i < 0) return null;
-	const n = {
-		...notes[i],
-		j: j.text.trim()
-	};
-	delete n.mood;
-	if (j.vibe) n.vibe = j.vibe;
-	else delete n.vibe;
-	if (j.date && /^\d{4}-\d\d-\d\d$/.test(j.date)) n.d = j.date;
-	notes[i] = n;
-	return notes;
-}
 // src/sheet/Listening.tsx
 var journals = /* @__PURE__ */ new Map();
+function Pick({ label, value, set, items }) {
+	return /* @__PURE__ */ jsxs(Field, {
+		className: "max-w-xs",
+		children: [/* @__PURE__ */ jsx(FieldLabel, { children: label }), /* @__PURE__ */ jsxs(Select, {
+			value,
+			onValueChange: (v) => set(String(v)),
+			items,
+			children: [/* @__PURE__ */ jsx(SelectTrigger, { children: /* @__PURE__ */ jsx(SelectValue, {}) }), /* @__PURE__ */ jsx(SelectContent, { children: items.map((x) => /* @__PURE__ */ jsx(SelectItem, {
+				value: x.value,
+				children: x.label
+			}, x.value)) })]
+		})]
+	});
+}
 function LogCard({ r, onLogged }) {
 	const { mutate, gear, setups, saveGear } = useRuntime();
-	const T = recordTracks(r);
+	const copies = ownedRecs(r);
+	const names = copies.map((c, i) => ownedTitle(c, i));
+	const several = copies.length > 1;
+	const [chosen, setCi] = useState(() => lastCopy(r, names));
+	const ci = chosen < copies.length ? chosen : 0;
+	const rc = several ? copies[ci] : r;
+	const T = recordTracks(rc);
 	const S = sortSetups(setups);
 	const [on, setOn] = useState(() => lastSetup(setups));
 	const [kind, setKind] = useState("full");
-	const [side, setSide] = useState(recordSides(r)[0]);
+	const [side, setSide] = useState(recordSides(rc)[0]);
 	const [picks, setPicks] = useState([]);
 	const [busy, setBusy] = useState(false);
 	const sides = [...new Set(T.map((t) => sideOf(t.pos)))];
 	const bySide = sides.length && sides.every(Boolean) ? sides : [""];
 	const log = async () => {
-		const c = collapsePick(r, kind, side, picks);
+		const c = collapsePick(rc, kind, side, picks);
 		const setup = S.length > 1 && S.some((x) => x.id === on) ? on : S[0]?.id || "";
 		if (S.length > 1) rememberSetup(setup);
-		const note = playNote(r, c.kind, c.side, c.tracks, setup ? setupName(S, setup) : "");
+		const note = playNote(rc, c.kind, c.side, c.tracks, setup ? setupName(S, setup) : "", several ? names[ci] : "");
 		let i = -1;
 		setBusy(true);
 		const ok = await mutate(r.id, (latest) => {
@@ -7485,7 +7647,7 @@ function LogCard({ r, onLogged }) {
 		if (ok) {
 			setPicks([]);
 			setKind("full");
-			const min = playMin(r, c.kind, c.tracks);
+			const min = playMin(rc, c.kind, c.tracks);
 			const hits = gearForPlay(gear, S, setup, r, min);
 			hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data));
 			onLogged({
@@ -7502,8 +7664,36 @@ function LogCard({ r, onLogged }) {
 			});
 		}
 	};
+	const pickCopy = (v) => {
+		const i = +v;
+		setCi(i);
+		setPicks([]);
+		setSide(recordSides(copies[i])[0]);
+		if (!recordTracks(copies[i]).length && kind === "tracks") setKind("full");
+	};
+	const played = S.length > 1 && /* @__PURE__ */ jsx(Pick, {
+		label: "Played on",
+		value: S.some((x) => x.id === on) ? on : S[0].id,
+		set: setOn,
+		items: S.map((x) => ({
+			value: x.id,
+			label: x.name || "Untitled setup"
+		}))
+	});
 	return /* @__PURE__ */ jsxs(Fieldset, { children: [
 		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Log a play" }),
+		several && /* @__PURE__ */ jsxs("div", {
+			className: "grid gap-4 sm:grid-cols-2",
+			children: [/* @__PURE__ */ jsx(Pick, {
+				label: "Which copy",
+				value: String(ci),
+				set: pickCopy,
+				items: names.map((n, i) => ({
+					value: String(i),
+					label: n
+				}))
+			}), played]
+		}),
 		/* @__PURE__ */ jsxs("div", {
 			className: "bg-background sticky top-0 z-10 -mx-6 flex flex-col gap-2 px-6 py-2 sm:flex-row sm:items-center sm:gap-3",
 			children: [/* @__PURE__ */ jsx("div", {
@@ -7529,11 +7719,11 @@ function LogCard({ r, onLogged }) {
 			label: "Which side",
 			value: side,
 			onChange: setSide,
-			options: recordSides(r).map((s) => [s, "Side " + s])
+			options: recordSides(rc).map((s) => [s, "Side " + s])
 		}),
 		kind === "tracks" && !picks.length && /* @__PURE__ */ jsx("p", {
 			className: "text-foreground-muted text-sm",
-			children: "Tick the tracks you played."
+			children: ci > 0 && several && rc.about?.tracksSource !== "copy" ? "Tick the tracks you played, from the album's tracklist." : "Tick the tracks you played."
 		}),
 		kind === "tracks" && /* @__PURE__ */ jsx(CheckboxGroup, {
 			"aria-label": "Tracks",
@@ -7562,21 +7752,7 @@ function LogCard({ r, onLogged }) {
 				}, t.pos))]
 			}, sd))
 		}),
-		S.length > 1 && /* @__PURE__ */ jsxs(Field, {
-			className: "max-w-xs",
-			children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Played on" }), /* @__PURE__ */ jsxs(Select, {
-				value: S.some((x) => x.id === on) ? on : S[0].id,
-				onValueChange: (v) => setOn(String(v)),
-				items: S.map((x) => ({
-					value: x.id,
-					label: x.name || "Untitled setup"
-				})),
-				children: [/* @__PURE__ */ jsx(SelectTrigger, { children: /* @__PURE__ */ jsx(SelectValue, {}) }), /* @__PURE__ */ jsx(SelectContent, { children: S.map((x) => /* @__PURE__ */ jsx(SelectItem, {
-					value: x.id,
-					children: x.name || "Untitled setup"
-				}, x.id)) })]
-			})]
-		})
+		!several && played
 	] });
 }
 function JournalEditor({ r, p, j, onDone }) {
@@ -7655,6 +7831,7 @@ function JournalEditor({ r, p, j, onDone }) {
 				children: "Set the vibe"
 			}),
 			/* @__PURE__ */ jsx(Textarea, {
+				className: "field-sizing-content max-h-80",
 				"aria-label": "Your thoughts",
 				placeholder: "What stood out tonight?",
 				value: text,
@@ -7737,7 +7914,7 @@ function Listening({ r }) {
 		else journals.delete(r.id);
 		keepJournal(j);
 	};
-	const months = playMonths(r);
+	const months = playMonths(r, ownedRecs(r).map((c, i) => [ownedTitle(c, i), c]));
 	const cur = today().slice(0, 7);
 	const [open, setOpen] = useState(() => [months.some((m) => m.month === cur) ? cur : months[0]?.month].filter(Boolean));
 	const isOpen = (p) => !!journal && journal.ref.i === p.ref.i && journal.ref.d === p.ref.d && journal.ref.t === p.ref.t;
@@ -7868,6 +8045,7 @@ function NotesTab({ r }) {
 					add();
 				},
 				children: [/* @__PURE__ */ jsx(Textarea, {
+					className: "field-sizing-content max-h-80",
 					"aria-label": "Note",
 					rows: 2,
 					value: draft,
@@ -7901,6 +8079,7 @@ function NotesTab({ r }) {
 					}), edit && same(edit.ref, ref) ? /* @__PURE__ */ jsxs("div", {
 						className: "flex flex-col gap-2",
 						children: [/* @__PURE__ */ jsx(Textarea, {
+							className: "field-sizing-content max-h-80",
 							"aria-label": "Edit note",
 							rows: 3,
 							value: edit.text,
@@ -8193,7 +8372,7 @@ function shopFrom(r, s) {
 		})
 	};
 }
-function OrderCard({ r, shop }) {
+function OrderCard({ r, shop, album }) {
 	const c = wantCopies(r)[0];
 	const first = c.pressing.split("\n")[0].trim();
 	const title = copyTitle(c, 0);
@@ -8221,6 +8400,7 @@ function OrderCard({ r, shop }) {
 	if (r.paid) rows.push(["Paid", "$" + r.paid]);
 	else if (c.budget) rows.push(["Budget", "Up to $" + c.budget]);
 	if (r.orderDate) rows.push(["Ordered", playDate(String(r.orderDate))]);
+	if (album) rows.push(...tracksRow(album, r));
 	if (r.orderNotes) rows.push(["Order notes", /* @__PURE__ */ jsx("span", {
 		className: "whitespace-pre-line",
 		children: String(r.orderNotes)
@@ -8257,7 +8437,8 @@ function OrdersView({ r, shops, onMoved }) {
 					className: "flex flex-col gap-4 pt-1 pb-3",
 					children: [/* @__PURE__ */ jsx(OrderCard, {
 						r: o.rec,
-						shop: shopShown(o.rec, shops)
+						shop: shopShown(o.rec, shops),
+						album: r
 					}), onMoved && /* @__PURE__ */ jsx(Arrived, {
 						r,
 						ci: o.ci,
@@ -8818,7 +8999,11 @@ function YourCopies({ r, shops }) {
 	const C = ownedRecs(r).map((c, i) => ({
 		c,
 		i,
-		rows: copyFacts(c, shops)
+		rows: [
+			...copyFacts(c, shops),
+			...tracksRow(r, c),
+			...runtimeRow(r, c)
+		]
 	}));
 	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: C.length > 1 ? "Your copies" : "Your copy" }), /* @__PURE__ */ jsx(Accordion, {
 		variant: "flush",
@@ -8849,68 +9034,6 @@ function YourCopies({ r, shops }) {
 			})]
 		}, i))
 	})] });
-}
-function Tracks({ r }) {
-	const T = recordTracks(r);
-	const [all, setAll] = useState(false);
-	if (!T.length) return null;
-	const shown = all || T.length <= 12 ? T : T.slice(0, 8);
-	const sided = T.every((t) => sideOf(t.pos));
-	const sideTime = (s) => {
-		const n = T.filter((t) => sideOf(t.pos) === s).reduce((n, t) => n + trackSecs(t.dur), 0);
-		return n ? ` · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, "0")}` : "";
-	};
-	const ab = r.about || {};
-	const src = okUrl(ab.tracksUrl);
-	const srcName = ab.tracksSource === "discogs" ? "your Discogs pressing" : "MusicBrainz";
-	return /* @__PURE__ */ jsxs(Fragment$1, { children: [
-		/* @__PURE__ */ jsx("ol", {
-			className: "flex flex-col gap-1 text-sm",
-			children: shown.map((t, i) => /* @__PURE__ */ jsxs(Fragment, { children: [sided && sideOf(t.pos) !== sideOf(shown[i - 1]?.pos) && /* @__PURE__ */ jsxs("li", {
-				role: "presentation",
-				className: `text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? "pt-3" : ""}`,
-				children: [
-					"Side ",
-					sideOf(t.pos),
-					sideTime(sideOf(t.pos))
-				]
-			}), /* @__PURE__ */ jsxs("li", {
-				className: "grid grid-cols-[2.5rem_1fr_auto] gap-2",
-				children: [
-					/* @__PURE__ */ jsx("span", {
-						className: "text-foreground-muted font-mono text-xs leading-5",
-						children: t.pos
-					}),
-					/* @__PURE__ */ jsx("span", {
-						className: "text-foreground",
-						children: t.title
-					}),
-					/* @__PURE__ */ jsx("span", {
-						className: "text-foreground-muted font-mono text-xs leading-5",
-						children: t.dur
-					})
-				]
-			})] }, i))
-		}),
-		shown.length < T.length && /* @__PURE__ */ jsxs(Button, {
-			variant: "ghost",
-			size: "sm",
-			className: "-ms-4 self-start",
-			onClick: () => setAll(true),
-			children: [
-				"Show all ",
-				T.length,
-				" tracks"
-			]
-		}),
-		/* @__PURE__ */ jsxs("p", {
-			className: "text-foreground-muted text-xs",
-			children: ["From ", /* @__PURE__ */ jsx(Source, {
-				name: srcName,
-				href: src
-			})]
-		})
-	] });
 }
 function Blurb({ text, clampAt, credit }) {
 	const [open, setOpen] = useState(false);
@@ -12216,6 +12339,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .max-h-\(--available-height\) {
     max-height: var(--available-height);
+  }
+
+  .max-h-80 {
+    max-height: calc(var(--spacing) * 80);
   }
 
   .max-h-full {
