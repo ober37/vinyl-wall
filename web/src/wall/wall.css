@@ -394,6 +394,10 @@
 [data-slot='drawer-popup'] {
   backdrop-filter: none;
 }
+/* with no blur the sheet's glass frame showed the wall through it sharp; a darker tint sets the sheet off from it */
+[data-slot='drawer-popup'][data-frame] {
+  background-color: color-mix(in srgb, black 25%, transparent);
+}
 /* while the photo's Soften slider moves, the sheet steps aside so the wall shows behind it, all but the slider */
 [data-previewing] [data-slot='drawer-backdrop'] {
   opacity: 0;
