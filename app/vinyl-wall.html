@@ -16540,6 +16540,10 @@ body {
   background-color: var(--warning-intense);
 }
 
+[data-slot="accordion-item"]:not(:has( > [data-slot="accordion-header"] > [data-slot="accordion-trigger"]:focus-visible)) {
+  --tw-ring-shadow: 0 0 #0000;
+}
+
 [data-slot="drawer-body"] {
   margin-top: -4px;
   padding-block: 4px;
