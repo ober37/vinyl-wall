@@ -227,6 +227,11 @@ body {
 [data-slot='tabs-list']:has([data-slot='tabs-trigger']:focus-visible) [data-slot='tabs-indicator'] {
   background-color: var(--warning-intense);
 }
+/* an accordion section rings for its own header's keyboard focus, not for a field inside it: appica's has-focus-visible
+   ring framed a whole month of plays while typing a note in it */
+[data-slot='accordion-item']:not(:has(> [data-slot='accordion-header'] > [data-slot='accordion-trigger']:focus-visible)) {
+  --tw-ring-shadow: 0 0 #0000;
+}
 /* room for the ring at the top and bottom of a sheet's scrolling body, which clips what's inside it */
 [data-slot='drawer-body'] {
   margin-top: -4px;
