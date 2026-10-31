@@ -1,6 +1,7 @@
 // The copies a wanted record hunts, ported from app/vinyl-wall.html. The first lives in the record's own fields (copyName,
 // pressing, label, catalog, budget, discogsId, buyLinks, releaseDate), so Discogs sync and older walls read it as before; any others are
-// in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted.
+// in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted,
+// and the ones on order (#139), each with its own order by the record's names for it (orderStatus, eta, shop, tracking…).
 import { kindOf, playDate, pressingText, shopHref, type Rec } from './record'
 
 // buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75);
@@ -18,7 +19,10 @@ export type Copy = {
   buyLinks: string[]
   releaseDate: string
   barcodes?: Barcodes
-}
+} & Partial<CopyOrder>
+// a copy's own order (#139), by the names the record's own has; a copy with an orderStatus is on order
+export const ORDER_KEYS = ['orderStatus', 'orderDate', 'eta', 'paid', 'shop', 'shopUrl', 'orderNum', 'carrier', 'tracking', 'orderNotes'] as const
+export type CopyOrder = Record<(typeof ORDER_KEYS)[number], string>
 export const COPY_KEYS = ['name', 'pressing', 'label', 'catalog', 'budget'] as const
 
 const s = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
@@ -40,6 +44,11 @@ export const guessedRelease = (r: Rec) => /^(master main release|vinyl: )/.test(
 
 // the barcode a shop's barcode page opens this copy by: the first UPC or EAN (12 or 13 digits) of its own release, else
 // its first; '' when it has none from this release
+// a copy's order as stored: every field when it's on order, nothing when it isn't
+const orderOf = (c: Record<string, unknown>): Partial<CopyOrder> =>
+  typeof c.orderStatus === 'string' && c.orderStatus ? Object.fromEntries(ORDER_KEYS.map((k) => [k, s(c[k])])) : {}
+export const copyOrdered = (c: Copy) => !!c.orderStatus
+
 export function copyBarcode(c: Copy): string {
   const L = c.barcodes && c.discogsId && c.barcodes.rid === c.discogsId ? c.barcodes.codes : []
   return L.find((x) => x.length === 12 || x.length === 13) || L[0] || ''
@@ -50,7 +59,7 @@ export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
     { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate), ...(guessedRelease(r) ? {} : bars(r.barcodes)) },
-    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes) })),
+    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes), ...orderOf(c) })),
   ]
 }
 
@@ -95,11 +104,12 @@ export function firstCopyChosen(r: Rec): boolean {
   return !!(c.name || c.pressing || c.catalog || c.budget || c.buyLinks.length || c.releaseDate || (c.discogsId && !auto) || (typed && c.label && c.label !== origLabel(r)))
 }
 
-// the copies still wanted, with their index in wantCopies: a hunt's own, or an owned or ordered record's moreCopies
+// the copies still wanted, with their index in wantCopies: a hunt's own, or an owned or ordered record's moreCopies not on
+// order
 export function stillCopies(r: Rec): [Copy, number][] {
   const C = wantCopies(r)
   const L: [Copy, number][] = kindOf(r) === 'wish' ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])
-  return L.filter(([c, i]) => (i ? copyHas(c) : firstCopyChosen(r)))
+  return L.filter(([c, i]) => (i ? copyHas(c) && !copyOrdered(c) : firstCopyChosen(r)))
 }
 export const copiesLegend = (r: Rec) =>
   (stillCopies(r).length > 1 ? 'The copies you ' : 'The copy you ') + (kindOf(r) === 'wish' ? 'want' : 'still want')

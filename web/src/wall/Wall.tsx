@@ -7,7 +7,8 @@ import { ROUND, Tip, TipGroup } from './Tip'
 import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
 import type { Shown } from '../model/share'
-import { coverUrl, hueOf, tagOf, type Rec, type Tag } from '../model/record'
+import { hangTag } from '../model/copyOrders'
+import { coverUrl, hueOf, type Rec, type Tag } from '../model/record'
 import type { Background } from '../model/site'
 import { Face } from './Face'
 
@@ -348,8 +349,8 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
               meta={[r.year, r.label].filter(Boolean).join(' · ')}
               cover={coverUrl(r)}
               hue={hueOf(r)}
-              tagText={tagOf(r)?.text ?? ''}
-              tagTone={tagOf(r)?.tone ?? 'paper'}
+              tagText={hangTag(r)?.text ?? ''}
+              tagTone={hangTag(r)?.tone ?? 'paper'}
               looking={busy(r)}
               example={!!r.example}
               onOpen={onOpen}

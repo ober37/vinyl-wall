@@ -9,3 +9,8 @@ export async function openCopies(user: ReturnType<typeof userEvent.setup>) {
   // an order's Order details shows once its copy is open
   for (const g of groups()) for (const b of within(g).queryAllByRole('button', { name: /^Order details/, expanded: false })) await user.click(b)
 }
+
+// and every folded order on the Order tab (they start folded too, #139)
+export async function openOrders(user: ReturnType<typeof userEvent.setup>) {
+  for (const b of within(screen.getByRole('tabpanel')).queryAllByRole('button', { expanded: false })) await user.click(b)
+}

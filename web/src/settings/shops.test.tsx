@@ -10,7 +10,7 @@ import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
 import type { Rec } from '../model/record'
-import { openCopies } from '../sheet/openCopies'
+import { openCopies, openOrders } from '../sheet/openCopies'
 
 const RECKLESS: Shop = {
   id: 'rk', name: 'Reckless Records', kind: 'local', place: '1532 N Milwaukee Ave, Chicago, IL 60622', phone: '(773) 235-3727',
@@ -368,6 +368,7 @@ describe('record sheet: the shop it came from', () => {
   it("links an order to the shop's web store when it has no link of its own", async () => {
     const { user } = setup({ shops: [SIREN] }, bought)
     await openRecord(user, 'Vs.')
+    await openOrders(user)
     expect(screen.getByRole('link', { name: 'Siren Records ↗' }).getAttribute('href')).toBe('https://sirenrecordsmchenry.com/')
     expect(screen.getByRole('link', { name: 'Call Siren Records' })).toBeTruthy()
   })

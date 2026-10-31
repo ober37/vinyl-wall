@@ -388,16 +388,19 @@
   }
 }
 
-/* while the photo's Soften slider moves, the sheet steps aside so the wall shows behind it, all but the slider; outside
-   the layers so it beats the drawer's own utilities */
+/* no blur behind the open sheet, in either theme (#142: like the captions' in #97, it made the page flicker); the
+   backdrop keeps its dim. Outside the layers so it beats the drawer's own utilities */
+[data-slot='drawer-backdrop'],
+[data-slot='drawer-popup'] {
+  backdrop-filter: none;
+}
+/* while the photo's Soften slider moves, the sheet steps aside so the wall shows behind it, all but the slider */
 [data-previewing] [data-slot='drawer-backdrop'] {
   opacity: 0;
-  backdrop-filter: none;
   transition: opacity 150ms ease-out;
 }
 [data-previewing] [data-slot='drawer-popup'] {
   visibility: hidden;
-  backdrop-filter: none;
 }
 [data-previewing] .soften {
   visibility: visible;

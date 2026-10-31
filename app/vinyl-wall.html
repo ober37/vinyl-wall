@@ -652,6 +652,18 @@ function replaced(g, day = today()) {
 	};
 }
 // src/model/copies.ts
+var ORDER_KEYS = [
+	"orderStatus",
+	"orderDate",
+	"eta",
+	"paid",
+	"shop",
+	"shopUrl",
+	"orderNum",
+	"carrier",
+	"tracking",
+	"orderNotes"
+];
 var COPY_KEYS = [
 	"name",
 	"pressing",
@@ -674,6 +686,8 @@ var bars = (v) => {
 	} } : {};
 };
 var guessedRelease = (r) => /^(master main release|vinyl: )/.test(String(r.discogsMatch || ""));
+var orderOf = (c) => typeof c.orderStatus === "string" && c.orderStatus ? Object.fromEntries(ORDER_KEYS.map((k) => [k, s$2(c[k])])) : {};
+var copyOrdered = (c) => !!c.orderStatus;
 function copyBarcode(c) {
 	const L = c.barcodes && c.discogsId && c.barcodes.rid === c.discogsId ? c.barcodes.codes : [];
 	return L.find((x) => x.length === 12 || x.length === 13) || L[0] || "";
@@ -709,7 +723,8 @@ function wantCopies(r) {
 		discogsId: did$1(c.discogsId),
 		buyLinks: links(c.buyLinks),
 		releaseDate: day$1(c.releaseDate),
-		...bars(c.barcodes)
+		...bars(c.barcodes),
+		...orderOf(c)
 	}))];
 }
 var copyTitle = (c, i) => c.name || c.pressing.split("\n")[0].trim() || (c.discogsId ? "Discogs release " + c.discogsId : "Copy " + (i + 1));
@@ -745,7 +760,7 @@ function firstCopyChosen(r) {
 }
 function stillCopies(r) {
 	const C = wantCopies(r);
-	return (kindOf$1(r) === "wish" ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])).filter(([c, i]) => i ? copyHas(c) : firstCopyChosen(r));
+	return (kindOf$1(r) === "wish" ? C.map((c, i) => [c, i]) : C.slice(1).map((c, i) => [c, i + 1])).filter(([c, i]) => i ? copyHas(c) && !copyOrdered(c) : firstCopyChosen(r));
 }
 var copiesLegend = (r) => (stillCopies(r).length > 1 ? "The copies you " : "The copy you ") + (kindOf$1(r) === "wish" ? "want" : "still want");
 function copyLabelShown(r, c, i) {
@@ -833,7 +848,7 @@ var did = (v) => {
 	const n = parseInt(String(v), 10);
 	return n > 0 ? n : "";
 };
-var obj = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : void 0;
+var obj$1 = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : void 0;
 var emptyOwned = () => ({
 	name: "",
 	pressing: "",
@@ -849,24 +864,36 @@ var emptyOwned = () => ({
 	acquired: ""
 });
 function moreOwned(r) {
-	return (Array.isArray(r.ownedCopies) ? r.ownedCopies : []).filter((c) => !!obj(c)).map((c) => {
+	return (Array.isArray(r.ownedCopies) ? r.ownedCopies : []).filter((c) => !!obj$1(c)).map((c) => {
 		const o = {
 			...emptyOwned(),
 			discogsId: did(c.discogsId)
 		};
 		for (const k of TEXT) o[k] = s$1(c[k]);
-		const b = obj(c.barcodes);
+		const b = obj$1(c.barcodes);
 		if (b && typeof b.rid === "number" && Array.isArray(b.codes)) o.barcodes = b;
 		return o;
 	});
 }
 var syncedRids = (r) => {
-	const L = obj(r.discogsSync)?.ownedInsts ?? [];
+	const L = obj$1(r.discogsSync)?.ownedInsts ?? [];
 	return Array.isArray(L) ? L.map((x) => x?.rid) : [];
 };
+function firstAsCopy(r) {
+	const o = {
+		...emptyOwned(),
+		discogsId: did(r.discogsId),
+		name: s$1(r.copyName)
+	};
+	for (const k of TEXT) if (k !== "name") o[k] = s$1(r[k]);
+	o.pressing = pressingText(r);
+	const b = obj$1(r.barcodes);
+	if (b && typeof b.rid === "number" && Array.isArray(b.codes)) o.barcodes = b;
+	return o;
+}
 function copyRec(r, c) {
 	const { name, ...rest } = c;
-	const sync = obj(r.discogsSync);
+	const sync = obj$1(r.discogsSync);
 	const synced = !!c.discogsId && syncedRids(r).includes(c.discogsId);
 	return {
 		...r,
@@ -882,10 +909,10 @@ function copyRec(r, c) {
 	};
 }
 var ownedRecs = (r) => kindOf$1(r) === "own" ? [r, ...moreOwned(r).map((c) => copyRec(r, c))] : [];
-var ownedTitle = (c, i) => s$1(c.copyName) || pressingText(c).split("\n")[0].trim() || "Copy " + (i + 1);
+var ownedTitle = (c, i) => s$1(c.copyName) || pressingText(c).split("\n")[0].trim() || (did(c.discogsId) ? "Discogs release " + did(c.discogsId) : "Copy " + (i + 1));
 var gradeShort = (c) => [c.mediaGrade, c.sleeveGrade].filter(Boolean).join(" / ");
 function gotPatch(r, ci, det) {
-	const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((x) => !!obj(x));
+	const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((x) => !!obj$1(x));
 	const c = wantCopies(r)[ci];
 	if (kindOf$1(r) !== "own" || ci < 1 || !c || ci > more.length) return null;
 	const L = buyHosts(c.buyLinks);
@@ -1075,7 +1102,12 @@ function stored(f) {
 		discogsId: c.discogsId,
 		buyLinks: tidyLinks(c.buyLinks),
 		releaseDate: c.releaseDate,
-		...c.barcodes ? { barcodes: c.barcodes } : {}
+		...c.barcodes ? { barcodes: c.barcodes } : {},
+		...c.orderStatus ? {
+			...Object.fromEntries(ORDER_KEYS.map((k) => [k, k === "orderNotes" ? c[k] ?? "" : (c[k] ?? "").trim()])),
+			paid: (c.paid ?? "").trim().replace(/^\$\s*/, ""),
+			shopUrl: shopHref((c.shopUrl ?? "").trim()) || (c.shopUrl ?? "").trim()
+		} : {}
 	}));
 	if (f.ownedCopies) o.ownedCopies = f.ownedCopies.map((c) => {
 		return {
@@ -3224,9 +3256,11 @@ function exportFile(p) {
 		"shops"
 	]) if (p.settings[k] !== void 0) site[k] = p.settings[k];
 	const records = byId(p.records);
+	const owned = Object.values(records).some((r) => Array.isArray(r.ownedCopies) && r.ownedCopies.length);
+	const ordered = Object.values(records).some((r) => wantCopies(r).slice(1).some(copyOrdered));
 	const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean));
 	return {
-		vinylWall: 1,
+		vinylWall: ordered ? 3 : owned ? 2 : 1,
 		exportedAt: nowUTC(),
 		app: p.app,
 		settings: { site },
@@ -3253,7 +3287,7 @@ function planImport(text, w) {
 		snap = JSON.parse(text);
 	} catch {}
 	if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== "object" || !snap.records) return "This file wasn't made by Export on a Vinyl Wall.";
-	if (snap.vinylWall > 1) return "This file was made by a newer Vinyl Wall. Update this wall first, then import it.";
+	if (snap.vinylWall > 3) return "This file was made by a newer Vinyl Wall. Update this wall first, then import it.";
 	const byId = new Map(w.records.map((r) => [r.id, r]));
 	const R = /* @__PURE__ */ new Map();
 	const K = /* @__PURE__ */ new Map();
@@ -3520,7 +3554,9 @@ function fillPatch(w, raw) {
 		if (add.length) p.moreCopies = [...Array.isArray(w.moreCopies) ? w.moreCopies : [], ...add];
 	}
 	if (same && statusOf(w) === "own") {
-		const owned = addMissing([w, ...moreOwned(w)], f.ownedCopies, ownKey);
+		const fileOwned = f.ownedCopies ?? [];
+		const firstOfFile = fileOwned.length ? [firstAsCopy(f)] : [];
+		const owned = addMissing([w, ...moreOwned(w)], [...firstOfFile, ...fileOwned], ownKey);
 		if (owned) p.ownedCopies = [...Array.isArray(w.ownedCopies) ? w.ownedCopies : [], ...owned.slice(1 + moreOwned(w).length)];
 	}
 	const auto = (Array.isArray(f.autoFilled) ? f.autoFilled : []).filter((k) => k in p);
@@ -4034,6 +4070,285 @@ function shownList(records, filter, query, only) {
 		list: all.filter((r) => (!on.length || on.includes(fkey(r))) && (!only || only(r)) && (!w.length || matches(r, w)))
 	};
 }
+// src/model/status.ts
+function movePatch(r, to, det, ci) {
+	const from = kindOf$1(r);
+	if (to === from) return null;
+	const t = today();
+	const notes = notesOf(r);
+	const patch = {
+		status: to,
+		...from === "wish" ? pickPatch(r, ci ?? 0) : {}
+	};
+	const said = det ? [det.paid ? "$" + det.paid : "", det.shop ? "from " + det.shop : ""].filter(Boolean).join(" ") : "";
+	let msg = "Moved back to the hunt.";
+	if (to === "own") {
+		patch.acquired = t;
+		if (from === "ordered") {
+			patch.orderStatus = "delivered";
+			notes.push({
+				d: t,
+				t: "Arrived" + (r.shop ? " from " + r.shop : "") + ". Hung it on the wall."
+			});
+		} else notes.push({
+			d: t,
+			t: said ? "Found it · " + said : "Found it. Moved to the wall."
+		});
+		msg = "Moved to the wall. Acquired today.";
+	}
+	if (to === "ordered") {
+		Object.assign(patch, {
+			orderStatus: "ordered",
+			orderDate: t
+		});
+		notes.push({
+			d: t,
+			t: said ? "Ordered · " + said : "Ordered."
+		});
+		msg = "Marked as ordered today.";
+	}
+	if (det) {
+		if (det.paid !== (r.paid || "")) patch.paid = det.paid;
+		if (det.shop !== (r.shop || "")) {
+			patch.shop = det.shop;
+			if (r.shopUrl) patch.shopUrl = "";
+		}
+	}
+	if (from === "wish" && to !== "wish") {
+		const L = buyHosts(movedCopy(r, ci).buyLinks);
+		const had = "shopUrl" in patch ? patch.shopUrl : r.shopUrl;
+		if (det?.shopUrl) patch.shopUrl = det.shopUrl;
+		else if (L.length === 1 && !had) patch.shopUrl = L[0][1];
+	}
+	if (from === "wish" && to !== "wish") {
+		const rd = movedCopy(r, ci).releaseDate;
+		if (to === "ordered" && rd > t) Object.assign(patch, {
+			orderStatus: "preorder",
+			eta: rd
+		});
+		if (rd || r.releaseDate) patch.releaseDate = "";
+	}
+	if (to !== "wish") patch.notes = notes;
+	return {
+		patch,
+		msg
+	};
+}
+function movedCopy(r, ci) {
+	const C = pickable(r);
+	return C.length > 1 ? C[Math.max(0, Math.min(C.length - 1, (ci ?? 0) | 0))] : wantCopies(r)[0];
+}
+// src/model/copyOrders.ts
+var obj = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : void 0;
+var rawMore = (r) => (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((x) => !!obj(x));
+var said = (det) => [det.paid ? "$" + det.paid : "", det.shop ? "from " + det.shop : ""].filter(Boolean).join(" ");
+var noOrder = Object.fromEntries(ORDER_KEYS.map((k) => [k, ""]));
+function ordersOf(r) {
+	const k = kindOf$1(r);
+	if (k === "wish") return [];
+	const C = wantCopies(r);
+	const L = k === "ordered" ? [{
+		ci: 0,
+		copy: C[0],
+		rec: r
+	}] : [];
+	C.forEach((c, i) => {
+		if (i && copyOrdered(c)) L.push({
+			ci: i,
+			copy: c,
+			rec: {
+				...r,
+				...noOrder,
+				status: "ordered",
+				copyName: c.name,
+				pressing: c.pressing,
+				label: c.label,
+				catalog: c.catalog,
+				budget: c.budget,
+				discogsId: c.discogsId,
+				buyLinks: c.buyLinks,
+				releaseDate: c.releaseDate,
+				...Object.fromEntries(ORDER_KEYS.map((x) => [x, c[x] ?? ""])),
+				discogsMatch: "",
+				moreCopies: void 0,
+				ownedCopies: void 0
+			}
+		});
+	});
+	return L;
+}
+var ordersDue = (r) => [...ordersOf(r)].sort((a, b) => String(a.rec.eta || "9999").localeCompare(String(b.rec.eta || "9999")));
+function ordersTag(r) {
+	const L = ordersDue(r);
+	if (!L.length) return "";
+	if (kindOf$1(r) === "own") return `+${L.length} on order`;
+	const o = L[0].rec;
+	return OSTAT[orderStatusOf(o)] + (o.eta ? " · " + shortDate(String(o.eta)) : "");
+}
+function leadAsCopy(r, withOrder) {
+	const { barcodes, ...c } = wantCopies(r)[0];
+	const order = withOrder ? {
+		...Object.fromEntries(ORDER_KEYS.map((k) => [k, String(r[k] ?? "")])),
+		orderStatus: orderStatusOf(r)
+	} : {};
+	return {
+		...c,
+		discogsId: c.discogsId,
+		...barcodes ? { barcodes } : {},
+		...order
+	};
+}
+function copyAsLead(c, withOrder) {
+	return {
+		copyName: c.name,
+		pressing: c.pressing,
+		label: c.label,
+		catalog: c.catalog,
+		budget: c.budget,
+		discogsId: c.discogsId || "",
+		buyLinks: c.buyLinks,
+		releaseDate: c.releaseDate,
+		...c.barcodes ? { barcodes: c.barcodes } : {},
+		...noOrder,
+		...withOrder ? Object.fromEntries(ORDER_KEYS.map((k) => [k, c[k] ?? ""])) : {}
+	};
+}
+function orderCopyPatch(r, ci, det) {
+	const more = rawMore(r);
+	const c = wantCopies(r)[ci];
+	if (kindOf$1(r) === "wish" || ci < 1 || !c || ci > more.length || copyOrdered(c)) return null;
+	const t = today();
+	const L = buyHosts(c.buyLinks);
+	const pre = c.releaseDate > t;
+	const order = {
+		...noOrder,
+		orderStatus: pre ? "preorder" : "ordered",
+		orderDate: t,
+		eta: pre ? c.releaseDate : "",
+		paid: det.paid,
+		shop: det.shop,
+		shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : "")
+	};
+	const notes = notesOf(r);
+	notes.push({
+		d: t,
+		t: said(det) ? "Ordered another copy · " + said(det) : "Ordered another copy."
+	});
+	return {
+		patch: {
+			moreCopies: more.map((x, j) => j === ci - 1 ? {
+				...x,
+				...order,
+				releaseDate: ""
+			} : x),
+			notes
+		},
+		msg: "Marked as ordered today."
+	};
+}
+var owned = (c, det) => ({
+	...emptyOwned(),
+	name: c.name,
+	pressing: c.pressing,
+	label: c.label,
+	catalog: c.catalog,
+	discogsId: c.discogsId,
+	...c.barcodes ? { barcodes: c.barcodes } : {},
+	paid: det.paid || "",
+	shop: det.shop || "",
+	shopUrl: det.shopUrl || "",
+	acquired: today()
+});
+function swapIn(r, ci, det, note) {
+	const more = rawMore(r);
+	const c = wantCopies(r)[ci];
+	const notes = notesOf(r);
+	notes.push({
+		d: today(),
+		t: note
+	});
+	const o = owned(c, det);
+	return {
+		patch: {
+			...copyAsLead(c, false),
+			status: "own",
+			paid: o.paid,
+			shop: o.shop,
+			shopUrl: o.shopUrl,
+			acquired: o.acquired,
+			moreCopies: [leadAsCopy(r, true), ...more.filter((_, j) => j !== ci - 1)],
+			notes
+		},
+		msg: "Moved to the wall. Your other order is still on the way."
+	};
+}
+function gotCopyPatch(r, ci, det) {
+	if (kindOf$1(r) === "own") return gotPatch(r, ci, det);
+	const c = wantCopies(r)[ci];
+	if (kindOf$1(r) !== "ordered" || ci < 1 || !c || ci > rawMore(r).length || copyOrdered(c)) return null;
+	const L = buyHosts(c.buyLinks);
+	return {
+		...swapIn(r, ci, {
+			...det,
+			shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : "")
+		}, said(det) ? "Found it · " + said(det) : "Found it. Moved to the wall."),
+		msg: "Moved to the wall. Your order is still on the way."
+	};
+}
+function arrivedPatch(r, ci) {
+	if (ci === 0) return kindOf$1(r) === "ordered" ? movePatch(r, "own") : null;
+	const more = rawMore(r);
+	const c = wantCopies(r)[ci];
+	if (!c || ci > more.length || !copyOrdered(c)) return null;
+	const det = {
+		paid: c.paid,
+		shop: c.shop,
+		shopUrl: c.shopUrl
+	};
+	if (kindOf$1(r) === "ordered") return swapIn(r, ci, det, "Arrived" + (c.shop ? " from " + c.shop : "") + ". Hung it on the wall.");
+	if (kindOf$1(r) !== "own") return null;
+	const notes = notesOf(r);
+	notes.push({
+		d: today(),
+		t: "Another copy arrived" + (c.shop ? " from " + c.shop : "") + "."
+	});
+	return {
+		patch: {
+			ownedCopies: [...Array.isArray(r.ownedCopies) ? r.ownedCopies : [], owned(c, det)],
+			moreCopies: more.filter((_, j) => j !== ci - 1),
+			notes
+		},
+		msg: "Added to your copies. Arrived today."
+	};
+}
+function cancelPatch(r, ci) {
+	const more = rawMore(r);
+	if (ci === 0) {
+		if (kindOf$1(r) !== "ordered") return null;
+		const next = ordersOf(r)[1];
+		if (!next) return movePatch(r, "wish");
+		return {
+			patch: {
+				...copyAsLead(next.copy, true),
+				moreCopies: more.map((x, j) => j === next.ci - 1 ? leadAsCopy(r, false) : x)
+			},
+			msg: "Back to the copies you want. Your other order is still on the way."
+		};
+	}
+	const c = wantCopies(r)[ci];
+	if (!c || ci > more.length || !copyOrdered(c)) return null;
+	return {
+		patch: { moreCopies: more.map((x, j) => j === ci - 1 ? Object.fromEntries(Object.entries(x).filter(([k]) => !ORDER_KEYS.includes(k))) : x) },
+		msg: "Back to the copies you want."
+	};
+}
+function hangTag(r) {
+	const t = ordersTag(r);
+	return t ? {
+		text: t,
+		tone: "ship"
+	} : tagOf(r);
+}
 // src/wall/Face.tsx
 function Face({ title, artist, hue, cover, className = "", small }) {
 	const [failed, setFailed] = useState(false);
@@ -4399,8 +4714,8 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 			meta: [r.year, r.label].filter(Boolean).join(" · "),
 			cover: coverUrl(r),
 			hue: hueOf(r),
-			tagText: tagOf(r)?.text ?? "",
-			tagTone: tagOf(r)?.tone ?? "paper",
+			tagText: hangTag(r)?.text ?? "",
+			tagTone: hangTag(r)?.tone ?? "paper",
 			looking: busy(r),
 			example: !!r.example,
 			onOpen
@@ -5093,7 +5408,7 @@ function DiscogsImport({ dz }) {
 				children: "Bring in what's already on Discogs"
 			}), /* @__PURE__ */ jsx("p", {
 				className: "text-foreground-muted text-sm",
-				children: "Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and nothing already on the wall changes."
+				children: "Adds the records in your Discogs collection and wantlist that aren't on the wall yet, and other copies of albums you have to their records. Covers are looked up for you, and nothing else on the wall changes."
 			})]
 		}), !hasMcp || !settings.taskId ? /* @__PURE__ */ jsx("p", {
 			className: "text-foreground-muted text-sm",
@@ -5908,7 +6223,8 @@ var FLAT = {
 	budget: "budget",
 	discogsId: "discogsId",
 	buyLinks: "buyLinks",
-	releaseDate: "releaseDate"
+	releaseDate: "releaseDate",
+	...Object.fromEntries(ORDER_KEYS.map((k) => [k, k]))
 };
 var firstOf = (f) => ({
 	name: f.copyName ?? "",
@@ -5921,11 +6237,13 @@ var firstOf = (f) => ({
 	releaseDate: f.releaseDate ?? ""
 });
 var asFlat = (c) => Object.fromEntries(Object.entries(c).filter(([k]) => k !== "barcodes").map(([k, v]) => [FLAT[k], v]));
-function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, connected = false, onConnect, order, orderState = "" }) {
+function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, connected = false, onConnect, order, orderState: orderState$1 = "", orderFor, onCancel }) {
 	const [confirm, setConfirm] = useState(null);
 	const more = form.moreCopies ?? [];
 	const wish = kind === "wish";
 	const all = isNew ? [firstOf(form)] : [firstOf(form), ...more];
+	const onOrder = all.map((c, i) => [c, i]).filter(([c, i]) => i > 0 && copyOrdered(c));
+	const wanted = all.map((c, i) => [c, i]).filter(([c, i]) => i > 0 && !copyOrdered(c));
 	const [keys, setKeys] = useState(() => all.map((_, i) => i));
 	const [open, setOpen] = useState(() => isNew ? ["0"] : focusCopy != null ? [String(focusCopy)] : []);
 	const [added, setAdded] = useState(focusCopy ?? null);
@@ -5964,12 +6282,12 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 		else remove(i);
 	};
 	const canRemove = (i) => !isNew && (i > 0 || wish && (all.length > 1 || copyHas(all[0]) || !!all[0].discogsId));
-	const fold = (i, title, fields, trail = "") => /* @__PURE__ */ jsxs(AccordionItem, {
+	const fold = (i, title, fields, trail = "", ordered = false) => /* @__PURE__ */ jsxs(AccordionItem, {
 		value: String(keys[i]),
 		children: [/* @__PURE__ */ jsx(AccordionTrigger, {
 			className: "text-foreground text-sm font-medium",
 			children: /* @__PURE__ */ jsxs("span", {
-				className: "flex w-full items-baseline justify-between gap-3",
+				className: "flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3",
 				children: [/* @__PURE__ */ jsx("span", {
 					className: "min-w-0",
 					children: title
@@ -5982,13 +6300,23 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 			className: "-mx-1 px-1",
 			children: /* @__PURE__ */ jsxs("div", {
 				className: "flex flex-col gap-4 pt-1 pb-1",
-				children: [fields, canRemove(i) && /* @__PURE__ */ jsx(Button, {
-					size: "sm",
-					variant: "ghost",
-					className: "text-error-emphasis -ms-3 self-start",
-					onClick: () => ask(i),
-					children: "Remove this copy"
-				})]
+				children: [
+					fields,
+					ordered && onCancel && /* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "outline",
+						className: "self-start",
+						onClick: () => onCancel(i),
+						children: "Cancelled, still want it"
+					}),
+					canRemove(i) && /* @__PURE__ */ jsx(Button, {
+						size: "sm",
+						variant: "ghost",
+						className: "text-error-emphasis -ms-3 self-start",
+						onClick: () => ask(i),
+						children: "Remove this copy"
+					})
+				]
 			})
 		})]
 	}, keys[i]);
@@ -6023,6 +6351,40 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 		links: true,
 		discogs: i === 0 ? discogs : release(c, i)
 	}), c.budget && "Up to $" + c.budget);
+	const orderFold = (node) => /* @__PURE__ */ jsx(Accordion, {
+		variant: "flush",
+		defaultValue: isNew ? ["order"] : [],
+		children: /* @__PURE__ */ jsxs(AccordionItem, {
+			value: "order",
+			children: [/* @__PURE__ */ jsx(AccordionTrigger, {
+				className: "text-foreground text-sm font-medium",
+				children: "Order details"
+			}), /* @__PURE__ */ jsx(AccordionContent, {
+				className: "-mx-1 px-1",
+				children: /* @__PURE__ */ jsx("div", {
+					className: "pt-1 pb-1",
+					children: node
+				})
+			})]
+		})
+	});
+	const orderedBlock = (c, i) => fold(i, copyTitle(c, i), /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(CopyFields, {
+		c,
+		ph: ORDERED,
+		on: (k, v) => setMore(i, k, v),
+		discogs: release(c, i)
+	}), orderFor && orderFold(orderFor({
+		title: "",
+		artist: "",
+		why: "",
+		year: "",
+		runtime: "",
+		...Object.fromEntries(ORDER_KEYS.map((k) => [k, c[k] ?? ""]))
+	}, (k, v) => setMore(i, k, v)))] }), orderState({
+		id: "",
+		orderStatus: c.orderStatus,
+		eta: c.eta
+	}), true);
 	const folds = (L) => /* @__PURE__ */ jsx(Accordion, {
 		variant: "flush",
 		multiple: true,
@@ -6036,7 +6398,7 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 			size: "sm",
 			variant: "outline",
 			onClick: add,
-			children: wish ? "+ Add another copy" : more.length ? "+ Add another copy you want" : "+ Add a copy you want"
+			children: wish ? "+ Add another copy" : wanted.length ? "+ Add another copy you want" : "+ Add a copy you want"
 		})
 	});
 	const plural = (n, s) => (n > 1 ? "The copies you " : "The copy you ") + s;
@@ -6045,32 +6407,16 @@ function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, discogs, co
 			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(all.length, "want") }),
 			folds(all.map((c, i) => block(c, i, i ? MORE : FIRST))),
 			addBtn
-		] }) : kind === "ordered" && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "The copy you ordered" }), folds(fold(0, copyTitle(firstOf(form), 0), /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(CopyFields, {
+		] }) : (kind === "ordered" || onOrder.length > 0 && !isNew) && /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(onOrder.length + (kind === "ordered" ? 1 : 0), "ordered") }), folds([...kind === "ordered" ? [fold(0, copyTitle(firstOf(form), 0), /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(CopyFields, {
 			c: firstOf(form),
 			ph: ORDERED,
 			on: setFirst,
 			auto,
 			discogs
-		}), /* @__PURE__ */ jsx(Accordion, {
-			variant: "flush",
-			defaultValue: isNew ? ["order"] : [],
-			children: /* @__PURE__ */ jsxs(AccordionItem, {
-				value: "order",
-				children: [/* @__PURE__ */ jsx(AccordionTrigger, {
-					className: "text-foreground text-sm font-medium",
-					children: "Order details"
-				}), /* @__PURE__ */ jsx(AccordionContent, {
-					className: "-mx-1 px-1",
-					children: /* @__PURE__ */ jsx("div", {
-						className: "pt-1 pb-1",
-						children: order
-					})
-				})]
-			})
-		})] }), orderState))] }),
+		}), orderFold(order)] }), orderState$1, !isNew)] : [], ...isNew ? [] : onOrder.map(([c, i]) => orderedBlock(c, i))])] }),
 		!wish && !isNew && /* @__PURE__ */ jsxs(Fieldset, { children: [
-			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(more.length || 2, "still want") }),
-			more.length ? folds(more.map((c, j) => block(c, j + 1, MORE))) : /* @__PURE__ */ jsx("p", {
+			/* @__PURE__ */ jsx(FieldsetLegend, { children: plural(wanted.length || 2, "still want") }),
+			wanted.length ? folds(wanted.map(([c, i]) => block(c, i, MORE))) : /* @__PURE__ */ jsx("p", {
 				className: "text-foreground-muted text-sm",
 				children: "None yet."
 			}),
@@ -6303,10 +6649,15 @@ function YourCopiesEdit({ form, set, auto, change, r, isNew, discogs, connected,
 	}
 	const stored = r ? moreOwned(r) : [];
 	const titles = [ownedTitle(form, 0), ...more.map((c, j) => ownedTitle(copyRec(r ?? { id: "" }, c), j + 1))];
-	const setMore = (j, c) => change({ ownedCopies: more.map((x, i) => i === j ? {
-		...x,
-		...c
-	} : x) });
+	const latest = useRef(more);
+	latest.current = more;
+	const setMore = (j, c) => {
+		latest.current = latest.current.map((x, i) => i === j ? {
+			...x,
+			...c
+		} : x);
+		change({ ownedCopies: latest.current });
+	};
 	const add = () => {
 		const k = Math.max(...keys) + 1;
 		setKeys([...keys, k]);
@@ -6341,7 +6692,7 @@ function YourCopiesEdit({ form, set, auto, change, r, isNew, discogs, connected,
 		children: [/* @__PURE__ */ jsx(AccordionTrigger, {
 			className: "text-foreground text-sm font-medium",
 			children: /* @__PURE__ */ jsxs("span", {
-				className: "flex w-full items-baseline justify-between gap-3",
+				className: "flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3",
 				children: [/* @__PURE__ */ jsx("span", {
 					className: "min-w-0",
 					children: titles[i]
@@ -6489,7 +6840,7 @@ function OrderFields(p) {
 		]
 	});
 }
-function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy, r, connected, onConnect }) {
+function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove, isNew, autoFilled, focusCopy, r, connected, onConnect, onCancel }) {
 	const p = {
 		form,
 		set,
@@ -6582,7 +6933,12 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 					id: "",
 					orderStatus: form.orderStatus,
 					eta: form.eta
-				}) : ""
+				}) : "",
+				orderFor: (f, s) => /* @__PURE__ */ jsx(OrderFields, {
+					form: f,
+					set: s
+				}),
+				onCancel
 			}),
 			own && /* @__PURE__ */ jsx(YourCopiesEdit, {
 				...p,
@@ -6600,7 +6956,12 @@ function EditForm({ form, kind, set, change, title, focusWhy, onStatus, onRemove
 				auto: autoFilled,
 				r,
 				connected: !!connected,
-				onConnect
+				onConnect,
+				orderFor: (f, s) => /* @__PURE__ */ jsx(OrderFields, {
+					form: f,
+					set: s
+				}),
+				onCancel
 			}),
 			!isNew && /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Button, {
 				variant: "outline",
@@ -6800,74 +7161,6 @@ function NewRecordSheet({ open, onClose, onCreated }) {
 		})
 	});
 }
-// src/model/status.ts
-function movePatch(r, to, det, ci) {
-	const from = kindOf$1(r);
-	if (to === from) return null;
-	const t = today();
-	const notes = notesOf(r);
-	const patch = {
-		status: to,
-		...from === "wish" ? pickPatch(r, ci ?? 0) : {}
-	};
-	const said = det ? [det.paid ? "$" + det.paid : "", det.shop ? "from " + det.shop : ""].filter(Boolean).join(" ") : "";
-	let msg = "Moved back to the hunt.";
-	if (to === "own") {
-		patch.acquired = t;
-		if (from === "ordered") {
-			patch.orderStatus = "delivered";
-			notes.push({
-				d: t,
-				t: "Arrived" + (r.shop ? " from " + r.shop : "") + ". Hung it on the wall."
-			});
-		} else notes.push({
-			d: t,
-			t: said ? "Found it · " + said : "Found it. Moved to the wall."
-		});
-		msg = "Moved to the wall. Acquired today.";
-	}
-	if (to === "ordered") {
-		Object.assign(patch, {
-			orderStatus: "ordered",
-			orderDate: t
-		});
-		notes.push({
-			d: t,
-			t: said ? "Ordered · " + said : "Ordered."
-		});
-		msg = "Marked as ordered today.";
-	}
-	if (det) {
-		if (det.paid !== (r.paid || "")) patch.paid = det.paid;
-		if (det.shop !== (r.shop || "")) {
-			patch.shop = det.shop;
-			if (r.shopUrl) patch.shopUrl = "";
-		}
-	}
-	if (from === "wish" && to !== "wish") {
-		const L = buyHosts(movedCopy(r, ci).buyLinks);
-		const had = "shopUrl" in patch ? patch.shopUrl : r.shopUrl;
-		if (det?.shopUrl) patch.shopUrl = det.shopUrl;
-		else if (L.length === 1 && !had) patch.shopUrl = L[0][1];
-	}
-	if (from === "wish" && to !== "wish") {
-		const rd = movedCopy(r, ci).releaseDate;
-		if (to === "ordered" && rd > t) Object.assign(patch, {
-			orderStatus: "preorder",
-			eta: rd
-		});
-		if (rd || r.releaseDate) patch.releaseDate = "";
-	}
-	if (to !== "wish") patch.notes = notes;
-	return {
-		patch,
-		msg
-	};
-}
-function movedCopy(r, ci) {
-	const C = pickable(r);
-	return C.length > 1 ? C[Math.max(0, Math.min(C.length - 1, (ci ?? 0) | 0))] : wantCopies(r)[0];
-}
 // src/sheet/CoverMenu.tsx
 function CoverMenu({ face, hasCover, onUploaded, onStatus, onRemove }) {
 	const c = useCoverPick(hasCover, onUploaded, onStatus);
@@ -6944,7 +7237,7 @@ function CopiesView({ r, onEditCopy, shops = [], got }) {
 				children: [/* @__PURE__ */ jsx(AccordionTrigger, {
 					className: "text-foreground text-sm font-medium",
 					children: /* @__PURE__ */ jsxs("span", {
-						className: "flex w-full items-baseline justify-between gap-3",
+						className: "flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3",
 						children: [/* @__PURE__ */ jsx("span", {
 							className: "min-w-0",
 							children: copyTitle(c, i)
@@ -7665,6 +7958,212 @@ function NotesTab({ r }) {
 		]
 	});
 }
+// src/sheet/StatusActions.tsx
+function StatusActions({ r, onMoved }) {
+	const { mutate } = useRuntime();
+	const [pick, setPick] = useState(null);
+	const [ask, setAsk] = useState(null);
+	const [ci, setCi] = useState(0);
+	const [busy, setBusy] = useState(false);
+	if (kindOf$1(r) !== "wish") return null;
+	const move = async (to, det) => {
+		setBusy(true);
+		let msg = "";
+		const ok = await mutate(r.id, (latest) => {
+			const m = movePatch(latest, to, det, ci);
+			msg = m?.msg || "";
+			return m?.patch ?? null;
+		});
+		setBusy(false);
+		setAsk(null);
+		if (ok) onMoved(msg);
+	};
+	const askPaid = (to) => {
+		setPick(null);
+		setAsk(to);
+	};
+	const start = (to) => {
+		setCi(0);
+		if (pickable(r).length > 1) setPick(to);
+		else askPaid(to);
+	};
+	if (pick) return /* @__PURE__ */ jsx(CopyPicker, {
+		r,
+		to: pick,
+		onPick: (i) => {
+			setCi(i);
+			askPaid(pick);
+		},
+		onCancel: () => setPick(null)
+	});
+	if (ask) return /* @__PURE__ */ jsx(PaidForm, {
+		shopLabel: ask === "own" ? "Bought from" : "From",
+		hosts: buyHosts(movedCopy(r, ci).buyLinks),
+		init: {
+			paid: String(r.paid || ""),
+			shop: String(r.shop || "")
+		},
+		busy,
+		onSave: (det) => move(ask, det),
+		onCancel: () => setAsk(null)
+	});
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-wrap gap-3",
+		children: [/* @__PURE__ */ jsx(Button, {
+			disabled: busy,
+			onClick: () => start("ordered"),
+			children: "Ordered it"
+		}), /* @__PURE__ */ jsx(Button, {
+			variant: "outline",
+			disabled: busy,
+			onClick: () => start("own"),
+			children: "Got it"
+		})]
+	});
+}
+function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }) {
+	const { settings } = useRuntime();
+	const [paid, setPaid] = useState(init.paid);
+	const [shop, setShop] = useState(init.shop);
+	const [url, setUrl] = useState("");
+	return /* @__PURE__ */ jsx("form", {
+		onSubmit: (e) => {
+			e.preventDefault();
+			const site = url || (hosts.length ? "" : shopSite(shopsOf(settings), shop));
+			onSave({
+				paid: paid.trim().replace(/^\$\s*/, ""),
+				shop: shop.trim(),
+				...site ? { shopUrl: site } : {}
+			});
+		},
+		children: /* @__PURE__ */ jsxs(Fieldset, { children: [
+			/* @__PURE__ */ jsx(FieldsetLegend, { children: "What did you pay?" }),
+			/* @__PURE__ */ jsxs("div", {
+				className: "grid gap-4 sm:grid-cols-2",
+				children: [/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Paid" }), /* @__PURE__ */ jsx(Input, {
+					value: paid,
+					onChange: (e) => setPaid(e.target.value),
+					inputMode: "decimal",
+					startSlot: /* @__PURE__ */ jsx("span", {
+						"aria-hidden": "true",
+						children: "$"
+					}),
+					autoFocus: true
+				})] }), /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: shopLabel }), /* @__PURE__ */ jsx(ShopInput, {
+					value: shop,
+					onChange: setShop,
+					placeholder: "e.g. Rough Trade"
+				})] })]
+			}),
+			hosts.length > 1 && /* @__PURE__ */ jsxs("div", {
+				role: "group",
+				"aria-labelledby": "fromQ",
+				className: "flex flex-col gap-2",
+				children: [/* @__PURE__ */ jsx("p", {
+					id: "fromQ",
+					className: "text-foreground-muted text-sm",
+					children: "From one of these?"
+				}), /* @__PURE__ */ jsx("div", {
+					className: "flex flex-wrap gap-2",
+					children: hosts.map(([h, u], i) => /* @__PURE__ */ jsx(Tip, {
+						label: u,
+						children: /* @__PURE__ */ jsx(Button, {
+							type: "button",
+							size: "sm",
+							variant: url === u ? "primary" : "outline",
+							"aria-pressed": url === u,
+							onClick: () => {
+								const on = url !== u;
+								setUrl(on ? u : "");
+								if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ""));
+							},
+							children: h
+						})
+					}, u + i))
+				})]
+			}),
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex gap-3",
+				children: [/* @__PURE__ */ jsx(Button, {
+					type: "submit",
+					size: "sm",
+					disabled: busy,
+					children: "Save"
+				}), /* @__PURE__ */ jsx(Button, {
+					type: "button",
+					size: "sm",
+					variant: "ghost",
+					onClick: onCancel,
+					children: "Cancel"
+				})]
+			})
+		] })
+	});
+}
+function CopyActions({ r, ci, onMoved, onOrdered }) {
+	const { mutate } = useRuntime();
+	const [ask, setAsk] = useState(null);
+	const [busy, setBusy] = useState(false);
+	if (!ask) return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-wrap gap-3",
+		children: [/* @__PURE__ */ jsx(Button, {
+			size: "sm",
+			onClick: () => setAsk("ordered"),
+			children: "Ordered this copy"
+		}), /* @__PURE__ */ jsx(Button, {
+			size: "sm",
+			variant: "outline",
+			onClick: () => setAsk("own"),
+			children: "Got this copy"
+		})]
+	});
+	const save = async (det) => {
+		setBusy(true);
+		let msg = "";
+		const ok = await mutate(r.id, (latest) => {
+			const m = ask === "ordered" ? orderCopyPatch(latest, ci, det) : gotCopyPatch(latest, ci, det);
+			msg = m?.msg || "";
+			return m?.patch ?? null;
+		});
+		setBusy(false);
+		setAsk(null);
+		if (ok) onMoved(msg);
+		if (ok && ask === "ordered") onOrdered?.();
+	};
+	return /* @__PURE__ */ jsx(PaidForm, {
+		shopLabel: ask === "own" ? "Bought from" : "From",
+		hosts: buyHosts(wantCopies(r)[ci]?.buyLinks ?? []),
+		init: {
+			paid: "",
+			shop: ""
+		},
+		busy,
+		onSave: save,
+		onCancel: () => setAsk(null)
+	});
+}
+function Arrived({ r, ci, onMoved }) {
+	const { mutate } = useRuntime();
+	const [busy, setBusy] = useState(false);
+	const go = async () => {
+		setBusy(true);
+		let msg = "";
+		const ok = await mutate(r.id, (latest) => {
+			const m = arrivedPatch(latest, ci);
+			msg = m?.msg || "";
+			return m?.patch ?? null;
+		});
+		setBusy(false);
+		if (ok) onMoved(msg);
+	};
+	return /* @__PURE__ */ jsx(Button, {
+		size: "sm",
+		className: "self-start",
+		disabled: busy,
+		onClick: go,
+		children: "It arrived"
+	});
+}
 // src/sheet/OrderCard.tsx
 function shopFrom(r, s) {
 	const href = shopHref(r.shopUrl) || s?.url || "";
@@ -7699,13 +8198,7 @@ function OrderCard({ r, shop }) {
 	const first = c.pressing.split("\n")[0].trim();
 	const title = copyTitle(c, 0);
 	const track = trackUrl(r.carrier, r.tracking);
-	const rows = [["Status", /* @__PURE__ */ jsxs(Fragment$1, { children: [orderState(r), track && /* @__PURE__ */ jsxs(Fragment$1, { children: [" · ", /* @__PURE__ */ jsx("a", {
-		href: track,
-		target: "_blank",
-		rel: "noopener",
-		className: `text-primary underline-offset-2 hover:underline whitespace-nowrap`,
-		children: "Track ↗"
-	})] })] })]];
+	const rows = [];
 	if (c.pressing && first !== title) rows.push(["Pressing", /* @__PURE__ */ jsx("span", {
 		className: "whitespace-pre-line",
 		children: c.pressing
@@ -7718,6 +8211,13 @@ function OrderCard({ r, shop }) {
 		const f = shopFrom(r, shop);
 		rows.push(["From", /* @__PURE__ */ jsxs(Fragment$1, { children: [f.name, f.reach] })]);
 	}
+	if (track) rows.push(["Tracking", /* @__PURE__ */ jsx("a", {
+		href: track,
+		target: "_blank",
+		rel: "noopener",
+		className: `${link} whitespace-nowrap`,
+		children: "Track ↗"
+	})]);
 	if (r.paid) rows.push(["Paid", "$" + r.paid]);
 	else if (c.budget) rows.push(["Budget", "Up to $" + c.budget]);
 	if (r.orderDate) rows.push(["Ordered", playDate(String(r.orderDate))]);
@@ -7727,17 +8227,45 @@ function OrderCard({ r, shop }) {
 	})]);
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-col gap-3",
-		children: [
-			/* @__PURE__ */ jsx("h4", {
-				className: "text-foreground-intense text-sm font-medium",
-				children: title
-			}),
-			/* @__PURE__ */ jsx(Facts, { rows }),
-			/* @__PURE__ */ jsx("div", {
-				className: "mt-1",
-				children: /* @__PURE__ */ jsx(LinkList, { links: discogsLinks(r) })
-			})
-		]
+		children: [/* @__PURE__ */ jsx(Facts, { rows }), /* @__PURE__ */ jsx("div", {
+			className: "mt-1",
+			children: /* @__PURE__ */ jsx(LinkList, { links: discogsLinks(r) })
+		})]
+	});
+}
+function OrdersView({ r, shops, onMoved }) {
+	return /* @__PURE__ */ jsx(Accordion, {
+		variant: "flush",
+		multiple: true,
+		children: ordersDue(r).map((o) => /* @__PURE__ */ jsxs(AccordionItem, {
+			value: String(o.ci),
+			children: [/* @__PURE__ */ jsx(AccordionTrigger, {
+				className: "text-foreground text-sm font-medium",
+				children: /* @__PURE__ */ jsxs("span", {
+					className: "flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3",
+					children: [/* @__PURE__ */ jsx("span", {
+						className: "min-w-0",
+						children: copyTitle(o.copy, o.ci)
+					}), /* @__PURE__ */ jsx("span", {
+						className: "text-foreground-muted shrink-0 font-normal",
+						children: orderState(o.rec)
+					})]
+				})
+			}), /* @__PURE__ */ jsx(AccordionContent, {
+				className: "-mx-1 px-1",
+				children: /* @__PURE__ */ jsxs("div", {
+					className: "flex flex-col gap-4 pt-1 pb-3",
+					children: [/* @__PURE__ */ jsx(OrderCard, {
+						r: o.rec,
+						shop: shopShown(o.rec, shops)
+					}), onMoved && /* @__PURE__ */ jsx(Arrived, {
+						r,
+						ci: o.ci,
+						onMoved
+					})]
+				})
+			})]
+		}, o.ci))
 	});
 }
 // src/model/research.ts
@@ -8251,188 +8779,6 @@ function hasResearch(r, canEdit) {
 	const k = kindOf$1(r);
 	return k !== "ordered" && (canEdit || researchEntries(r).length > 0) || k === "ordered" && stillCopies(r).length > 0;
 }
-// src/sheet/StatusActions.tsx
-function StatusActions({ r, onMoved }) {
-	const { mutate } = useRuntime();
-	const [pick, setPick] = useState(null);
-	const [ask, setAsk] = useState(null);
-	const [ci, setCi] = useState(0);
-	const [busy, setBusy] = useState(false);
-	const k = kindOf$1(r);
-	if (k === "own") return null;
-	const move = async (to, det) => {
-		setBusy(true);
-		let msg = "";
-		const ok = await mutate(r.id, (latest) => {
-			const m = movePatch(latest, to, det, ci);
-			msg = m?.msg || "";
-			return m?.patch ?? null;
-		});
-		setBusy(false);
-		setAsk(null);
-		if (ok) onMoved(msg);
-	};
-	const askPaid = (to) => {
-		setPick(null);
-		setAsk(to);
-	};
-	const start = (to) => {
-		setCi(0);
-		if (pickable(r).length > 1) setPick(to);
-		else askPaid(to);
-	};
-	if (pick) return /* @__PURE__ */ jsx(CopyPicker, {
-		r,
-		to: pick,
-		onPick: (i) => {
-			setCi(i);
-			askPaid(pick);
-		},
-		onCancel: () => setPick(null)
-	});
-	if (ask) return /* @__PURE__ */ jsx(PaidForm, {
-		shopLabel: ask === "own" ? "Bought from" : "From",
-		hosts: k === "wish" ? buyHosts(movedCopy(r, ci).buyLinks) : [],
-		init: {
-			paid: String(r.paid || ""),
-			shop: String(r.shop || "")
-		},
-		busy,
-		onSave: (det) => move(ask, det),
-		onCancel: () => setAsk(null)
-	});
-	return /* @__PURE__ */ jsx("div", {
-		className: "flex flex-wrap gap-3",
-		children: k === "ordered" ? /* @__PURE__ */ jsx(Button, {
-			disabled: busy,
-			onClick: () => move("own"),
-			children: "It arrived"
-		}) : /* @__PURE__ */ jsxs(Fragment$1, { children: [/* @__PURE__ */ jsx(Button, {
-			disabled: busy,
-			onClick: () => start("ordered"),
-			children: "Ordered it"
-		}), /* @__PURE__ */ jsx(Button, {
-			variant: "outline",
-			disabled: busy,
-			onClick: () => start("own"),
-			children: "Got it"
-		})] })
-	});
-}
-function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }) {
-	const { settings } = useRuntime();
-	const [paid, setPaid] = useState(init.paid);
-	const [shop, setShop] = useState(init.shop);
-	const [url, setUrl] = useState("");
-	return /* @__PURE__ */ jsx("form", {
-		onSubmit: (e) => {
-			e.preventDefault();
-			const site = url || (hosts.length ? "" : shopSite(shopsOf(settings), shop));
-			onSave({
-				paid: paid.trim().replace(/^\$\s*/, ""),
-				shop: shop.trim(),
-				...site ? { shopUrl: site } : {}
-			});
-		},
-		children: /* @__PURE__ */ jsxs(Fieldset, { children: [
-			/* @__PURE__ */ jsx(FieldsetLegend, { children: "What did you pay?" }),
-			/* @__PURE__ */ jsxs("div", {
-				className: "grid gap-4 sm:grid-cols-2",
-				children: [/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Paid" }), /* @__PURE__ */ jsx(Input, {
-					value: paid,
-					onChange: (e) => setPaid(e.target.value),
-					inputMode: "decimal",
-					startSlot: /* @__PURE__ */ jsx("span", {
-						"aria-hidden": "true",
-						children: "$"
-					}),
-					autoFocus: true
-				})] }), /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: shopLabel }), /* @__PURE__ */ jsx(ShopInput, {
-					value: shop,
-					onChange: setShop,
-					placeholder: "e.g. Rough Trade"
-				})] })]
-			}),
-			hosts.length > 1 && /* @__PURE__ */ jsxs("div", {
-				role: "group",
-				"aria-labelledby": "fromQ",
-				className: "flex flex-col gap-2",
-				children: [/* @__PURE__ */ jsx("p", {
-					id: "fromQ",
-					className: "text-foreground-muted text-sm",
-					children: "From one of these?"
-				}), /* @__PURE__ */ jsx("div", {
-					className: "flex flex-wrap gap-2",
-					children: hosts.map(([h, u], i) => /* @__PURE__ */ jsx(Tip, {
-						label: u,
-						children: /* @__PURE__ */ jsx(Button, {
-							type: "button",
-							size: "sm",
-							variant: url === u ? "primary" : "outline",
-							"aria-pressed": url === u,
-							onClick: () => {
-								const on = url !== u;
-								setUrl(on ? u : "");
-								if (on && !shop.trim()) setShop(shopOf({ shopUrl: u }, shopsOf(settings))?.name || h.replace(/ \(\d+\)$/, ""));
-							},
-							children: h
-						})
-					}, u + i))
-				})]
-			}),
-			/* @__PURE__ */ jsxs("div", {
-				className: "flex gap-3",
-				children: [/* @__PURE__ */ jsx(Button, {
-					type: "submit",
-					size: "sm",
-					disabled: busy,
-					children: "Save"
-				}), /* @__PURE__ */ jsx(Button, {
-					type: "button",
-					size: "sm",
-					variant: "ghost",
-					onClick: onCancel,
-					children: "Cancel"
-				})]
-			})
-		] })
-	});
-}
-function GotCopy({ r, ci, onMoved }) {
-	const { mutate } = useRuntime();
-	const [ask, setAsk] = useState(false);
-	const [busy, setBusy] = useState(false);
-	if (!ask) return /* @__PURE__ */ jsx(Button, {
-		size: "sm",
-		variant: "outline",
-		className: "self-start",
-		onClick: () => setAsk(true),
-		children: "Got this copy"
-	});
-	const save = async (det) => {
-		setBusy(true);
-		let msg = "";
-		const ok = await mutate(r.id, (latest) => {
-			const m = gotPatch(latest, ci, det);
-			msg = m?.msg || "";
-			return m?.patch ?? null;
-		});
-		setBusy(false);
-		setAsk(false);
-		if (ok) onMoved(msg);
-	};
-	return /* @__PURE__ */ jsx(PaidForm, {
-		shopLabel: "Bought from",
-		hosts: buyHosts(wantCopies(r)[ci]?.buyLinks ?? []),
-		init: {
-			paid: "",
-			shop: ""
-		},
-		busy,
-		onSave: save,
-		onCancel: () => setAsk(false)
-	});
-}
 // src/sheet/ViewBody.tsx
 function copyFacts(r, shops) {
 	if (kindOf$1(r) !== "own") return [];
@@ -8482,7 +8828,7 @@ function YourCopies({ r, shops }) {
 			children: [/* @__PURE__ */ jsx(AccordionTrigger, {
 				className: "text-foreground text-sm font-medium",
 				children: /* @__PURE__ */ jsxs("span", {
-					className: "flex w-full items-baseline justify-between gap-3",
+					className: "flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3",
 					children: [/* @__PURE__ */ jsx("span", {
 						className: "min-w-0",
 						children: ownedTitle(c, i)
@@ -8688,10 +9034,13 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 	const still = stillCopies(r).length > 0;
 	const hunting = k === "wish" || still;
 	const pressings = still || k === "wish" && canEdit;
+	const orderN = ordersOf(r).length;
+	const orders = orderN > 0;
+	const orderTab = orderN > 1 ? "Orders" : "Order";
 	const tabs = [
 		...about ? ["about"] : [],
 		...own ? ["listening"] : [],
-		...k === "ordered" ? ["order"] : [],
+		...orders ? ["order"] : [],
 		...pressings ? ["pressings"] : [],
 		...notes ? ["notes"] : [],
 		...hunting ? ["search"] : [],
@@ -8714,10 +9063,6 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 				onClick: onAddWhy,
 				children: own ? "Why is this one on the wall? Add a few words…" : "Why do you want this one? Add a few words…"
 			}),
-			canEdit && k !== "wish" && /* @__PURE__ */ jsx(StatusActions, {
-				r,
-				onMoved
-			}, "status" + r.id + k),
 			msg && /* @__PURE__ */ jsx("p", {
 				role: "status",
 				className: "text-foreground-muted text-sm",
@@ -8741,9 +9086,9 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 								value: "listening",
 								children: "Listening"
 							}),
-							k === "ordered" && /* @__PURE__ */ jsx(TabsTrigger, {
+							orders && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "order",
-								children: "Order"
+								children: orderTab
 							}),
 							pressings && /* @__PURE__ */ jsx(TabsTrigger, {
 								value: "pressings",
@@ -8779,11 +9124,12 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 						value: "listening",
 						children: titled("Listening", /* @__PURE__ */ jsx(Listening, { r }))
 					}),
-					k === "ordered" && /* @__PURE__ */ jsx(TabsContent, {
+					orders && /* @__PURE__ */ jsx(TabsContent, {
 						value: "order",
-						children: titled("Order", /* @__PURE__ */ jsx(OrderCard, {
+						children: titled(orderTab, /* @__PURE__ */ jsx(OrdersView, {
 							r,
-							shop: shopShown(r, shops)
+							shops,
+							onMoved: canEdit ? onMoved : void 0
 						}))
 					}),
 					pressings && /* @__PURE__ */ jsxs(TabsContent, {
@@ -8796,10 +9142,11 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 							r,
 							onEditCopy: canEdit ? onEditCopy : void 0,
 							shops,
-							got: canEdit && own ? (ci) => /* @__PURE__ */ jsx(GotCopy, {
+							got: canEdit && k !== "wish" ? (ci) => /* @__PURE__ */ jsx(CopyActions, {
 								r,
 								ci,
-								onMoved
+								onMoved,
+								onOrdered: () => setTab("order")
 							}, r.id + ci) : void 0
 						})]
 					}),
@@ -8952,7 +9299,17 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 		setPick(null);
 		let m = "";
 		mutate(r.id, (latest) => {
-			const x = movePatch(latest, to, void 0, ci);
+			const x = to === "wish" && kindOf$1(latest) === "ordered" && ordersOf(latest).length > 1 ? cancelPatch(latest, 0) : movePatch(latest, to, void 0, ci);
+			m = x?.msg || "";
+			return x?.patch ?? null;
+		}).then((ok) => ok && setSaved(m));
+	};
+	const cancelOrder = (ci) => {
+		if (!r) return;
+		flush();
+		let m = "";
+		mutate(r.id, (latest) => {
+			const x = cancelPatch(latest, ci);
 			m = x?.msg || "";
 			return x?.patch ?? null;
 		}).then((ok) => ok && setSaved(m));
@@ -9054,6 +9411,11 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 										variant: k === "own" ? "success" : k === "ordered" ? "info" : "secondary",
 										children: k === "wish" ? PRIORITY[r.priority == 1 ? 0 : r.priority == 3 ? 2 : 1] : KIND_LABEL[k]
 									}),
+									k === "own" && ordersOf(r).length > 0 && /* @__PURE__ */ jsxs(Badge, {
+										size: "sm",
+										variant: "info",
+										children: [ordersOf(r).length, " on order"]
+									}),
 									canEdit && /* @__PURE__ */ jsx(Button, {
 										size: "sm",
 										variant: editing ? "primary" : "outline",
@@ -9142,6 +9504,7 @@ function RecordSheet({ id, onClose, onBack, onDiscogs }) {
 							title: r.title || "this record",
 							focusWhy,
 							onStatus: (to) => moveTo(to),
+							onCancel: cancelOrder,
 							onRemove: removeIt,
 							autoFilled: Array.isArray(r.autoFilled) ? r.autoFilled : [],
 							focusCopy,
@@ -9906,7 +10269,7 @@ async function paint(list, site, withImages) {
 			if (hang === "barn") drawRing(ctx, c, x + sw / 2, top - 14);
 			else if (hang === "peg") drawPeg(ctx, c, x, sw, top);
 			else if (P) drawPin(ctx, x + sw / 2 + P.tx, top - 6.5, P, c);
-			const tag = tagOf(r);
+			const tag = hangTag(r);
 			if (tag) drawTag(ctx, tag, x + sw + 4, top + sw * .82, 176.8, c);
 			const cap = caps[i + j];
 			let cy = top + sw + 12;
@@ -12991,6 +13354,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
   .pb-2 {
     padding-bottom: calc(var(--spacing) * 2);
+  }
+
+  .pb-3 {
+    padding-bottom: calc(var(--spacing) * 3);
   }
 
   .pb-3\.5 {
@@ -16617,8 +16984,16 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
       flex-direction: row;
     }
 
+    .sm\:items-baseline {
+      align-items: baseline;
+    }
+
     .sm\:items-center {
       align-items: center;
+    }
+
+    .sm\:justify-between {
+      justify-content: space-between;
     }
 
     .sm\:justify-end {
@@ -17617,17 +17992,18 @@ body {
   scroll-padding-block: 8px;
 }
 
-[data-previewing] [data-slot="drawer-backdrop"] {
-  opacity: 0;
+[data-slot="drawer-backdrop"], [data-slot="drawer-popup"] {
   -webkit-backdrop-filter: none;
   backdrop-filter: none;
+}
+
+[data-previewing] [data-slot="drawer-backdrop"] {
+  opacity: 0;
   transition: opacity .15s ease-out;
 }
 
 [data-previewing] [data-slot="drawer-popup"] {
   visibility: hidden;
-  -webkit-backdrop-filter: none;
-  backdrop-filter: none;
 }
 
 [data-previewing] .soften {

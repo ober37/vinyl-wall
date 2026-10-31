@@ -15,7 +15,8 @@ Mapping:
   status own      -> Collection (Uncategorized), Media/Sleeve condition + Notes fields
   status wish     -> Wantlist with notes (priority, target pressing, budget)
   status ordered  -> Wantlist with notes ("On order from ...")
-  moreCopies      -> each copy with a release id is on the wantlist too, with its own notes; a copy that goes
+  moreCopies      -> each copy with a release id is on the wantlist too, with its own notes (an order's, for a copy on
+                     order, #139); a copy that goes
                      (removed, or the record deleted) comes off it. discogsSync.copyRids holds what the wall put there.
   ownedCopies     -> an owned record's other copies you have (#121): each with a release id is its own collection item,
                      with its grades and notes; one that goes (removed, the record deleted or no longer owned) comes off
@@ -202,16 +203,21 @@ def coll_notes(d):
     return out
 
 
+def order_note(x, edition):
+    """An order's wantlist note: the record's own (x the record) or a copy's on order (x the copy, #139)."""
+    s = "On order"
+    if x.get("shop"): s += " from " + x["shop"]
+    if x.get("orderDate"): s += f" (ordered {x['orderDate']})"
+    st = {"preorder": "Pre-order", "shipped": "Shipped", "delayed": "Delayed"}.get(x.get("orderStatus"))
+    if st: s += ". " + st
+    if x.get("eta"): s += f", expected {x['eta']}"
+    if edition: s += ". Edition: " + edition
+    return s[:255]
+
+
 def want_notes(d):
     if d.get("status") == "ordered":
-        s = "On order"
-        if d.get("shop"): s += " from " + d["shop"]
-        if d.get("orderDate"): s += f" (ordered {d['orderDate']})"
-        st = {"preorder": "Pre-order", "shipped": "Shipped", "delayed": "Delayed"}.get(d.get("orderStatus"))
-        if st: s += ". " + st
-        if d.get("eta"): s += f", expected {d['eta']}"
-        if d.get("pressing"): s += ". Edition: " + d["pressing"]
-        return s[:255]
+        return order_note(d, d.get("pressing"))
     pr = {1: "Top want", 2: "Want", 3: "Someday"}.get(int(d.get("priority") or 2), "Want")
     bits = [pr]
     more = [c for c in (d.get("moreCopies") or []) if isinstance(c, dict)]
@@ -247,6 +253,8 @@ def copy_rids(d, rid):
 
 
 def copy_notes(d, c):
+    if c.get("orderStatus"):  # a copy on order (#139): its order, as the record's own reads
+        return order_note(c, c.get("name") or first_line(c.get("pressing")))
     pr = {1: "Top want", 2: "Want", 3: "Someday"}.get(int(d.get("priority") or 2), "Want")
     bits = [pr]
     t = c.get("name") or first_line(c.get("pressing"))

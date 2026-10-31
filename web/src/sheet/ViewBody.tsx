@@ -15,12 +15,13 @@ import { gradeShort, ownedRecs, ownedTitle } from '../model/owned'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
-import { OrderCard, shopFrom } from './OrderCard'
+import { OrdersView, shopFrom } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
 import { Chevron, LinkList, Source } from './Links'
 import { hasResearch, ResearchTab, SearchElsewhere, type WantMsg } from './ResearchTab'
-import { GotCopy, StatusActions } from './StatusActions'
+import { CopyActions, StatusActions } from './StatusActions'
+import { ordersOf } from '../model/copyOrders'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
 function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
@@ -82,7 +83,7 @@ function YourCopies({ r, shops }: { r: Rec; shops: Shop[] }) {
         {C.map(({ c, i, rows }) => (
           <AccordionItem key={i} value={String(i)}>
             <AccordionTrigger className="text-foreground text-sm font-medium">
-              <span className="flex w-full items-baseline justify-between gap-3">
+              <span className="flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                 <span className="min-w-0">{ownedTitle(c, i)}</span>
                 {gradeShort(c) && <span className="text-foreground-muted shrink-0 font-normal">{gradeShort(c)}</span>}
               </span>
@@ -294,11 +295,15 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const still = stillCopies(r).length > 0
   const hunting = k === 'wish' || still
   const pressings = still || (k === 'wish' && canEdit)
+  // the Order tab: an ordered record's order and any copy's on order (#139), named Orders when there are several
+  const orderN = ordersOf(r).length
+  const orders = orderN > 0
+  const orderTab = orderN > 1 ? 'Orders' : 'Order'
   // one order for every kind (#115): About, the record's task tab (Listening, Order), Pressings, Notes, Search, Research
   const tabs = [
     ...(about ? ['about'] : []),
     ...(own ? ['listening'] : []),
-    ...(k === 'ordered' ? ['order'] : []),
+    ...(orders ? ['order'] : []),
     ...(pressings ? ['pressings'] : []),
     ...(notes ? ['notes'] : []),
     ...(hunting ? ['search'] : []),
@@ -330,8 +335,6 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           </Button>
         )
       )}
-      {/* Ordered it / Got it sit in Pressings, above the copies they act on; It arrived stays above the tabs */}
-      {canEdit && k !== 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
       {msg && (
         <p role="status" className="text-foreground-muted text-sm">
           {msg}
@@ -344,7 +347,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
             <TabsList variant="line" size="sm" activateOnFocus>
               {about && <TabsTrigger value="about">About</TabsTrigger>}
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
-              {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
+              {orders && <TabsTrigger value="order">{orderTab}</TabsTrigger>}
               {pressings && <TabsTrigger value="pressings">Pressings</TabsTrigger>}
               {notes && <TabsTrigger value="notes">Notes</TabsTrigger>}
               {hunting && <TabsTrigger value="search">Search</TabsTrigger>}
@@ -373,9 +376,9 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
               {titled('Listening', <Listening r={r} />)}
             </TabsContent>
           )}
-          {k === 'ordered' && (
+          {orders && (
             <TabsContent value="order">
-              {titled('Order', <OrderCard r={r} shop={shopShown(r, shops)} />)}
+              {titled(orderTab, <OrdersView r={r} shops={shops} onMoved={canEdit ? onMoved : undefined} />)}
             </TabsContent>
           )}
           {pressings && (
@@ -385,7 +388,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
                 r={r}
                 onEditCopy={canEdit ? onEditCopy : undefined}
                 shops={shops}
-                got={canEdit && own ? (ci) => <GotCopy key={r.id + ci} r={r} ci={ci} onMoved={onMoved} /> : undefined}
+                got={canEdit && k !== 'wish' ? (ci) => <CopyActions key={r.id + ci} r={r} ci={ci} onMoved={onMoved} onOrdered={() => setTab('order')} /> : undefined}
               />
             </TabsContent>
           )}

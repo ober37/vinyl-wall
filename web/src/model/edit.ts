@@ -1,6 +1,6 @@
 // The edit form's fields and the patch they write. Mirrors collect()/schedule()/write() in app/vinyl-wall.html:
 // only fields the form owns, only when they changed, in production's stored shapes.
-import { wantCopies, type Copy } from './copies'
+import { ORDER_KEYS, wantCopies, type Copy } from './copies'
 import { moreOwned, type OwnCopy } from './owned'
 import { kindOf, orderStatusOf, pressingText, shopHref, type Rec } from './record'
 import { RELOOK_ABOUT } from './task'
@@ -118,6 +118,14 @@ export function stored(f: Form): Record<string, unknown> {
       buyLinks: tidyLinks(c.buyLinks),
       releaseDate: c.releaseDate,
       ...(c.barcodes ? { barcodes: c.barcodes } : {}),
+      // a copy on order keeps its order (#139), stored as the record's own is
+      ...(c.orderStatus
+        ? {
+            ...Object.fromEntries(ORDER_KEYS.map((k) => [k, k === 'orderNotes' ? (c[k] ?? '') : (c[k] ?? '').trim()])),
+            paid: (c.paid ?? '').trim().replace(/^\$\s*/, ''),
+            shopUrl: shopHref((c.shopUrl ?? '').trim()) || (c.shopUrl ?? '').trim(),
+          }
+        : {}),
     }))
   if (f.ownedCopies)
     o.ownedCopies = f.ownedCopies.map((c) => {

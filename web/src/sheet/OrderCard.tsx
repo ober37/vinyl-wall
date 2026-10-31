@@ -1,8 +1,11 @@
 import { Fragment } from 'react'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
+import { ordersDue } from '../model/copyOrders'
 import { copyTitle, wantCopies } from '../model/copies'
 import { discogsLinks, orderState, trackUrl } from '../model/orders'
 import { OSTAT, orderStatusOf, playDate, shopHref, type Rec } from '../model/record'
-import { reachOf, type Shop } from '../model/shops'
+import { reachOf, shopShown, type Shop } from '../model/shops'
+import { Arrived } from './StatusActions'
 import { Facts } from './Facts'
 import { link, LinkList } from './Links'
 
@@ -34,31 +37,16 @@ export function shopFrom(r: Rec, s?: Shop): { name: React.ReactNode; reach: Reac
   return { name, reach }
 }
 
-// The Order tab: the copy ordered as one open card, like a hunt's single copy. Where the order's at first (with a tracking
-// link), then the copy's pressing and label, where it's from, what it cost (its budget until something's paid), when it
-// was ordered, older order notes, and its Discogs links.
+// One order, in its fold on the Order tab (#139), which names the copy and says where the order's at: the copy's pressing
+// and label, where it's from, the way to track it, what it cost (its budget until something's paid), when it was
+// ordered, older order notes, and its Discogs links.
 export function OrderCard({ r, shop }: { r: Rec; shop?: Shop }) {
   const c = wantCopies(r)[0]
   const first = c.pressing.split('\n')[0].trim()
   // named as the copy is everywhere else (#121)
   const title = copyTitle(c, 0)
   const track = trackUrl(r.carrier, r.tracking)
-  const rows: [string, React.ReactNode][] = [
-    [
-      'Status',
-      <>
-        {orderState(r)}
-        {track && (
-          <>
-            {' · '}
-            <a href={track} target="_blank" rel="noopener" className={`${link} whitespace-nowrap`}>
-              Track ↗
-            </a>
-          </>
-        )}
-      </>,
-    ],
-  ]
+  const rows: [string, React.ReactNode][] = []
   if (c.pressing && first !== title) rows.push(['Pressing', <span className="whitespace-pre-line">{c.pressing}</span>])
   if (c.label || c.catalog)
     rows.push(['Label', <>{c.label}{c.catalog && <span className="text-foreground-muted">{c.label ? ' · ' : ''}{c.catalog}</span>}</>])
@@ -66,17 +54,42 @@ export function OrderCard({ r, shop }: { r: Rec; shop?: Shop }) {
     const f = shopFrom(r, shop)
     rows.push(['From', <>{f.name}{f.reach}</>])
   }
+  if (track) rows.push(['Tracking', <a href={track} target="_blank" rel="noopener" className={`${link} whitespace-nowrap`}>Track ↗</a>])
   if (r.paid) rows.push(['Paid', '$' + r.paid])
   else if (c.budget) rows.push(['Budget', 'Up to $' + c.budget])
   if (r.orderDate) rows.push(['Ordered', playDate(String(r.orderDate))])
   if (r.orderNotes) rows.push(['Order notes', <span className="whitespace-pre-line">{String(r.orderNotes)}</span>])
   return (
     <div className="flex flex-col gap-3">
-      <h4 className="text-foreground-intense text-sm font-medium">{title}</h4>
       <Facts rows={rows} />
       <div className="mt-1">
         <LinkList links={discogsLinks(r)} />
       </div>
     </div>
+  )
+}
+
+// The Order tab (#139): every order, the one expected first at the top, a fold each under the copy's title with where
+// it's at beside it, folded to start as every copy is (#121); It arrived at the foot of each, for whoever can edit
+export function OrdersView({ r, shops, onMoved }: { r: Rec; shops: Shop[]; onMoved?: (msg: string) => void }) {
+  return (
+    <Accordion variant="flush" multiple>
+      {ordersDue(r).map((o) => (
+        <AccordionItem key={o.ci} value={String(o.ci)}>
+          <AccordionTrigger className="text-foreground text-sm font-medium">
+            <span className="flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
+              <span className="min-w-0">{copyTitle(o.copy, o.ci)}</span>
+              <span className="text-foreground-muted shrink-0 font-normal">{orderState(o.rec)}</span>
+            </span>
+          </AccordionTrigger>
+          <AccordionContent className="-mx-1 px-1">
+            <div className="flex flex-col gap-4 pt-1 pb-3">
+              <OrderCard r={o.rec} shop={shopShown(o.rec, shops)} />
+              {onMoved && <Arrived r={r} ci={o.ci} onMoved={onMoved} />}
+            </div>
+          </AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   )
 }

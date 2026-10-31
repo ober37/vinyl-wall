@@ -60,7 +60,7 @@ export function CopiesView({ r, onEditCopy, shops = [], got }: {
         return (
           <AccordionItem key={i} value={String(i)}>
             <AccordionTrigger className="text-foreground text-sm font-medium">
-              <span className="flex w-full items-baseline justify-between gap-3">
+              <span className="flex w-full flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-3">
                 <span className="min-w-0">{copyTitle(c, i)}</span>
                 {c.budget && <span className="text-foreground-muted shrink-0 font-normal">Up to ${c.budget}</span>}
               </span>

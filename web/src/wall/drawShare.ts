@@ -1,10 +1,11 @@
 // The share picture, drawn on a canvas as production's drawShare (app/vinyl-wall.html): the wall's photo (washed as on the
 // wall), title, counts, then the sleeves shown hanging in the wall's style with their tags, in wall order. Covers come from
 // the wall's stored images; a record without one, or one that won't load, gets the generated sleeve. Pattern
-// backgrounds are drawn as wall.css draws them. Nothing private goes in: tagOf leaves the budget off, and there
+// backgrounds are drawn as wall.css draws them. Nothing private goes in: hangTag leaves the budget off, and there
 // are no prices, orders or notes. Colours are the theme's tokens, read off the page.
 import { countsLine, SHARE_MAX } from '../model/share'
-import { coverUrl, faceColors, hueOf, tagOf, type Rec, type Tag } from '../model/record'
+import { hangTag } from '../model/copyOrders'
+import { coverUrl, faceColors, hueOf, type Rec, type Tag } from '../model/record'
 import type { Site } from '../model/site'
 import { corkNoise, feltNoise } from './grain'
 
@@ -566,7 +567,7 @@ async function paint(list: Rec[], site: Site, withImages: boolean): Promise<Draw
       if (hang === 'barn') drawRing(ctx, c, x + sw / 2, top - 14)
       else if (hang === 'peg') drawPeg(ctx, c, x, sw, top)
       else if (P) drawPin(ctx, x + sw / 2 + P.tx, top - 6.5, P, c)
-      const tag = tagOf(r)
+      const tag = hangTag(r)
       if (tag) drawTag(ctx, tag, x + sw + 4, top + sw * 0.82, sw + 4, c)
       const cap = caps[i + j]
       let cy = top + sw + 12

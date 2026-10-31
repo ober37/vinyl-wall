@@ -10,7 +10,12 @@ const rule = /:root:not\(\.dark\) \.cap \{([^}]*)\}/.exec(css)![1]
 it('light-mode captions have no blur, filter or blend behind them', () => {
   expect(rule).not.toMatch(/backdrop-filter|(^|\s)filter:|mix-blend/)
   // the only backdrop-filter left on the wall turns one off
-  expect([...css.matchAll(/backdrop-filter:\s*([^;]+);/g)].map((m) => m[1])).toEqual(['none', 'none'])
+  expect([...css.matchAll(/backdrop-filter:\s*([^;]+);/g)].map((m) => m[1])).toEqual(['none'])
+})
+
+// #142: the same flicker in both themes while a record is open, from the drawer's own blur behind the sheet
+it('the open sheet has no blur behind it, in either theme', () => {
+  expect(/\[data-slot='drawer-backdrop'\],\s*\[data-slot='drawer-popup'\] \{\s*backdrop-filter: none;\s*\}/.test(css)).toBe(true)
 })
 
 it("the caption label is at least 85% paper, so the artist line keeps 4.5:1 over a dark photo", () => {

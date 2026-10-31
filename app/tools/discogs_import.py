@@ -24,6 +24,8 @@ Rules:
     earlier import skipped these, so a re-run brings them in, and a second re-run adds nothing.
   - Several wantlist releases of one album make one record: the first is the record's own pressing, the others become
     its more copies (moreCopies, each with its release id, listed in discogsSync.copyRids so the sync manages them).
+    A copy's note saying it's on order ("On order from …", #139) puts that order on the copy, on an album you own or have
+    on order.
     An album in the collection keeps its wantlist pressings as copies it still wants. An album already on the wall
     gets none of them.
   - Imported records are marked as already synced (discogsSync), so the wall -> Discogs sync never re-adds
@@ -321,7 +323,10 @@ def main():
             hunts[key].setdefault("moreCopies", []).append({
                 "name": back.get("pressing", ""), "pressing": pressing_of(bi), "label": clean_name(lab.get("name")),
                 "catalog": "" if (lab.get("catno") or "").lower() == "none" else (lab.get("catno") or ""),
-                "budget": back.get("budget", ""), "discogsId": bi["id"]})
+                "budget": back.get("budget", ""), "discogsId": bi["id"],
+                # a copy on order (#139), on a record you own or have on order; a hunt's stays a copy it wants
+                **({"orderStatus": back.get("orderStatus", "ordered"), **{k: back.get(k, "") for k in ("orderDate", "eta", "shop")}}
+                   if back.get("status") == "ordered" and hunts[key].get("status") in ("own", "ordered") else {})})
             hunts[key]["discogsSync"].setdefault("copyRids", []).append(bi["id"])
             seen.add(bi["id"]); n_copies += 1
             continue
