@@ -30,12 +30,12 @@ describe('covers and artists', () => {
   it('an uploaded cover stops the lookup and is no longer auto-filled', () => {
     expect(coverPatch({ id: 'r', autoFilled: ['coverAsset', 'year'] }, 'a9')).toEqual({ coverAsset: 'a9', needsEnrich: false, autoFilled: ['year'] })
   })
-  it('Find cover & details looks the album info up again, unless it was turned off', () => {
+  it('Look up… looks the album info up again, unless it was turned off', () => {
     const r = { id: 'r', aboutAt: '2026-10-01', aboutV: 3 }
     expect(enrichPatch(r)).toEqual({ needsEnrich: true, aboutAt: '', aboutV: 0 })
     expect(enrichPatch({ ...r, aboutBlocked: true })).toEqual({ needsEnrich: true })
   })
-  it('Remove cover goes back to the sleeve until an upload or Find cover & details (#62)', () => {
+  it('Remove cover goes back to the sleeve until an upload or Look up the cover and details (#62)', () => {
     const r: Rec = { id: 'r', coverAsset: 'a1', coverOriginal: 'o1', autoFilled: ['coverAsset', 'year'] }
     expect(removeCoverPatch(r)).toEqual({ coverAsset: '', coverBlocked: true, coverOriginal: '', autoFilled: ['year'] })
     expect(removeCoverPatch({ id: 'r', coverAsset: 'a1' })).toEqual({ coverAsset: '', coverBlocked: true })

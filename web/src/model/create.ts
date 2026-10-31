@@ -30,7 +30,7 @@ export const coverPatch = (r: Rec, id: string) => ({
   autoFilled: (r.autoFilled || []).filter((k) => k !== 'coverAsset'),
   ...(r.coverBlocked ? { coverBlocked: false } : {}),
 })
-// "Remove cover": back to the plain sleeve, and the lookup doesn't put one back until an upload or Find cover & details (#62)
+// "Remove cover": back to the plain sleeve, and the lookup doesn't put one back until an upload or Look up the cover and details (#62)
 export const removeCoverPatch = (r: Rec) => ({
   coverAsset: '',
   coverBlocked: true,
@@ -38,7 +38,7 @@ export const removeCoverPatch = (r: Rec) => ({
   ...(r.autoFilled?.includes('coverAsset') ? { autoFilled: r.autoFilled.filter((k) => k !== 'coverAsset') } : {}),
 })
 
-// "Find cover & details" looks the album info up again too, unless it's been turned off (aboutBlocked, set from the chat),
+// edit mode's "Look up…" (#135) looks the album info up again too, unless it's been turned off (aboutBlocked, set from the chat),
 // and lifts a Remove cover
 export const enrichPatch = (r: Rec) => ({
   needsEnrich: true,

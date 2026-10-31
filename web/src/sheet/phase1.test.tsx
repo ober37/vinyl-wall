@@ -192,11 +192,14 @@ describe('edit mode', () => {
     expect(await screen.findByText('Upload failed: That image is too big to store. Try a smaller one.')).toBeTruthy()
   })
 
-  it('offers only Find cover & details for the lookups, and nothing to turn artist info off (#129)', async () => {
+  it('offers one lookup, in edit mode only, and nothing to turn artist info off (#129, #135)', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
+    await screen.findByRole('heading', { name: 'Kind of Blue' })
+    expect(screen.queryByRole('button', { name: /^Look up/ })).toBeNull()
     await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
-    expect(screen.getByRole('button', { name: 'Find cover & details' })).toBeTruthy()
+    // it has a cover, which the lookup keeps
+    expect(screen.getAllByRole('button', { name: /^Look up/ }).map((b) => b.textContent)).toEqual(['Look up details again'])
     for (const name of ['Not this artist', 'Bring back artist info', 'Look up album & artist info again']) expect(screen.queryByRole('button', { name })).toBeNull()
   })
 
@@ -215,8 +218,8 @@ describe('edit mode', () => {
     await user.click(screen.getByRole('button', { name: 'Cover options' }))
     expect((await screen.findAllByRole('menuitem')).map((m) => m.textContent)).toEqual(['Upload cover…'])
     await user.keyboard('{Escape}')
-    // Find cover & details brings one back
-    await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+    // no cover now, so the lookup offers one, and brings it back
+    await user.click(screen.getByRole('button', { name: 'Look up the cover and details' }))
     await waitFor(() => expect(fake.records.r1).toMatchObject({ coverBlocked: false, needsEnrich: true }))
   })
 
@@ -253,9 +256,10 @@ describe('the lookup line', () => {
       await user.click(await screen.findByRole('button', { name: open }))
       await screen.findByRole('heading', { name: title })
       await user.click(await screen.findByRole('button', { name: 'Edit' }))
-      await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
-      expect(await within(screen.getByRole('dialog')).findAllByText(/^Looking up/)).toHaveLength(1)
-      expect(screen.getByRole('button', { name: 'Find cover & details' })).toHaveProperty('disabled', true)
+      // it has a cover: the button reads as the status it turns into, which takes its place
+      await user.click(screen.getByRole('button', { name: 'Look up details again' }))
+      expect(await within(screen.getByRole('dialog')).findAllByText('Looking up details…')).toHaveLength(1)
+      expect(screen.queryByRole('button', { name: /^Look up/ })).toBeNull()
       await user.keyboard('{Escape}')
       await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull())
     }
@@ -270,5 +274,14 @@ describe('the lookup line', () => {
     expect(await within(await screen.findByRole('dialog')).findByText(/^Looking up/)).toBeTruthy()
     await act(async () => fake.remote('r3', { needsEnrich: false, coverAsset: 'new', aboutAt: '2026-10-24', aboutV: 3, about: { summary: 'S.' } }))
     await waitFor(() => expect(within(screen.getByRole('dialog')).queryByText(/^Looking up/)).toBeNull())
+  })
+
+  it('offers no lookup in edit mode while the album info alone is being looked up (#135)', async () => {
+    const { fake, user } = setup()
+    await act(async () => fake.remote('r1', { aboutAt: '', aboutV: 0 }))
+    await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
+    await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
+    expect(await screen.findByText('Looking up the album…')).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^Look up/ })).toBeNull()
   })
 })

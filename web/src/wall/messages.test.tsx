@@ -28,7 +28,7 @@ const toastOf = (text: string | RegExp) =>
 async function askInSheet(user: ReturnType<typeof userEvent.setup>) {
   await user.click(await screen.findByRole('button', { name: /Open Blue Train/ }))
   await user.click(await screen.findByRole('button', { name: 'Edit' }))
-  await user.click(screen.getByRole('button', { name: 'Find cover & details' }))
+  await user.click(screen.getByRole('button', { name: /^Look up (the cover and details|details again)$/ }))
 }
 const closeSheet = async (user: ReturnType<typeof userEvent.setup>) => {
   await user.keyboard('{Escape}')
