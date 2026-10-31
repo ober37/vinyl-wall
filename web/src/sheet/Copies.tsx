@@ -33,40 +33,41 @@ const barcodeRow = (c: Copy, shops: Shop[]): Row[] => {
   return L.length ? [['Check this pressing at', <LinkList links={L} />]] : []
 }
 
-// The copies a record hunts, as production's wantCopyHTML shows them: one copy on a hunt is an open card (name, pressing,
-// label, budget); several, or the copies an owned or ordered record still wants, are folded rows under each copy's title.
-// Nothing when there are none.
+// The copies a record hunts, as production's wantCopyHTML shows them: folded rows under each copy's title, one too, as
+// every copy is (#121). Nothing when there are none.
 // shops: the owner's, for the barcode shops' links
-export function CopiesView({ r, onEditCopy, shops = [] }: { r: Rec; onEditCopy?: (ci: number) => void; shops?: Shop[] }) {
+// got: what goes at the foot of a copy's row (Got this copy, on an owned record the owner can edit)
+export function CopiesView({ r, onEditCopy, shops = [], got }: {
+  r: Rec
+  onEditCopy?: (ci: number) => void
+  shops?: Shop[]
+  got?: (ci: number) => React.ReactNode
+}) {
   const L = stillCopies(r)
   // a hunt with no copy chosen yet says how to add one, to whoever can
   const none = onEditCopy && kindOf(r) === 'wish' ? <p className="text-foreground-muted text-sm">No copies yet. Add the pressing you're after in Edit.</p> : null
   if (!L.length) return none
-  let body: React.ReactNode
-  if (L.length === 1 && kindOf(r) === 'wish') {
-    const [c, i] = L[0]
-    const rows = [...pressRow(c), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops)]
-    if (!rows.length && !c.name) return none
-    body = (
-      <div className="flex flex-col gap-2">
-        {c.name && <h4 className="text-foreground-intense text-sm font-medium">{c.name}</h4>}
-        {rows.length > 0 && <Facts rows={rows} />}
-      </div>
-    )
-  } else
-    body = (
-      <Accordion variant="flush" multiple>
-        {L.map(([c, i]) => {
-          const rows = [...(c.name ? pressRow(c) : []), ...labelRow(c, c.label), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops)]
-          return (
-            <AccordionItem key={i} value={String(i)}>
-              <AccordionTrigger className="text-foreground text-sm font-medium">
-                <span className="flex w-full items-baseline justify-between gap-3">
-                  <span className="min-w-0">{copyTitle(c, i)}</span>
-                  {c.budget && <span className="text-foreground-muted shrink-0 font-normal">Up to ${c.budget}</span>}
-                </span>
-              </AccordionTrigger>
-              <AccordionContent>
+  // a lone label shows only when it names the copy (copyLabelShown)
+  const rowsOf = (c: Copy, i: number) => [
+    ...(c.name ? pressRow(c) : []), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops),
+  ]
+  // a hunt's one copy with nothing in it isn't a copy yet
+  if (L.length === 1 && kindOf(r) === 'wish' && !L[0][0].name && !rowsOf(...L[0]).length) return none
+  const body = (
+    <Accordion variant="flush" multiple>
+      {L.map(([c, i]) => {
+        const rows = rowsOf(c, i)
+        return (
+          <AccordionItem key={i} value={String(i)}>
+            <AccordionTrigger className="text-foreground text-sm font-medium">
+              <span className="flex w-full items-baseline justify-between gap-3">
+                <span className="min-w-0">{copyTitle(c, i)}</span>
+                {c.budget && <span className="text-foreground-muted shrink-0 font-normal">Up to ${c.budget}</span>}
+              </span>
+            </AccordionTrigger>
+            {/* room for a focus ring (Got this copy's form), which the fold's clipping would cut */}
+            <AccordionContent className="-mx-1 px-1">
+              <div className="flex flex-col gap-3 pt-1">
                 {rows.length ? (
                   <Facts rows={rows} />
                 ) : (
@@ -79,12 +80,14 @@ export function CopiesView({ r, onEditCopy, shops = [] }: { r: Rec; onEditCopy?:
                     )}
                   </div>
                 )}
-              </AccordionContent>
-            </AccordionItem>
-          )
-        })}
-      </Accordion>
-    )
+                {got?.(i)}
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        )
+      })}
+    </Accordion>
+  )
   return (
     <Fieldset>
       <FieldsetLegend>{copiesLegend(r)}</FieldsetLegend>

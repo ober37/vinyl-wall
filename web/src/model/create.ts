@@ -8,9 +8,10 @@ import { RELOOK_ABOUT } from './task'
 // No needsSync: a new record has no discogsSync yet, which is what the task's sync looks for.
 export function newDoc(form: Form, kind: Kind, coverId: string | null, now = Date.now()): Record<string, unknown> {
   const d: Record<string, unknown> = { priority: 2, ...stored(form), status: kind, notes: [], added: now }
-  // a new record has no Discogs release yet, and only a hunt shows its (empty) list of other copies
+  // a new record has no Discogs release yet, only a hunt shows its (empty) list of other copies, and none has a second copy owned
   delete d.discogsId
   if (kind !== 'wish') delete d.moreCopies
+  delete d.ownedCopies
   if (kind === 'ordered' && !d.orderStatus) d.orderStatus = 'ordered'
   if (coverId) d.coverAsset = coverId
   if (!d.coverAsset || !d.year || !d.label) d.needsEnrich = true

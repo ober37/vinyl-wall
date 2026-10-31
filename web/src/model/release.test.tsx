@@ -1,5 +1,5 @@
 // #75: a wanted copy's release date
-import { render, screen } from '@testing-library/react'
+import { fireEvent, render, screen } from '@testing-library/react'
 import { describe, expect, it } from 'vitest'
 import { CopiesView } from '../sheet/Copies'
 import { copiesPatch, pickPatch, releaseText, stillCopies, wantCopies } from './copies'
@@ -64,10 +64,12 @@ describe('release date', () => {
 
   it('shows on the copy card while it means something', () => {
     const v = render(<CopiesView r={{ ...preorder, moreCopies: [] }} />)
+    fireEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.getByText('Release')).toBeTruthy()
     expect(screen.getByText('Out Nov 20, 2099')).toBeTruthy()
     v.unmount()
     render(<CopiesView r={{ ...preorder, releaseDate: '2001-01-01', moreCopies: [] }} />)
+    fireEvent.click(screen.getByRole('button', { expanded: false }))
     expect(screen.queryByText('Release')).toBeNull()
   })
 })

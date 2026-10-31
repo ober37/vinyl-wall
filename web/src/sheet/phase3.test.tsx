@@ -5,6 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 function setup(opts: Parameters<typeof fakeClaude>[1] = {}, extra: Record<string, Record<string, unknown>> = {}) {
   const data = sample()
@@ -53,19 +54,22 @@ describe('the Order tab', () => {
     const { user } = setup()
     await open(user, 'Aja')
     const panel = screen.getByRole('tabpanel')
-    expect(within(panel).getByRole('heading', { name: 'Your order' })).toBeTruthy()
+    // named as the copy is everywhere else: an order with no name or pressing is Copy 1 (#121)
+    expect(within(panel).getByRole('heading', { name: 'Copy 1' })).toBeTruthy()
     expect(within(panel).queryByRole('link', { name: 'Track ↗' })).toBeNull()
     expect(within(panel).getByText('Rough Trade')).toBeTruthy()
   })
 })
 
 describe('edit mode: the order', () => {
-  it('edits the order in its own group, under the copy ordered', async () => {
+  it('edits the order in the copy ordered, as its Order details, folded with where it is at (#121)', async () => {
     const { fake, user } = setup({}, tracked)
     await open(user, 'Rumours')
     await user.click(btn('Edit'))
-    expect(screen.getByRole('group', { name: 'The copy you ordered' })).toBeTruthy()
-    const g = screen.getByRole('group', { name: 'The order' })
+    const g = screen.getByRole('group', { name: 'The copy you ordered' })
+    expect(screen.queryByRole('group', { name: 'The order' })).toBeNull()
+    await openCopies(user)
+    expect(within(g).getByRole('button', { name: /^Order details/ }).getAttribute('aria-expanded')).toBe('true')
     const track = within(g).getByRole('textbox', { name: 'Tracking #' })
     await user.clear(track)
     await user.type(track, '1Z000')
@@ -83,7 +87,8 @@ describe('edit mode: the order', () => {
     const { user } = setup()
     await open(user, 'Aja')
     await user.click(btn('Edit'))
-    const g = screen.getByRole('group', { name: 'The order' })
+    await openCopies(user)
+    const g = screen.getByRole('group', { name: 'The copy you ordered' })
     expect(within(g).getByRole('combobox', { name: 'From' })).toHaveProperty('value', 'Rough Trade')
     expect(within(g).queryByRole('textbox', { name: 'Order notes' })).toBeNull()
   })

@@ -5,6 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 function setup(opts: Parameters<typeof fakeClaude>[1] = {}, extra: Record<string, Record<string, unknown>> = {}) {
   const data = sample()
@@ -41,8 +42,9 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup()
     await open(user, 'Abbey Road')
     await user.click(btn('Edit'))
+    await openCopies(user)
     const g = legend('The copies you want')
-    expect(within(g).getByRole('heading', { name: 'UK first' })).toBeTruthy()
+    expect(within(g).getByRole('button', { name: /^UK first/ })).toBeTruthy()
     const budgets = within(g).getAllByRole('textbox', { name: 'Budget' })
     await user.clear(budgets[1])
     await user.type(budgets[1], '45')
@@ -59,6 +61,7 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup()
     await open(user, 'Pet Sounds')
     await user.click(btn('Edit'))
+    await openCopies(user)
     expect(screen.getByRole('group', { name: 'The copy you want' })).toBeTruthy()
     // a lone empty copy has nothing to remove
     expect(screen.queryByRole('button', { name: 'Remove this copy' })).toBeNull()
@@ -74,6 +77,7 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup()
     await open(user, 'Abbey Road')
     await user.click(btn('Edit'))
+    await openCopies(user)
     await user.click(screen.getAllByRole('button', { name: 'Remove this copy' })[0])
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
     await waitFor(() =>
@@ -88,6 +92,7 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup({}, { r8: { title: 'Toxicity', artist: 'System of a Down', status: 'wish', pressing: '2018 reissue', discogsId: 5, notes: [], added: 8 } })
     await open(user, 'Toxicity')
     await user.click(btn('Edit'))
+    await openCopies(user)
     await user.click(within(legend('The copy you want')).getByRole('button', { name: 'Remove this copy' }))
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
     await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ pressing: '', discogsId: '', discogsMatch: '', needsSync: true }))
@@ -99,6 +104,7 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup({}, { r8: { title: 'Revolver', artist: 'The Beatles', status: 'own', moreCopies: [{ name: 'Mono', budget: '' }], notes: [], added: 8 } })
     await open(user, 'Revolver')
     await user.click(btn('Edit'))
+    await openCopies(user)
     const g = legend('The copy you still want')
     await user.click(within(g).getByRole('button', { name: 'Remove this copy' }))
     await user.click(await screen.findByRole('button', { name: 'Remove' }))
@@ -110,6 +116,7 @@ describe('edit mode: priority and copies', () => {
     const { fake, user } = setup()
     await open(user, 'Aja')
     await user.click(btn('Edit'))
+    await openCopies(user)
     const g = legend('The copy you ordered')
     await user.type(within(g).getByRole('textbox', { name: 'Name' }), 'Cisco 45')
     await user.click(btn('Done'))
@@ -153,15 +160,17 @@ describe('the hunt in view mode', () => {
     expect(screen.getByText('Top want', { selector: '[data-slot=badge]' })).toBeTruthy()
   })
 
-  it('shows a lone copy as a card, and nothing for a looked-up label alone', async () => {
+  it('shows a lone copy as a fold like any other (#121), and nothing for a looked-up label alone', async () => {
     const { user } = setup({}, {
       r8: { title: 'Revolver', artist: 'The Beatles', status: 'wish', label: 'Parlophone', catalog: 'PMC 7009', budget: '80', notes: [], added: 8 },
       r9: { title: 'Help!', artist: 'The Beatles', status: 'wish', label: 'Parlophone', autoFilled: ['label'], notes: [], added: 9 },
     })
     await open(user, 'Revolver')
     const g = screen.getByRole('group', { name: 'The copy you want' })
+    expect(within(g).getByRole('button', { name: /Up to \$80/ }).getAttribute('aria-expanded')).toBe('false')
+    await openCopies(user)
     expect(within(g).getByText('Parlophone')).toBeTruthy()
-    expect(within(g).getByText('Up to $80')).toBeTruthy()
+    expect(within(g).getAllByText('Up to $80').length).toBeGreaterThan(0)
     await user.keyboard('{Escape}')
     await open(user, 'Help!')
     expect(screen.queryByRole('group', { name: /The copy/ })).toBeNull()
@@ -263,8 +272,12 @@ describe('the Research tab', () => {
     // the header's Edit, then the one beside what was added
     await screen.findByText(/Added “Japan Odeon”/)
     await user.click(screen.getAllByRole('button', { name: 'Edit' }).at(-1)!)
-    const names = within(screen.getByRole('group', { name: 'The copies you want' })).getAllByRole('textbox', { name: 'Name' })
-    expect(document.activeElement).toBe(names[1])
+    // only that copy's fold is open, with the cursor in its name
+    const g = within(screen.getByRole('group', { name: 'The copies you want' }))
+    expect(g.getByRole('button', { name: /^Japan Odeon/ }).getAttribute('aria-expanded')).toBe('true')
+    const names = g.getAllByRole('textbox', { name: 'Name' })
+    expect(names).toHaveLength(1)
+    expect(document.activeElement).toBe(names[0])
   })
 
   it("keeps + Want's Undo through Edit and back", async () => {

@@ -1,15 +1,13 @@
-// The runout and the Discogs release in edit, as production's runRow/wireRuns and discogsHTML: the runout side by side,
-// the release number (a pasted link keeps just its number) with its sync line, and Copy runout for a Discogs submission.
+// The runout and the Discogs release in edit, as production's runRow/wireRuns and discogsHTML: the runout side by side, and
+// the release number (a pasted link keeps just its number).
 import { Button } from '@appica/ui-react/button'
-import { CopyButton } from '@appica/ui-react/copy-button'
 import { Field, FieldLabel, FieldDescription, FieldError } from '@appica/ui-react/field'
 import { Input } from '@appica/ui-react/input'
-import { Textarea } from '@appica/ui-react/textarea'
-import { useEffect, useId, useRef, useState } from 'react'
+import { useId, useState } from 'react'
 import { wantCopies } from '../model/copies'
-import { generalMatch, releaseOf, runJoin, runoutText, runSides, syncLine, type Sync } from '../model/discogs'
+import { generalMatch, releaseOf, runJoin, runSides, type Sync } from '../model/discogs'
 import type { Form } from '../model/edit'
-import { kindOf, type Rec } from '../model/record'
+import type { Rec } from '../model/record'
 
 const sidesOf = (m: unknown) => {
   const r = runSides(m)
@@ -78,15 +76,6 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
   const id = form.discogsId ?? ''
   // what's typed while it isn't a release; otherwise the field shows the number (a pasted link becomes it at once)
   const [draft, setDraft] = useState<string | null>(null)
-  const [copied, setCopied] = useState('')
-  // the clipboard is blocked: the runout shown to copy by hand, as it reads now, selected once when it appears
-  const [manual, setManual] = useState(false)
-  const manualBox = useRef<HTMLTextAreaElement>(null)
-  useEffect(() => {
-    if (!manual) return
-    manualBox.current?.focus()
-    manualBox.current?.select()
-  }, [manual])
   const bad = draft !== null
   const changed = id !== wantCopies(r)[0].discogsId
   const typed = (v: string) => {
@@ -94,9 +83,10 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
     setDraft(n === null ? v : null)
     if (n !== null && n !== id) change({ discogsId: n })
   }
-  // without a number there's nothing to sync: only a failed or pending sync says more than the hint
+  // how the sync is going is the sheet's status line now (#121); under the field, only why it won't sync, or what to do
+  // when the last sync found nothing
   const sync = (r.discogsSync || {}) as Sync
-  const quiet = id === '' && !changed && !r.needsSync && sync.state !== 'no-match' && sync.state !== 'error'
+  const noMatch = connected && sync.state === 'no-match' && !changed && !r.needsSync
   const line = !connected ? (
     <>
       Connect Discogs in{' '}
@@ -105,70 +95,37 @@ export function DiscogsFields({ r, form, change, connected, onConnect }: Props) 
       </button>{' '}
       to sync
     </>
-  ) : quiet ? (
-    'Leave it empty and a match is found for you.'
-  ) : (
-    syncLine(r, changed)
-  )
-  const own = kindOf(r) === 'own'
-  const matrix = runJoin(runSides(form.matrix))
-  const runout = runoutText(matrix, (form.pressing ?? '').trim(), (form.catalog ?? '').trim())
+  ) : noMatch ? (
+    'Paste the number from its Discogs URL.'
+  ) : null
   return (
-    <>
-      <Field className="sm:col-span-2" invalid={bad}>
-        <FieldLabel>Release number</FieldLabel>
-        {/* the link's column only when there's a link, so the field reaches the right edge on phones without it */}
-        <div className={`grid items-center gap-4 sm:grid-cols-2 ${id !== '' && !bad ? 'grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1'}`}>
-          <Input
-            value={draft ?? String(id)}
-            onChange={(e) => typed(e.target.value)}
-            inputMode="numeric"
-            autoComplete="off"
-            placeholder="From the Discogs URL"
-            className="font-mono placeholder:font-sans"
-          />
-          {id !== '' && !bad && (
-            <a
-              href={`https://www.discogs.com/release/${id}`}
-              target="_blank"
-              rel="noopener"
-              className="text-primary justify-self-start text-sm underline-offset-2 hover:underline"
-            >
-              Open on Discogs ↗
-            </a>
-          )}
-        </div>
-        {bad ? <FieldError match>Not a release number or link</FieldError> : <FieldDescription>{line}</FieldDescription>}
-        {!changed && !bad && generalMatch(r.discogsMatch) && (
-          <FieldDescription>This points at a general release of the album. Paste the number of your exact pressing when you know it.</FieldDescription>
-        )}
-      </Field>
-      {own && matrix && (
-        <div className="flex flex-wrap items-center gap-3 sm:col-span-2">
-          <CopyButton
-            size="sm"
-            variant="outline"
-            label="Copy runout for a Discogs submission"
-            copiedLabel="Copied runout"
-            value={() => runout}
-            onCopy={() => {
-              setManual(false)
-              setCopied("Copied. Paste it into the release's edit form on Discogs.")
-            }}
-            onCopyError={() => {
-              setManual(true)
-              setCopied("Selected: copy it with your device's copy command")
-            }}
+    <Field className="sm:col-span-2" invalid={bad}>
+      <FieldLabel>Discogs release</FieldLabel>
+      {/* the link's column only when there's a link, so the field reaches the right edge on phones without it */}
+      <div className={`grid items-center gap-4 sm:grid-cols-2 ${id !== '' && !bad ? 'grid-cols-[minmax(0,1fr)_auto]' : 'grid-cols-1'}`}>
+        <Input
+          value={draft ?? String(id)}
+          onChange={(e) => typed(e.target.value)}
+          inputMode="numeric"
+          autoComplete="off"
+          placeholder="Link or release #"
+          className="font-mono placeholder:font-sans"
+        />
+        {id !== '' && !bad && (
+          <a
+            href={`https://www.discogs.com/release/${id}`}
+            target="_blank"
+            rel="noopener"
+            className="text-primary justify-self-start text-sm underline-offset-2 hover:underline"
           >
-            Copy runout for a Discogs submission
-          </CopyButton>
-          <span role="status" className="text-foreground-muted text-xs">
-            {copied}
-          </span>
-          {/* the clipboard is blocked here: the text, selected, to copy by hand */}
-          {manual && <Textarea readOnly aria-label="Runout for a Discogs submission" value={runout} ref={manualBox} className="w-full font-mono" />}
-        </div>
+            Open on Discogs ↗
+          </a>
+        )}
+      </div>
+      {bad ? <FieldError match>Not a release number or link</FieldError> : line && <FieldDescription>{line}</FieldDescription>}
+      {!changed && !bad && generalMatch(r.discogsMatch) && (
+        <FieldDescription>This points at a general release of the album. Paste the number of your exact pressing when you know it.</FieldDescription>
       )}
-    </>
+    </Field>
   )
 }

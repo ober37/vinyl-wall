@@ -1,5 +1,6 @@
 // The wall's filter (the counts under the title) and search, as in app/vinyl-wall.html
 import { kindOf, wallOrder, type Rec } from './record'
+import { moreOwned } from './owned'
 
 export const FKEYS = ['own', 'ord', 'p1', 'p2', 'p3'] as const
 export type FKey = (typeof FKEYS)[number]
@@ -17,9 +18,10 @@ export const fold = (t: unknown) =>
     .replace(/[̀-ͯ]/g, '')
     .toLowerCase()
 const words = (q: string) => fold(q).split(/\s+/).filter(Boolean)
-// every typed word must appear in the title, artist, label or year
+// every typed word must appear in the title, artist, label or year, or a label or catalog number of a copy you own (#121)
 const matches = (r: Rec, w: string[]) => {
-  const hay = fold([r.title, r.artist, r.label, r.year].join(' '))
+  const own = kindOf(r) === 'own' ? [r.catalog, ...moreOwned(r).flatMap((c) => [c.label, c.catalog])] : []
+  const hay = fold([r.title, r.artist, r.label, r.year, ...own].join(' '))
   return w.every((x) => hay.includes(x))
 }
 

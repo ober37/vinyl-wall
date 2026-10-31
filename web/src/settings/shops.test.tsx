@@ -10,6 +10,7 @@ import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
 import type { Rec } from '../model/record'
+import { openCopies } from '../sheet/openCopies'
 
 const RECKLESS: Shop = {
   id: 'rk', name: 'Reckless Records', kind: 'local', place: '1532 N Milwaukee Ave, Chicago, IL 60622', phone: '(773) 235-3727',
@@ -323,6 +324,7 @@ describe('shops: a record bought at a show (#117)', () => {
     const { user } = setup({}, { s1: { title: 'Kinda Hard', artist: 'Bilmuri', status: 'own', notes: [], added: 1, shop: booth, paid: '30' } })
     await openRecord(user, 'Kinda Hard')
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     expect(screen.getByText(booth).tagName).toBe('SPAN')
   })
 })
@@ -334,6 +336,7 @@ describe('record sheet: this pressing at a barcode shop (#88)', () => {
   it('links each barcode shop straight to the copy’s pressing', async () => {
     const { user } = setup({ shops: [{ ...SIREN, upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }, ...DEFAULT_SHOPS] }, nevermind())
     await openRecord(user, 'Nevermind')
+    await openCopies(user)
     expect(screen.getByText('Check this pressing at')).toBeTruthy()
     expect(screen.getByRole('link', { name: 'Siren Records ↗' }).getAttribute('href')).toBe('https://sirenrecordsmchenry.com/UPC/720642442517')
   })
@@ -354,6 +357,7 @@ describe('record sheet: the shop it came from', () => {
     const { user } = setup({ shops: [SIREN] }, bought)
     await openRecord(user, 'Ten')
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     const a = screen.getByRole('link', { name: 'Siren Records ↗' })
     expect(a.getAttribute('href')).toBe('https://www.sirenrecordsmchenry.com/products/ten')
     expect(screen.getByRole('link', { name: 'Call Siren Records' }).getAttribute('href')).toBe('tel:8153851122')
@@ -372,6 +376,7 @@ describe('record sheet: the shop it came from', () => {
     const { user } = setup({}, bought)
     await openRecord(user, 'Yield')
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     expect(screen.getByRole('link', { name: "Joe's Records ↗" }).getAttribute('href')).toBe('https://www.discogs.com/seller/joes')
     expect(linkNames()).not.toContain('Discogs Marketplace ↗')
   })
@@ -451,6 +456,7 @@ describe('shops: suggested as you type', () => {
     const { user, fake } = setup({ shops: [SIREN] }, bought)
     await openRecord(user, 'Ten')
     await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await openCopies(user)
     const box = screen.getByRole('combobox', { name: 'Bought from' })
     await user.clear(box)
     await user.type(box, 'sir')
@@ -473,6 +479,7 @@ describe('shops: suggested as you type', () => {
     const { user, fake } = setup({ shops: [SIREN] }, { b4: { ...bought.b1, title: 'No Code', shop: 'Rough Trade', shopUrl: 'https://roughtrade.com/x' } })
     await openRecord(user, 'No Code')
     await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await openCopies(user)
     const box = screen.getByRole('combobox', { name: 'Bought from' })
     await user.clear(box)
     await user.type(box, 'sir')
@@ -496,6 +503,7 @@ describe('shops: suggested as you type', () => {
     const { user } = setup({ shops: [SIREN] }, bought)
     await openRecord(user, 'Vs.')
     await user.click(screen.getByRole('button', { name: 'Edit' }))
+    await openCopies(user)
     const box = screen.getByRole('combobox', { name: 'From' })
     await user.clear(box)
     await user.type(box, 'Merch booth')

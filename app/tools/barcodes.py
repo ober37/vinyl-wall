@@ -6,7 +6,7 @@ Usage: [DISCOGS_TOKEN=...] python3 -I barcodes.py <records_dir> <versions.json> 
 <records_dir> holds one JSON file per record doc as written by ArtifactData list/out_dir (each file {"data": …} or the
 raw doc); versions.json maps doc_id -> its version. A copy's barcodes live with the copy, beside its pressing and
 discogsId: the record's own fields for its first copy (its copy, on a record you have), each entry of moreCopies for
-the rest. They're kept as {"rid": <the release they came from>, "codes": [digits, …]}, so a copy whose release changed
+the rest, and each entry of ownedCopies for the other copies you have (#121). They're kept as {"rid": <the release they came from>, "codes": [digits, …]}, so a copy whose release changed
 (or whose barcodes were moved beside the wrong copy) is read again; a release with none keeps "codes": [] and isn't
 asked again. A release the sync guessed for the record (discogsMatch "master main release" or "vinyl: …", often the
 original pressing, not the one wanted) isn't the copy's pressing: it gets no barcodes, and any saved from it go. At most MAX_RELEASES releases a run; the rest wait for the next one. out.json is a list of batch writes.
@@ -75,7 +75,8 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
         if r.get("deleted") or r.get("example"):
             continue
         more = r.get("moreCopies") if isinstance(r.get("moreCopies"), list) else []
-        copies = [r] + [c for c in more if isinstance(c, dict)]
+        owned = r.get("ownedCopies") if isinstance(r.get("ownedCopies"), list) else []
+        copies = [r] + [c for c in more + owned if isinstance(c, dict)]
         data = {}
         if guessed(r) and "barcodes" in r:
             data["barcodes"] = DEL
@@ -95,6 +96,8 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
             c["barcodes"] = {"rid": rid, "codes": got[rid]}
             if c is r:
                 data["barcodes"] = c["barcodes"]
+            elif any(c is x for x in owned):
+                data["ownedCopies"] = owned
             else:
                 data["moreCopies"] = more
         if data and rid_doc in versions:

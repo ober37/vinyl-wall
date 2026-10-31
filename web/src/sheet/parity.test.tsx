@@ -7,6 +7,7 @@ import { today } from '../model/record'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 type C = Record<string, Record<string, unknown>>
 type Seed = ReturnType<typeof sample>
@@ -346,13 +347,17 @@ describe('moving a record', () => {
 })
 
 describe('edit mode', () => {
-  it('follows the view: why, your copy, then the album; grades in words', async () => {
+  it('follows the view: the record (with its year and runtime), why, then your copy; grades in words', async () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
     await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    const [why, copy, album] = ["Why it's on the wall", 'Your copy', 'About the album'].map((name) => screen.getByRole('group', { name }))
+    await openCopies(user)
+    const [rec, why, copy] = ['The record', "Why it's on the wall", 'Your copy'].map((name) => screen.getByRole('group', { name }))
+    expect(within(rec).getByRole('textbox', { name: /^Year released/ })).toBeTruthy()
+    expect(within(rec).getByRole('textbox', { name: 'Runtime (min)' })).toBeTruthy()
+    expect(rec.compareDocumentPosition(why) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(why.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(copy.compareDocumentPosition(album) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(screen.queryByRole('group', { name: 'About the album' })).toBeNull()
     expect(screen.getByRole('combobox', { name: 'Vinyl' }).textContent).toBe('Near mint (NM)')
     expect(screen.getByRole('combobox', { name: 'Sleeve' }).textContent).toBe('Very good plus (VG+)')
     await user.click(screen.getByRole('combobox', { name: 'Vinyl' }))
@@ -365,11 +370,13 @@ describe('edit mode', () => {
     const { fake, user } = setup()
     await open(user, 'Aja')
     await user.click(btn('Edit'))
+    await openCopies(user)
     const site = screen.getByRole('textbox', { name: 'Shop website' })
     await user.type(site, 'roughtrade.com')
     await user.click(btn('Done'))
     await waitFor(() => expect(fake.records.r5.shopUrl).toBe('https://roughtrade.com/'))
     await user.click(btn('Edit'))
+    await openCopies(user)
     await user.clear(screen.getByRole('textbox', { name: 'Shop website' }))
     await user.type(screen.getByRole('textbox', { name: 'Shop website' }), 'javascript:alert(1)')
     expect(screen.queryByText("Not a web address, so it won't link")).toBeNull()
@@ -398,11 +405,12 @@ describe('Add details now', () => {
     await user.click(within(sheet).getByRole('button', { name: 'I own it' }))
     expect(within(sheet).getByRole('group', { name: 'Your copy' })).toBeTruthy()
     await user.click(within(sheet).getByRole('button', { name: 'On order' }))
-    expect(within(sheet).getByRole('group', { name: 'The order' })).toBeTruthy()
+    // a new order's copy and its Order details start open, to be filled in
+    expect(within(within(sheet).getByRole('group', { name: 'The copy you ordered' })).getByRole('button', { name: /^Order details/ }).getAttribute('aria-expanded')).toBe('true')
     expect(within(sheet).queryByRole('group', { name: 'Your copy' })).toBeNull()
     await user.click(within(sheet).getByRole('button', { name: 'I want it' }))
     expect(within(sheet).getAllByRole('group', { name: 'Priority' }).length).toBeGreaterThan(0)
-    expect(within(sheet).queryByRole('group', { name: 'The order' })).toBeNull()
+    expect(within(sheet).queryByRole('group', { name: 'The copy you ordered' })).toBeNull()
   })
 })
 

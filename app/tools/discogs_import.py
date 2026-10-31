@@ -5,7 +5,8 @@ Usage: DISCOGS_TOKEN=... DISCOGS_USER=... python3 -I discogs_import.py <records_
 
 <records_dir> holds the wall's record docs as written by ArtifactData list/out_dir (each file either
 {"id","data","version"} or the raw doc). Writes <out.json>: a list of DB writes
-[{"op":"set","collection":"records","doc_id","data"}] for NEW records only, then one update to settings/site that marks
+[{"op":"set","collection":"records","doc_id","data"}] for NEW records (and pinned updates adding other copies you have to
+owned records already on the wall, below), then one update to settings/site that marks
 the import done (so the records and that mark land together; the task puts settings/site's current version in place
 of its if_version "SETTINGS_VERSION"), and prints a one-line report.
 
@@ -14,6 +15,13 @@ Rules:
   - Nothing already on the wall is changed. A Discogs item is "already on the wall" if a record has the
     same release id (discogsId or discogsSync.rid) or the same artist + title (ignoring case, punctuation,
     "The", and Discogs' "(2)"/"*" suffixes). A release in both the collection and the wantlist is imported once, as owned.
+  - Several collection items of one album (two pressings, or two copies of one) make one owned record: the first is
+    the record's own copy, the others its other copies you have (ownedCopies, #121), each with its grades, date and
+    what its notes give back, its item listed in discogsSync.ownedInsts as adopted so the sync manages it.
+  - The one change to a record already on the wall: a collection item of an album it owns, that no record keeps
+    (discogsSync.instanceId or ownedInsts), joins it the same way, as another copy you have. Only records already
+    linked to a collection item (discogsSync.instanceId) gain them, so a record's own copy is never added twice; an
+    earlier import skipped these, so a re-run brings them in, and a second re-run adds nothing.
   - Several wantlist releases of one album make one record: the first is the record's own pressing, the others become
     its more copies (moreCopies, each with its release id, listed in discogsSync.copyRids so the sync manages them).
     An album in the collection keeps its wantlist pressings as copies it still wants. An album already on the wall
@@ -176,6 +184,19 @@ def now():
     return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
 
 
+def load_docs(dirpath):
+    """The wall's record docs as (doc_id, version, data)."""
+    docs = []
+    for f in sorted(glob.glob(os.path.join(dirpath, "**", "*.json"), recursive=True)):
+        with open(f) as fh:
+            j = json.load(fh)
+        if isinstance(j.get("data"), dict):
+            docs.append((j.get("id") or os.path.basename(f)[:-5], j.get("version"), j["data"]))
+        else:
+            docs.append((os.path.basename(f)[:-5], None, j))
+    return docs
+
+
 def load(dirpath):
     docs = []
     for f in sorted(glob.glob(os.path.join(dirpath, "**", "*.json"), recursive=True)):
@@ -199,10 +220,36 @@ def base_record(bi, status, ms):
     return rec
 
 
+def owned_copy(it, bi):
+    """A collection item of an album already made in this run, as one of its other copies (ownedCopies)."""
+    lab = (bi.get("labels") or [{}])[0]
+    fields = {f.get("field_id"): f.get("value") for f in it.get("notes") or []}
+    c = {"name": "", "pressing": pressing_of(bi), "label": clean_name(lab.get("name")),
+         "catalog": "" if (lab.get("catno") or "").lower() == "none" else (lab.get("catno") or ""), "matrix": "",
+         "discogsId": bi["id"], "mediaGrade": GRADE_BACK.get(fields.get(1), ""), "sleeveGrade": GRADE_BACK.get(fields.get(2), ""),
+         "paid": "", "shop": "", "shopUrl": "", "acquired": (it.get("date_added") or "")[:10]}
+    back = read_coll((fields.get(3) or "").strip())
+    back.pop("why", None)  # the album's, already on the record
+    c.update(back)
+    return c
+
+
 def main():
     src, dst = sys.argv[1], sys.argv[2]
     user = os.environ["DISCOGS_USER"]
-    wall = load(src)
+    docs = load_docs(src)
+    wall = [d for _, _, d in docs]
+    # the collection items records keep, and the owned records linked to one, by album: another copy of theirs joins them
+    kept, mine = set(), {}
+    for doc_id, ver, d in docs:
+        s = d.get("discogsSync") if isinstance(d.get("discogsSync"), dict) else {}
+        if s.get("instanceId"):
+            kept.add(s["instanceId"])
+        kept.update(x.get("instanceId") for x in s.get("ownedInsts") or [] if isinstance(x, dict))
+        if (d.get("status") or "own") == "own" and not d.get("deleted") and s.get("instanceId") and ver:
+            mine.setdefault((norm(d.get("artist")), norm(d.get("title"))), (doc_id, ver, d))
+    kept.discard(None)
+    joined = {}  # doc_id -> (version, ownedCopies, ownedInsts) for records already on the wall gaining copies
     ids, keys = set(), set()
     for d in wall:
         for v in (d.get("discogsId"), (d.get("discogsSync") or {}).get("rid")):
@@ -216,7 +263,7 @@ def main():
     coll = pages(f"/users/{urllib.parse.quote(user)}/collection/folders/0/releases", "releases")
     wants = pages(f"/users/{urllib.parse.quote(user)}/wants", "wants")
 
-    writes, seen, n_own, n_want, skipped, n_copies = [], set(), 0, 0, 0, 0
+    writes, seen, n_own, n_want, skipped, n_copies, n_owned_more = [], set(), 0, 0, 0, 0, 0
     hunts = {}  # (artist, title) -> the record made in this run, for the album's other wantlist pressings
     ms = int(time.time() * 1000)
 
@@ -226,6 +273,24 @@ def main():
     for it in coll:
         bi = it.get("basic_information") or {}
         if not bi.get("id"):
+            continue
+        key = (norm(artist_of(bi)), norm(bi.get("title")))
+        if it.get("instance_id") in kept:  # a record keeps it already
+            skipped += 1
+            continue
+        if key in mine:  # another copy of an album the wall owns, that an earlier import skipped
+            doc_id, ver, d = mine[key]
+            j = joined.setdefault(doc_id, (ver, [c for c in d.get("ownedCopies") or [] if isinstance(c, dict)],
+                                           [x for x in (d.get("discogsSync") or {}).get("ownedInsts") or [] if isinstance(x, dict)]))
+            j[1].append(owned_copy(it, bi))
+            j[2].append({"rid": bi["id"], "instanceId": it.get("instance_id"), "adopted": True})
+            kept.add(it.get("instance_id")); n_owned_more += 1
+            continue
+        if key in hunts:  # another copy of an album made owned in this run
+            hunts[key].setdefault("ownedCopies", []).append(owned_copy(it, bi))
+            hunts[key]["discogsSync"].setdefault("ownedInsts", []).append(
+                {"rid": bi["id"], "instanceId": it.get("instance_id"), "adopted": True})
+            seen.add(bi["id"]); n_owned_more += 1
             continue
         if already(bi):
             skipped += 1
@@ -271,8 +336,13 @@ def main():
         seen.add(bi["id"]); keys.add((norm(rec["artist"]), norm(rec["title"]))); n_want += 1
         hunts[key] = rec
 
+    for doc_id, (ver, copies, insts) in joined.items():
+        writes.append({"op": "update", "collection": "records", "doc_id": doc_id, "if_version": ver,
+                       "data": {"ownedCopies": copies, "discogsSync": {"ownedInsts": insts}}})
     capped = " (stopped at 1000 items)" if len(coll) >= MAX_ITEMS or len(wants) >= MAX_ITEMS else ""
     more = (f"; {n_copies} more pressings became copies" if n_copies != 1 else "; 1 more pressing became a copy") if n_copies else ""
+    if n_owned_more:
+        more += f"; {n_owned_more} more copies you have joined their albums" if n_owned_more != 1 else "; 1 more copy you have joined its album"
     report = f"Imported {n_own + n_want} records ({n_own} owned, {n_want} wanted){more}; {skipped} skipped as already on the wall{capped}."
     DEL = {"__delete__": True}
     writes.append({"op": "update", "collection": "settings", "doc_id": "site", "if_version": "SETTINGS_VERSION", "data": {"run": {"beatMs": int(time.time() * 1000)}, "discogs": {
