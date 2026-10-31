@@ -99,7 +99,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
               </div>
               <Field>
                 <FieldLabel>About</FieldLabel>
-                <Textarea rows={2} maxLength={400} value={d.about} onChange={(e) => set('about', e.target.value)} />
+                <Textarea className="field-sizing-content max-h-80" rows={2} maxLength={400} value={d.about} onChange={(e) => set('about', e.target.value)} />
               </Field>
             </>
           )}

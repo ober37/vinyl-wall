@@ -156,9 +156,11 @@ export type Play = {
 export type PlayMonth = { month: string; name: string; plays: Play[]; min: number }
 
 // the play history, newest first, grouped by month
-export function playMonths(r: Rec): PlayMonth[] {
-  const T = recordTracks(r)
-  const title = (p: unknown) => T.find((t) => t.pos === p)?.title || String(p)
+// copies: an owned record's copies by name, when it has several (#138); a play logged on one names it, and its tracks are
+// that copy's
+export function playMonths(r: Rec, copies: [string, Rec][] = []): PlayMonth[] {
+  const tracksOf = (n: Note) => recordTracks(copies.find(([name]) => name === n.copy)?.[1] ?? r)
+  const title = (n: Note, p: unknown) => tracksOf(n).find((t) => t.pos === p)?.title || String(p)
   const rows = noteList(r)
     .map((n, i) => ({ n, i }))
     .filter((x) => isPlay(x.n))
@@ -184,13 +186,13 @@ export function playMonths(r: Rec): PlayMonth[] {
         ? n.side
           ? 'Side ' + n.side
           : 'One side'
-        : `${cnt} track${cnt === 1 ? '' : 's'}${tp.length ? ' · ' + tp.slice(0, 2).map(title).join(', ') + (tp.length > 2 ? ` +${tp.length - 2}` : '') : ''}`
+        : `${cnt} track${cnt === 1 ? '' : 's'}${tp.length ? ' · ' + tp.slice(0, 2).map((p) => title(n, p)).join(', ') + (tp.length > 2 ? ` +${tp.length - 2}` : '') : ''}`
     const play: Play = {
       key: i,
       ref: { i, d: n.d, t: n.t },
       day: d,
       date: d ? playDate(d) : '',
-      what,
+      what: copies.length > 1 && typeof n.copy === 'string' && n.copy ? what + ' · ' + n.copy : what,
       icon: whole ? '●' : side ? '◐' : '◔',
       setup: on?.[1] || '',
       min: +m[3] || 0,

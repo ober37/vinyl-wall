@@ -36,7 +36,7 @@ function BuyLinks({ c, on }: { c: Copy; on: (v: string) => void }) {
           on(e.target.value)
         }}
         onBlur={() => setLeft(true)}
-        className="field-sizing-content"
+        className="field-sizing-content max-h-80"
         autoCapitalize="off"
         autoComplete="off"
         placeholder="One link per line, e.g. https://www.roughtrade.com/…"
@@ -83,7 +83,7 @@ function CopyFields({ c, ph, on, auto, focus, links, discogs }: {
       </Field>
       <Field className="sm:col-span-2">
         <FieldLabel>Pressing</FieldLabel>
-        <Textarea rows={2} value={c.pressing} onChange={(e) => on('pressing', e.target.value)} placeholder={ph.pressing} />
+        <Textarea className="field-sizing-content max-h-80" rows={2} value={c.pressing} onChange={(e) => on('pressing', e.target.value)} placeholder={ph.pressing} />
       </Field>
       {text('label', 'Label')}
       {text('catalog', 'Catalog no.', true)}
@@ -99,8 +99,9 @@ function CopyFields({ c, ph, on, auto, focus, links, discogs }: {
   )
 }
 
-// a copy's own fields as the record's (its barcodes aren't edited: a copy moved into first place has its own read again)
-const FLAT: Record<Exclude<keyof Copy, 'barcodes'>, keyof Form> = {
+// a copy's own fields as the record's (its barcodes and tracklist aren't edited: a copy moved into first place has its own
+// read again, and the album's tracklist is the first copy's)
+const FLAT: Record<Exclude<keyof Copy, 'barcodes' | 'releaseTracks'>, keyof Form> = {
   name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', budget: 'budget', discogsId: 'discogsId', buyLinks: 'buyLinks', releaseDate: 'releaseDate',
   ...(Object.fromEntries(ORDER_KEYS.map((k) => [k, k])) as Record<(typeof ORDER_KEYS)[number], keyof Form>),
 }
@@ -110,7 +111,7 @@ export const firstOf = (f: Form): Copy => ({
   releaseDate: f.releaseDate ?? '',
 })
 const asFlat = (c: Copy): Partial<Form> =>
-  Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'barcodes').map(([k, v]) => [FLAT[k as keyof typeof FLAT], v]))
+  Object.fromEntries(Object.entries(c).filter(([k]) => k !== 'barcodes' && k !== 'releaseTracks').map(([k, v]) => [FLAT[k as keyof typeof FLAT], v]))
 
 // Edit mode's copies, as production's edit form has them. A hunt's copies are one group, the first in the record's own
 // fields; an ordered record's first copy is the one ordered, and the copies on order (#139) follow it (on an owned record
@@ -160,7 +161,7 @@ export function CopiesEdit({ form, kind, change, isNew, auto, focusCopy, r, disc
 
   // the links box's text is kept a line each, blank lines too, so typing a new line works
   const val = (k: keyof Copy, v: string) => (k === 'buyLinks' ? v.split('\n') : v)
-  const setFirst = (k: keyof Copy, v: string) => k !== 'barcodes' && change({ [FLAT[k]]: val(k, v) })
+  const setFirst = (k: keyof Copy, v: string) => k !== 'barcodes' && k !== 'releaseTracks' && change({ [FLAT[k]]: val(k, v) })
   const setMore = (i: number, k: keyof Copy, v: string) => change({ moreCopies: more.map((c, j) => (j === i - 1 ? { ...c, [k]: val(k, v) } : c)) })
   const add = () => {
     const k = Math.max(...keys) + 1

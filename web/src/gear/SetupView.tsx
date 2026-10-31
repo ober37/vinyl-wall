@@ -49,6 +49,7 @@ export function SetupView({ x, onStatus, onGone }: { x: Setup; onStatus: (s: str
         <Field>
           <FieldLabel>Notes</FieldLabel>
           <Textarea
+            className="field-sizing-content max-h-80"
             rows={3}
             value={note}
             placeholder="Where it lives, what's connected to what…"

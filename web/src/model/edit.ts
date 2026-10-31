@@ -118,6 +118,7 @@ export function stored(f: Form): Record<string, unknown> {
       buyLinks: tidyLinks(c.buyLinks),
       releaseDate: c.releaseDate,
       ...(c.barcodes ? { barcodes: c.barcodes } : {}),
+      ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
       // a copy on order keeps its order (#139), stored as the record's own is
       ...(c.orderStatus
         ? {
@@ -129,7 +130,8 @@ export function stored(f: Form): Record<string, unknown> {
     }))
   if (f.ownedCopies)
     o.ownedCopies = f.ownedCopies.map((c) => {
-      const t = Object.fromEntries(Object.entries(c).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]))
+      // (a runtime only when one's typed: blank is its release's or the album's, #138)
+      const t = Object.fromEntries(Object.entries(c).filter(([k, v]) => k !== 'runtime' || String(v).trim()).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]))
       return { ...t, paid: c.paid.trim().replace(/^\$\s*/, ''), shopUrl: shopHref(c.shopUrl.trim()) || c.shopUrl.trim() }
     })
   const n = parseInt(f.runtime, 10)

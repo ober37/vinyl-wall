@@ -5,7 +5,7 @@ import { movePatch } from './status'
 import type { Rec } from './record'
 
 // several owned pressings on one record (#121)
-const stereo = { name: 'Stereo', pressing: '1966 stereo', label: '', catalog: 'BST 81577', matrix: '', discogsId: 31, mediaGrade: 'NM', sleeveGrade: '', paid: '35', shop: '', shopUrl: '', acquired: '2023-01-02' }
+const stereo = { name: 'Stereo', pressing: '1966 stereo', label: '', catalog: 'BST 81577', matrix: '', discogsId: 31, mediaGrade: 'NM', sleeveGrade: '', paid: '35', shop: '', shopUrl: '', acquired: '2023-01-02', runtime: '' }
 const rec: Rec = { id: 'r', title: 'Blue Train', artist: 'John Coltrane', status: 'own', discogsId: 30, pressing: '1957 mono', ownedCopies: [stereo, 'junk', null] }
 
 describe('owned copies', () => {
