@@ -1,19 +1,9 @@
-import { playDate, runParts, type Rec } from './record'
+import { runParts, type Rec } from './record'
 
 // discogsMatch values the background task's matcher writes (app/tools/discogs_sync.py): a release matched for you,
 // not one you chose. dev/test_discogs.py checks this list covers every value the matcher writes.
 // prettier-ignore
 export const AUTO_MATCH = ["master main release", "vinyl: master main release", "vinyl: earliest original pressing", "vinyl: first matching release", "catalog", "catalog+pressing"]
-
-// what the matcher's choice reads as on the release line
-export const MATCH_TEXT: Record<string, string> = {
-  'master main release': 'master release',
-  'vinyl: master main release': 'master release',
-  'vinyl: earliest original pressing': 'earliest original pressing',
-  'vinyl: first matching release': 'first matching release',
-  catalog: 'catalog number',
-  'catalog+pressing': 'catalog number and pressing',
-}
 
 // a release number, or a pasted Discogs release link: the number, "" for nothing, null for anything else
 export function releaseOf(v: string): number | '' | null {
@@ -24,34 +14,21 @@ export function releaseOf(v: string): number | '' | null {
   return n > 0 ? n : null
 }
 
-// the task's "2026-10-24 18:02 UTC" as a local day: "Oct 24", with the year when it isn't this one
-export function syncDay(at: unknown): string {
-  const t = new Date(String(at || '').replace(' UTC', 'Z').replace(' ', 'T'))
-  if (isNaN(+t)) return String(at || '')
-  return playDate(new Date(t.getTime() - t.getTimezoneOffset() * 6e4).toISOString().slice(0, 10))
-}
-
 export type Sync = { state?: string; at?: string; where?: string; msg?: string }
-function syncState(r: Rec, changed: boolean): string {
+// what went wrong with the last sync, for the sheet's status line (#121): nothing while Discogs isn't connected or an edit
+// waits to sync, so an old failure doesn't linger. A failure doesn't say why: the task's message is for Claude, not the
+// person, who can only try again
+export const SYNC_FAILED = 'Sync failed'
+export function syncProblem(r: Rec, discogsOn: boolean): string {
   const s = (r.discogsSync || {}) as Sync
-  if (changed || r.needsSync) return 'Waiting to sync…'
-  if (s.state === 'synced') return `Synced to your ${s.where === 'collection' ? 'collection' : 'wantlist'} · ${syncDay(s.at)}`
-  if (s.state === 'no-match') return String(s.msg || 'No match found on Discogs')
-  if (s.state === 'error') return 'Sync failed: ' + (s.msg || '')
-  return 'Not synced yet'
-}
-// the release line under the number (production's discogsHTML): waiting, synced, no match or failed, and how it was matched
-export function syncLine(r: Rec, changed: boolean): string {
-  const m = changed ? '' : String(r.discogsMatch || '')
-  return syncState(r, changed) + (m ? ' · ' + (MATCH_TEXT[m] ? `Matched automatically (${MATCH_TEXT[m]})` : m) : '')
+  if (!discogsOn || r.needsSync) return ''
+  if (s.state === 'no-match') return 'No vinyl pressing found on Discogs'
+  if (s.state === 'error') return SYNC_FAILED
+  return ''
 }
 
 // the matcher picked a general release, not a pressing
 export const generalMatch = (m: unknown) => /master|first/.test(String(m || ''))
-
-// what Copy runout puts on the clipboard for a Discogs submission (production's runoutText)
-export const runoutText = (matrix: string, pressing: string, catalog: string) =>
-  `Matrix / Runout: ${matrix}\n(Observed on my copy: ${[pressing, catalog].filter(Boolean).join(', ')}.)`
 
 // a runout as rows by side: "Side A: x · Side B: y", or unlabelled parts given the next letter not taken
 export function runSides(m: unknown): { side: string; v: string }[] {

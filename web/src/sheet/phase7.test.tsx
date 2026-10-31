@@ -6,6 +6,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 type C = Record<string, Record<string, unknown>>
 // the wall's filter is remembered in this browser; one test's filter isn't the next one's
@@ -50,6 +51,7 @@ const open = async (user: User, title: string) => {
 const about = async (user: User, title: string) => {
   await open(user, title)
   await user.click(screen.getByRole('tab', { name: 'About' }))
+  await openCopies(user)
   return screen.getByRole('tabpanel')
 }
 const section = (panel: HTMLElement, name: string) => within(panel).getByRole('group', { name })
@@ -123,27 +125,6 @@ describe('the About tab', () => {
     await user.click(within(s).getByRole('button', { name: /2 sides · Cat\. AAPJ 8163-45/ }))
     expect(within(s).getByText('Side A: AAPJ 8163-45 A')).toBeTruthy()
     expect(links(s)).toEqual(['Your pressing ↗', 'What it sells for ↗', 'Other pressings ↗'])
-  })
-})
-
-describe('Copy runout for a Discogs submission', () => {
-  it('needs only a runout, and selects the text when the clipboard is blocked', async () => {
-    const { user } = setup((s) => Object.assign(s.records.r1, { discogsId: '' }))
-    vi.spyOn(navigator.clipboard, 'writeText').mockRejectedValue(new Error('blocked'))
-    await open(user, 'Kind of Blue')
-    await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
-    await user.click(screen.getByRole('button', { name: 'Copy runout for a Discogs submission' }))
-    const box = (await screen.findByRole('textbox', { name: 'Runout for a Discogs submission' })) as HTMLTextAreaElement
-    expect(box.value).toMatch(/^Matrix \/ Runout: Side A: AAPJ 8163-45 A/)
-    expect(screen.getByText("Selected: copy it with your device's copy command")).toBeTruthy()
-    expect(document.activeElement).toBe(box)
-    // it follows what's typed, and leaves the cursor where it's typed
-    const b = screen.getByRole('textbox', { name: 'Side B' })
-    await user.clear(b)
-    await user.type(b, 'NEW')
-    expect(box.value).toMatch(/Side B: NEW/)
-    expect(document.activeElement).toBe(b)
-    vi.restoreAllMocks()
   })
 })
 

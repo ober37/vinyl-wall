@@ -5,6 +5,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 type Opts = Parameters<typeof fakeClaude>[1]
 function setup(opts: Opts = {}) {
@@ -123,7 +124,7 @@ describe('the new-record sheet', () => {
     const sheet = await startAdding(user)
     await user.click(within(sheet).getByRole('button', { name: 'I own it' }))
     await user.click(within(sheet).getByRole('button', { name: 'Add details now' }))
-    await user.type(within(sheet).getByRole('textbox', { name: 'Year' }), '1977')
+    await user.type(within(sheet).getByRole('textbox', { name: 'Year released' }), '1977')
     await user.type(within(sheet).getByRole('textbox', { name: 'Label' }), 'Warner Bros.')
     await user.upload(within(sheet).getByLabelText('Upload cover'), new File(['x'], 'cover.png', { type: 'image/png' }))
     expect(await within(sheet).findByText("Cover ready. It'll hang with the record.")).toBeTruthy()
@@ -245,6 +246,7 @@ describe('edit mode', () => {
     await user.click(await screen.findByRole('button', { name: /Open Kind of Blue/ }))
     // the sheet's own Edit comes first (play rows have Edit buttons too)
     await user.click((await screen.findAllByRole('button', { name: 'Edit' }))[0])
+    await openCopies(user)
     expect(screen.getAllByText('auto-filled')).toHaveLength(2)
   })
 })

@@ -114,7 +114,7 @@ describe('Import from a file', () => {
     await choose(user, fileOf({ hello: 1 }, 'notes.json'))
     expect(await within(view).findByText("This file wasn't made by Export on a Vinyl Wall.")).toBeTruthy()
     expect(within(view).getByRole('button', { name: 'Choose a file' })).toBeTruthy()
-    await choose(user, fileOf({ vinylWall: 2, records: {} }))
+    await choose(user, fileOf({ vinylWall: 3, records: {} }))
     expect(await within(view).findByText(/made by a newer Vinyl Wall/)).toBeTruthy()
     await choose(user, fileOf({ vinylWall: 1, records: { y: { title: 'Kind of Blue', artist: 'Miles Davis' } } }))
     expect(await within(view).findByText('Everything in this file is already on the wall.')).toBeTruthy()

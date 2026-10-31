@@ -70,7 +70,7 @@ calls = []
 
 
 def fake_call(method, path, params=None, body=None, ok404=False):
-    calls.append((method, path, (body or {}).get("notes")))
+    calls.append((method, path, (body or {}).get("notes", (body or {}).get("value"))))
     return {"instance_id": 77} if method == "POST" and "/collection/" in path and "/collection/folders/1/releases/" in path else {}
 
 
@@ -146,6 +146,136 @@ check("import: an owned copy's note fills its fields and isn't kept as a note",
 check("import: an order comes back as an order", got["dg-21"]["status"] == "ordered" and got["dg-21"]["orderStatus"] == "shipped", got["dg-21"])
 check("import: any other note stays a note", got["dg-22"]["priority"] == 2 and "Got this from Bob" in got["dg-22"]["notes"][0]["t"], got["dg-22"])
 check("notes in other shapes aren't read", I.read_want("Got this from Bob") == {} and I.read_coll("Signed copy") == {})
+
+# --- several owned copies on one record (#121)
+graded = lambda r, inst, note="": {**r, "instance_id": inst, "date_added": "2024-02-03T10:00:00-08:00",
+                                   "notes": [{"field_id": 1, "value": "Near Mint (NM or M-)"}, {"field_id": 3, "value": note}]}
+coll = [graded(rel(30, "Blue Train", "John Coltrane", "Blue Note", "BLP 1577"), 300),
+        graded(rel(31, "Blue Train", "John Coltrane", "Blue Note", "BST 81577"), 310, S.coll_notes({"shop": "Amoeba", "paid": "35", "why": "x"})),
+        graded(rel(30, "Blue Train", "John Coltrane", "Blue Note", "BLP 1577"), 301)]
+wants = []
+sys.argv = ["x", os.path.join(tmp, "empty"), os.path.join(tmp, "owned.json")]
+I.main()
+ow = json.load(open(os.path.join(tmp, "owned.json")))
+got = {w["doc_id"]: w["data"] for w in ow if w["collection"] == "records"}
+bt = got.get("dg-30", {})
+check("import: two pressings and a second copy of one album make one owned record", set(got) == {"dg-30"}, sorted(got))
+check("import: the other copies are its ownedCopies, with release, grade, date and notes",
+      [(c["discogsId"], c["mediaGrade"], c["acquired"], c["shop"], c["paid"]) for c in bt.get("ownedCopies", [])]
+      == [(31, "NM", "2024-02-03", "Amoeba", "35"), (30, "NM", "2024-02-03", "", "")] and "why" not in bt["ownedCopies"][0], bt.get("ownedCopies"))
+check("import: the sync is told about their items, adopted",
+      bt.get("discogsSync", {}).get("ownedInsts") == [{"rid": 31, "instanceId": 310, "adopted": True}, {"rid": 30, "instanceId": 301, "adopted": True}],
+      bt.get("discogsSync"))
+check("import: the report counts them", "2 more copies you have joined their albums" in ow[-1]["data"]["discogs"]["importMsg"], ow[-1])
+
+# an earlier import skipped another copy of an album already on the wall: a re-run adds it to that record, once
+os.makedirs(os.path.join(tmp, "had"))
+with open(os.path.join(tmp, "had", "bt.json"), "w") as fh:
+    json.dump({"id": "bt", "version": 7, "data": {"title": "Blue Train", "artist": "John Coltrane", "status": "own", "discogsId": 30,
+                                                  "discogsSync": {"rid": 30, "instanceId": 300, "adopted": True}}}, fh)
+with open(os.path.join(tmp, "had", "typed.json"), "w") as fh:  # typed on the wall, never linked to a collection item
+    json.dump({"id": "typed", "version": 2, "data": {"title": "Giant Steps", "artist": "John Coltrane", "status": "own"}}, fh)
+coll = [graded(rel(30, "Blue Train", "John Coltrane"), 300), graded(rel(31, "Blue Train", "John Coltrane"), 310),
+        graded(rel(50, "Giant Steps", "John Coltrane"), 500)]
+wants = []
+sys.argv = ["x", os.path.join(tmp, "had"), os.path.join(tmp, "rerun.json")]
+I.main()
+rw = json.load(open(os.path.join(tmp, "rerun.json")))
+upd = [w for w in rw if w["collection"] == "records"]
+check("re-import: the skipped copy joins the record already on the wall, pinned, and nothing else changes",
+      [(w["op"], w["doc_id"], w.get("if_version")) for w in upd] == [("update", "bt", 7)]
+      and [c["discogsId"] for c in upd[0]["data"]["ownedCopies"]] == [31]
+      and upd[0]["data"]["discogsSync"] == {"ownedInsts": [{"rid": 31, "instanceId": 310, "adopted": True}]}, upd)
+check("re-import: a record never linked to a collection item gains nothing (its own copy may be that item)",
+      not any(w["doc_id"] == "typed" for w in upd), upd)
+with open(os.path.join(tmp, "had", "bt.json"), "w") as fh:
+    json.dump({"id": "bt", "version": 8, "data": {"title": "Blue Train", "artist": "John Coltrane", "status": "own", "discogsId": 30,
+                                                  "ownedCopies": upd[0]["data"]["ownedCopies"],
+                                                  "discogsSync": {"rid": 30, "instanceId": 300, "adopted": True, **upd[0]["data"]["discogsSync"]}}}, fh)
+I.main()
+rw = json.load(open(os.path.join(tmp, "rerun.json")))
+check("re-import: a second re-run adds nothing", not any(w["doc_id"] == "bt" for w in rw), rw)
+
+insts = {}
+S.instances = lambda rid: insts.get(rid, [])
+calls.clear()
+mine = {"title": "Blue Train", "artist": "John Coltrane", "status": "own", "discogsId": 30, "why": "Lee Morgan!",
+        "ownedCopies": [{"name": "Stereo", "pressing": "1966 stereo", "discogsId": 31, "mediaGrade": "VG+", "shop": "Amoeba", "paid": "35"},
+                        {"name": "Typed", "pressing": "no release"}]}
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300}
+insts[30] = [{"instance_id": 300, "folder_id": 1}]
+S.sync_one(mine, set(), sync)
+check("sync: another copy you have goes in the collection with its grade and notes",
+      ("POST", "/users/u/collection/folders/1/releases/31", None) in calls
+      and ("POST", "/users/u/collection/folders/1/releases/31/instances/77/fields/3", "Pressing: 1966 stereo\nBought: Amoeba $35\nLee Morgan!") in calls
+      and any(c[1].endswith("/31/instances/77/fields/1") for c in calls), calls)
+check("sync: ownedInsts remembers it; a copy with no release isn't guessed",
+      sync.get("ownedInsts") == [{"rid": 31, "instanceId": 77, "adopted": False}] and sum(c[0] == "GET" for c in calls) == 0, sync)
+
+calls.clear()
+insts[31] = [{"instance_id": 77, "folder_id": 1}]
+S.sync_one(mine, set(), sync)
+check("sync: a second run edits the same item, adds none", not any(c[1] == "/users/u/collection/folders/1/releases/31" for c in calls), calls)
+
+calls.clear()
+S.sync_one({**mine, "ownedCopies": []}, set(), sync)
+check("sync: a removed copy's item comes off the collection",
+      ("DELETE", "/users/u/collection/folders/1/releases/31/instances/77", None) in calls and "ownedInsts" not in sync, calls)
+
+calls.clear()
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "ownedInsts": [{"rid": 31, "instanceId": 310, "adopted": True}]}
+insts[31] = [{"instance_id": 310, "folder_id": 1}]
+S.sync_one({**mine, "ownedCopies": []}, set(), sync)
+check("sync: a copy's item that was already in the collection is never deleted", not any(c[0] == "DELETE" for c in calls), calls)
+
+# two copies of one release, one's item deleted on Discogs: the other keeps its own, and the first gets a new one
+calls.clear()
+two = {**mine, "ownedCopies": [{"name": "B", "discogsId": 5}, {"name": "C", "discogsId": 5}]}
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300,
+        "ownedInsts": [{"rid": 5, "instanceId": 2, "adopted": False}, {"rid": 5, "instanceId": 3, "adopted": False}]}
+insts[5] = [{"instance_id": 3, "folder_id": 1}]
+S.sync_one(two, set(), sync)
+check("sync: a copy whose item went never takes another copy's, and nothing it keeps comes off",
+      sorted(x["instanceId"] for x in sync["ownedInsts"]) == [3, 77] and not any(c[0] == "DELETE" and "/instances/3" in c[1] for c in calls), (sync, calls))
+
+# the first copy's release set to one another copy's item stands for: it gets an item of its own
+calls.clear()
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "ownedInsts": [{"rid": 31, "instanceId": 77, "adopted": False}]}
+insts[31] = [{"instance_id": 77, "folder_id": 1}]
+S.sync_one({**mine, "discogsId": 31, "ownedCopies": [{"name": "Stereo", "discogsId": 31}]}, set(), sync)
+check("sync: the first copy never shares an item with another copy",
+      ("POST", "/users/u/collection/folders/1/releases/31", None) in calls and [x["instanceId"] for x in sync["ownedInsts"]] == [77], (sync, calls))
+
+# a call failing after a new item was made: the item is already recorded, so the error keeps it known
+def failing(method, path, params=None, body=None, ok404=False):
+    if path.endswith("/fields/3") and "/releases/9/" in path:
+        raise RuntimeError("POST -> 500")
+    return fake_call(method, path, params, body, ok404)
+S.call = failing
+insts[9] = []
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300}
+try:
+    S.sync_one({**mine, "ownedCopies": [{"name": "New", "discogsId": 9}]}, set(), sync)
+except RuntimeError:
+    pass
+S.call = fake_call
+check("sync: a new item is recorded before a later call fails", sync.get("ownedInsts") == [{"rid": 9, "instanceId": 77, "adopted": False}], sync)
+
+# the first copy removed: the next moves into the record's fields, and its item becomes the record's
+calls.clear()
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "ownedInsts": [{"rid": 31, "instanceId": 77, "adopted": False}]}
+insts[31] = [{"instance_id": 77, "folder_id": 1}]
+S.sync_one({**mine, "discogsId": 31, "ownedCopies": []}, set(), sync)
+check("sync: the copy moved into first place keeps its item",
+      sync.get("instanceId") == 77 and "ownedInsts" not in sync and not any(c[1] == "/users/u/collection/folders/1/releases/31" for c in calls)
+      and not any(c[0] == "DELETE" and "/31/" in c[1] for c in calls), (sync, calls))
+check("sync: the removed first copy's item comes off", ("DELETE", "/users/u/collection/folders/1/releases/30/instances/300", None) in calls, calls)
+
+calls.clear()
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "ownedInsts": [{"rid": 31, "instanceId": 77, "adopted": False}]}
+S.sync_one({**mine, "status": "wish"}, set(), sync)
+check("sync: back on the hunt, the other copies' items come off", ("DELETE", "/users/u/collection/folders/1/releases/31/instances/77", None) in calls
+      and "ownedInsts" not in sync, calls)
 
 # --- sync: a run with a lot to sync stops starting records after its budget, and says how many wait
 for i in range(3):

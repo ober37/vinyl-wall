@@ -1,6 +1,7 @@
 // The edit form's fields and the patch they write. Mirrors collect()/schedule()/write() in app/vinyl-wall.html:
 // only fields the form owns, only when they changed, in production's stored shapes.
 import { wantCopies, type Copy } from './copies'
+import { moreOwned, type OwnCopy } from './owned'
 import { kindOf, orderStatusOf, pressingText, shopHref, type Rec } from './record'
 import { RELOOK_ABOUT } from './task'
 
@@ -41,12 +42,14 @@ export type Form = {
   orderNotes?: string
   // every kind: the copies after the first (on owned and ordered records, the ones still wanted)
   moreCopies?: Copy[]
+  // owned records: the copies you own after the first (#121)
+  ownedCopies?: OwnCopy[]
 }
 
 // fields whose changes Discogs sync pushes (production's SYNCED)
 const SYNCED = new Set([
   'title', 'artist', 'status', 'pressing', 'matrix', 'shop', 'acquired', 'paid', 'why', 'mediaGrade', 'sleeveGrade', 'priority',
-  'budget', 'copyName', 'moreCopies', 'orderDate', 'orderStatus', 'eta', 'discogsId', 'deleted',
+  'budget', 'copyName', 'moreCopies', 'ownedCopies', 'orderDate', 'orderStatus', 'eta', 'discogsId', 'deleted',
 ])
 // every write goes through this: a synced field changed means the background task pushes it to Discogs, and a release
 // written without saying how it was matched is the person's own choice, not the matcher's ("set by you", so the release
@@ -84,6 +87,7 @@ export function toForm(r: Rec): Form {
   if (k === 'wish') Object.assign(f, { priority: String(r.priority == 1 ? 1 : r.priority == 3 ? 3 : 2), buyLinks: c0.buyLinks, releaseDate: c0.releaseDate })
   if (k === 'own')
     Object.assign(f, {
+      copyName: s(r.copyName),
       label: s(r.label),
       catalog: s(r.catalog),
       pressing: pressingText(r),
@@ -95,6 +99,7 @@ export function toForm(r: Rec): Form {
       sleeveGrade: s(r.sleeveGrade),
       matrix: s(r.matrix),
       discogsId: c0.discogsId,
+      ownedCopies: moreOwned(r),
     })
   return f
 }
@@ -114,6 +119,11 @@ export function stored(f: Form): Record<string, unknown> {
       releaseDate: c.releaseDate,
       ...(c.barcodes ? { barcodes: c.barcodes } : {}),
     }))
+  if (f.ownedCopies)
+    o.ownedCopies = f.ownedCopies.map((c) => {
+      const t = Object.fromEntries(Object.entries(c).map(([k, v]) => [k, typeof v === 'string' ? v.trim() : v]))
+      return { ...t, paid: c.paid.trim().replace(/^\$\s*/, ''), shopUrl: shopHref(c.shopUrl.trim()) || c.shopUrl.trim() }
+    })
   const n = parseInt(f.runtime, 10)
   o.runtime = isNaN(n) ? '' : n
   if (f.paid !== undefined) o.paid = f.paid.trim().replace(/^\$\s*/, '')

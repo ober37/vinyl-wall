@@ -2,10 +2,11 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it } from 'vitest'
 import { App } from '../App'
-import { AUTO_MATCH, MATCH_TEXT, releaseOf, runJoin, runSides, syncDay, syncLine } from '../model/discogs'
+import { releaseOf, runJoin, runSides, syncProblem } from '../model/discogs'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 function setup(extra: Record<string, Record<string, unknown>> = {}, site: Record<string, unknown> = {}) {
   const data = sample()
@@ -25,10 +26,11 @@ const edit = async (user: U, title: string) => {
   await user.click(await screen.findByRole('button', { name: new RegExp('Open ' + title) }))
   await screen.findByRole('heading', { name: title })
   await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
+  await openCopies(user)
 }
 const updates = (fake: Fake, id: string) => fake.calls.filter((c) => c.op === 'update' && c.path === 'records/' + id).map((c) => c.data!)
 const legend = (name: string) => screen.getByRole('group', { name })
-const release = () => screen.getByRole('textbox', { name: 'Release number' })
+const release = () => screen.getByRole('textbox', { name: 'Discogs release' })
 const connected = { discogs: { username: 'me', hasToken: true, status: 'ok' } }
 
 describe('an edit waiting to go to Discogs', () => {
@@ -45,7 +47,7 @@ describe('an edit waiting to go to Discogs', () => {
     expect((await sleeve('Loaded Album')).getAttribute('aria-label')).not.toMatch(/syncing/)
     await user.click(await sleeve('Edited Album'))
     expect(await screen.findByText('Waiting to sync…')).toBeTruthy()
-    // in edit, the Discogs section says it, once
+    // in edit too, on the same line (#121), once
     await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
     expect(screen.getAllByText('Waiting to sync…')).toHaveLength(1)
   })
@@ -87,7 +89,7 @@ describe('the Discogs release in edit', () => {
   it('sits in Your copy on an owned record, with its link', async () => {
     const { user } = setup()
     await edit(user, 'Kind of Blue')
-    expect(within(legend('Your copy')).getByRole('textbox', { name: 'Release number' })).toHaveProperty('value', '7140383')
+    expect(within(legend('Your copy')).getByRole('textbox', { name: 'Discogs release' })).toHaveProperty('value', '7140383')
     expect(screen.getByRole('link', { name: 'Open on Discogs ↗' }).getAttribute('href')).toBe('https://www.discogs.com/release/7140383')
   })
 
@@ -98,7 +100,6 @@ describe('the Discogs release in edit', () => {
     await user.click(release())
     await user.paste('https://www.discogs.com/release/12345-Miles-Davis-Kind-Of-Blue')
     expect(release()).toHaveProperty('value', '12345')
-    expect(screen.getByText('Waiting to sync…')).toBeTruthy()
     await waitFor(() => expect(updates(fake, 'r1').at(-1)).toEqual({ discogsId: 12345, discogsMatch: 'set by you', needsSync: true }))
     expect(screen.getByRole('link', { name: 'Open on Discogs ↗' }).getAttribute('href')).toBe('https://www.discogs.com/release/12345')
   })
@@ -123,7 +124,7 @@ describe('the Discogs release in edit', () => {
     expect(await screen.findByRole('heading', { name: 'Settings' })).toBeTruthy()
   })
 
-  it('has its own section on a wanted record, with the sync line and the hint for a general release', async () => {
+  it('sits in the copy on a wanted record, with the hint for a general release and no routine sync line (#121)', async () => {
     const { user } = setup(
       {
         r8: {
@@ -134,49 +135,47 @@ describe('the Discogs release in edit', () => {
       connected,
     )
     await edit(user, 'Revolver')
-    const d = within(legend('Discogs'))
-    expect(d.getByText('Synced to your wantlist · Mar 4 · Matched automatically (master release)')).toBeTruthy()
+    const d = within(legend('The copy you want'))
+    expect(d.queryByText(/Synced to your/)).toBeNull()
     expect(d.getByText(/points at a general release/)).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /Copy runout/ })).toBeNull()
   })
 
-  it('copies the runout as typed for a Discogs submission', async () => {
-    const { user } = setup({}, connected)
-    await edit(user, 'Kind of Blue')
-    const b = within(legend('Runout')).getByRole('textbox', { name: 'Side B' })
-    await user.clear(b)
-    await user.type(b, 'NEW')
-    await user.click(screen.getByRole('button', { name: 'Copy runout for a Discogs submission' }))
-    expect(await navigator.clipboard.readText()).toBe(
-      'Matrix / Runout: Side A: AAPJ 8163-45 A · Side B: NEW\n(Observed on my copy: 2015 Analogue Productions 45rpm 2LP, AAPJ 8163-45.)',
-    )
-    expect(screen.getByText(/Copied\. Paste it into/)).toBeTruthy()
-  })
-
-  it('gives an empty field only the hint, unless the last sync found nothing', async () => {
+  it('says nothing under an empty field; a sync that found nothing says what to do here, and on the status line', async () => {
     const { user } = setup(
-      { r8: { title: 'Revolver', artist: 'The Beatles', status: 'wish', discogsSync: { state: 'no-match', msg: 'No vinyl pressing found on Discogs.' }, notes: [], added: 8 } },
+      {
+        r8: {
+          title: 'Revolver', artist: 'The Beatles', status: 'wish', coverAsset: 'c', runtime: 40, aboutAt: 1, aboutV: 3, about: { summary: 's' },
+          discogsSync: { state: 'no-match', msg: 'No vinyl pressing found on Discogs.' }, notes: [], added: 8,
+        },
+      },
       connected,
     )
     await edit(user, 'Pet Sounds')
-    expect(within(legend('Discogs')).getByText('Leave it empty and a match is found for you.')).toBeTruthy()
-    expect(screen.queryByText('Not synced yet')).toBeNull()
+    expect(within(legend('The copy you want')).queryByText(/Leave it empty|Paste the number/)).toBeNull()
     await user.click(screen.getByRole('button', { name: 'Done' }))
     await user.keyboard('{Escape}')
     await edit(user, 'Revolver')
-    expect(within(legend('Discogs')).getByText('No vinyl pressing found on Discogs.')).toBeTruthy()
+    expect(within(legend('The copy you want')).getByText('Paste the number from its Discogs URL.')).toBeTruthy()
+    expect(screen.getByText('No vinyl pressing found on Discogs')).toBeTruthy()
+    // the lookup is still there, apart from the problem
+    expect(screen.getByRole('button', { name: 'Look up details again' })).toBeTruthy()
   })
 
-  it('is not on a record with no runout', async () => {
-    const { user } = setup({}, connected)
-    await edit(user, 'Blue Train')
-    expect(screen.queryByRole('button', { name: /Copy runout/ })).toBeNull()
+  it('a sync that failed shows on the status line in view, only while Discogs is connected', async () => {
+    const rec = { r8: { title: 'Revolver', artist: 'The Beatles', status: 'wish', coverAsset: 'c', runtime: 40, aboutAt: 1, aboutV: 3, about: { summary: 's' }, discogsSync: { state: 'error', msg: 'boom' }, notes: [], added: 8 } }
+    const { fake, user } = setup(rec, connected)
+    await user.click(await screen.findByRole('button', { name: /Open Revolver/ }))
+    // not why: that's for Claude; Retry marks it to sync again and starts the task
+    expect(await screen.findByText('Sync failed')).toBeTruthy()
+    expect(screen.queryByText(/boom/)).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Retry' }))
+    await waitFor(() => expect(updates(fake, 'r8').at(-1)).toEqual({ needsSync: true }))
+    expect(await screen.findByText('Waiting to sync…')).toBeTruthy()
   })
 })
 
 describe('Discogs helpers', () => {
-  it('words every value the matcher writes', () => {
-    expect(AUTO_MATCH.filter((m) => !MATCH_TEXT[m])).toEqual([])
-  })
   it('reads a release number or link', () => {
     expect(releaseOf(' 123 ')).toBe(123)
     expect(releaseOf('r123')).toBe(123)
@@ -186,12 +185,12 @@ describe('Discogs helpers', () => {
     expect(releaseOf('')).toBe('')
     expect(releaseOf('https://www.discogs.com/master/24047')).toBeNull()
   })
-  it('shows the year only when it is not this one, and the other states', () => {
-    expect(syncDay('2020-01-02 12:00 UTC')).toMatch(/2020/)
-    expect(syncLine({ id: 'x', discogsSync: { state: 'error', msg: 'boom' } }, false)).toBe('Sync failed: boom')
-    expect(syncLine({ id: 'x', discogsMatch: 'imported from Discogs' }, false)).toBe('Not synced yet · imported from Discogs')
-    expect(syncLine({ id: 'x', discogsSync: { state: 'synced', where: 'wantlist', at: '2026-10-25 15:00 UTC' }, discogsMatch: 'set by you' }, false)).toMatch(/^Synced to your wantlist · .+ · set by you$/)
-    expect(syncLine({ id: 'x', needsSync: true }, false)).toBe('Waiting to sync…')
+  it('names only what went wrong with a sync, and nothing while Discogs is off or an edit waits (#121)', () => {
+    expect(syncProblem({ id: 'x', discogsSync: { state: 'error', msg: 'boom' } }, true)).toBe('Sync failed')
+    expect(syncProblem({ id: 'x', discogsSync: { state: 'no-match' } }, true)).toBe('No vinyl pressing found on Discogs')
+    expect(syncProblem({ id: 'x', discogsSync: { state: 'synced' } }, true)).toBe('')
+    expect(syncProblem({ id: 'x', discogsSync: { state: 'error' } }, false)).toBe('')
+    expect(syncProblem({ id: 'x', needsSync: true, discogsSync: { state: 'error' } }, true)).toBe('')
   })
   it('reads unlabelled runouts by side and drops empty sides', () => {
     expect(runSides('AA · BB')).toEqual([{ side: 'A', v: 'AA' }, { side: 'B', v: 'BB' }])

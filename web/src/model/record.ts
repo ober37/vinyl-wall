@@ -80,7 +80,8 @@ export const GRADES: [string, string][] = [
   ['F', 'Fair (F)'],
   ['P', 'Poor (P)'],
 ]
-const GRADE_NAME: Record<string, string> = { M: 'Mint', NM: 'Near mint', F: 'Fair', P: 'Poor' }
+// every grade in words, as the grade list names them
+const GRADE_NAME: Record<string, string> = { M: 'Mint', NM: 'Near mint', 'VG+': 'Very good plus', VG: 'Very good', 'G+': 'Good plus', G: 'Good', F: 'Fair', P: 'Poor' }
 export function gradeText(r: Rec): string {
   const g = (v: string | undefined, w: string) => (v ? `${GRADE_NAME[v] || v} ${w}` : '')
   return [g(r.mediaGrade, 'vinyl'), g(r.sleeveGrade, 'sleeve')].filter(Boolean).join(' · ')

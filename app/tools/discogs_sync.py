@@ -17,6 +17,10 @@ Mapping:
   status ordered  -> Wantlist with notes ("On order from ...")
   moreCopies      -> each copy with a release id is on the wantlist too, with its own notes; a copy that goes
                      (removed, or the record deleted) comes off it. discogsSync.copyRids holds what the wall put there.
+  ownedCopies     -> an owned record's other copies you have (#121): each with a release id is its own collection item,
+                     with its grades and notes; one that goes (removed, the record deleted or no longer owned) comes off
+                     it unless it was already there. discogsSync.ownedInsts holds them as {rid, instanceId, adopted}.
+                     A copy's release is never guessed.
   deleted: true   -> removed from Discogs (only items the wall created / wantlist), doc deleted
 Never deletes collection items the wall did not create.
 """
@@ -277,6 +281,81 @@ def sync_copies(d, rid, wants, sync):
     return keep
 
 
+def rid_of(v):
+    try:
+        return int(str(v or "").strip() or 0)
+    except ValueError:
+        return 0
+
+
+def sync_owned(d, sync):
+    """Each other copy you have (ownedCopies) with a release id as its own collection item, grades and notes set; the
+    items the wall kept for copies that went come off, unless they were already in the collection. On a record that
+    isn't owned (or is deleted) they all go."""
+    owned = (d.get("status") or "own") == "own" and not d.get("deleted")
+    copies = [c for c in (d.get("ownedCopies") or []) if isinstance(c, dict) and rid_of(c.get("discogsId")) > 0] if owned else []
+    have = [x for x in (sync.get("ownedInsts") or []) if isinstance(x, dict)]
+    main = sync.get("instanceId")
+    got = {}
+
+    def items(rid):  # a release's collection items, read once a run
+        if rid not in got:
+            got[rid] = instances(rid)
+        return got[rid]
+    # the items copies still hold (still on Discogs): another copy, whose own item went, never takes one of these
+    held = {x.get("instanceId") for x in have if any(i["instance_id"] == x.get("instanceId") for i in items(x.get("rid")))} if copies else set()
+    keep = []
+    for c in copies:
+        rid = rid_of(c.get("discogsId"))
+        x = next((x for x in have if x.get("rid") == rid and x not in keep and x.get("instanceId") in held), None) or \
+            next((x for x in have if x.get("rid") == rid and x not in keep), None)
+        insts = items(rid)
+        inst = next((i for i in insts if x and i["instance_id"] == x.get("instanceId")), None)
+        if not inst:  # gone from Discogs, or new: an item already there no one uses, else a new one
+            used = {main} | held | {k.get("instanceId") for k in keep}
+            inst = next((i for i in insts if i["instance_id"] not in used), None)
+            if inst:
+                x = {"rid": rid, "instanceId": inst["instance_id"], "adopted": True}
+            else:
+                r = call("POST", f"/users/{USER}/collection/folders/1/releases/{rid}")
+                inst = {"instance_id": r["instance_id"], "folder_id": 1}
+                x = {"rid": rid, "instanceId": r["instance_id"], "adopted": False}
+        keep.append(x)
+        # recorded as it goes, so a call failing later still leaves an item it made known (and the wall's to take off)
+        sync["ownedInsts"] = keep + [y for y in have if y not in keep]
+        base = f"/users/{USER}/collection/folders/{inst['folder_id']}/releases/{rid}/instances/{inst['instance_id']}/fields"
+        if c.get("mediaGrade") in GRADE:
+            call("POST", f"{base}/1", body={"value": GRADE[c["mediaGrade"]]})
+        if c.get("sleeveGrade") in GRADE:
+            call("POST", f"{base}/2", body={"value": GRADE[c["sleeveGrade"]]})
+        call("POST", f"{base}/3", body={"value": coll_notes({**c, "why": d.get("why")})})
+    for x in have:
+        if x not in keep and not x.get("adopted") and x.get("instanceId") != main:
+            drop(x.get("rid"), {"instanceId": x.get("instanceId")}, set())
+    if keep:
+        sync["ownedInsts"] = keep
+    else:
+        sync.pop("ownedInsts", None)
+
+
+def take_over(sync, rid, d):
+    """The record's own release is one another copy had (the first copy removed, the next moved into its place): its
+    collection item becomes the record's, so it isn't added twice or taken off. Only an item no other copy of that release
+    still needs."""
+    have = [x for x in (sync.get("ownedInsts") or []) if isinstance(x, dict)]
+    need = sum(1 for c in d.get("ownedCopies") or [] if isinstance(c, dict) and rid_of(c.get("discogsId")) == rid)
+    mine = [x for x in have if x.get("rid") == rid]
+    x = mine[-1] if len(mine) > need else None
+    if not x:
+        return
+    sync["instanceId"] = x.get("instanceId")
+    if x.get("adopted"):
+        sync["adopted"] = True
+    else:
+        sync.pop("adopted", None)
+    sync["ownedInsts"] = [y for y in have if y is not x]
+
+
 def drop(rid, sync, wants):
     """Remove what the wall put on Discogs for release rid."""
     if not rid:
@@ -298,6 +377,7 @@ def sync_one(d, wants, sync):
         rid = int("".join(c for c in rid if c.isdigit()) or 0) or None
     if d.get("deleted"):
         sync_copies(d, rid, wants, sync)
+        sync_owned(d, sync)
         drop(sync.get("rid") or rid, sync, wants)
         return None
     if not rid:
@@ -306,7 +386,9 @@ def sync_one(d, wants, sync):
             keep = sync_copies(d, None, wants, sync)
             if sync.get("rid") and not sync.get("adopted") and sync["rid"] not in keep:  # was linked to something else: take it back off
                 drop(sync["rid"], sync, wants)
-            return {"discogsSync": {"state": "no-match", "at": now(), **({"copyRids": keep} if keep else {}),
+            sync_owned(d, sync)
+            ins = sync.get("ownedInsts")
+            return {"discogsSync": {"state": "no-match", "at": now(), **({"copyRids": keep} if keep else {}), **({"ownedInsts": ins} if ins else {}),
                                     "msg": "No vinyl pressing found on Discogs. Paste the release number from its Discogs URL."},
                     "discogsMatch": {"__delete__": True},
                     "needsSync": {"__delete__": True}}
@@ -321,11 +403,15 @@ def sync_one(d, wants, sync):
         else:
             drop(sync["rid"], sync, wants)
         sync.pop("instanceId", None)
+        if (d.get("status") or "own") == "own":
+            take_over(sync, rid, d)
     status = d.get("status") or "own"
     if status == "own":
         insts = instances(rid)
         iid = sync.get("instanceId")
-        inst = next((i for i in insts if i["instance_id"] == iid), None) or (insts[0] if insts else None)
+        # never an item another copy of the record keeps (ownedInsts)
+        others = {x.get("instanceId") for x in sync.get("ownedInsts") or [] if isinstance(x, dict)}
+        inst = next((i for i in insts if i["instance_id"] == iid), None) or next((i for i in insts if i["instance_id"] not in others), None)
         if not inst:
             r = call("POST", f"/users/{USER}/collection/folders/1/releases/{rid}")
             inst = {"instance_id": r["instance_id"], "folder_id": 1}
@@ -356,6 +442,7 @@ def sync_one(d, wants, sync):
                     call("DELETE", f"/users/{USER}/collection/folders/{inst['folder_id']}/releases/{rid}/instances/{iid}")
             sync.pop("instanceId", None)
         where = "wantlist"
+    sync_owned(d, sync)
     sync.update({"state": "synced", "at": now(), "rid": rid, "where": where})
     sync.pop("msg", None)
     out["discogsSync"] = sync

@@ -106,6 +106,6 @@ describe('patchFor', () => {
     const f = toForm({ ...owned, moreCopies: [{ name: 'UK', discogsId: 5 }, null] })
     expect(f.moreCopies).toEqual([{ name: 'UK', pressing: '', label: '', catalog: '', budget: '', discogsId: 5, buyLinks: [], releaseDate: '' }])
     expect(f).not.toHaveProperty('priority')
-    expect(f).not.toHaveProperty('copyName')
+    expect(f.copyName).toBe('')
   })
 })

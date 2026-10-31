@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 22.
+Skill version 23.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -18,11 +18,15 @@ The wall is a published artifact. Its records are documents in the page's `recor
 - `notes`: `[]`. `added`: now in milliseconds. `priority`: `2` (on a wish, `1` is Top want and `3` is Someday).
 - `needsEnrich: true`, so the wall looks up the cover, year, label and album info. Leave `coverAsset`, `year` and `label` to that lookup unless the person gives them.
 - The pressing, often from photos of the record: `pressing` (e.g. "2015 Analogue Productions 45rpm reissue"), `label`, `catalog` (the catalog number), `discogsId` (the Discogs release number, as a number) and `matrix`, the runouts as `"Side A: <runout> · Side B: <runout>"`, one entry per side, joined by " · ".
-- Owned: `acquired` (`YYYY-MM-DD`, only when they give a date or say today; otherwise leave it out), `paid` (a number as text, `"48"`), `shop`, `shopUrl`, `mediaGrade`, `sleeveGrade`.
+- Owned: `copyName` (a short name for their copy, only when they give one, like "Sealed"), `acquired` (`YYYY-MM-DD`, only when they give a date or say today; otherwise leave it out), `paid` (a number as text, `"48"`), `shop`, `shopUrl`, `mediaGrade`, `sleeveGrade`.
 - Ordered: `copyName` (a short name for the copy, like "MoFi one-step"), `shop`, `shopUrl`, `paid`, `orderDate`, `eta` (`YYYY-MM-DD`), `orderStatus` (`"preorder"`, `"ordered"`, `"shipped"` or `"delayed"`), `orderNum`, `carrier`, `tracking`.
 - Wish: `copyName`, `budget`, `buyLinks` (see Where to buy a copy), `releaseDate` (see Release dates).
 
 Write only what the person said or the photos show; leave the rest out. Before adding, `list` `records` and check it isn't already there (same artist and title); if it is, ask whether this is another copy or a change to the one there.
+
+## Another copy they own
+
+An owned record holds every copy of the album they have: its own fields are the first copy, and `ownedCopies` lists the others. When they have another copy of an owned record (a second pressing, or a second copy of the same one), `get` the record and append `{"name", "pressing", "label", "catalog", "matrix", "discogsId", "mediaGrade", "sleeveGrade", "paid", "shop", "shopUrl", "acquired"}` to `ownedCopies` (create the list if it isn't there; empty strings for what you don't know, `discogsId` as a number), filled in as for a new record's pressing and owned fields. A `name` tells two copies of the same pressing apart ("Sealed", "Player"); ask for one only then. When the copy they got is one the record lists in `moreCopies` (a copy still wanted), take it out of `moreCopies` in the same write and carry over its name, pressing, label, catalog and `discogsId`. `update` with `if_version` and `needsSync: true`. Never make a second record for an album they already own.
 
 Ask either/or questions as a yes/no where you can ("Is it new or sealed?", not "New or used?"), so a "yes" is never ambiguous.
 

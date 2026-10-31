@@ -64,7 +64,7 @@ describe('the wall', () => {
     await user.type(screen.getByRole('searchbox'), 'x')
     expect(await screen.findByText('Nothing on the wall matches “coltranex”.')).toBeTruthy()
     expect(screen.queryByRole('button', { name: 'Clear the search' })).toBeNull()
-    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    await user.click(screen.getByRole('button', { name: 'Search the wall' }))
     expect(sleeves()).toHaveLength(5)
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Search the wall' }))
   })

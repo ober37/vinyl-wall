@@ -68,8 +68,8 @@ function DiscogsImport({ dz }: { dz: Discogs }) {
       <div className="flex flex-col gap-2">
         <p className="text-foreground-intense text-sm font-semibold">Bring in what's already on Discogs</p>
         <p className="text-foreground-muted text-sm">
-          Adds the records in your Discogs collection and wantlist that aren't on the wall yet. Covers are looked up for you, and
-          nothing already on the wall changes.
+          Adds the records in your Discogs collection and wantlist that aren't on the wall yet, and other copies of albums you
+          have to their records. Covers are looked up for you, and nothing else on the wall changes.
         </p>
       </div>
       {!hasMcp || !settings.taskId ? (

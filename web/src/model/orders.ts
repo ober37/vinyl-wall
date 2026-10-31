@@ -1,5 +1,5 @@
 // An order's links, as trackUrl and ownLinks in app/vinyl-wall.html build them.
-import { kindOf, type Rec } from './record'
+import { kindOf, OSTAT, orderStatusOf, playDate, type Rec } from './record'
 
 // the carrier's tracking page for a number; a pasted http(s) link as it is; any other carrier a web search. No number, no link
 export function trackUrl(carrier: unknown, n: unknown): string {
@@ -36,3 +36,6 @@ export function discogsLinks(r: Rec): [string, string][] {
   ]
   return L.filter((x, i, a) => a.findIndex((y) => y[1] === x[1]) === i)
 }
+
+// where an order's at, as the Order tab's Status line says it: "Shipped, expected Nov 4"
+export const orderState = (r: Rec) => OSTAT[orderStatusOf(r)] + (r.eta ? ', expected ' + playDate(r.eta) : '')

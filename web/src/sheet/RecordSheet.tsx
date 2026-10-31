@@ -17,6 +17,7 @@ import { coverPatch, enrichPatch, removeCoverPatch } from '../model/create'
 import { coverUrl, hueOf, kindOf, KIND_LABEL, type Kind, type Rec } from '../model/record'
 import { pickable } from '../model/copies'
 import { movePatch } from '../model/status'
+import { SYNC_FAILED, syncProblem } from '../model/discogs'
 import { lookupStatus, syncing } from '../model/task'
 import { useRuntime } from '../runtime/runtime'
 import { Face } from '../wall/Face'
@@ -167,6 +168,11 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
     statusLine.current?.focus()
     update(r.id, enrichPatch(r)).then((ok) => ok && fireTask({ asked: true }))
   }
+  const retry = () => {
+    if (!r) return
+    statusLine.current?.focus()
+    update(r.id, { needsSync: true }).then((ok) => ok && fireTask({ asked: true }))
+  }
   // Remove cover: the image goes too when no other record shows it; an upload of their own is gone for good (#62)
   const shared = !!r?.coverAsset && records.some((x) => x.id !== r.id && x.coverAsset === r.coverAsset)
   const ownUpload = !!r?.coverAsset && !r.autoFilled?.includes('coverAsset') && !shared
@@ -192,9 +198,12 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
       className="size-24 shrink-0 rounded-(--radius-2xs) sm:size-38"
     />
   )
-  // a lookup says what it's doing; an edit waiting for Discogs says so too, except in edit, where the Discogs section does
-  // for editors only, like the wall's busy dots: a viewer can't act on it
-  const status = r && canEdit ? lookupStatus(r) || (!editing && syncing(r, settings.discogs?.status === 'ok') ? 'Waiting to sync…' : '') : ''
+  // a lookup says what it's doing; an edit waiting for Discogs says so too, and a sync that went wrong says what (#121), for
+  // editors only, like the wall's busy dots: a viewer can't act on it
+  const discogsOn = settings.discogs?.status === 'ok'
+  const looking = r && canEdit ? lookupStatus(r) : ''
+  const problem = r && canEdit && !looking && !syncing(r, discogsOn) ? syncProblem(r, discogsOn) : ''
+  const status = r && canEdit ? looking || (syncing(r, discogsOn) ? 'Waiting to sync…' : '') || problem : ''
 
   return (
     <Drawer side="right" open={!!r} onOpenChange={(o) => !o && close()}>
@@ -264,22 +273,35 @@ export function RecordSheet({ id, onClose, onBack, onDiscogs }: { id: string | n
                 {k === 'own' && !editing && <Badges r={r} records={records} />}
                 {/* waiting on the background task: the record's one lookup line, gone when the task fills it in. Always there
                     (out of the way when empty), so a screen reader hears it start */}
-                <p
-                  ref={statusLine}
-                  role="status"
-                  tabIndex={-1}
-                  className={status ? 'text-foreground-muted mt-1 flex items-center gap-2 text-xs outline-none' : 'sr-only'}
-                >
-                  {status && (
-                    <>
-                      <span aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
-                      {status}
-                    </>
+                <div className={status ? 'mt-1 flex flex-wrap items-center gap-x-2 text-xs' : undefined}>
+                  <p
+                    ref={statusLine}
+                    role="status"
+                    tabIndex={-1}
+                    className={status ? 'text-foreground-muted flex items-center gap-2 outline-none' : 'sr-only'}
+                  >
+                    {status && (
+                      <>
+                        {/* a problem's dot is steady and red, not the brass one that pulses while something runs */}
+                        <span
+                          aria-hidden="true"
+                          className={`size-1.75 shrink-0 rounded-full ${problem ? 'bg-error' : 'bg-brass motion-safe:animate-pulse-dot'}`}
+                        />
+                        <span className="line-clamp-2 break-words">{status}</span>
+                      </>
+                    )}
+                  </p>
+                  {/* a failed sync is tried again on the next run of the background task, started now */}
+                  {problem === SYNC_FAILED && (
+                    <Button size="sm" variant="ghost" className="-my-1.5" onClick={retry}>
+                      Retry
+                    </Button>
                   )}
-                </p>
-                {/* edit mode, nothing running: the same line starts the lookup, in the words its status will use (#135) */}
-                {editing && !status && (
-                  <Button size="sm" variant="ghost" className="-ms-3 self-start" onClick={enrich}>
+                </div>
+                {/* edit mode, no lookup running: the same line starts the lookup, in the words its status will use (#135);
+                    under a sync problem it sits apart, so it doesn't read as a retry of the sync */}
+                {editing && !looking && (
+                  <Button size="sm" variant="ghost" className={`-ms-3 self-start ${problem ? 'mt-1' : ''}`} onClick={enrich}>
                     {r.coverAsset ? 'Look up details again' : 'Look up the cover and details'}
                   </Button>
                 )}

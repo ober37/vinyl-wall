@@ -304,12 +304,9 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   onKeyDown={(e) => e.key === 'Escape' && closeSearch()}
-                  // Clear is the one way to clear it, so not the browser's own × as well
+                  // Escape or the search button close it (and clear it), so not the browser's own × as well
                   className="flex-1 [&::-webkit-search-cancel-button]:appearance-none"
                 />
-                <Button size="sm" variant="outline" onClick={closeSearch}>
-                  Clear
-                </Button>
               </div>
             )}
           </div>

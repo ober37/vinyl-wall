@@ -1,6 +1,6 @@
 import { Fragment } from 'react'
-import { wantCopies } from '../model/copies'
-import { discogsLinks, trackUrl } from '../model/orders'
+import { copyTitle, wantCopies } from '../model/copies'
+import { discogsLinks, orderState, trackUrl } from '../model/orders'
 import { OSTAT, orderStatusOf, playDate, shopHref, type Rec } from '../model/record'
 import { reachOf, type Shop } from '../model/shops'
 import { Facts } from './Facts'
@@ -40,14 +40,14 @@ export function shopFrom(r: Rec, s?: Shop): { name: React.ReactNode; reach: Reac
 export function OrderCard({ r, shop }: { r: Rec; shop?: Shop }) {
   const c = wantCopies(r)[0]
   const first = c.pressing.split('\n')[0].trim()
-  const title = c.name || first || 'Your order'
+  // named as the copy is everywhere else (#121)
+  const title = copyTitle(c, 0)
   const track = trackUrl(r.carrier, r.tracking)
   const rows: [string, React.ReactNode][] = [
     [
       'Status',
       <>
-        {OSTAT[orderStatusOf(r)]}
-        {r.eta ? ', expected ' + playDate(r.eta) : ''}
+        {orderState(r)}
         {track && (
           <>
             {' · '}

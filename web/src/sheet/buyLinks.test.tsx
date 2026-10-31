@@ -11,6 +11,7 @@ import { movePatch } from '../model/status'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from './openCopies'
 
 function setup(extra: Record<string, Record<string, unknown>> = {}) {
   const data = sample()
@@ -76,6 +77,7 @@ describe('buy links: the sheet', () => {
   it('shows each copy’s links by site, opening in a new tab', async () => {
     const { user } = setup({ h: { ...hunt, moreCopies: [] } })
     await open(user, 'Hunt')
+    await openCopies(user)
     const g = screen.getByRole('group', { name: 'The copy you want' })
     const a = within(g).getByRole('link', { name: 'roughtrade.com ↗' })
     expect(a.getAttribute('href')).toBe(RT)
@@ -87,6 +89,7 @@ describe('buy links: the sheet', () => {
     const { fake, user } = setup({ h: { ...hunt, buyLinks: [], moreCopies: [] } })
     await open(user, 'Hunt')
     await user.click(btn('Edit'))
+    await openCopies(user)
     const box = screen.getByRole('textbox', { name: 'Where to buy' })
     await user.type(box, 'roughtrade.com/a{Enter}foo bar')
     await user.tab()

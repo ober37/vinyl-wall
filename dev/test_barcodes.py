@@ -57,6 +57,11 @@ check("pinned to each record's version, and nothing for the rest", by["own"]["if
 check("a release the sync guessed gets no barcodes, its old ones go, and its chosen copies still get theirs",
       by["guess"]["data"] == {"barcodes": {"__delete__": True}, "moreCopies": [{"pressing": "Reissue", "discogsId": 2, "barcodes": {"rid": 2, "codes": ["8717931357418"]}}]}, by["guess"]["data"])
 check("a release matched by catalog number is the pressing, so it gets its barcodes", by["byCat"]["data"] == {"barcodes": {"rid": 3, "codes": []}}, by["byCat"]["data"])
+o = B.plan({"two": {"title": "I", "status": "own", "discogsId": 3, "barcodes": {"rid": 3, "codes": []},
+                    "ownedCopies": [{"name": "Stereo", "discogsId": 2}, {"name": "Typed"}]}}, {"two": 9}, releases(REL))[0]
+check("another copy you have gets its own, in its ownedCopies entry (#121)",
+      o == [{"op": "update", "collection": "records", "doc_id": "two", "if_version": 9,
+             "data": {"ownedCopies": [{"name": "Stereo", "discogsId": 2, "barcodes": {"rid": 2, "codes": ["8717931357418"]}}, {"name": "Typed"}]}}], o)
 check("a line on what was done", lines == ["3 Discogs releases read, 2 with barcodes, 5 records to update."], lines)
 
 f = releases(REL)

@@ -1,8 +1,10 @@
 // Export and import of a library file, ported from exportLibrary/readLibrary/applyLibrary in app/vinyl-wall.html. Same file
-// (vinylWall: 1) both ways, so files move between this page and production's. Pure: no React, no db.
+// (vinylWall: 1) both ways, so files move between this page and production's. A file holding other copies you own
+// (ownedCopies, #121) is vinylWall: 2, so an older wall refuses it rather than dropping them. Pure: no React, no db.
 /* The file holds records, gear, setups and the page's look. Never the Discogs token (it isn't loaded here) or anything
    tied to one wall: the task id, the Discogs connection, update state, data version. */
 import { wantCopies, type Copy } from './copies'
+import { firstAsCopy, moreOwned } from './owned'
 import { aboutPending } from './task'
 import { BACKGROUNDS, HANGS } from './site'
 import { mergeShops, shopsOf } from './shops'
@@ -51,9 +53,10 @@ export function exportFile(p: { records: Rec[]; gear: Doc[]; setups: Doc[]; arti
   const site: Data = {}
   for (const k of ['title', 'bg', 'dim', 'hang', 'shops']) if (p.settings[k] !== undefined) site[k] = p.settings[k]
   const records = byId(p.records as Doc[])
+  const owned = Object.values(records).some((r) => Array.isArray(r.ownedCopies) && r.ownedCopies.length)
   const refs = new Set(Object.values(records).map((r) => r.artistRef).filter(Boolean))
   return {
-    vinylWall: 1, exportedAt: nowUTC(), app: p.app, settings: { site }, setups: byId(p.setups), gear: byId(p.gear), records,
+    vinylWall: owned ? 2 : 1, exportedAt: nowUTC(), app: p.app, settings: { site }, setups: byId(p.setups), gear: byId(p.gear), records,
     artists: byId(p.artists.filter((a) => refs.has(a.id))), covers: {},
   }
 }
@@ -95,7 +98,7 @@ export function planImport(text: string, w: { records: Doc[]; artists: Doc[]; ge
   }
   if (!snap || !Number.isInteger(snap.vinylWall) || typeof snap.records !== 'object' || !snap.records)
     return "This file wasn't made by Export on a Vinyl Wall."
-  if (snap.vinylWall > 1) return 'This file was made by a newer Vinyl Wall. Update this wall first, then import it.'
+  if (snap.vinylWall > 2) return 'This file was made by a newer Vinyl Wall. Update this wall first, then import it.'
   // every record already here, or brought in by an earlier one in this file, by id, Discogs release, and artist and title
   const byId = new Map<string, Doc | null>(w.records.map((r) => [r.id, r]))
   const R = new Map<number, Doc | null>()
@@ -189,7 +192,7 @@ export const planSummary = (p: Plan) =>
 // what a record may carry in from a file: its own fields, never another wall's sync or lookup state
 // prettier-ignore
 const IMPORT_FIELDS = ["title", "artist", "year", "label", "catalog", "pressing", "matrix", "runtime", "status", "why", "notes", "shop", "shopUrl", "acquired", "paid",
-  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "releaseDate", "moreCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
+  "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "releaseDate", "moreCopies", "ownedCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
   "discogsMatch", "coverAsset", "coverOriginal", "coverBlocked", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
 // what an artist may carry in: the lookup's own fields, with the right types
 const ARTIST_FIELDS: Record<string, string> = { name: 'string', wiki: 'string', wikidata: 'string', intro: 'string', summary: 'string', source: 'string', fetchedAt: 'number' }
@@ -206,6 +209,7 @@ export function importable(d: Data): Data {
   if (!Array.isArray(r.notes)) r.notes = []
   if (r.copyName !== undefined && typeof r.copyName !== 'string') delete r.copyName
   if (r.moreCopies !== undefined) r.moreCopies = wantCopies({ id: '', moreCopies: r.moreCopies } as Rec).slice(1)
+  if (r.ownedCopies !== undefined) r.ownedCopies = moreOwned({ id: '', ownedCopies: r.ownedCopies })
   if (r.buyLinks !== undefined) r.buyLinks = wantCopies({ id: '', buyLinks: r.buyLinks } as Rec)[0].buyLinks
   if (r.releaseDate !== undefined) r.releaseDate = wantCopies({ id: '', releaseDate: r.releaseDate } as Rec)[0].releaseDate
   r.needsSync = 'check' // checked against this wall's Discogs account, if it has one (quietly: see syncing)
@@ -250,6 +254,10 @@ function addMissing(wall: unknown, file: unknown, k: (x: Data) => string): Data[
 }
 const noteKey = (n: Data) => (n.id ? 'id:' + n.id : JSON.stringify([n.d ?? '', n.t ?? '']))
 const entryKey = (e: Data) => (e.id ? 'id:' + e.id : JSON.stringify(e))
+// an owned copy is the same one when its release, pressing, name and day bought all are (two copies of one pressing differ by
+// the day or the name)
+const ownKey = (c: Data) =>
+  JSON.stringify([parseInt(String(c.discogsId), 10) || '', libNorm(c.pressing), libNorm(c.copyName ?? c.name), String(c.acquired || '')])
 const copyKeys = (c: Copy) => [c.discogsId ? 'r:' + c.discogsId : '', c.pressing ? 'p:' + libNorm(c.pressing) : ''].filter(Boolean)
 
 // a record's patch: what it's missing from the file's copy. A cover is the file's asset id, which the caller maps to this
@@ -276,6 +284,14 @@ export function fillPatch(w: Data, raw: Data): Data {
       .slice(1)
       .filter((c) => copyKeys(c).length && !copyKeys(c).some((k) => have.has(k)) && copyKeys(c).every((k) => have.add(k)))
     if (add.length) p.moreCopies = [...(Array.isArray(w.moreCopies) ? w.moreCopies : []), ...add]
+  }
+  // owned on both: the file's other copies the wall doesn't have (#121), and its first copy too when the file holds
+  // several (then the file says each is a copy of its own, not the wall's copy described differently)
+  if (same && statusOf(w) === 'own') {
+    const fileOwned = (f.ownedCopies as Data[] | undefined) ?? []
+    const firstOfFile = fileOwned.length ? [firstAsCopy(f as Rec)] : []
+    const owned = addMissing([w, ...moreOwned(w as Rec)], [...firstOfFile, ...fileOwned], ownKey)
+    if (owned) p.ownedCopies = [...(Array.isArray(w.ownedCopies) ? w.ownedCopies : []), ...owned.slice(1 + moreOwned(w as Rec).length)]
   }
   // a filled-in field the file's lookup filled stays marked, so a later lookup may still better it
   const auto = (Array.isArray(f.autoFilled) ? f.autoFilled : []).filter((k) => k in p)

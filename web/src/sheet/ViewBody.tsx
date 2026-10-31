@@ -1,4 +1,5 @@
 import { Fragment, useState } from 'react'
+import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
@@ -10,6 +11,7 @@ import { shopShown, shopsOf, type Shop } from '../model/shops'
 import { sideOf, trackSecs } from '../model/plays'
 import { aboutPending } from '../model/task'
 import { stillCopies } from '../model/copies'
+import { gradeShort, ownedRecs, ownedTitle } from '../model/owned'
 import { useRuntime } from '../runtime/runtime'
 import { Listening } from './Listening'
 import { NotesTab, noteCount } from './NotesTab'
@@ -18,7 +20,7 @@ import { CopiesView } from './Copies'
 import { Facts } from './Facts'
 import { Chevron, LinkList, Source } from './Links'
 import { hasResearch, ResearchTab, SearchElsewhere, type WantMsg } from './ResearchTab'
-import { StatusActions } from './StatusActions'
+import { GotCopy, StatusActions } from './StatusActions'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
 function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
@@ -67,6 +69,36 @@ function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
       </Collapsible>,
     ])
   return f
+}
+
+// Your copy, or Your copies when there are several (#121): each a folded row under its title with its grades beside it,
+// one too, all folded to start, each with its own facts and Discogs links
+function YourCopies({ r, shops }: { r: Rec; shops: Shop[] }) {
+  const C = ownedRecs(r).map((c, i) => ({ c, i, rows: copyFacts(c, shops) }))
+  return (
+    <Fieldset>
+      <FieldsetLegend>{C.length > 1 ? 'Your copies' : 'Your copy'}</FieldsetLegend>
+      <Accordion variant="flush" multiple>
+        {C.map(({ c, i, rows }) => (
+          <AccordionItem key={i} value={String(i)}>
+            <AccordionTrigger className="text-foreground text-sm font-medium">
+              <span className="flex w-full items-baseline justify-between gap-3">
+                <span className="min-w-0">{ownedTitle(c, i)}</span>
+                {gradeShort(c) && <span className="text-foreground-muted shrink-0 font-normal">{gradeShort(c)}</span>}
+              </span>
+            </AccordionTrigger>
+            {/* room for a focus ring (its Discogs links), which the fold's clipping would cut */}
+            <AccordionContent className="-mx-1 px-1">
+              <div className="flex flex-col gap-3 pt-1">
+                {rows.length > 0 && <Facts labelCol rows={rows} />}
+                <LinkList links={discogsLinks(c)} />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </Fieldset>
+  )
 }
 
 function Tracks({ r }: { r: Rec }) {
@@ -249,7 +281,8 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   const shops = shopsOf(settings)
   const k = kindOf(r)
   const own = k === 'own'
-  const copy = copyFacts(r, shops)
+  const copies = ownedRecs(r)
+  const copy = copies.length > 1 ? copies : copyFacts(r, shops)
   const hasTracks = recordTracks(r).length > 0
   const artist = artistOf(r, artists)
   const about = copy.length > 0 || hasTracks || !!artist
@@ -313,17 +346,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
               {own && <TabsTrigger value="listening">Listening</TabsTrigger>}
               {k === 'ordered' && <TabsTrigger value="order">Order</TabsTrigger>}
               {pressings && <TabsTrigger value="pressings">Pressings</TabsTrigger>}
-              {notes && (
-                <TabsTrigger value="notes">
-                  Notes
-                  {notesN > 0 && (
-                    <>
-                      {' '}
-                      <span className="text-foreground-muted">{notesN}</span>
-                    </>
-                  )}
-                </TabsTrigger>
-              )}
+              {notes && <TabsTrigger value="notes">Notes</TabsTrigger>}
               {hunting && <TabsTrigger value="search">Search</TabsTrigger>}
               {research && <TabsTrigger value="research">Research</TabsTrigger>}
             </TabsList>
@@ -336,13 +359,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
                   <Tracks r={r} />
                 </Fieldset>
               )}
-              {copy.length > 0 && (
-                <Fieldset>
-                  <FieldsetLegend>Your copy</FieldsetLegend>
-                  <Facts labelCol rows={copy} />
-                  <LinkList links={discogsLinks(r)} />
-                </Fieldset>
-              )}
+              {copy.length > 0 && <YourCopies r={r} shops={shops} />}
               {artist && (
                 <Fieldset>
                   <FieldsetLegend>About the artist</FieldsetLegend>
@@ -364,7 +381,12 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           {pressings && (
             <TabsContent value="pressings" className="flex flex-col gap-6">
               {canEdit && k === 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
-              <CopiesView r={r} onEditCopy={canEdit ? onEditCopy : undefined} shops={shops} />
+              <CopiesView
+                r={r}
+                onEditCopy={canEdit ? onEditCopy : undefined}
+                shops={shops}
+                got={canEdit && own ? (ci) => <GotCopy key={r.id + ci} r={r} ci={ci} onMoved={onMoved} /> : undefined}
+              />
             </TabsContent>
           )}
           {notes && (

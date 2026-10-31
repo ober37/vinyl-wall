@@ -6,6 +6,7 @@ import { App } from '../App'
 import { fakeClaude } from '../runtime/fake'
 import { RuntimeProvider } from '../runtime/runtime'
 import { sample } from '../runtime/sample'
+import { openCopies } from '../sheet/openCopies'
 
 type Seed = ReturnType<typeof sample>
 type Opts = Parameters<typeof fakeClaude>[1]
@@ -99,13 +100,14 @@ describe('search', () => {
     expect(document.activeElement).toBe(screen.getByRole('button', { name: 'Search the wall' }))
   })
 
-  // production's × "Clear search" is a Clear text button here (an approved departure)
-  it('Clear closes search and shows the whole wall', async () => {
+  // production's × "Clear search" is the search button itself here (approved departures)
+  it('the search button closes search and shows the whole wall, with no Clear beside it', async () => {
     const { user } = setup()
     await user.click(await screen.findByRole('button', { name: 'Search the wall' }))
     await user.type(screen.getByRole('searchbox', { name: 'Search the wall' }), 'coltrane')
     await waitFor(() => expect(sleeves()).toEqual(['r3']))
-    await user.click(screen.getByRole('button', { name: 'Clear' }))
+    expect(screen.queryByRole('button', { name: 'Clear' })).toBeNull()
+    await user.click(screen.getByRole('button', { name: 'Search the wall' }))
     expect(screen.queryByRole('searchbox')).toBeNull()
     expect(sleeves()).toHaveLength(5)
   })
@@ -181,7 +183,7 @@ describe('the tabs', () => {
   it('keep one order, opening on the task tab: Listening on an owned record, Order on an order, Pressings on a hunt', async () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes', 'Research'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Aja')
     expect(tabNames()).toEqual(['Order*', 'Notes'])
@@ -193,7 +195,7 @@ describe('the tabs', () => {
   it('show a viewer Notes only when there are notes, with their count', async () => {
     const { user } = setup(() => {}, { canWrite: false })
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Blue Train')
     // its label is in the fact line, so About has nothing and Listening stands alone
@@ -212,19 +214,21 @@ describe('the tabs', () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('tab', { name: 'About' }))
-    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes 1', 'Research'])
+    await openCopies(user)
+    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes', 'Research'])
     await user.click(screen.getByRole('button', { name: 'Close' }))
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes', 'Research'])
   })
 
   it('keep the tab chosen through Edit and Done', async () => {
     const { user } = setup()
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     await user.click(screen.getAllByRole('button', { name: 'Edit' })[0])
     await user.click(screen.getByRole('button', { name: 'Done' }))
-    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes 1', 'Research'])
+    expect(tabNames()).toEqual(['About*', 'Listening', 'Notes', 'Research'])
   })
 
   it('move focus with the arrow keys, round from the last to the first', async () => {
@@ -242,7 +246,7 @@ describe('the tabs', () => {
     await open(user, 'Kind of Blue')
     await user.click(screen.getByRole('tab', { name: 'About' }))
     await user.keyboard('{ArrowRight}')
-    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes 1', 'Research'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Notes', 'Research'])
   })
 
   it('put a hunt’s copies and Ordered it / Got it in Pressings, and Search elsewhere in Search', async () => {
@@ -261,7 +265,7 @@ describe('the tabs', () => {
   it('give an owned record Pressings and Search while copies are still wanted', async () => {
     const { user } = setup((s) => Object.assign(s.records.r1, { moreCopies: [{ name: 'Mono', pressing: '1959 mono', budget: '200' }] }))
     await open(user, 'Kind of Blue')
-    expect(tabNames()).toEqual(['About', 'Listening*', 'Pressings', 'Notes 1', 'Search', 'Research'])
+    expect(tabNames()).toEqual(['About', 'Listening*', 'Pressings', 'Notes', 'Search', 'Research'])
     await user.click(screen.getByRole('tab', { name: 'Pressings' }))
     expect(within(screen.getByRole('tabpanel')).getByText('Mono')).toBeTruthy()
   })
@@ -283,6 +287,7 @@ describe('the About tab', () => {
   const about = async (user: User, title: string) => {
     await open(user, title)
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     return screen.getByRole('tabpanel')
   }
   const bought = new Date('2024-03-02T12:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) + ', 2024'
@@ -294,12 +299,13 @@ describe('the About tab', () => {
     expect(screen.getByText('Columbia · Produced by Teo Macero, Irving Townsend · Modal jazz, Cool jazz')).toBeTruthy()
     expect(screen.getByText('Recorded New York · 1959')).toBeTruthy()
     await user.click(screen.getByRole('tab', { name: 'About' }))
+    await openCopies(user)
     const panel = screen.getByRole('tabpanel')
     expect(within(panel).queryByRole('group', { name: 'About the album' })).toBeNull()
     expect(facts(within(panel).getByRole('group', { name: 'Your copy' })).map(([k, v]) => (k === 'Runout' ? [k] : [k, v]))).toEqual([
       ['Pressing', '2015 Analogue Productions 45rpm 2LP'],
       ['Bought', `${bought} · A local record shop · $48`],
-      ['Grade', 'Near mint vinyl · VG+ sleeve'],
+      ['Grade', 'Near mint vinyl · Very good plus sleeve'],
       ['Runout'],
     ])
   })
