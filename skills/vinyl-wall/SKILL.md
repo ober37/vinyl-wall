@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 21.
+Skill version 22.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -133,7 +133,7 @@ The `Wall:` line can be missing; then find the wall as for a new record. When th
 - **Finding or buying a copy:** when the question is about finding or buying a copy (which pressing to hunt, where it's available, what it costs), check their shops first.
   - **Order:** `get` `settings/site` for `shops` (if it's missing, use the defaults above). Check local shops first, then online shops, then marketplaces.
   - **Matching:** look up the album at each shop that has a `search`, and match only this album by this artist on vinyl. Skip CDs, tapes, merch and other albums. A shop with a website but no `search`: find its search as in What a shop supports, use it, and save it to the shop (see Missing shop details).
-  - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`). The copy keeps its release's barcodes beside it as `barcodes: {"rid": <release id>, "codes": [...]}` (the record's own fields for its first copy, its `moreCopies` entry for the others); use those when `rid` is the copy's `discogsId`, else read them from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only). Put each in `upc`, a 12- or 13-digit one first. A page found that way is that exact pressing. If a shop's bot check stops you opening its pages, don't report it as having nothing: its line reads `"<shop>: couldn't check from here"`, and the pressing's barcode page goes in `sources` so they can open it themselves.
+  - **By barcode:** at a shop with a `upc`, also open the product page for each copy they want that has a Discogs release (`discogsId`). The copy keeps its release's barcodes beside it as `barcodes: {"rid": <release id>, "codes": [...]}` (the record's own fields for its first copy, its `moreCopies` entry for the others); use those when `rid` is the copy's `discogsId`, else read them from `https://api.discogs.com/releases/<id>` (`identifiers` of type "Barcode", digits only). Put each in `upc`, a 12- or 13-digit one first. Skip the record's own copy when its `discogsMatch` is `"master main release"` or starts with `"vinyl: "`: that's the sync's guess at the album (often the original pressing), not the pressing they want; offer to set the right release instead. A page found that way is that exact pressing. If a shop's bot check stops you opening its pages, don't report it as having nothing: its line reads `"<shop>: couldn't check from here"`, and the pressing's barcode page goes in `sources` so they can open it themselves.
   - **Shopify stores (`shopify: true`, like Revolver):** they have structured data. `<shop>/search/suggest.json?q=<artist title>&resources[type]=product` lists matching products with `available`, `price` and `url`. `<shop>/products/<handle>.json` gives each variant's `price` and `available`.
   - **What to report:**
     - A shop: what's in stock (format, colour variant, price, link), and anything sold out or on pre-order.

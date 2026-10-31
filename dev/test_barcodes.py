@@ -39,6 +39,9 @@ records = {
     "moved": {"title": "D", "status": "wish", "discogsId": 2, "barcodes": {"rid": 1, "codes": ["0602547670233"]}},
     "gone": {"title": "E", "status": "wish", "discogsId": 1, "deleted": True},
     "example": {"title": "F", "status": "wish", "discogsId": 1, "example": True},
+    "guess": {"title": "G", "status": "wish", "discogsId": 1, "discogsMatch": "vinyl: earliest original pressing", "barcodes": {"rid": 1, "codes": ["0602547670233"]},
+              "moreCopies": [{"pressing": "Reissue", "discogsId": 2}]},
+    "byCat": {"title": "H", "status": "wish", "discogsId": 3, "discogsMatch": "catalog+pressing"},
 }
 versions = {k: i + 1 for i, k in enumerate(records)}
 f = releases(REL)
@@ -50,11 +53,15 @@ check("another copy gets its own, in its entry, the copy without a release left 
       by["own"]["data"]["moreCopies"] == [{"pressing": "Mono", "discogsId": "2", "barcodes": {"rid": 2, "codes": ["8717931357418"]}}, {"pressing": "No release"}], by["own"]["data"].get("moreCopies"))
 check("a release with no barcode keeps an empty list, so it isn't asked again", by["wish"]["data"] == {"barcodes": {"rid": 3, "codes": []}})
 check("barcodes from another release are read again for this one", by["moved"]["data"] == {"barcodes": {"rid": 2, "codes": ["8717931357418"]}})
-check("pinned to each record's version, and nothing for the rest", by["own"]["if_version"] == 1 and set(by) == {"own", "wish", "moved"}, sorted(by))
-check("a line on what was done", lines == ["3 Discogs releases read, 2 with barcodes, 3 records to update."], lines)
+check("pinned to each record's version, and nothing for the rest", by["own"]["if_version"] == 1 and set(by) == {"own", "wish", "moved", "guess", "byCat"}, sorted(by))
+check("a release the sync guessed gets no barcodes, its old ones go, and its chosen copies still get theirs",
+      by["guess"]["data"] == {"barcodes": {"__delete__": True}, "moreCopies": [{"pressing": "Reissue", "discogsId": 2, "barcodes": {"rid": 2, "codes": ["8717931357418"]}}]}, by["guess"]["data"])
+check("a release matched by catalog number is the pressing, so it gets its barcodes", by["byCat"]["data"] == {"barcodes": {"rid": 3, "codes": []}}, by["byCat"]["data"])
+check("a line on what was done", lines == ["3 Discogs releases read, 2 with barcodes, 5 records to update."], lines)
 
 f = releases(REL)
-writes, lines = B.plan(copy.deepcopy(records), versions, f, limit=1)
+base = {k: v for k, v in records.items() if k not in ("guess", "byCat")}
+writes, lines = B.plan(copy.deepcopy(base), versions, f, limit=1)
 check("at most the limit of releases a run, one read serving every copy of it; the rest wait",
       f.asked == [2] and sorted(w["doc_id"] for w in writes) == ["moved", "own"] and "2 copies wait for the next run" in lines[0], (f.asked, writes, lines))
 

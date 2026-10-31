@@ -25,6 +25,13 @@ describe('barcodes (#88)', () => {
     expect(copyBarcode({ ...a, barcodes: undefined })).toBe('')
   })
 
+  it('never uses barcodes beside a release the sync guessed, only one chosen or matched by catalog', () => {
+    expect(copyBarcode(wantCopies({ ...hunt, discogsMatch: 'vinyl: earliest original pressing' } as Rec)[0])).toBe('')
+    expect(copyBarcode(wantCopies({ ...hunt, discogsMatch: 'master main release' } as Rec)[0])).toBe('')
+    expect(copyBarcode(wantCopies({ ...hunt, discogsMatch: 'catalog+pressing' } as Rec)[0])).toBe('720642442517')
+    expect(copyBarcode(wantCopies({ ...hunt, discogsMatch: 'set by you' } as Rec)[0])).toBe('720642442517')
+  })
+
   it('keeps barcodes with their copy when copies are saved, picked or moved', () => {
     const [a, b] = wantCopies(hunt)
     expect(copiesPatch(hunt, [b, a])).toMatchObject({ discogsId: 5, barcodes: b.barcodes, moreCopies: [{ discogsId: 7097051, barcodes: a.barcodes }] })

@@ -5,7 +5,8 @@ import { kindOf, playDate, pressingText, shopHref, type Rec } from './record'
 
 // buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75);
 // barcodes: its Discogs release's, with that release's id, filled in by the background task (tools/barcodes.py, #88).
-// They stay with the copy wherever it goes; ones beside a release they didn't come from are read again, never used
+// They stay with the copy wherever it goes; ones beside a release they didn't come from are read again, never used, and
+// so are ones beside a release the sync guessed for the record (not the pressing wanted)
 export type Barcodes = { rid: number; codes: string[] }
 export type Copy = {
   name: string
@@ -33,6 +34,10 @@ const bars = (v: unknown): { barcodes?: Barcodes } => {
     ? { barcodes: { rid: b.rid, codes: b.codes.filter((x) => typeof x === 'string' && /^\d+$/.test(x)) } }
     : {}
 }
+// the sync's guess at the record's release (tools/discogs_sync.py), often the original pressing: not a pressing anyone chose
+// or matched by catalog number
+export const guessedRelease = (r: Rec) => /^(master main release|vinyl: )/.test(String(r.discogsMatch || ''))
+
 // the barcode a shop's barcode page opens this copy by: the first UPC or EAN (12 or 13 digits) of its own release, else
 // its first; '' when it has none from this release
 export function copyBarcode(c: Copy): string {
@@ -44,7 +49,7 @@ export const emptyCopy = (): Copy => ({ name: '', pressing: '', label: '', catal
 export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
-    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate), ...bars(r.barcodes) },
+    { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate), ...(guessedRelease(r) ? {} : bars(r.barcodes)) },
     ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes) })),
   ]
 }
