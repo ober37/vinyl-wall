@@ -1,11 +1,12 @@
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
-import { buyHosts, copiesLegend, copyBarcode, copyLabelShown, copyTitle, pickable, releaseText, stillCopies, type Copy } from '../model/copies'
+import { buyHosts, copyAlbum, copiesLegend, copyBarcode, copyLabelShown, copyTitle, pickable, releaseText, stillCopies, type Copy } from '../model/copies'
 import { kindOf, today, type Rec } from '../model/record'
 import { shopOrder, type Shop } from '../model/shops'
 import { Facts } from './Facts'
 import { LinkList } from './Links'
+import { tracksRow } from './Tracks'
 
 type Row = [string, React.ReactNode]
 const pressRow = (c: Copy): Row[] => (c.pressing ? [['Pressing', <span className="whitespace-pre-line">{c.pressing}</span>]] : [])
@@ -50,6 +51,7 @@ export function CopiesView({ r, onEditCopy, shops = [], got }: {
   // a lone label shows only when it names the copy (copyLabelShown)
   const rowsOf = (c: Copy, i: number) => [
     ...(c.name ? pressRow(c) : []), ...labelRow(c, copyLabelShown(r, c, i) ? c.label : ''), ...releaseRow(c), ...budgetRow(c), ...buyRow(c), ...barcodeRow(c, shops),
+    ...tracksRow(r, { ...r, ...copyAlbum(r, c) }),
   ]
   // a hunt's one copy with nothing in it isn't a copy yet
   if (L.length === 1 && kindOf(r) === 'wish' && !L[0][0].name && !rowsOf(...L[0]).length) return none

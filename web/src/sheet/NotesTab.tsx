@@ -47,6 +47,7 @@ export function NotesTab({ r }: { r: Rec }) {
           }}
         >
           <Textarea
+            className="field-sizing-content max-h-80"
             aria-label="Note"
             rows={2}
             value={draft}
@@ -74,7 +75,7 @@ export function NotesTab({ r }: { r: Rec }) {
               <time className="text-foreground-muted text-xs">{n.d ? playDate(String(n.d)) : ''}</time>
               {edit && same(edit.ref, ref) ? (
                 <div className="flex flex-col gap-2">
-                  <Textarea aria-label="Edit note" rows={3} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} autoFocus />
+                  <Textarea className="field-sizing-content max-h-80" aria-label="Edit note" rows={3} value={edit.text} onChange={(e) => setEdit({ ...edit, text: e.target.value })} autoFocus />
                   <div className="flex flex-wrap gap-3">
                     <Button size="sm" onClick={save}>
                       Save

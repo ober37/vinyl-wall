@@ -1,4 +1,4 @@
-import { Fragment, useState } from 'react'
+import { useState } from 'react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Collapsible, CollapsibleTrigger, CollapsibleContent } from '@appica/ui-react/collapsible'
@@ -8,7 +8,6 @@ import { albumFacts, gradeText, kindOf, okUrl, playDate, pressingText, recordTra
 import { artistOf, LINKS_SHOWN, type Artist } from '../model/artist'
 import { discogsLinks } from '../model/orders'
 import { shopShown, shopsOf, type Shop } from '../model/shops'
-import { sideOf, trackSecs } from '../model/plays'
 import { aboutPending } from '../model/task'
 import { stillCopies } from '../model/copies'
 import { gradeShort, ownedRecs, ownedTitle } from '../model/owned'
@@ -18,6 +17,7 @@ import { NotesTab, noteCount } from './NotesTab'
 import { OrdersView, shopFrom } from './OrderCard'
 import { CopiesView } from './Copies'
 import { Facts } from './Facts'
+import { runtimeRow, Tracks, tracksRow } from './Tracks'
 import { Chevron, LinkList, Source } from './Links'
 import { hasResearch, ResearchTab, SearchElsewhere, type WantMsg } from './ResearchTab'
 import { CopyActions, StatusActions } from './StatusActions'
@@ -75,7 +75,7 @@ function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
 // Your copy, or Your copies when there are several (#121): each a folded row under its title with its grades beside it,
 // one too, all folded to start, each with its own facts and Discogs links
 function YourCopies({ r, shops }: { r: Rec; shops: Shop[] }) {
-  const C = ownedRecs(r).map((c, i) => ({ c, i, rows: copyFacts(c, shops) }))
+  const C = ownedRecs(r).map((c, i) => ({ c, i, rows: [...copyFacts(c, shops), ...tracksRow(r, c), ...runtimeRow(r, c)] }))
   return (
     <Fieldset>
       <FieldsetLegend>{C.length > 1 ? 'Your copies' : 'Your copy'}</FieldsetLegend>
@@ -99,52 +99,6 @@ function YourCopies({ r, shops }: { r: Rec; shops: Shop[] }) {
         ))}
       </Accordion>
     </Fieldset>
-  )
-}
-
-function Tracks({ r }: { r: Rec }) {
-  const T = recordTracks(r)
-  const [all, setAll] = useState(false)
-  if (!T.length) return null
-  const shown = all || T.length <= 12 ? T : T.slice(0, 8)
-  // by side when every position reads A1, B2…, each side with its running time
-  const sided = T.every((t) => sideOf(t.pos))
-  const sideTime = (s: string) => {
-    const n = T.filter((t) => sideOf(t.pos) === s).reduce((n, t) => n + trackSecs(t.dur), 0)
-    return n ? ` · ${Math.floor(n / 60)}:${String(n % 60).padStart(2, '0')}` : ''
-  }
-  const ab = r.about || {}
-  const src = okUrl(ab.tracksUrl)
-  const srcName = ab.tracksSource === 'discogs' ? 'your Discogs pressing' : 'MusicBrainz'
-  return (
-    <>
-      <ol className="flex flex-col gap-1 text-sm">
-        {shown.map((t, i) => (
-          <Fragment key={i}>
-            {sided && sideOf(t.pos) !== sideOf(shown[i - 1]?.pos) && (
-              // a side's heading, not a track: screen readers count only the tracks
-              <li role="presentation" className={`text-foreground-muted font-mono text-xs tracking-wider uppercase ${i ? 'pt-3' : ''}`}>
-                Side {sideOf(t.pos)}
-                {sideTime(sideOf(t.pos))}
-              </li>
-            )}
-            <li className="grid grid-cols-[2.5rem_1fr_auto] gap-2">
-              <span className="text-foreground-muted font-mono text-xs leading-5">{t.pos}</span>
-              <span className="text-foreground">{t.title}</span>
-              <span className="text-foreground-muted font-mono text-xs leading-5">{t.dur}</span>
-            </li>
-          </Fragment>
-        ))}
-      </ol>
-      {shown.length < T.length && (
-        <Button variant="ghost" size="sm" className="-ms-4 self-start" onClick={() => setAll(true)}>
-          Show all {T.length} tracks
-        </Button>
-      )}
-      <p className="text-foreground-muted text-xs">
-        From <Source name={srcName} href={src} />
-      </p>
-    </>
   )
 }
 

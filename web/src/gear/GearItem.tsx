@@ -297,7 +297,7 @@ export function GearEdit({ g, onStatus, onGone }: { g: Gear; onStatus: (s: strin
         </Field>
         <Field className="sm:col-span-2">
           <FieldLabel>Setup notes</FieldLabel>
-          <Textarea rows={3} value={f.specs} onChange={text('specs')} placeholder="Tracking force, settings, part numbers, what it pairs with…" />
+          <Textarea className="field-sizing-content max-h-80" rows={3} value={f.specs} onChange={text('specs')} placeholder="Tracking force, settings, part numbers, what it pairs with…" />
         </Field>
         <label className="text-foreground flex items-center gap-2 text-sm sm:col-span-2">
           <Checkbox

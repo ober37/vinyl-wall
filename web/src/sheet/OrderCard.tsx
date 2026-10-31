@@ -7,6 +7,7 @@ import { OSTAT, orderStatusOf, playDate, shopHref, type Rec } from '../model/rec
 import { reachOf, shopShown, type Shop } from '../model/shops'
 import { Arrived } from './StatusActions'
 import { Facts } from './Facts'
+import { tracksRow } from './Tracks'
 import { link, LinkList } from './Links'
 
 // the shop by name, linked to its website when there is one. A shop on your list (#89) gives its name, its web store
@@ -40,7 +41,8 @@ export function shopFrom(r: Rec, s?: Shop): { name: React.ReactNode; reach: Reac
 // One order, in its fold on the Order tab (#139), which names the copy and says where the order's at: the copy's pressing
 // and label, where it's from, the way to track it, what it cost (its budget until something's paid), when it was
 // ordered, older order notes, and its Discogs links.
-export function OrderCard({ r, shop }: { r: Rec; shop?: Shop }) {
+// album: the record, when r is a copy's order (its own tracklist shows when it isn't the album's, #138)
+export function OrderCard({ r, shop, album }: { r: Rec; shop?: Shop; album?: Rec }) {
   const c = wantCopies(r)[0]
   const first = c.pressing.split('\n')[0].trim()
   // named as the copy is everywhere else (#121)
@@ -58,6 +60,7 @@ export function OrderCard({ r, shop }: { r: Rec; shop?: Shop }) {
   if (r.paid) rows.push(['Paid', '$' + r.paid])
   else if (c.budget) rows.push(['Budget', 'Up to $' + c.budget])
   if (r.orderDate) rows.push(['Ordered', playDate(String(r.orderDate))])
+  if (album) rows.push(...tracksRow(album, r))
   if (r.orderNotes) rows.push(['Order notes', <span className="whitespace-pre-line">{String(r.orderNotes)}</span>])
   return (
     <div className="flex flex-col gap-3">
@@ -84,7 +87,7 @@ export function OrdersView({ r, shops, onMoved }: { r: Rec; shops: Shop[]; onMov
           </AccordionTrigger>
           <AccordionContent className="-mx-1 px-1">
             <div className="flex flex-col gap-4 pt-1 pb-3">
-              <OrderCard r={o.rec} shop={shopShown(o.rec, shops)} />
+              <OrderCard r={o.rec} shop={shopShown(o.rec, shops)} album={r} />
               {onMoved && <Arrived r={r} ci={o.ci} onMoved={onMoved} />}
             </div>
           </AccordionContent>

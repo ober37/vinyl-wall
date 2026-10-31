@@ -2,13 +2,16 @@
 // pressing, label, catalog, budget, discogsId, buyLinks, releaseDate), so Discogs sync and older walls read it as before; any others are
 // in moreCopies, in the order they were added. Owned and ordered records keep only moreCopies: the copies still wanted,
 // and the ones on order (#139), each with its own order by the record's names for it (orderStatus, eta, shop, tracking…).
-import { kindOf, playDate, pressingText, shopHref, type Rec } from './record'
+import { kindOf, playDate, pressingText, recordTracks, shopHref, type Rec, type Track } from './record'
 
 // buyLinks: where the copy is sold, one address each; releaseDate: when a pre-order comes out, YYYY-MM-DD (#75);
 // barcodes: its Discogs release's, with that release's id, filled in by the background task (tools/barcodes.py, #88).
 // They stay with the copy wherever it goes; ones beside a release they didn't come from are read again, never used, and
 // so are ones beside a release the sync guessed for the record (not the pressing wanted)
 export type Barcodes = { rid: number; codes: string[] }
+// releaseTracks: a copy's own tracklist, and its runtime when every track has a length, from its Discogs release, filled
+// in by the background task for every copy after the first (#138); the first copy's are the album's
+export type ReleaseTracks = { rid: number; tracks: Track[]; runtime?: number }
 export type Copy = {
   name: string
   pressing: string
@@ -19,6 +22,7 @@ export type Copy = {
   buyLinks: string[]
   releaseDate: string
   barcodes?: Barcodes
+  releaseTracks?: ReleaseTracks
 } & Partial<CopyOrder>
 // a copy's own order (#139), by the names the record's own has; a copy with an orderStatus is on order
 export const ORDER_KEYS = ['orderStatus', 'orderDate', 'eta', 'paid', 'shop', 'shopUrl', 'orderNum', 'carrier', 'tracking', 'orderNotes'] as const
@@ -37,6 +41,10 @@ const bars = (v: unknown): { barcodes?: Barcodes } => {
   return b && typeof b === 'object' && typeof b.rid === 'number' && Array.isArray(b.codes)
     ? { barcodes: { rid: b.rid, codes: b.codes.filter((x) => typeof x === 'string' && /^\d+$/.test(x)) } }
     : {}
+}
+export const relTracks = (v: unknown): { releaseTracks?: ReleaseTracks } => {
+  const t = v as ReleaseTracks | undefined
+  return t && typeof t === 'object' && typeof t.rid === 'number' && Array.isArray(t.tracks) ? { releaseTracks: t } : {}
 }
 // the sync's guess at the record's release (tools/discogs_sync.py), often the original pressing: not a pressing anyone chose
 // or matched by catalog number
@@ -59,8 +67,24 @@ export function wantCopies(r: Rec): Copy[] {
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((c): c is Record<string, unknown> => !!c && typeof c === 'object')
   return [
     { name: s(r.copyName), pressing: pressingText(r), label: s(r.label), catalog: s(r.catalog), budget: s(r.budget), discogsId: did(r.discogsId), buyLinks: links(r.buyLinks), releaseDate: day(r.releaseDate), ...(guessedRelease(r) ? {} : bars(r.barcodes)) },
-    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes), ...orderOf(c) })),
+    ...more.map((c) => ({ name: s(c.name), pressing: s(c.pressing), label: s(c.label), catalog: s(c.catalog), budget: s(c.budget), discogsId: did(c.discogsId), buyLinks: links(c.buyLinks), releaseDate: day(c.releaseDate), ...bars(c.barcodes), ...relTracks(c.releaseTracks), ...orderOf(c) })),
   ]
+}
+
+// A copy's album as the sheet reads it (#138): its own release's tracklist when it has one, and its runtime (typed, else
+// its release's, else the album's), so its tracks, sides and a play's minutes are that pressing's
+type HasTracks = { discogsId: number | ''; releaseTracks?: ReleaseTracks; runtime?: string }
+export function copyAlbum(r: Rec, c: HasTracks): Pick<Rec, 'about' | 'runtime'> {
+  const t = c.releaseTracks && c.discogsId && c.releaseTracks.rid === c.discogsId ? c.releaseTracks : undefined
+  const T = recordTracks({ id: '', about: { tracks: t?.tracks } })
+  const runtime = parseInt(c.runtime || '', 10) || (T.length && t?.runtime) || r.runtime || ''
+  return { runtime, about: T.length ? { ...r.about, tracks: T, tracksSource: 'copy', tracksUrl: 'https://www.discogs.com/release/' + c.discogsId } : r.about }
+}
+// a copy's tracklist to show in its fold: its own, when its tracks or their titles differ from the album's
+export function ownTracks(album: Rec, copy: Rec): boolean {
+  if (copy.about?.tracksSource !== 'copy') return false
+  const key = (x: Rec) => JSON.stringify(recordTracks(x).map((t) => [t.pos, t.title]))
+  return key(copy) !== key(album)
 }
 
 // a copy's name for headings and the copy picker: its name, else its pressing, else its Discogs release, else "Copy N"

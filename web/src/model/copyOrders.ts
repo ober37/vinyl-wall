@@ -3,7 +3,7 @@
 // copy's arrival or a cancelled order leaves the record with a copy of another kind in its own fields, the two change
 // places, so the record's own fields stay its copy as the rest of the page and the Discogs sync read them.
 import { notesOf } from './notes'
-import { buyHosts, copyOrdered, ORDER_KEYS, wantCopies, type Copy } from './copies'
+import { buyHosts, copyAlbum, copyOrdered, ORDER_KEYS, wantCopies, type Copy } from './copies'
 import { emptyOwned, gotPatch, type OwnCopy } from './owned'
 import { kindOf, OSTAT, orderStatusOf, shortDate, tagOf, today, type Rec, type Tag } from './record'
 import { movePatch, type Paid } from './status'
@@ -34,6 +34,7 @@ export function ordersOf(r: Rec): Order[] {
           status: 'ordered',
           copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId, buyLinks: c.buyLinks,
           releaseDate: c.releaseDate,
+          ...copyAlbum(r, c),
           ...Object.fromEntries(ORDER_KEYS.map((x) => [x, c[x] ?? ''])),
           discogsMatch: '',
           moreCopies: undefined,
@@ -105,6 +106,7 @@ const owned = (c: Copy, det: { paid?: string; shop?: string; shopUrl?: string })
   ...emptyOwned(),
   name: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, discogsId: c.discogsId,
   ...(c.barcodes ? { barcodes: c.barcodes } : {}),
+  ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
   paid: det.paid || '', shop: det.shop || '', shopUrl: det.shopUrl || '',
   acquired: today(),
 })

@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-"""Store each copy's barcodes from its Discogs release, so a shop's barcode page opens that pressing (#88).
+"""Store each copy's barcodes from its Discogs release, so a shop's barcode page opens that pressing (#88), and each copy
+after the first its release's tracklist and runtime, so the sheet shows that pressing's tracks and a play of it counts
+its minutes (#138).
 
 Usage: [DISCOGS_TOKEN=...] python3 -I barcodes.py <records_dir> <versions.json> <out.json>
 
@@ -8,7 +10,9 @@ raw doc); versions.json maps doc_id -> its version. A copy's barcodes live with 
 discogsId: the record's own fields for its first copy (its copy, on a record you have), each entry of moreCopies for
 the rest, and each entry of ownedCopies for the other copies you have (#121). They're kept as {"rid": <the release they came from>, "codes": [digits, …]}, so a copy whose release changed
 (or whose barcodes were moved beside the wrong copy) is read again; a release with none keeps "codes": [] and isn't
-asked again. A release the sync guessed for the record (discogsMatch "master main release" or "vinyl: …", often the
+asked again. A copy's tracklist is kept the same way, as {"rid": …, "tracks": [{"pos", "title", "dur"?}, …], "runtime":
+<minutes, when every track has a length>}, in releaseTracks; the record's own copy has none, as its tracklist and runtime
+are the album's (tools/lookup.py reads them from its release). A release the sync guessed for the record (discogsMatch "master main release" or "vinyl: …", often the
 original pressing, not the one wanted) isn't the copy's pressing: it gets no barcodes, and any saved from it go. At most MAX_RELEASES releases a run; the rest wait for the next one. out.json is a list of batch writes.
 """
 import glob, json, os, re, sys, time, urllib.error, urllib.request
@@ -38,6 +42,26 @@ def codes_of(release):
             if len(d) >= 8 and d not in out:
                 out.append(d)
     return out
+
+
+def tracks_of(release):
+    """A release's tracks as the page reads them, and its runtime in minutes when every track has a length."""
+    tr = [{"pos": t.get("position", ""), "title": t.get("title", ""), **({"dur": t["duration"]} if t.get("duration") else {})}
+          for t in (release or {}).get("tracklist") or [] if t.get("type_", "track") == "track" and t.get("title")]
+    s = [secs(t.get("dur")) for t in tr]
+    return {"tracks": tr, **({"runtime": round(sum(s) / 60)} if tr and all(s) and round(sum(s) / 60) else {})}
+
+
+def secs(d):
+    m = re.fullmatch(r"(?:(\d+):)?(\d+):(\d\d)", str(d or "").strip())
+    return (int(m.group(1) or 0) * 3600 + int(m.group(2)) * 60 + int(m.group(3))) if m else 0
+
+
+def tracks_stale(c):
+    """The copy has a Discogs release whose tracklist isn't stored beside it."""
+    rid = rid_of(c.get("discogsId"))
+    t = c.get("releaseTracks")
+    return bool(rid) and not (isinstance(t, dict) and t.get("rid") == rid and isinstance(t.get("tracks"), list))
 
 
 def stale(c):
@@ -81,7 +105,9 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
         if guessed(r) and "barcodes" in r:
             data["barcodes"] = DEL
         for c in copies:
-            if (c is r and guessed(r)) or not stale(c):
+            bar = not (c is r and guessed(r)) and stale(c)
+            trk = c is not r and tracks_stale(c)
+            if not (bar or trk):
                 continue
             rid = rid_of(c["discogsId"])
             if rid not in got:
@@ -90,10 +116,13 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
                     continue
                 asked += 1
                 rel = fetch(rid)
-                got[rid] = None if rel is None else codes_of(rel)
+                got[rid] = None if rel is None else (codes_of(rel), tracks_of(rel))
             if got[rid] is None:
                 continue
-            c["barcodes"] = {"rid": rid, "codes": got[rid]}
+            if bar:
+                c["barcodes"] = {"rid": rid, "codes": got[rid][0]}
+            if trk:
+                c["releaseTracks"] = {"rid": rid, **got[rid][1]}
             if c is r:
                 data["barcodes"] = c["barcodes"]
             elif any(c is x for x in owned):
@@ -102,7 +131,7 @@ def plan(records, versions, fetch, limit=MAX_RELEASES):
                 data["moreCopies"] = more
         if data and rid_doc in versions:
             writes.append({"op": "update", "collection": "records", "doc_id": rid_doc, "if_version": versions[rid_doc], "data": data})
-    found = sum(1 for v in got.values() if v)
+    found = sum(1 for v in got.values() if v and v[0])
     lines = [f"{asked} Discogs releases read, {found} with barcodes, {len(writes)} records to update"
              + (f"; {waiting} copies wait for the next run" if waiting else "") + "."]
     return writes, lines

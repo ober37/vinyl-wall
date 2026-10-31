@@ -175,8 +175,15 @@ function DateIn({ k, label, form, set }: { k: Key; label: string; form: Form; se
 }
 
 // one owned copy's fields: Name, Pressing across, where and when it was bought, grades, Label and Catalog no., runout and
-// its Discogs release
-function OwnedFields({ form, set, discogs, auto, focus }: { form: Form; set: Props['set']; discogs: React.ReactNode; auto?: string[]; focus?: boolean }) {
+// its Discogs release; album: on a copy after the first, the album's runtime, beside which the copy's own can be typed (#138)
+function OwnedFields({ form, set, discogs, auto, focus, album }: {
+  form: Form
+  set: Props['set']
+  discogs: React.ReactNode
+  auto?: string[]
+  focus?: boolean
+  album?: string
+}) {
   const p = { form, set }
   return (
     <div className="grid gap-4 sm:grid-cols-2">
@@ -184,6 +191,7 @@ function OwnedFields({ form, set, discogs, auto, focus }: { form: Form; set: Pro
       <Field className="sm:col-span-2">
         <FieldLabel>Pressing</FieldLabel>
         <Textarea
+          className="field-sizing-content max-h-80"
           rows={2}
           value={form.pressing ?? ''}
           onChange={(e) => set('pressing', e.target.value)}
@@ -198,6 +206,7 @@ function OwnedFields({ form, set, discogs, auto, focus }: { form: Form; set: Pro
       <Grade k="sleeveGrade" label="Sleeve" {...p} />
       <Text k="label" label="Label" placeholder="e.g. Columbia" auto={auto} {...p} />
       <Text k="catalog" label="Catalog no." placeholder="e.g. CS 8163" mono {...p} />
+      {album !== undefined && <Text k="runtime" label="Runtime (min)" placeholder={album ? album + " (the album's)" : 'e.g. 46'} mono numeric {...p} />}
       <Runout form={form} set={set} />
       {discogs}
     </div>
@@ -205,9 +214,9 @@ function OwnedFields({ form, set, discogs, auto, focus }: { form: Form; set: Pro
 }
 
 // an owned copy after the first as the form's fields, so OwnedFields edits it as it does the first
-const OWN_FORM: Record<Exclude<keyof OwnCopy, 'discogsId' | 'barcodes'>, Key> = {
+const OWN_FORM: Record<Exclude<keyof OwnCopy, 'discogsId' | 'barcodes' | 'releaseTracks'>, Key> = {
   name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', matrix: 'matrix', mediaGrade: 'mediaGrade', sleeveGrade: 'sleeveGrade',
-  paid: 'paid', shop: 'shop', shopUrl: 'shopUrl', acquired: 'acquired',
+  paid: 'paid', shop: 'shop', shopUrl: 'shopUrl', acquired: 'acquired', runtime: 'runtime',
 }
 const asForm = (c: OwnCopy): Form => ({
   title: '', artist: '', why: '', year: '', runtime: '', discogsId: c.discogsId,
@@ -315,7 +324,7 @@ function YourCopiesEdit({ form, set, auto, change, r, isNew, discogs, connected,
               onConnect={onConnect}
               />
           )
-          return block(j + 1, <OwnedFields form={cf} set={setC} discogs={disc} focus={added === keys[j + 1]} />)
+          return block(j + 1, <OwnedFields form={cf} set={setC} discogs={disc} focus={added === keys[j + 1]} album={form.runtime} />)
         })}
       </Accordion>
       {/* on a row of its own below the last copy: it's for the group, not that copy */}
@@ -383,7 +392,7 @@ function OrderFields(p: { form: Form; set: Props['set'] }) {
       {form.orderNotes !== undefined && (
         <Field className="sm:col-span-2">
           <FieldLabel>Order notes</FieldLabel>
-          <Textarea rows={2} value={form.orderNotes} onChange={(e) => set('orderNotes', e.target.value)} />
+          <Textarea className="field-sizing-content max-h-80" rows={2} value={form.orderNotes} onChange={(e) => set('orderNotes', e.target.value)} />
         </Field>
       )}
     </div>
@@ -429,6 +438,7 @@ export function EditForm({ form, kind, set, change, title, focusWhy, onStatus, o
       <Fieldset>
         <FieldsetLegend>{own ? "Why it's on the wall" : 'Why you want it'}</FieldsetLegend>
         <Textarea
+          className="field-sizing-content max-h-80"
           aria-label="Why"
           rows={3}
           autoFocus={focusWhy}

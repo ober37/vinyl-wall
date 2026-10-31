@@ -42,15 +42,16 @@ export function playMin(r: Rec, kind: PlayKind, tracks: string[]) {
   return kind === 'tracks' ? tracksMin(r, tracks) : kind === 'side' ? Math.round(rt / 2) : rt
 }
 
-// on: the setup's name, once the wall has any setup
-export function playNote(r: Rec, kind: PlayKind, side: string, tracks: string[], on = ''): Note {
+// on: the setup's name, once the wall has any setup; copy: which of several copies you own was played, by its name then
+// (#138), with r that copy (ownedRecs), so its tracks and runtime count
+export function playNote(r: Rec, kind: PlayKind, side: string, tracks: string[], on = '', copy = ''): Note {
   const t =
     (kind === 'tracks'
       ? `Played ${tracks.length} track${tracks.length > 1 ? 's' : ''}`
       : kind === 'side'
         ? 'Played one side'
         : 'Played the whole album') + (on ? ` on ${on}` : '') + ` (~${playMin(r, kind, tracks)} min)`
-  return { d: today(), t, ...(side ? { side } : {}), ...(tracks.length ? { tracks } : {}) }
+  return { d: today(), t, ...(side ? { side } : {}), ...(tracks.length ? { tracks } : {}), ...(copy ? { copy } : {}) }
 }
 
 // the journal's save: thoughts in j, the vibe set or cleared (an old mood goes), a new date moves the play
@@ -65,4 +66,10 @@ export function saveJournal(r: Rec, ref: NoteRef, j: { text: string; vibe: numbe
   if (j.date && /^\d{4}-\d\d-\d\d$/.test(j.date)) n.d = j.date
   notes[i] = n
   return notes
+}
+
+// the copy a play was last logged on, among copies by their names; else the first
+export function lastCopy(r: Rec, names: string[]): number {
+  const n = [...notesOf(r)].reverse().find((x) => typeof x?.copy === 'string' && names.includes(x.copy))
+  return n ? names.indexOf(n.copy as string) : 0
 }

@@ -50,7 +50,7 @@ PART C — Discogs sync (one-way, wall → Discogs)
 PART K — barcodes
 K1. `list` the "records" collection with out_dir "<workdir>/db-bar" (follow next_cursor), and write <workdir>/versions-bar.json mapping each doc_id to its version.
 K2. In ONE turn, fetch the script with the Artifact tool (action "read", url the artifact URL above, path "tools/barcodes.py", out_dir <workdir>/tools), then run: python3 -I <workdir>/tools/barcodes.py <workdir>/db-bar/records <workdir>/versions-bar.json <workdir>/barcodes.json
-    If discogs.hasToken is true, prefix it with DISCOGS_TOKEN="$(cat <workdir>/tokfile)" (see TOKEN HANDLING); it only raises Discogs' rate limit. It reads each copy's Discogs release once, keeps its barcodes with that copy, and prints one line.
+    If discogs.hasToken is true, prefix it with DISCOGS_TOKEN="$(cat <workdir>/tokfile)" (see TOKEN HANDLING); it only raises Discogs' rate limit. It reads each copy's Discogs release once, keeps its barcodes (and, for each copy after the first, its tracklist and runtime) with that copy, and prints one line.
 K3. Apply barcodes.json with ArtifactData action "batch" (up to 50 entries per call; pass each entry's op, collection, doc_id, if_version and data exactly). If a batch fails on a version conflict (the owner edited that record meanwhile), drop the entry it names and send the rest; that record waits for the next run.
 
 PART S — shop search links

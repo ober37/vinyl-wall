@@ -2,7 +2,7 @@
 // matrix, discogsId, grades, paid, shop, shopUrl, acquired, barcodes), so Discogs sync and older walls read it as before;
 // any others are in ownedCopies, each with the same fields by the same names (name for copyName), in the order they came.
 import { notesOf } from './notes'
-import { buyHosts, wantCopies, type Barcodes } from './copies'
+import { buyHosts, copyAlbum, relTracks, wantCopies, type Barcodes, type ReleaseTracks } from './copies'
 import { kindOf, pressingText, today, type Rec } from './record'
 
 export type OwnCopy = {
@@ -18,9 +18,12 @@ export type OwnCopy = {
   shop: string
   shopUrl: string
   acquired: string
+  // minutes, as typed: '' is its release's, else the album's (#138)
+  runtime: string
   barcodes?: Barcodes
+  releaseTracks?: ReleaseTracks
 }
-const TEXT = ['name', 'pressing', 'label', 'catalog', 'matrix', 'mediaGrade', 'sleeveGrade', 'paid', 'shop', 'shopUrl', 'acquired'] as const
+const TEXT = ['name', 'pressing', 'label', 'catalog', 'matrix', 'mediaGrade', 'sleeveGrade', 'paid', 'shop', 'shopUrl', 'acquired', 'runtime'] as const
 
 const s = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
 const did = (v: unknown): number | '' => {
@@ -42,6 +45,7 @@ export const emptyOwned = (): OwnCopy => ({
   shop: '',
   shopUrl: '',
   acquired: '',
+  runtime: '',
 })
 
 // the copies after the first, as stored (anything that isn't a copy is skipped)
@@ -52,7 +56,7 @@ export function moreOwned(r: Rec): OwnCopy[] {
     for (const k of TEXT) o[k] = s(c[k])
     const b = obj(c.barcodes)
     if (b && typeof b.rid === 'number' && Array.isArray(b.codes)) o.barcodes = b as Barcodes
-    return o
+    return { ...o, ...relTracks(c.releaseTracks) }
   })
 }
 
@@ -67,7 +71,8 @@ const syncedRids = (r: Rec) => {
 // the first copy, from the record's own fields, as one of ownedCopies (a library file's, beside its others)
 export function firstAsCopy(r: Rec): OwnCopy {
   const o: OwnCopy = { ...emptyOwned(), discogsId: did(r.discogsId), name: s(r.copyName) }
-  for (const k of TEXT) if (k !== 'name') o[k] = s(r[k])
+  // (its runtime is the album's, the record's own)
+  for (const k of TEXT) if (k !== 'name' && k !== 'runtime') o[k] = s(r[k])
   o.pressing = pressingText(r)
   const b = obj(r.barcodes)
   if (b && typeof b.rid === 'number' && Array.isArray(b.codes)) o.barcodes = b as Barcodes
@@ -77,13 +82,14 @@ export function firstAsCopy(r: Rec): OwnCopy {
 // a copy after the first as a record of its own: the album's fields with the copy's over them, so it reads (facts,
 // Discogs links, sync line) as the first copy does
 export function copyRec(r: Rec, c: OwnCopy): Rec {
-  const { name, ...rest } = c
+  const { name, runtime, releaseTracks, ...rest } = c
   const sync = obj(r.discogsSync)
   const synced = !!c.discogsId && syncedRids(r).includes(c.discogsId)
   return {
     ...r,
     copyName: name,
     ...rest,
+    ...copyAlbum(r, c),
     discogsMatch: '',
     ownedCopies: undefined,
     discogsSync: synced ? { state: 'synced', where: 'collection', at: sync?.at } : {},
@@ -121,6 +127,7 @@ export function gotPatch(
     catalog: c.catalog,
     discogsId: c.discogsId,
     ...(c.barcodes ? { barcodes: c.barcodes } : {}),
+    ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
     paid: det.paid,
     shop: det.shop,
     shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : ''),

@@ -12,7 +12,8 @@ import { Textarea } from '@appica/ui-react/textarea'
 import { fromDate, toDate } from '../model/dates'
 import { deleteNote, notesOf, type NoteRef } from '../model/notes'
 import { gearForPlay, gearOfPlay, lastSetup, loggedText, offText, playMoved, playOff, rememberSetup, setupName, sortSetups } from '../model/gear'
-import { collapsePick, playMin, playNote, recordSides, saveJournal, sideOf, VIBES, type PlayKind } from '../model/plays'
+import { collapsePick, lastCopy, playMin, playNote, recordSides, saveJournal, sideOf, VIBES, type PlayKind } from '../model/plays'
+import { ownedRecs, ownedTitle } from '../model/owned'
 import { fmtH, playDate, playMonths, recordTracks, today, type Play, type Rec } from '../model/record'
 import { playStats } from '../model/stats'
 import { useRuntime } from '../runtime/runtime'
@@ -26,25 +27,54 @@ type Journal = { ref: NoteRef; fresh: boolean; msg?: string }
 // offers Undo when the record is opened again
 const journals = new Map<string, Journal>()
 
+// a choice from a list, as Played on and Which copy are
+function Pick({ label, value, set, items }: { label: string; value: string; set: (v: string) => void; items: { value: string; label: string }[] }) {
+  return (
+    <Field className="max-w-xs">
+      <FieldLabel>{label}</FieldLabel>
+      <Select value={value} onValueChange={(v) => set(String(v))} items={items}>
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {items.map((x) => (
+            <SelectItem key={x.value} value={x.value}>
+              {x.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </Field>
+  )
+}
+
 function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
   const { mutate, gear, setups, saveGear } = useRuntime()
-  const T = recordTracks(r)
+  // with several copies you own, which one was played (the last one logged to start): its tracks, sides and runtime (#138)
+  const copies = ownedRecs(r)
+  const names = copies.map((c, i) => ownedTitle(c, i))
+  const several = copies.length > 1
+  const [chosen, setCi] = useState(() => lastCopy(r, names))
+  // (a copy removed since goes back to the first)
+  const ci = chosen < copies.length ? chosen : 0
+  const rc = several ? copies[ci] : r
+  const T = recordTracks(rc)
   const S = sortSetups(setups)
   // with two setups or more, which one it was played on (the last one used, remembered on this device)
   const [on, setOn] = useState(() => lastSetup(setups))
   const [kind, setKind] = useState<PlayKind>('full')
-  const [side, setSide] = useState(recordSides(r)[0])
+  const [side, setSide] = useState(recordSides(rc)[0])
   const [picks, setPicks] = useState<string[]>([])
   const [busy, setBusy] = useState(false)
   const sides = [...new Set(T.map((t) => sideOf(t.pos)))]
   const bySide = sides.length && sides.every(Boolean) ? sides : ['']
 
   const log = async () => {
-    const c = collapsePick(r, kind, side, picks)
+    const c = collapsePick(rc, kind, side, picks)
     // a wall with setups names the one it was played on, even when there's only one
     const setup = S.length > 1 && S.some((x) => x.id === on) ? on : S[0]?.id || ''
     if (S.length > 1) rememberSetup(setup)
-    const note = playNote(r, c.kind, c.side, c.tracks, setup ? setupName(S, setup) : '')
+    const note = playNote(rc, c.kind, c.side, c.tracks, setup ? setupName(S, setup) : '', several ? names[ci] : '')
     let i = -1
     setBusy(true)
     const ok = await mutate(r.id, (latest) => {
@@ -57,7 +87,7 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
       setPicks([])
       // back to Whole album, so the tracklist folds and the play just logged is in reach
       setKind('full')
-      const min = playMin(r, c.kind, c.tracks)
+      const min = playMin(rc, c.kind, c.tracks)
       const hits = gearForPlay(gear, S, setup, r, min)
       // each piece's minutes and plays are added to it as it is when its write is made
       hits.forEach((x) => saveGear(x.g.id, (g) => g && gearForPlay([g], S, setup, r, min)[0]?.data))
@@ -65,9 +95,27 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
     }
   }
 
+  // another copy's positions aren't this one's: its ticks go, and its first side is chosen
+  const pickCopy = (v: string) => {
+    const i = +v
+    setCi(i)
+    setPicks([])
+    setSide(recordSides(copies[i])[0])
+    if (!recordTracks(copies[i]).length && kind === 'tracks') setKind('full')
+  }
+  const played = S.length > 1 && (
+    <Pick label="Played on" value={S.some((x) => x.id === on) ? on : S[0].id} set={setOn} items={S.map((x) => ({ value: x.id, label: x.name || 'Untitled setup' }))} />
+  )
   return (
     <Fieldset>
       <FieldsetLegend>Log a play</FieldsetLegend>
+      {/* which copy decides everything under it, so it comes first, with Played on beside it from sm */}
+      {several && (
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Pick label="Which copy" value={String(ci)} set={pickCopy} items={names.map((n, i) => ({ value: String(i), label: n }))} />
+          {played}
+        </div>
+      )}
       {/* the choice and its action on one row, kept at the top of the sheet while the card is on screen, so the button
           stays in reach down a long tracklist; with Tracks chosen it shows once a track is ticked, with the count. On a
           phone the choices take the width and the button its own row under them */}
@@ -87,9 +135,14 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
         )}
       </div>
       {kind === 'side' && (
-        <Segmented label="Which side" value={side} onChange={setSide} options={recordSides(r).map((s) => [s, 'Side ' + s])} />
+        <Segmented label="Which side" value={side} onChange={setSide} options={recordSides(rc).map((s) => [s, 'Side ' + s])} />
       )}
-      {kind === 'tracks' && !picks.length && <p className="text-foreground-muted text-sm">Tick the tracks you played.</p>}
+      {/* a copy after the first without a tracklist of its own ticks the album's, and says so */}
+      {kind === 'tracks' && !picks.length && (
+        <p className="text-foreground-muted text-sm">
+          {ci > 0 && several && rc.about?.tracksSource !== 'copy' ? "Tick the tracks you played, from the album's tracklist." : 'Tick the tracks you played.'}
+        </p>
+      )}
       {kind === 'tracks' && (
         <CheckboxGroup aria-label="Tracks" value={picks} onValueChange={(v) => setPicks(v as string[])} className="gap-3">
           {bySide.map((sd) => (
@@ -110,23 +163,7 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
           ))}
         </CheckboxGroup>
       )}
-      {S.length > 1 && (
-        <Field className="max-w-xs">
-          <FieldLabel>Played on</FieldLabel>
-          <Select value={S.some((x) => x.id === on) ? on : S[0].id} onValueChange={(v) => setOn(String(v))} items={S.map((x) => ({ value: x.id, label: x.name || 'Untitled setup' }))}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {S.map((x) => (
-                <SelectItem key={x.id} value={x.id}>
-                  {x.name || 'Untitled setup'}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </Field>
-      )}
+      {!several && played}
     </Fieldset>
   )
 }
@@ -188,7 +225,7 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
           Set the vibe
         </Button>
       )}
-      <Textarea aria-label="Your thoughts" placeholder="What stood out tonight?" value={text} onChange={(e) => setText(e.target.value)} rows={3} />
+      <Textarea className="field-sizing-content max-h-80" aria-label="Your thoughts" placeholder="What stood out tonight?" value={text} onChange={(e) => setText(e.target.value)} rows={3} />
       {!j.fresh && (
         <Field>
           <FieldLabel>Played on</FieldLabel>
@@ -252,7 +289,11 @@ export function Listening({ r }: { r: Rec }) {
     else journals.delete(r.id)
     keepJournal(j)
   }
-  const months = playMonths(r)
+  const copies = ownedRecs(r)
+  const months = playMonths(
+    r,
+    copies.map((c, i): [string, Rec] => [ownedTitle(c, i), c]),
+  )
   const cur = today().slice(0, 7)
   const [open, setOpen] = useState<string[]>(() => [months.some((m) => m.month === cur) ? cur : months[0]?.month].filter(Boolean))
   // by position too: two whole-album plays on one day have the same date and text
