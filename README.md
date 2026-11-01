@@ -28,14 +28,16 @@ If something's missing, Claude tells you before building anything.
 
 ## Features
 
-- **The wall.** Every record hangs on the wall, from iron rings on a weathered barnwood plank, wooden pegs, push pins on cork, or floating (Settings → Hanging): what you own, then orders on the way by expected arrival, then the hunt by priority. Tags show each record's status, and tapping the counts under the title filters the wall to one or more of them. Search by title, artist, label or year to find a record fast. Hover (or tap) a sleeve to open it: a short list of the record's facts, its listening log, and an About section with the album and artist from Wikipedia and the artist's official links.
-- **The hunt.** A wishlist with priorities (Top want, Want, Someday) and the copies you want, each a pressing with its own budget. Your shops, local and online (Settings → Shops; Revolver, Amazon, Discogs Marketplace and eBay to start), each one click from a record, and research in your Claude chat, which checks your shops first, searches the web and saves what it finds to the record. Ask the chat to find record shops near you.
+- **The wall.** Every record hangs on the wall, from iron rings on a weathered barnwood plank, wooden pegs, push pins on cork, or floating (Settings → Hanging): what you own, then orders on the way by expected arrival, then the hunt by priority. Tags show each record's status, and tapping the counts under the title filters the wall to one or more of them. Search by title, artist, label or year to find a record fast. Open a sleeve for its record sheet: the album and artist from Wikipedia with the artist's official links, every pressing you have or want, and its listening, notes and research in tabs.
+- **The hunt.** A wishlist with priorities (Top want, Want, Someday) and the copies you want, each a pressing with its own budget, the shop pages that sell it, and its release date if it's a pre-order. Your shops, local and online (Settings → Shops; Revolver, Amazon, Discogs Marketplace and eBay to start), each one click from a record, searching for the album or, by barcode, the exact pressing. Research in your Claude chat checks your shops first, searches the web and saves what it finds to the record; pin what's worth keeping.
 - **Automatic details.** Add just an artist and album: the cover, year, label and runtime are looked up for you.
-- **Your copy.** Media and sleeve grades, catalog number, pressing, matrix/runout, where you bought it and what you paid.
-- **Orders.** Store, order number, status, expected date, carrier and tracking link. "It arrived" moves it to the wall.
-- **Listening log.** Dated notes per record, plus "Played the whole album" / "Played one side".
+- **Your copies.** Every pressing of an album you own lives on one record, each with its grades, catalog number, matrix/runout, where you bought it, what you paid, and its own tracklist and runtime. Own one pressing while you hunt for or order another.
+- **Orders.** Store, order number, status, expected date, carrier and tracking link, for a new record or another pressing of one you own. "It arrived" moves it to the wall.
+- **Listening log.** Log a whole album, one side or a few tracks, on the copy you played, with a note and a vibe. Plays, hours and badges for your most played records, plus dated notes per record.
 - **Equipment.** Turntables, cartridges, styluses, speakers and more, grouped into setups (e.g. Office, Living room) with shared gear. Plays add hours to the right gear; styluses warn you as they approach their rated life.
 - **Discogs sync (optional).** Owned records go to your Discogs collection with grades and notes; the hunt and orders go to your wantlist. Already on Discogs? Import your collection and wantlist in one tap.
+- **From a chat.** Save the Vinyl Wall skill to your Claude account, then add records from photos of the sleeve, research a pressing, find record shops near you, or merge two records of one album.
+- **Your library in a file.** Export everything to a file, and import it into a wall.
 - **Make it yours.** Rename the wall and pick a background: photos of a listening room, record shops, a coffee shop or a tavern, softened as much as you like, or patterns like speaker grille and walnut paneling. Or upload your own.
 - **Easy updates.** Settings tells you when a new version is out and what to send Claude.
 - Works on phones, and in light and dark mode.
@@ -64,7 +66,8 @@ The sync only writes to *your* collection and wantlist, and the import only adds
 
 | Path | What it is |
 |---|---|
-| `app/vinyl-wall.html` | The wall itself: one self-contained page |
+| `app/vinyl-wall.html` | The wall itself: one page, built from `web/` |
+| `web/` | The page's source (React and appica-ui) |
 | `app/tools/discogs_sync.py` | One-way sync from the wall to your Discogs collection and wantlist |
 | `app/tools/discogs_import.py` | One-time import of an existing Discogs collection and wantlist onto the wall |
 | `app/tools/barcodes.py` | Keeps each copy's barcodes from its Discogs release, so a shop's barcode page opens that pressing |
@@ -72,7 +75,7 @@ The sync only writes to *your* collection and wantlist, and the import only adds
 | `app/tools/lookup.py` | Looks up covers, details and album and artist info for new records, a few at a time |
 | `app/backgrounds/` | The photo backgrounds |
 | `tasks/background-task.md` | Instructions for the background task (covers, runtimes, Discogs) |
-| `skills/vinyl-wall/SKILL.md` | A Claude skill for adding records from a chat; setup offers to save it to your account |
+| `skills/vinyl-wall/SKILL.md` | A Claude skill for adding records, research, shops and merging records from a chat; setup offers to save it to your account |
 | `SETUP.md` | Step-by-step instructions Claude follows to install or update a wall |
 
 ## Credits and licenses
