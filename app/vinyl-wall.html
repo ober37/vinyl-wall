@@ -4,7 +4,7 @@
     <script>globalThis.process={env:{NODE_ENV:"production"}}</script>
 
 
-    <meta name="vinyl-wall-version" content="0.9.6">
+    <meta name="vinyl-wall-version" content="0.9.7">
 
     <script>(function themeScript(storageKey, defaultTheme, forcedTheme, themes, value, enableSystem, enableColorScheme) {
   const el = document.documentElement;
@@ -3022,7 +3022,7 @@ function GearPill({ onOpen }) {
 	});
 }
 // src/version.ts
-var APP_VERSION = "0.9.6";
+var APP_VERSION = "0.9.7";
 // src/model/image.ts
 var browser = {
 	bitmap: (f) => createImageBitmap(f),
@@ -5415,7 +5415,7 @@ var day = (d) => {
 };
 function useUpdateAvailable() {
 	const { canEdit, hasMcp, settings } = useRuntime();
-	return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, "0.9.6");
+	return canEdit && hasMcp && !!settings.taskId && newer(settings.update?.latest, "0.9.7");
 }
 var STALL = 6e5;
 function DiscogsImport({ dz }) {
