@@ -277,6 +277,24 @@ S.sync_one({**mine, "status": "wish"}, set(), sync)
 check("sync: back on the hunt, the other copies' items come off", ("DELETE", "/users/u/collection/folders/1/releases/31/instances/77", None) in calls
       and "ownedInsts" not in sync, calls)
 
+# --- two records of one album merged from chat (#140): the record that went is deleted outright, its collection items
+# moved into the kept record's ownedInsts and its wantlist entries into its copyRids
+calls.clear()
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "ownedInsts": [{"rid": 41, "instanceId": 410, "adopted": False}]}
+insts[30], insts[41] = [{"instance_id": 300, "folder_id": 1}], [{"instance_id": 410, "folder_id": 1}]
+S.sync_one({**mine, "ownedCopies": [{"name": "Merged", "discogsId": 41}]}, set(), sync)
+check("merge: the other record's collection item stays and isn't added again",
+      sync.get("ownedInsts") == [{"rid": 41, "instanceId": 410, "adopted": False}]
+      and not any(c[1] == "/users/u/collection/folders/1/releases/41" or (c[0] == "DELETE" and "/41/" in c[1]) for c in calls), (sync, calls))
+
+calls.clear()
+w = {42, 43}
+sync = {"rid": 30, "where": "collection", "state": "synced", "instanceId": 300, "copyRids": [42, 43]}
+S.sync_one({**mine, "ownedCopies": [], "moreCopies": [{"name": "Merged want", "discogsId": 42}]}, w, sync)
+check("merge: a moved wantlist entry that's still a copy stays, a guessed one comes off",
+      ("DELETE", "/users/u/wants/43", None) in calls and not any(c[0] == "DELETE" and c[1] == "/users/u/wants/42" for c in calls)
+      and sync.get("copyRids") == [42], (sync, calls))
+
 # --- copies on order (#139): each is on the wantlist with its order's note, read back onto the copy on import
 placed = {"name": "Blue vinyl", "orderStatus": "shipped", "shop": "Rough Trade", "orderDate": "2026-10-01", "eta": "2026-11-02"}
 rt = I.read_want(S.copy_notes({"priority": 2}, placed))

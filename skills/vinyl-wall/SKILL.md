@@ -1,11 +1,11 @@
 ---
 name: vinyl-wall
-description: Add, update or research records on the person's Vinyl Wall (a published artifact) from a chat, often from photos of the record. Use whenever they ask to add, hang, log or change a record, an order or a wanted album on their wall, or to research one of its records and save what you found. Also use it to add, find or change the record shops the wall checks first ("find record shops near me").
+description: Add, update or research records on the person's Vinyl Wall (a published artifact) from a chat, often from photos of the record. Use whenever they ask to add, hang, log or change a record, an order or a wanted album on their wall, or to research one of its records and save what you found, or to merge two records of one album. Also use it to add, find or change the record shops the wall checks first ("find record shops near me").
 ---
 
 # Adding records to a Vinyl Wall
 
-Skill version 25.
+Skill version 26.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -41,6 +41,23 @@ If a shop listing shows a release date still to come (a pre-order), ask whether 
 To change a record, `update` only the fields that change, plus `needsSync: true` so the change reaches Discogs (an order that arrives moves from the wantlist to the collection).
 
 A record with `coverBlocked: true` had its cover removed on purpose: don't give it a cover (`coverAsset`, or `needsEnrich` for one) unless they ask. When they do, also set `coverBlocked: false`. Likewise `aboutBlocked: true` means they turned off its album and artist info (Not this artist): leave it off unless they ask, then set `aboutBlocked: false`, `aboutAt: ""`, `aboutV: 0` and `needsEnrich: true`.
+
+## Two records of one album
+
+A wall from before copies existed can hold one album as two records. When they ask you to merge two records of one album (never on your own), `get` both. Keep the one further along: owned, then on order, then wanted; between two alike, the one `added` first. Tell them which you'll keep before writing anything. The other one is the second record; it joins the kept one:
+
+- Its first copy (its own fields), by the second record's status:
+  - Owned: append it to `ownedCopies` as in Another copy they own (`name` from its `copyName`), with its `barcodes` when it has them.
+  - On order: append it to `moreCopies` as a copy on order: `{"name", "pressing", "label", "catalog", "discogsId", "barcodes"}` and its order fields `orderStatus`, `orderDate`, `eta`, `paid`, `shop`, `shopUrl`, `orderNum`, `carrier`, `tracking`, `orderNotes`.
+  - Wanted: append it to `moreCopies` as a copy wanted: `{"name", "pressing", "label", "catalog", "budget", "discogsId", "buyLinks", "releaseDate", "barcodes"}`, but only as a copy they chose (see Research): a `discogsId` the sync matched by itself becomes `""`, and when its name, pressing, catalog, budget and `discogsId` are then all empty, it adds no copy. When both records are wanted, the kept one takes the higher `priority` (the lower number).
+- Its `ownedCopies` go after the kept record's, and its `moreCopies` after the kept record's `moreCopies`. Skip a copy wanted or on order when the kept record already has a copy with that pressing or Discogs release.
+- Each copy they own is named in its plays by its heading: its name, else its pressing's first line, else "Discogs release <discogsId>". When a copy they own has none of those, or two copies would have the same one, ask them for a name (like "Sealed" or "Player") for each.
+- `notes`: both records' notes in one list by date (`d`), oldest first. When the kept record is owned, each play (a note whose `t` starts with "Played") without a `copy` gets one: the heading of the copy it was played on, the kept record's first copy for its own plays and the second record's first copy for the second's.
+- `researchLog`: both records' entries (a single `research` object counts as one), newest first by `at`, at most 10, dropping the oldest that aren't `pinned`; `research: null`.
+- `why`: the kept record's, else the second's.
+- `discogsSync`, so the second record's items stay on Discogs as the kept record's: `ownedInsts` is the kept record's list plus, when the second's `discogsSync` has an `instanceId`, `{"rid": <its rid>, "instanceId": <its instanceId>, "adopted": <its adopted, else false>}` and then the second's own `ownedInsts`. `copyRids` is the kept record's list plus the second's `rid` when its `where` is `"wantlist"` and the second's `copyRids`, each once. Write only these two lists (leave out one that's empty); the wall keeps the rest of `discogsSync`.
+
+`update` the kept record with `if_version` and `needsSync: true`. Then `list` `gear`: for each piece whose `plays` has entries with the second record's `id`, `update` it with `if_version`, those entries' `id` and `title` now the kept record's. Last, `delete` the second record's document in `records`. Never mark it `deleted: true`: that tells the sync to take its items off Discogs, and they're the kept record's now. Tell them in a line what the kept record now holds (its copies, notes and plays).
 
 ## Where to buy a copy
 
