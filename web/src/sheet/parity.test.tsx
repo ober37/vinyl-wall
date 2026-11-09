@@ -121,6 +121,8 @@ describe('months in the play history', () => {
     await close(user, 'Blue Train')
     await open(user, 'Blue Train')
     expect(month(new RegExp('March ' + lastYear)).getAttribute('aria-expanded')).toBe('false')
+    // back to Whole album, so this record's form keeps no draft for the tests after this one (#153)
+    await user.click(btn('Whole album'))
   })
 
   it('opens the current month when it has plays', async () => {

@@ -7600,6 +7600,8 @@ function artistOf(r, artists) {
 }
 // src/sheet/Listening.tsx
 var journals = /* @__PURE__ */ new Map();
+var logDrafts = /* @__PURE__ */ new Map();
+var journalDrafts = /* @__PURE__ */ new Map();
 function Pick({ label, value, set, items }) {
 	return /* @__PURE__ */ jsxs(Field, {
 		className: "max-w-xs",
@@ -7619,15 +7621,26 @@ function LogCard({ r, onLogged }) {
 	const copies = ownedRecs(r);
 	const names = copies.map((c, i) => ownedTitle(c, i));
 	const several = copies.length > 1;
-	const [chosen, setCi] = useState(() => lastCopy(r, names));
+	const draft = logDrafts.get(r.id);
+	const [chosen, setCi] = useState(() => draft?.ci ?? lastCopy(r, names));
 	const ci = chosen < copies.length ? chosen : 0;
 	const rc = several ? copies[ci] : r;
 	const T = recordTracks(rc);
 	const S = sortSetups(setups);
-	const [on, setOn] = useState(() => lastSetup(setups));
-	const [kind, setKind] = useState("full");
-	const [side, setSide] = useState(recordSides(rc)[0]);
-	const [picks, setPicks] = useState([]);
+	const [on, setOn] = useState(() => draft?.on ?? lastSetup(setups));
+	const [kind, setKind] = useState(draft?.kind ?? "full");
+	const [side, setSide] = useState(draft?.side ?? recordSides(rc)[0]);
+	const [picks, setPicks] = useState(draft?.picks ?? []);
+	useEffect(() => {
+		if (chosen === lastCopy(r, names) && on === lastSetup(setups) && kind === "full" && side === recordSides(rc)[0] && !picks.length) logDrafts.delete(r.id);
+		else logDrafts.set(r.id, {
+			ci: chosen,
+			on,
+			kind,
+			side,
+			picks
+		});
+	});
 	const [busy, setBusy] = useState(false);
 	const sides = [...new Set(T.map((t) => sideOf(t.pos)))];
 	const bySide = sides.length && sides.every(Boolean) ? sides : [""];
@@ -7757,9 +7770,23 @@ function LogCard({ r, onLogged }) {
 }
 function JournalEditor({ r, p, j, onDone }) {
 	const { mutate, gear, saveGear } = useRuntime();
-	const [vibe, setVibe] = useState(p.vibe);
-	const [text, setText] = useState(p.thoughts);
-	const [date, setDate] = useState(p.day);
+	const k = r.id + " " + p.key;
+	const draft = journalDrafts.get(k);
+	const [vibe, setVibe] = useState(draft?.vibe ?? p.vibe);
+	const [text, setText] = useState(draft?.text ?? p.thoughts);
+	const [date, setDate] = useState(draft?.date ?? p.day);
+	useEffect(() => {
+		if (vibe === p.vibe && text === p.thoughts && date === p.day) journalDrafts.delete(k);
+		else journalDrafts.set(k, {
+			vibe,
+			text,
+			date
+		});
+	});
+	const done = () => {
+		journalDrafts.delete(k);
+		onDone();
+	};
 	const [confirm, setConfirm] = useState(false);
 	const gone = () => {
 		throw new Error("This play changed elsewhere. Try again.");
@@ -7776,12 +7803,12 @@ function JournalEditor({ r, p, j, onDone }) {
 	}) ?? gone() })).then((ok) => {
 		if (!ok) return;
 		if (!j.fresh && date !== p.day && /^\d{4}-\d\d-\d\d$/.test(date)) hits.forEach((x) => saveGear(x.g.id, (g) => g && playMoved(g, x.k, date)));
-		onDone();
+		done();
 	});
 	const drop = () => mutate(r.id, (latest) => ({ notes: deleteNote(latest, j.ref) ?? gone() })).then((ok) => {
 		if (!ok) return;
 		hits.forEach((x) => saveGear(x.g.id, (g) => g && playOff(g, x.k, x.m)));
-		onDone();
+		done();
 	});
 	return /* @__PURE__ */ jsxs("div", {
 		className: "bg-background-muted flex flex-col gap-3 rounded-md p-3",
@@ -7853,7 +7880,7 @@ function JournalEditor({ r, p, j, onDone }) {
 					/* @__PURE__ */ jsx(Button, {
 						size: "sm",
 						variant: "ghost",
-						onClick: onDone,
+						onClick: done,
 						children: j.fresh ? "Skip" : "Cancel"
 					}),
 					j.fresh ? /* @__PURE__ */ jsx(Button, {
