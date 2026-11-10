@@ -5,7 +5,7 @@ description: Add, update or research records on the person's Vinyl Wall (a publi
 
 # Adding records to a Vinyl Wall
 
-Skill version 27.
+Skill version 28.
 
 The wall is a published artifact. Its records are documents in the page's `records` collection, read and written with `ArtifactData` on the wall's URL. If the chat wasn't started from the wall, find it with `Artifact` `action: "list"` (titled "Vinyl Wall" or the person's own title), or ask.
 
@@ -55,6 +55,7 @@ A wall from before copies existed can hold one album as two records. When they a
 - `notes`: both records' notes in one list by date (`d`), oldest first. When the kept record is owned, each play (a note whose `t` starts with "Played") without a `copy` gets one: the heading of the copy it was played on, the kept record's first copy for its own plays and the second record's first copy for the second's.
 - `researchLog`: both records' entries (a single `research` object counts as one), newest first by `at`, at most 10, dropping the oldest that aren't `pinned`; `research: null`.
 - `why`: the kept record's, else the second's.
+- `sightings`: both records' sightings (see Seen in a shop), each once.
 - `discogsSync`, so the second record's items stay on Discogs as the kept record's: `ownedInsts` is the kept record's list plus, when the second's `discogsSync` has an `instanceId`, `{"rid": <its rid>, "instanceId": <its instanceId>, "adopted": <its adopted, else false>}` and then the second's own `ownedInsts`. `copyRids` is the kept record's list plus the second's `rid` when its `where` is `"wantlist"` and the second's `copyRids`, each once. Write only these two lists (leave out one that's empty); the wall keeps the rest of `discogsSync`.
 
 `update` the kept record with `if_version` and `needsSync: true`. Then `list` `gear`: for each piece whose `plays` has entries with the second record's `id`, `update` it with `if_version`, those entries' `id` and `title` now the kept record's. Last, `delete` the second record's document in `records`. Never mark it `deleted: true`: that tells the sync to take its items off Discogs, and they're the kept record's now. Tell them in a line what the kept record now holds (its copies, notes and plays).
@@ -64,6 +65,17 @@ A wall from before copies existed can hold one album as two records. When they a
 Each copy they want can keep the shop pages where that exact copy is sold: `buyLinks`, a list of `https://` addresses. The first copy's is the record's own `buyLinks`; each other copy's is on its entry in `moreCopies`. When they give you a shop page for a copy, `get` the record, add the link to that copy's `buyLinks` (skip it if it's already there), and `update` with `if_version`.
 
 When they point at links in a note, move each link onto the copy it's for, asking which copy when it's unclear. A link for a variant that isn't one of their copies yet: ask whether to add it as a copy they want (append it to `moreCopies` with its `buyLinks`, and add `needsSync: true`). Leave the note as it is unless they ask you to change it.
+
+## Seen in a shop
+
+When they say a shop had an album they want but they didn't buy it ("they also had Pet Sounds at Northside"), log a sighting on that wanted record (`status: "wish"`; if it's not on the wall, ask whether to add it as wanted first). `get` the record and `update` it with `if_version`, the new sighting first in `sightings`, then the existing ones:
+
+- `id`: a fresh random id of 10 letters and digits.
+- `shop`: the shop's name. When it's on their list (see Their shops), even said differently, its exact `name`, and `shopId`: that shop's `id`, so the sighting follows the shop if it's renamed.
+- `d`: the day they saw it, `YYYY-MM-DD` (today unless they say otherwise).
+- `price`, `pressing`, `note`: only what they tell you (`price` as a number, no `$`).
+
+It needs no `needsSync`. Never change or remove existing sightings unless they ask. The wall tags the record "Seen …" for 30 days and lists it under that shop in Settings → Shops.
 
 ## Release dates
 

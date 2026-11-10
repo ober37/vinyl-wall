@@ -3,6 +3,7 @@
    ?empty  empty wall      ?dz  Discogs connected      ?dz&stale  import stuck for 15 min
    ?data=<file>  load a wall snapshot (a JSON file in dev/, never committed) instead of the sample data
    ?nomcp  no background task (e.g. a shared view)     ?up=available|none
+   ?viewer  someone the wall is shared with (no edit rights)
    Calls the page makes to connectors are recorded in window.__calls; Export saves a real file through the browser. */
 (function(){
 const q=new URLSearchParams(location.search), now=Date.now();
@@ -32,7 +33,8 @@ const data={
   s2:{type:"stylus",name:"Ortofon 2M Red stylus",setup:"living",status:"active",tracks:true,ratedLow:300,ratedHigh:500,startHours:0,minutes:262*60,added:6},
   p1:{type:"speakers",name:"Bookshelf speakers",setup:"*",status:"active",tracks:false,installed:"2025-03-01",added:7}},
  records:{
-  r1:{title:"Kind of Blue",artist:"Miles Davis",year:"1959",label:"Columbia",status:"own",runtime:46,why:"The record that taught me to sit still and listen.",pressing:"2015 Analogue Productions 45rpm 2LP (Discogs r7140383)",discogsId:7140383,catalog:"AAPJ 8163-45",
+  // #152: seen at the local shop, then bought there
+  r1:{title:"Kind of Blue",artist:"Miles Davis",year:"1959",label:"Columbia",status:"own",sightings:[{id:"g0",shopId:"ns",shop:"Northside Trading Post in Lakeview, IL",d:day(20),price:"25",bought:day(18)}],runtime:46,why:"The record that taught me to sit still and listen.",pressing:"2015 Analogue Productions 45rpm 2LP (Discogs r7140383)",discogsId:7140383,catalog:"AAPJ 8163-45",
    matrix:"Side A: AAPJ 8163-45 A · Side B: AAPJ 8163-45 B · Side C: AAPJ 8163-45 C · Side D: AAPJ 8163-45 D (all etched, QRP)",
    mediaGrade:"NM",sleeveGrade:"VG+",shop:"A local record shop",paid:"48",acquired:"2024-03-02",
    artistRef:"mb-miles",aboutAt:1,about:{wiki:"https://en.wikipedia.org/wiki/Kind_of_Blue",source:"claude",
@@ -56,7 +58,9 @@ const data={
     tracksSource:"musicbrainz",tracksUrl:"https://musicbrainz.org/release-group/9162580e-5df4-32de-80cc-f45a8d8a9b1d"},researchLog:[
    {id:"ab2",at:day(3),question:"Which pressing should I hunt?",sources:[{title:"Discogs: Abbey Road releases",url:"https://www.discogs.com/master/24047"},{title:"Not a link",url:"javascript:alert(1)"}],headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
    {id:"ab1",at:day(60),headline:"UK first pressings are collector money.",summary:"Check the Her Majesty listing on the sleeve to spot a true first.",check:["Her Majesty not listed on the back"],price:"UK firsts $150-400."}]},
-  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6},
+  // #152: seen at the local shop three days ago (linked by id), and long ago at a shop not on the list
+  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6,
+   sightings:[{id:"g1",shopId:"ns",shop:"Northside Trading Post in Lakeview, IL",d:day(3),price:"32",pressing:"2016 mono reissue",note:"used bin"},{id:"g2",shop:"Corner Groove",d:day(90)}]},
   // #151: a hunt whose first copy is the sync's guess, its second sold online; an owned record still wanting a copy sold online
   r7:{title:"In Rainbows",artist:"Radiohead",year:"2007",status:"wish",priority:2,discogsId:1180042,discogsMatch:"vinyl: earliest original pressing",pressing:"2007 original",budget:"60",
    moreCopies:[{name:"Anniversary",pressing:"2026 anniversary reissue",budget:"35",buyLinks:["https://www.bigvinyl.example/products/in-rainbows-anniversary"]}],notes:[],added:7},
@@ -95,7 +99,7 @@ const assetsCap={upload:async b=>{if(window.__failUpload)throw Object.assign(new
 window.claude={use:async n=>
   n==="db"?{collection:coll,doc:p=>{const i=p.lastIndexOf("/");return docRef(p.slice(0,i),p.slice(i+1))}}:
   n==="assets"?assetsCap:
-  n==="user"?{canEdit:async()=>true,isOwner:async()=>true,id:async()=>"u1"}:
+  n==="user"?{canEdit:async()=>!q.has("viewer"),isOwner:async()=>!q.has("viewer"),id:async()=>"u1"}:
   n==="mcp"&&!q.has("nomcp")?{callTool:async(...a)=>{window.__calls.push(a);const l=JSON.parse(sessionStorage.getItem("__callLog")||"[]");l.push([a[1],Object.keys(a[2]||{})]);sessionStorage.setItem("__callLog",JSON.stringify(l));return {}}}:
   n==="downloads"?{save:async({filename,data})=>{window.__calls.push(["downloads.save",filename]);window.__lastSave=data;
     const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([data]));a.download=filename;a.click();return {status:"saved"}}}:
