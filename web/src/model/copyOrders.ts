@@ -7,6 +7,7 @@ import { buyHosts, copyAlbum, linkFor, copyOrdered, ORDER_KEYS, wantCopies, type
 import { emptyOwned, gotPatch, type OwnCopy } from './owned'
 import { kindOf, OSTAT, orderStatusOf, shortDate, tagOf, today, type Rec, type Tag } from './record'
 import { movePatch, type Paid } from './status'
+import { agoText, recentSighting } from './sightings'
 
 const obj = (v: unknown) => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined)
 // moreCopies as wantCopies reads them, so an index into wantCopies (less one) points at the same one
@@ -192,8 +193,11 @@ export function cancelPatch(r: Rec, ci: number): { patch: Record<string, unknown
 }
 
 // the hang tag on the wall and in the share picture: a record's orders when it has any (an owned record's copies on order
-// too), else as tagOf has it
+// too), else as tagOf has it; a wanted record seen in a shop lately says when, in its priority's colour (#152)
 export function hangTag(r: Rec): Tag | null {
   const t = ordersTag(r)
-  return t ? { text: t, tone: 'ship' } : tagOf(r)
+  if (t) return { text: t, tone: 'ship' }
+  const tag = tagOf(r)
+  const seen = recentSighting(r)
+  return tag && seen ? { ...tag, text: 'Seen ' + agoText(seen.d) } : tag
 }

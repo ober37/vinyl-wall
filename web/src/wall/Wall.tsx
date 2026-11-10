@@ -8,6 +8,7 @@ import { ToggleGroup } from '@appica/ui-react/toggle-group'
 import { FKEYS, FLABEL, shownList, type FKey } from '../model/filter'
 import type { Shown } from '../model/share'
 import { hangTag } from '../model/copyOrders'
+import { RECENT_DAYS, recentSighting } from '../model/sightings'
 import { coverUrl, hueOf, type Rec, type Tag } from '../model/record'
 import type { Background } from '../model/site'
 import { Face } from './Face'
@@ -170,7 +171,21 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
   useEffect(() => {
     if (!syncingN) setSyncPick(false)
   }, [syncingN])
-  const { n, on, list } = shownList(records, filter, searching ? q : '', syncOnly ? busy : undefined)
+  // the seen chip (#152): wanted records seen in a shop lately, to go back for; like the syncing chip, for this visit only
+  const seenN = records.filter((r) => recentSighting(r)).length
+  const [seenPick, setSeenPick] = useState(false)
+  const seenOnly = seenPick && seenN > 0
+  useEffect(() => {
+    if (!seenN) setSeenPick(false)
+  }, [seenN])
+  const only = syncOnly || seenOnly ? (r: Rec) => (!syncOnly || busy(r)) && (!seenOnly || !!recentSighting(r)) : undefined
+  // the seen and syncing chips, after the counts
+  const sideChip = buttonVariants({
+    variant: 'ghost',
+    size: 'sm',
+    className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
+  })
+  const { n, on, list } = shownList(records, filter, searching ? q : '', only)
   // what had focus, so focus that the filter takes off the wall lands on a chip rather than the page
   const focused = useRef<Element | null>(null)
   useEffect(() => {
@@ -230,7 +245,7 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                     variant="outline"
                     aria-label="Share your wall"
                     className={ROUND}
-                    onClick={() => onShare({ list, total: records.length, filtered: on.length > 0 || syncOnly, searched: searching && !!q.trim() })}
+                    onClick={() => onShare({ list, total: records.length, filtered: on.length > 0 || syncOnly || seenOnly, searched: searching && !!q.trim() })}
                   >
                     <ShareIcon />
                   </Button>
@@ -273,17 +288,28 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
                   ))}
                 </ToggleGroup>
               )}
+              {seenN > 0 && (
+                <Tip label={`${seenN} wanted record${seenN === 1 ? '' : 's'} seen in a shop in the last ${RECENT_DAYS} days`} narrow>
+                  <Toggle
+                    data-slot="seen-chip"
+                    pressed={seenOnly}
+                    onPressedChange={setSeenPick}
+                    className={sideChip}
+                  >
+                    <b className="text-ink font-medium">{seenN}</b>
+                    <span>
+                      <span className="sr-only"> record{seenN === 1 ? '' : 's'}</span> seen
+                    </span>
+                  </Toggle>
+                </Tip>
+              )}
               {syncingN > 0 && (
                 // after the counts and apart from them: it narrows within them rather than adding to them, and isn't remembered
                 <Toggle
                   data-slot="syncing-chip"
                   pressed={syncOnly}
                   onPressedChange={setSyncPick}
-                  className={buttonVariants({
-                    variant: 'ghost',
-                    size: 'sm',
-                    className: 'bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1',
-                  })}
+                  className={sideChip}
                 >
                   <i aria-hidden="true" className="bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full" />
                   <b className="text-ink font-medium">{syncingN}</b>
@@ -335,7 +361,11 @@ export function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools
       ) : !list.length ? (
         <div className="on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm">
           <span>
-            {syncOnly
+            {seenOnly && !syncOnly
+              ? q.trim() && searching
+                ? `Nothing seen lately matches “${q}”${on.length ? ' with this filter' : ''}.`
+                : 'Nothing seen lately with this filter.'
+              : syncOnly
               ? q.trim() && searching
                 ? `Nothing syncing matches “${q}”${on.length ? ' with this filter' : ''}.`
                 : 'Nothing syncing with this filter.'

@@ -3113,14 +3113,14 @@ var DEFAULT_SHOPS = [
 	}
 ];
 var https = (v) => /^https:\/\/[^\s]+$/i.test(String(v || "").trim()) ? String(v).trim() : "";
-var text = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
+var text$1 = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
 function shopsOf(settings) {
 	if (!Array.isArray(settings.shops)) return DEFAULT_SHOPS;
-	return settings.shops.filter((s) => !!s && typeof s === "object" && !!text(s.name, 80)).map((s, i) => {
+	return settings.shops.filter((s) => !!s && typeof s === "object" && !!text$1(s.name, 80)).map((s, i) => {
 		const kind = KINDS.some(([k]) => k === s.kind) ? s.kind : "online";
 		const shop = {
-			id: text(s.id, 40) || "s" + i,
-			name: text(s.name, 80),
+			id: text$1(s.id, 40) || "s" + i,
+			name: text$1(s.name, 80),
 			kind
 		};
 		const url = https(s.url);
@@ -3137,7 +3137,7 @@ function shopsOf(settings) {
 			"email",
 			"about"
 		]) {
-			const v = text(s[k], k === "about" ? 400 : 120);
+			const v = text$1(s[k], k === "about" ? 400 : 120);
 			if (v) shop[k] = v;
 		}
 		return shop;
@@ -3489,6 +3489,7 @@ var IMPORT_FIELDS = [
 	"coverOriginal",
 	"coverBlocked",
 	"researchLog",
+	"sightings",
 	"added",
 	"autoFilled",
 	"about",
@@ -3629,6 +3630,8 @@ function fillPatch(w, raw) {
 	if (notes) p.notes = notes;
 	const log = addMissing(w.researchLog, f.researchLog, entryKey$1);
 	if (log) p.researchLog = log;
+	const seen = addMissing(w.sightings, f.sightings, entryKey$1);
+	if (seen) p.sightings = seen;
 	if (same) {
 		const have = new Set(wantCopies(w).flatMap(copyKeys));
 		const add = wantCopies(f).slice(1).filter((c) => copyKeys(c).length && !copyKeys(c).some((k) => have.has(k)) && copyKeys(c).every((k) => have.add(k)));
@@ -4225,6 +4228,64 @@ function movedCopy(r, ci) {
 	const C = pickable(r);
 	return C.length > 1 ? C[Math.max(0, Math.min(C.length - 1, (ci ?? 0) | 0))] : wantCopies(r)[0];
 }
+var DAY = /^\d{4}-\d\d-\d\d$/;
+var text = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
+function sightingsOf(r) {
+	return (Array.isArray(r.sightings) ? r.sightings : []).filter((s) => !!s && typeof s === "object" && !!text(s.shop, 80) && DAY.test(String(s.d))).map((s, i) => {
+		const x = {
+			id: text(s.id, 40) || "g" + i,
+			shop: text(s.shop, 80),
+			d: String(s.d)
+		};
+		const sid = text(s.shopId, 40);
+		if (sid) x.shopId = sid;
+		for (const k of [
+			"price",
+			"pressing",
+			"note"
+		]) {
+			const v = text(s[k], k === "note" ? 400 : 120);
+			if (v) x[k] = v;
+		}
+		return x;
+	}).sort((a, b) => b.d.localeCompare(a.d));
+}
+var seenAt = (s, list) => s.shopId && list.find((x) => x.id === s.shopId)?.name || s.shop;
+var daysSince = (d, now = today()) => Math.round((+/* @__PURE__ */ new Date(now + "T12:00") - +/* @__PURE__ */ new Date(d + "T12:00")) / 864e5);
+var agoText = (d, now = today()) => {
+	const n = daysSince(d, now);
+	return n <= 0 ? "today" : n === 1 ? "yesterday" : n < 31 ? `${n} days ago` : longDate(d);
+};
+function recentSighting(r, now = today()) {
+	if (kindOf$1(r) !== "wish") return void 0;
+	const s = sightingsOf(r)[0];
+	return s && daysSince(s.d, now) <= 30 ? s : void 0;
+}
+function addSighting(r, s, list) {
+	const keep = Array.isArray(r.sightings) ? r.sightings : [];
+	const name = s.shop.trim().slice(0, 80);
+	const add = {
+		id: Math.random().toString(36).slice(2, 12),
+		shop: name,
+		d: s.d
+	};
+	const on = list.find((x) => x.name.toLowerCase() === name.toLowerCase());
+	if (on) add.shopId = on.id;
+	for (const k of [
+		"price",
+		"pressing",
+		"note"
+	]) if (s[k]?.trim()) add[k] = s[k].trim();
+	return { sightings: [add, ...keep] };
+}
+function removeSighting(r, s) {
+	const keep = Array.isArray(r.sightings) ? r.sightings : [];
+	const i = keep.findIndex((x) => {
+		const o = x && typeof x === "object" ? x : {};
+		return o.id ? o.id === s.id : text(o.shop, 80) === s.shop && o.d === s.d;
+	});
+	return i < 0 ? null : { sightings: keep.filter((_, j) => j !== i) };
+}
 // src/model/copyOrders.ts
 var obj = (v) => v && typeof v === "object" && !Array.isArray(v) ? v : void 0;
 var rawMore = (r) => (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((x) => !!obj(x));
@@ -4440,10 +4501,16 @@ function cancelPatch(r, ci) {
 }
 function hangTag(r) {
 	const t = ordersTag(r);
-	return t ? {
+	if (t) return {
 		text: t,
 		tone: "ship"
-	} : tagOf(r);
+	};
+	const tag = tagOf(r);
+	const seen = recentSighting(r);
+	return tag && seen ? {
+		...tag,
+		text: "Seen " + agoText(seen.d)
+	} : tag;
 }
 // src/wall/Face.tsx
 function Face({ title, artist, hue, cover, className = "", small }) {
@@ -4637,7 +4704,19 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 	useEffect(() => {
 		if (!syncingN) setSyncPick(false);
 	}, [syncingN]);
-	const { n, on, list } = shownList(records, filter, searching ? q : "", syncOnly ? busy : void 0);
+	const seenN = records.filter((r) => recentSighting(r)).length;
+	const [seenPick, setSeenPick] = useState(false);
+	const seenOnly = seenPick && seenN > 0;
+	useEffect(() => {
+		if (!seenN) setSeenPick(false);
+	}, [seenN]);
+	const only = syncOnly || seenOnly ? (r) => (!syncOnly || busy(r)) && (!seenOnly || !!recentSighting(r)) : void 0;
+	const sideChip = buttonVariants({
+		variant: "ghost",
+		size: "sm",
+		className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
+	});
+	const { n, on, list } = shownList(records, filter, searching ? q : "", only);
 	const focused = useRef(null);
 	useEffect(() => {
 		const track = (e) => focused.current = e.target;
@@ -4691,7 +4770,7 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 							onClick: () => onShare({
 								list,
 								total: records.length,
-								filtered: on.length > 0 || syncOnly,
+								filtered: on.length > 0 || syncOnly || seenOnly,
 								searched: searching && !!q.trim()
 							}),
 							children: /* @__PURE__ */ jsx(ShareIcon, {})
@@ -4706,63 +4785,79 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 				className: "min-w-0 flex-1",
 				children: [/* @__PURE__ */ jsxs("div", {
 					className: "on-photo flex flex-wrap items-center gap-1.5 py-0.5 sm:py-1",
-					children: [records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
-						multiple: true,
-						"aria-label": "Show on the wall",
-						value: on,
-						onValueChange: (v) => setFilter(v),
-						className: "flex-wrap gap-1.5",
-						children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsx(Tip, {
-							label: k === "own" ? "" : `${n[k]} ${FLABEL[k]}`,
+					children: [
+						records.length > 0 && /* @__PURE__ */ jsx(ToggleGroup, {
+							multiple: true,
+							"aria-label": "Show on the wall",
+							value: on,
+							onValueChange: (v) => setFilter(v),
+							className: "flex-wrap gap-1.5",
+							children: FKEYS.filter((k) => n[k]).map((k) => /* @__PURE__ */ jsx(Tip, {
+								label: k === "own" ? "" : `${n[k]} ${FLABEL[k]}`,
+								narrow: true,
+								children: /* @__PURE__ */ jsxs(Toggle, {
+									value: k,
+									className: buttonVariants({
+										variant: "ghost",
+										size: "sm",
+										className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
+									}),
+									children: [
+										CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
+											"aria-hidden": "true",
+											className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
+										}),
+										/* @__PURE__ */ jsx("b", {
+											className: "text-ink font-medium",
+											children: n[k]
+										}),
+										" ",
+										/* @__PURE__ */ jsx("span", {
+											className: k === "own" ? "" : "max-sm:sr-only",
+											children: FLABEL[k]
+										})
+									]
+								})
+							}, k))
+						}),
+						seenN > 0 && /* @__PURE__ */ jsx(Tip, {
+							label: `${seenN} wanted record${seenN === 1 ? "" : "s"} seen in a shop in the last 30 days`,
 							narrow: true,
 							children: /* @__PURE__ */ jsxs(Toggle, {
-								value: k,
-								className: buttonVariants({
-									variant: "ghost",
-									size: "sm",
-									className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
-								}),
-								children: [
-									CHIP_TONE[k] && /* @__PURE__ */ jsx("i", {
-										"aria-hidden": "true",
-										className: `ring-border size-2.5 rounded-(--radius-4xs) ring-1 ${CHIP_TONE[k]}`
-									}),
-									/* @__PURE__ */ jsx("b", {
-										className: "text-ink font-medium",
-										children: n[k]
-									}),
-									" ",
-									/* @__PURE__ */ jsx("span", {
-										className: k === "own" ? "" : "max-sm:sr-only",
-										children: FLABEL[k]
-									})
-								]
+								"data-slot": "seen-chip",
+								pressed: seenOnly,
+								onPressedChange: setSeenPick,
+								className: sideChip,
+								children: [/* @__PURE__ */ jsx("b", {
+									className: "text-ink font-medium",
+									children: seenN
+								}), /* @__PURE__ */ jsxs("span", { children: [/* @__PURE__ */ jsxs("span", {
+									className: "sr-only",
+									children: [" record", seenN === 1 ? "" : "s"]
+								}), " seen"] })]
 							})
-						}, k))
-					}), syncingN > 0 && /* @__PURE__ */ jsxs(Toggle, {
-						"data-slot": "syncing-chip",
-						pressed: syncOnly,
-						onPressedChange: setSyncPick,
-						className: buttonVariants({
-							variant: "ghost",
-							size: "sm",
-							className: "bg-wall/70 text-ink-2 data-pressed:text-ink ring-border data-pressed:ring-border-emphasis gap-1.5 px-2.5! font-mono text-[0.8125rem] ring-1"
 						}),
-						children: [
-							/* @__PURE__ */ jsx("i", {
-								"aria-hidden": "true",
-								className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
-							}),
-							/* @__PURE__ */ jsx("b", {
-								className: "text-ink font-medium",
-								children: syncingN
-							}),
-							/* @__PURE__ */ jsxs("span", { children: [/* @__PURE__ */ jsxs("span", {
-								className: "sr-only",
-								children: [" record", syncingN === 1 ? "" : "s"]
-							}), " syncing"] })
-						]
-					})]
+						syncingN > 0 && /* @__PURE__ */ jsxs(Toggle, {
+							"data-slot": "syncing-chip",
+							pressed: syncOnly,
+							onPressedChange: setSyncPick,
+							className: sideChip,
+							children: [
+								/* @__PURE__ */ jsx("i", {
+									"aria-hidden": "true",
+									className: "bg-brass motion-safe:animate-pulse-dot size-1.75 shrink-0 rounded-full"
+								}),
+								/* @__PURE__ */ jsx("b", {
+									className: "text-ink font-medium",
+									children: syncingN
+								}),
+								/* @__PURE__ */ jsxs("span", { children: [/* @__PURE__ */ jsxs("span", {
+									className: "sr-only",
+									children: [" record", syncingN === 1 ? "" : "s"]
+								}), " syncing"] })
+							]
+						})
+					]
 				}), searching && /* @__PURE__ */ jsx("div", {
 					role: "search",
 					id: "wall-search",
@@ -4798,7 +4893,7 @@ function Wall({ records, title, hang, busy, onOpen, onAdd, onShare, tools, gear,
 		children: onAdd ? "Nothing hanging yet. Add a record you own, or one you're hunting for." : "Nothing hanging yet."
 	}) : !list.length ? /* @__PURE__ */ jsx("div", {
 		className: "on-photo text-ink-2 flex flex-wrap items-center gap-3 text-sm",
-		children: /* @__PURE__ */ jsx("span", { children: syncOnly ? q.trim() && searching ? `Nothing syncing matches “${q}”${on.length ? " with this filter" : ""}.` : "Nothing syncing with this filter." : `Nothing on the wall matches “${q}”${on.length ? " with this filter" : ""}.` })
+		children: /* @__PURE__ */ jsx("span", { children: seenOnly && !syncOnly ? q.trim() && searching ? `Nothing seen lately matches “${q}”${on.length ? " with this filter" : ""}.` : "Nothing seen lately with this filter." : syncOnly ? q.trim() && searching ? `Nothing syncing matches “${q}”${on.length ? " with this filter" : ""}.` : "Nothing syncing with this filter." : `Nothing on the wall matches “${q}”${on.length ? " with this filter" : ""}.` })
 	}) : /* @__PURE__ */ jsx("ul", {
 		className: `rack ${lowHang ? "max-sm:pt-0" : ""}`,
 		"data-hang": hang,
@@ -8238,6 +8333,128 @@ function NotesTab({ r }) {
 		]
 	});
 }
+// src/sheet/Sightings.tsx
+function SeenForm({ r, onDone }) {
+	const { mutate, settings } = useRuntime();
+	const [shop, setShop] = useState("");
+	const [d, setD] = useState(today());
+	const [price, setPrice] = useState("");
+	const [pressing, setPressing] = useState("");
+	const [note, setNote] = useState("");
+	const [busy, setBusy] = useState(false);
+	const name = shop.trim();
+	return /* @__PURE__ */ jsx("form", {
+		onSubmit: async (e) => {
+			e.preventDefault();
+			if (!name) return;
+			setBusy(true);
+			const ok = await mutate(r.id, (latest) => addSighting(latest, {
+				shop: name,
+				d,
+				price: price.replace(/^\$\s*/, ""),
+				pressing,
+				note
+			}, shopsOf(settings)));
+			setBusy(false);
+			if (ok) onDone(`Seen at ${name}. It's on the wall's “seen” filter for 30 days.`);
+		},
+		children: /* @__PURE__ */ jsxs(Fieldset, { children: [
+			/* @__PURE__ */ jsx(FieldsetLegend, { children: "Where did you see it?" }),
+			/* @__PURE__ */ jsxs("div", {
+				className: "grid gap-4 sm:grid-cols-2",
+				children: [
+					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Seen at" }), /* @__PURE__ */ jsx(ShopInput, {
+						value: shop,
+						onChange: setShop,
+						placeholder: "e.g. Rough Trade"
+					})] }),
+					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "When" }), /* @__PURE__ */ jsx(DateField, {
+						value: toDate(d),
+						onValueChange: (x) => setD(fromDate(x) || d)
+					})] }),
+					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Price" }), /* @__PURE__ */ jsx(Input, {
+						value: price,
+						onChange: (e) => setPrice(e.target.value),
+						inputMode: "decimal",
+						startSlot: /* @__PURE__ */ jsx("span", {
+							"aria-hidden": "true",
+							children: "$"
+						})
+					})] }),
+					/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Pressing" }), /* @__PURE__ */ jsx(Input, {
+						value: pressing,
+						onChange: (e) => setPressing(e.target.value),
+						placeholder: "e.g. 2016 reissue, red vinyl"
+					})] })
+				]
+			}),
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Note" }), /* @__PURE__ */ jsx(Input, {
+				value: note,
+				onChange: (e) => setNote(e.target.value),
+				placeholder: "e.g. used bin, sleeve a bit worn"
+			})] }),
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex gap-3",
+				children: [/* @__PURE__ */ jsx(Button, {
+					type: "submit",
+					size: "sm",
+					disabled: busy || !name,
+					children: "Save"
+				}), /* @__PURE__ */ jsx(Button, {
+					type: "button",
+					size: "sm",
+					variant: "ghost",
+					onClick: () => onDone(""),
+					children: "Cancel"
+				})]
+			})
+		] })
+	});
+}
+function SightingsView({ r }) {
+	const { canEdit, mutate, settings } = useRuntime();
+	const shops = shopsOf(settings);
+	const list = sightingsOf(r);
+	if (!list.length) return null;
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [/* @__PURE__ */ jsx(FieldsetLegend, { children: "Seen in shops" }), /* @__PURE__ */ jsx("ul", {
+		className: "flex flex-col gap-2",
+		children: list.map((s) => {
+			const old = daysSince(s.d) > 30;
+			const at = seenAt(s, shops);
+			return /* @__PURE__ */ jsxs("li", {
+				className: `flex items-start justify-between gap-3 text-sm ${old ? "text-foreground-muted" : "text-foreground"}`,
+				children: [/* @__PURE__ */ jsxs("div", {
+					className: "min-w-0",
+					children: [/* @__PURE__ */ jsxs("div", { children: [
+						/* @__PURE__ */ jsx("span", {
+							className: "font-medium",
+							children: at
+						}),
+						" · ",
+						/* @__PURE__ */ jsx("time", {
+							dateTime: s.d,
+							title: longDate(s.d),
+							children: agoText(s.d)
+						})
+					] }), (s.price || s.pressing || s.note) && /* @__PURE__ */ jsx("div", {
+						className: "text-foreground-muted break-words",
+						children: [
+							s.price && "$" + s.price,
+							s.pressing,
+							s.note
+						].filter(Boolean).join(" · ")
+					})]
+				}), canEdit && /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					"aria-label": `Remove seen at ${at}, ${longDate(s.d)}`,
+					onClick: () => mutate(r.id, (latest) => removeSighting(latest, s)),
+					children: "Remove"
+				})]
+			}, s.id + s.d);
+		})
+	})] });
+}
 // src/sheet/StatusActions.tsx
 function StatusActions({ r, onMoved }) {
 	const { mutate } = useRuntime();
@@ -8245,6 +8462,7 @@ function StatusActions({ r, onMoved }) {
 	const [ask, setAsk] = useState(null);
 	const [ci, setCi] = useState(0);
 	const [busy, setBusy] = useState(false);
+	const [seen, setSeen] = useState(false);
 	if (kindOf$1(r) !== "wish") return null;
 	const move = async (to, det) => {
 		setBusy(true);
@@ -8276,6 +8494,13 @@ function StatusActions({ r, onMoved }) {
 		},
 		onCancel: () => setPick(null)
 	});
+	if (seen) return /* @__PURE__ */ jsx(SeenForm, {
+		r,
+		onDone: (msg) => {
+			setSeen(false);
+			if (msg) onMoved(msg);
+		}
+	});
 	if (ask) return /* @__PURE__ */ jsx(PaidForm, {
 		shopLabel: ask === "own" ? "Bought from" : "From",
 		bought: ask === "own",
@@ -8290,16 +8515,25 @@ function StatusActions({ r, onMoved }) {
 	});
 	return /* @__PURE__ */ jsxs("div", {
 		className: "flex flex-wrap gap-3",
-		children: [/* @__PURE__ */ jsx(Button, {
-			disabled: busy,
-			onClick: () => start("ordered"),
-			children: "Ordered it"
-		}), /* @__PURE__ */ jsx(Button, {
-			variant: "outline",
-			disabled: busy,
-			onClick: () => start("own"),
-			children: "Got it"
-		})]
+		children: [
+			/* @__PURE__ */ jsx(Button, {
+				disabled: busy,
+				onClick: () => start("ordered"),
+				children: "Ordered it"
+			}),
+			/* @__PURE__ */ jsx(Button, {
+				variant: "outline",
+				disabled: busy,
+				onClick: () => start("own"),
+				children: "Got it"
+			}),
+			/* @__PURE__ */ jsx(Button, {
+				variant: "ghost",
+				disabled: busy,
+				onClick: () => setSeen(true),
+				children: "Seen it"
+			})
+		]
 	});
 }
 function PaidForm({ shopLabel, bought, hosts, init, busy, onSave, onCancel }) {
@@ -9293,7 +9527,7 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 	const research = hasResearch(r, canEdit);
 	const still = stillCopies(r).length > 0;
 	const hunting = k === "wish" || still;
-	const pressings = still || k === "wish" && canEdit;
+	const pressings = still || k === "wish" && (canEdit || sightingsOf(r).length > 0);
 	const orderN = ordersOf(r).length;
 	const orders = orderN > 0;
 	const orderTab = orderN > 1 ? "Orders" : "Order";
@@ -9395,20 +9629,24 @@ function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant, tab, s
 					pressings && /* @__PURE__ */ jsxs(TabsContent, {
 						value: "pressings",
 						className: "flex flex-col gap-6",
-						children: [canEdit && k === "wish" && /* @__PURE__ */ jsx(StatusActions, {
-							r,
-							onMoved
-						}, "status" + r.id + k), /* @__PURE__ */ jsx(CopiesView, {
-							r,
-							onEditCopy: canEdit ? onEditCopy : void 0,
-							shops,
-							got: canEdit && k !== "wish" ? (ci) => /* @__PURE__ */ jsx(CopyActions, {
+						children: [
+							canEdit && k === "wish" && /* @__PURE__ */ jsx(StatusActions, {
 								r,
-								ci,
-								onMoved,
-								onOrdered: () => setTab("order")
-							}, r.id + ci) : void 0
-						})]
+								onMoved
+							}, "status" + r.id + k),
+							k === "wish" && /* @__PURE__ */ jsx(SightingsView, { r }),
+							/* @__PURE__ */ jsx(CopiesView, {
+								r,
+								onEditCopy: canEdit ? onEditCopy : void 0,
+								shops,
+								got: canEdit && k !== "wish" ? (ci) => /* @__PURE__ */ jsx(CopyActions, {
+									r,
+									ci,
+									onMoved,
+									onOrdered: () => setTab("order")
+								}, r.id + ci) : void 0
+							})
+						]
 					}),
 					notes && /* @__PURE__ */ jsx(TabsContent, {
 						value: "notes",

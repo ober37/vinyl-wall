@@ -12,16 +12,18 @@ import { movedCopy, movePatch, type Paid } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
 import { ShopInput } from './ShopInput'
+import { SeenForm } from './Sightings'
 import { Tip } from '../wall/Tip'
 
 // View mode's status buttons on the hunt: Ordered it / Got it (asking which copy when it hunts several, then what was
-// paid). An order's It arrived is in its fold on the Order tab (#139)
+// paid), and Seen it, which leaves it on the hunt (#152). An order's It arrived is in its fold on the Order tab (#139)
 export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) => void }) {
   const { mutate } = useRuntime()
   const [pick, setPick] = useState<'ordered' | 'own' | null>(null)
   const [ask, setAsk] = useState<'ordered' | 'own' | null>(null)
   const [ci, setCi] = useState(0)
   const [busy, setBusy] = useState(false)
+  const [seen, setSeen] = useState(false)
   const k = kindOf(r)
   if (k !== 'wish') return null
 
@@ -60,6 +62,17 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
       />
     )
 
+  if (seen)
+    return (
+      <SeenForm
+        r={r}
+        onDone={(msg) => {
+          setSeen(false)
+          if (msg) onMoved(msg)
+        }}
+      />
+    )
+
   if (ask)
     return (
       <PaidForm
@@ -80,6 +93,9 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
       </Button>
       <Button variant="outline" disabled={busy} onClick={() => start('own')}>
         Got it
+      </Button>
+      <Button variant="ghost" disabled={busy} onClick={() => setSeen(true)}>
+        Seen it
       </Button>
     </div>
   )

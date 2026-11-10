@@ -56,7 +56,9 @@ const data={
     tracksSource:"musicbrainz",tracksUrl:"https://musicbrainz.org/release-group/9162580e-5df4-32de-80cc-f45a8d8a9b1d"},researchLog:[
    {id:"ab2",at:day(3),question:"Which pressing should I hunt?",sources:[{title:"Discogs: Abbey Road releases",url:"https://www.discogs.com/master/24047"},{title:"Not a link",url:"javascript:alert(1)"}],headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
    {id:"ab1",at:day(60),headline:"UK first pressings are collector money.",summary:"Check the Her Majesty listing on the sleeve to spot a true first.",check:["Her Majesty not listed on the back"],price:"UK firsts $150-400."}]},
-  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6},
+  // #152: seen at the local shop three days ago (linked by id), and long ago at a shop not on the list
+  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6,
+   sightings:[{id:"g1",shopId:"ns",shop:"Northside Trading Post in Lakeview, IL",d:day(3),price:"32",pressing:"2016 mono reissue",note:"used bin"},{id:"g2",shop:"Corner Groove",d:day(90)}]},
   // #151: a hunt whose first copy is the sync's guess, its second sold online; an owned record still wanting a copy sold online
   r7:{title:"In Rainbows",artist:"Radiohead",year:"2007",status:"wish",priority:2,discogsId:1180042,discogsMatch:"vinyl: earliest original pressing",pressing:"2007 original",budget:"60",
    moreCopies:[{name:"Anniversary",pressing:"2026 anniversary reissue",budget:"35",buyLinks:["https://www.bigvinyl.example/products/in-rainbows-anniversary"]}],notes:[],added:7},

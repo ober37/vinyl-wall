@@ -21,6 +21,8 @@ import { runtimeRow, Tracks, tracksRow } from './Tracks'
 import { Chevron, LinkList, Source } from './Links'
 import { hasResearch, ResearchTab, SearchElsewhere, type WantMsg } from './ResearchTab'
 import { CopyActions, StatusActions } from './StatusActions'
+import { SightingsView } from './Sightings'
+import { sightingsOf } from '../model/sightings'
 import { ordersOf } from '../model/copyOrders'
 
 // Your copy (owned records): pressing, where and when it was bought, grade, runout
@@ -250,7 +252,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
   // viewer sees Pressings only when there are copies
   const still = stillCopies(r).length > 0
   const hunting = k === 'wish' || still
-  const pressings = still || (k === 'wish' && canEdit)
+  const pressings = still || (k === 'wish' && (canEdit || sightingsOf(r).length > 0))
   // the Order tab: an ordered record's order and any copy's on order (#139), named Orders when there are several
   const orderN = ordersOf(r).length
   const orders = orderN > 0
@@ -340,6 +342,7 @@ export function ViewBody({ r, msg, onMoved, onAddWhy, onEditCopy, want, setWant,
           {pressings && (
             <TabsContent value="pressings" className="flex flex-col gap-6">
               {canEdit && k === 'wish' && <StatusActions key={"status" + r.id + k} r={r} onMoved={onMoved} />}
+              {k === 'wish' && <SightingsView r={r} />}
               <CopiesView
                 r={r}
                 onEditCopy={canEdit ? onEditCopy : undefined}

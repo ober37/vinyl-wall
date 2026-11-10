@@ -195,7 +195,7 @@ export const planSummary = (p: Plan) =>
 // prettier-ignore
 const IMPORT_FIELDS = ["title", "artist", "year", "label", "catalog", "pressing", "matrix", "runtime", "status", "why", "notes", "shop", "shopUrl", "acquired", "paid",
   "mediaGrade", "sleeveGrade", "priority", "budget", "copyName", "buyLinks", "releaseDate", "moreCopies", "ownedCopies", "orderDate", "orderStatus", "eta", "orderNum", "carrier", "tracking", "orderNotes", "discogsId",
-  "discogsMatch", "coverAsset", "coverOriginal", "coverBlocked", "researchLog", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
+  "discogsMatch", "coverAsset", "coverOriginal", "coverBlocked", "researchLog", "sightings", "added", "autoFilled", "about", "aboutAt", "aboutV", "artistRef", "aboutBlocked"]
 // what an artist may carry in: the lookup's own fields, with the right types
 const ARTIST_FIELDS: Record<string, string> = { name: 'string', wiki: 'string', wikidata: 'string', intro: 'string', summary: 'string', source: 'string', fetchedAt: 'number' }
 export function importableArtist(d: Data): Data {
@@ -280,6 +280,8 @@ export function fillPatch(w: Data, raw: Data): Data {
   if (notes) p.notes = notes
   const log = addMissing(w.researchLog, f.researchLog, entryKey)
   if (log) p.researchLog = log
+  const seen = addMissing(w.sightings, f.sightings, entryKey)
+  if (seen) p.sightings = seen
   if (same) {
     const have = new Set(wantCopies(w as Rec).flatMap(copyKeys))
     const add = wantCopies(f as Rec)
