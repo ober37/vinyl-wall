@@ -93,6 +93,7 @@ export function toForm(r: Rec): Form {
       pressing: pressingText(r),
       acquired: s(r.acquired),
       paid: s(r.paid),
+      budget: s(r.budget),
       shop: s(r.shop),
       shopUrl: s(r.shopUrl),
       mediaGrade: s(r.mediaGrade),

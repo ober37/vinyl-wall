@@ -79,7 +79,7 @@ describe('several owned copies (#121)', () => {
     await user.clear(paid[1])
     await user.type(paid[1], '$40')
     await user.click(btn('Done'))
-    await waitFor(() => expect(updates(fake, 'r3').at(-1)).toEqual({ ownedCopies: [{ ...BLUE.ownedCopies[0], paid: '40' }], needsSync: true }))
+    await waitFor(() => expect(updates(fake, 'r3').at(-1)).toEqual({ ownedCopies: [{ ...BLUE.ownedCopies[0], paid: '40', budget: '' }], needsSync: true }))
   })
 
   it("picking a saved shop for another copy keeps both its name and its website", async () => {

@@ -15,6 +15,8 @@ export type OwnCopy = {
   mediaGrade: string
   sleeveGrade: string
   paid: string
+  // what it was bought against, as a copy wanted had it (#156)
+  budget: string
   shop: string
   shopUrl: string
   acquired: string
@@ -23,7 +25,7 @@ export type OwnCopy = {
   barcodes?: Barcodes
   releaseTracks?: ReleaseTracks
 }
-const TEXT = ['name', 'pressing', 'label', 'catalog', 'matrix', 'mediaGrade', 'sleeveGrade', 'paid', 'shop', 'shopUrl', 'acquired', 'runtime'] as const
+const TEXT = ['name', 'pressing', 'label', 'catalog', 'matrix', 'mediaGrade', 'sleeveGrade', 'paid', 'budget', 'shop', 'shopUrl', 'acquired', 'runtime'] as const
 
 const s = (v: unknown) => (typeof v === 'string' || typeof v === 'number' ? String(v) : '')
 const did = (v: unknown): number | '' => {
@@ -42,6 +44,7 @@ export const emptyOwned = (): OwnCopy => ({
   mediaGrade: '',
   sleeveGrade: '',
   paid: '',
+  budget: '',
   shop: '',
   shopUrl: '',
   acquired: '',
@@ -108,7 +111,7 @@ export const ownedTitle = (c: Rec, i: number) =>
 export const gradeShort = (c: Rec) => [c.mediaGrade, c.sleeveGrade].filter(Boolean).join(' / ')
 
 // Got this copy: a copy still wanted on an owned record (ci its index in wantCopies) joins the copies you own, bought
-// today, with what was paid and where; its budget and links stay behind
+// today, with what was paid and where, and its budget (#156); its links stay behind
 export function gotPatch(
   r: Rec,
   ci: number,
@@ -129,6 +132,7 @@ export function gotPatch(
     ...(c.barcodes ? { barcodes: c.barcodes } : {}),
     ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
     paid: det.paid,
+    budget: c.budget,
     shop: det.shop,
     shopUrl: det.shopUrl || linkFor(L, det.shop),
     acquired: today(),
