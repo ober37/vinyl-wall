@@ -3,7 +3,7 @@
 // copy's arrival or a cancelled order leaves the record with a copy of another kind in its own fields, the two change
 // places, so the record's own fields stay its copy as the rest of the page and the Discogs sync read them.
 import { notesOf } from './notes'
-import { buyHosts, copyAlbum, copyOrdered, ORDER_KEYS, wantCopies, type Copy } from './copies'
+import { buyHosts, copyAlbum, linkFor, copyOrdered, ORDER_KEYS, wantCopies, type Copy } from './copies'
 import { emptyOwned, gotPatch, type OwnCopy } from './owned'
 import { kindOf, OSTAT, orderStatusOf, shortDate, tagOf, today, type Rec, type Tag } from './record'
 import { movePatch, type Paid } from './status'
@@ -90,7 +90,7 @@ export function orderCopyPatch(r: Rec, ci: number, det: Paid): { patch: Record<s
     eta: pre ? c.releaseDate : '',
     paid: det.paid,
     shop: det.shop,
-    shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : ''),
+    shopUrl: det.shopUrl || linkFor(L, det.shop),
   }
   const notes = notesOf(r)
   notes.push({ d: t, t: said(det) ? 'Ordered another copy · ' + said(det) : 'Ordered another copy.' })
@@ -124,6 +124,8 @@ function swapIn(r: Rec, ci: number, det: { paid?: string; shop?: string; shopUrl
       ...copyAsLead(c, false),
       status: 'own',
       paid: o.paid, shop: o.shop, shopUrl: o.shopUrl, acquired: o.acquired,
+      // where to buy it is no use once it's yours (#151)
+      buyLinks: [],
       moreCopies: [leadAsCopy(r, true), ...more.filter((_, j) => j !== ci - 1)],
       notes,
     },
@@ -137,8 +139,10 @@ export function gotCopyPatch(r: Rec, ci: number, det: Paid): { patch: Record<str
   const c = wantCopies(r)[ci]
   if (kindOf(r) !== 'ordered' || ci < 1 || !c || ci > rawMore(r).length || copyOrdered(c)) return null
   const L = buyHosts(c.buyLinks)
-  const d = { ...det, shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : '') }
-  return { ...swapIn(r, ci, d, said(det) ? 'Found it · ' + said(det) : 'Found it. Moved to the wall.'), msg: 'Moved to the wall. Your order is still on the way.' }
+  const d = { ...det, shopUrl: det.shopUrl || linkFor(L, det.shop) }
+  const m = swapIn(r, ci, d, said(det) ? 'Found it · ' + said(det) : 'Found it. Moved to the wall.')
+  if (det.sealed) Object.assign(m.patch, { mediaGrade: 'M', sleeveGrade: 'M' })
+  return { ...m, msg: 'Moved to the wall. Your order is still on the way.' }
 }
 
 // It arrived, on one order: the record's own moves it to the wall as before (its other orders stay on order); a copy's

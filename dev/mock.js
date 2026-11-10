@@ -9,7 +9,9 @@ const q=new URLSearchParams(location.search), now=Date.now();
 // play note dates: n days back, as a local date like the page's today(); first is the 1st of this month
 const day=n=>{const t=new Date(now-n*864e5);return new Date(t-t.getTimezoneOffset()*6e4).toISOString().slice(0,10)}, first=day(0).slice(0,8)+"01";
 const data={
- settings:{site:{title:"My Vinyl Wall",url:"https://claude.ai/artifact/preview",bg:{kind:"preset",preset:"listening"},discogs:{}}},
+ settings:{site:{title:"My Vinyl Wall",url:"https://claude.ai/artifact/preview",bg:{kind:"preset",preset:"listening"},discogs:{},
+  // #151: a local shop to buy at in person, beside an online one
+  shops:[{id:"ns",name:"Northside Trading Post in Lakeview, IL",kind:"local",url:"https://northsidetrading.example/",place:"Lakeview, IL"},{id:"rt",name:"Rough Trade",kind:"online",url:"https://www.roughtrade.com/"}]}},
  setups:{den:{name:"Den",note:"",added:1},living:{name:"Living room",note:"Main hi-fi",added:2}},
  // About info the background task (Part L) writes: one doc per artist, shared by that artist's records. Sample links only.
  artists:{
@@ -54,7 +56,12 @@ const data={
     tracksSource:"musicbrainz",tracksUrl:"https://musicbrainz.org/release-group/9162580e-5df4-32de-80cc-f45a8d8a9b1d"},researchLog:[
    {id:"ab2",at:day(3),question:"Which pressing should I hunt?",sources:[{title:"Discogs: Abbey Road releases",url:"https://www.discogs.com/master/24047"},{title:"Not a link",url:"javascript:alert(1)"}],headline:"Hunt the 2019 half-speed reissue under $40.",summary:"The 2019 anniversary mix is the best value; originals are for collectors.",pressings:["2019 50th Anniversary half-speed: best value"],price:"About $30-40 for 2019; firsts $150+."},
    {id:"ab1",at:day(60),headline:"UK first pressings are collector money.",summary:"Check the Her Majesty listing on the sleeve to spot a true first.",check:["Her Majesty not listed on the back"],price:"UK firsts $150-400."}]},
-  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6}}};
+  r6:{title:"Pet Sounds",artist:"The Beach Boys",year:"1966",status:"wish",priority:3,notes:[],added:6},
+  // #151: a hunt whose first copy is the sync's guess, its second sold online; an owned record still wanting a copy sold online
+  r7:{title:"In Rainbows",artist:"Radiohead",year:"2007",status:"wish",priority:2,discogsId:1180042,discogsMatch:"vinyl: earliest original pressing",pressing:"2007 original",budget:"60",
+   moreCopies:[{name:"Anniversary",pressing:"2026 anniversary reissue",budget:"35",buyLinks:["https://www.bigvinyl.example/products/in-rainbows-anniversary"]}],notes:[],added:7},
+  r8:{title:"Rumours",artist:"Fleetwood Mac",year:"1977",status:"own",runtime:39,
+   moreCopies:[{name:"Half-speed",pressing:"2024 half-speed",budget:"45",buyLinks:["https://www.bigvinyl.example/products/rumours-half-speed"]}],notes:[],added:8}}};
 if(q.get("data")){try{const x=new XMLHttpRequest();x.open("GET",q.get("data"),false);x.send();const snap=JSON.parse(x.responseText);
   for(const c of ["settings","setups","gear","records","artists"]) if(snap[c]) data[c]=snap[c]; data.settings.site=data.settings.site||{};}catch(e){console.warn("Couldn't load snapshot",e)}}
 const site=data.settings.site;

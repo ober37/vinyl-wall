@@ -86,7 +86,9 @@ describe('It arrived, on one order', () => {
 describe('Got this copy, on an ordered record', () => {
   it('makes the copy the record\'s own, on the wall, and keeps its order as a copy on order', () => {
     const m = gotCopyPatch(ordered, 2, { paid: '25', shop: 'Siren' })!
-    expect(m.patch).toMatchObject({ status: 'own', copyName: 'Blue vinyl', paid: '25', shop: 'Siren', shopUrl: 'https://www.roughtrade.com/blue' })
+    expect(m.patch).toMatchObject({ status: 'own', copyName: 'Blue vinyl', paid: '25', shop: 'Siren', shopUrl: '' })
+    // bought at Siren, so the copy's Rough Trade link isn't where it came from (#151)
+    expect(gotCopyPatch(ordered, 2, { paid: '25', shop: '' })!.patch.shopUrl).toBe('https://www.roughtrade.com/blue')
     expect((m.patch.moreCopies as Record<string, unknown>[]).map((c) => [c.name, c.orderStatus])).toEqual([
       ['Indie exclusive', 'ordered'],
       ['Blue vinyl', 'shipped'],

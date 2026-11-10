@@ -3,8 +3,8 @@ import { Autocomplete, AutocompleteContent, AutocompleteInput, AutocompleteItem,
 import { shopsOf, shopSuggest } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 
-// Where a record came from (#99): free text that suggests your shops once you type part of one's name, so picking one
-// links the record to it (#89). onPick: a suggestion was taken
+// Where a record came from (#99): free text that suggests your shops, all of them on a click into it and those it could
+// mean as you type (#151), so picking one links the record to it (#89). onPick: a suggestion was taken
 export function ShopInput({ value, onChange, onPick, placeholder }: {
   value: string
   onChange: (v: string) => void
@@ -25,6 +25,7 @@ export function ShopInput({ value, onChange, onPick, placeholder }: {
       }}
       open={open && names.length > 0}
       onOpenChange={setOpen}
+      openOnInputClick
     >
       <AutocompleteInput placeholder={placeholder} />
       <AutocompleteContent>

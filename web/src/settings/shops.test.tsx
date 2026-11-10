@@ -445,8 +445,8 @@ describe('Settings → Shops: not on your list yet', () => {
 // #99: your shops suggested where a record came from
 describe('shops: suggested as you type', () => {
   const list = [SIREN, RECKLESS, DUSTY, ...DEFAULT_SHOPS]
-  it('suggests names with what is typed, those starting with it first, up to 5, none when empty or exact', () => {
-    expect(shopSuggest(list, '')).toEqual([])
+  it('suggests names with what is typed, those starting with it first, up to 5, none when exact, all before typing (#151)', () => {
+    expect(shopSuggest(list, '')).toHaveLength(list.length)
     expect(shopSuggest(list, 'siren records')).toEqual([])
     expect(shopSuggest(list, 're')).toEqual(['Reckless Records', 'Revolver', 'Siren Records'])
     expect(shopSuggest(list, 'o')).toHaveLength(5)

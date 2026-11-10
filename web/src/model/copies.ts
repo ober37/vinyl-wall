@@ -112,6 +112,15 @@ export function buyHosts(L: string[]): [string, string][] {
     })
 }
 
+// the website a copy's only link gives where it came from: only when no shop was named, or the shop named is the link's
+// site ("Rough Trade", roughtrade.com), not one bought somewhere else (#151)
+export function linkFor(L: [string, string][], shop: string): string {
+  if (L.length !== 1) return ''
+  const name = shop.toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+  const site = L[0][0].replace(/\.[a-z]+$/i, '').toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+  return !name || name.includes(site) || site.includes(name) ? L[0][1] : ''
+}
+
 // the sync's matcher's own discogsMatch values (tools/discogs_sync.py); any other value was chosen by someone
 export const AUTO_MATCH = [
   'master main release', 'vinyl: master main release', 'vinyl: earliest original pressing', 'vinyl: first matching release',
@@ -168,11 +177,22 @@ export function pickPatch(r: Rec, ci: number): Record<string, unknown> {
   if (C.length < 2) return {}
   const k = Math.max(0, Math.min(C.length - 1, ci | 0))
   const c = C[k]
+  // the record's own copy, when it's offered, is the first; moved aside, a release the sync guessed for it goes with its
+  // barcodes, and with nothing else it's no copy at all (#151)
+  const auto = AUTO_MATCH.includes(String(r.discogsMatch))
+  const guessed = auto && copyHas(wantCopies(r)[0])
+  const aside = C.map((x, j) => {
+    if (j || !guessed) return x
+    const { barcodes: _, ...rest } = x
+    return { ...rest, discogsId: '' as const }
+  })
   return {
     copyName: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, budget: c.budget, discogsId: c.discogsId || '', buyLinks: c.buyLinks,
     releaseDate: c.releaseDate,
     ...barsOf(c),
-    moreCopies: C.filter((_, j) => j !== k),
+    // another copy's release is one you chose, not the sync's guess
+    ...(k && auto ? { discogsMatch: '' } : {}),
+    moreCopies: aside.filter((x, j) => j !== k && copyHas(x)),
   }
 }
 
