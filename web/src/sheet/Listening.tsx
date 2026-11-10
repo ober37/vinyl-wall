@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Accordion, AccordionItem, AccordionTrigger, AccordionContent } from '@appica/ui-react/accordion'
 import { Button } from '@appica/ui-react/button'
 import { Checkbox } from '@appica/ui-react/checkbox'
@@ -26,6 +26,11 @@ type Journal = { ref: NoteRef; fresh: boolean; msg?: string }
 // the open journal of each record, kept when its sheet closes (production's journalOpen), so a play just logged still
 // offers Undo when the record is opened again
 const journals = new Map<string, Journal>()
+// what's typed but not saved yet, in the Log a play form and in a journal, kept the same way: the tab panels unmount
+// when hidden, and checking the tracklist on About mid-play shouldn't lose it (#153)
+type LogDraft = { ci: number; on: string; kind: PlayKind; side: string; picks: string[] }
+const logDrafts = new Map<string, LogDraft>()
+const journalDrafts = new Map<string, { vibe: number; text: string; date: string }>()
 
 // a choice from a list, as Played on and Which copy are
 function Pick({ label, value, set, items }: { label: string; value: string; set: (v: string) => void; items: { value: string; label: string }[] }) {
@@ -54,17 +59,24 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
   const copies = ownedRecs(r)
   const names = copies.map((c, i) => ownedTitle(c, i))
   const several = copies.length > 1
-  const [chosen, setCi] = useState(() => lastCopy(r, names))
+  const draft = logDrafts.get(r.id)
+  const [chosen, setCi] = useState(() => draft?.ci ?? lastCopy(r, names))
   // (a copy removed since goes back to the first)
   const ci = chosen < copies.length ? chosen : 0
   const rc = several ? copies[ci] : r
   const T = recordTracks(rc)
   const S = sortSetups(setups)
   // with two setups or more, which one it was played on (the last one used, remembered on this device)
-  const [on, setOn] = useState(() => lastSetup(setups))
-  const [kind, setKind] = useState<PlayKind>('full')
-  const [side, setSide] = useState(recordSides(rc)[0])
-  const [picks, setPicks] = useState<string[]>([])
+  const [on, setOn] = useState(() => draft?.on ?? lastSetup(setups))
+  const [kind, setKind] = useState<PlayKind>(draft?.kind ?? 'full')
+  const [side, setSide] = useState(draft?.side ?? recordSides(rc)[0])
+  const [picks, setPicks] = useState<string[]>(draft?.picks ?? [])
+  // a draft only while it differs from how the form starts, so an untouched form still follows the last copy and setup
+  useEffect(() => {
+    const fresh = chosen === lastCopy(r, names) && on === lastSetup(setups) && kind === 'full' && side === recordSides(rc)[0] && !picks.length
+    if (fresh) logDrafts.delete(r.id)
+    else logDrafts.set(r.id, { ci: chosen, on, kind, side, picks })
+  })
   const [busy, setBusy] = useState(false)
   const sides = [...new Set(T.map((t) => sideOf(t.pos)))]
   const bySide = sides.length && sides.every(Boolean) ? sides : ['']
@@ -170,9 +182,21 @@ function LogCard({ r, onLogged }: { r: Rec; onLogged: (j: Journal) => void }) {
 
 function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDone: () => void }) {
   const { mutate, gear, saveGear } = useRuntime()
-  const [vibe, setVibe] = useState(p.vibe)
-  const [text, setText] = useState(p.thoughts)
-  const [date, setDate] = useState(p.day)
+  const k = r.id + ' ' + p.key
+  const draft = journalDrafts.get(k)
+  const [vibe, setVibe] = useState(draft?.vibe ?? p.vibe)
+  const [text, setText] = useState(draft?.text ?? p.thoughts)
+  const [date, setDate] = useState(draft?.date ?? p.day)
+  // (only while it differs from the play as saved, so a change made elsewhere isn't hidden behind an untouched draft)
+  useEffect(() => {
+    if (vibe === p.vibe && text === p.thoughts && date === p.day) journalDrafts.delete(k)
+    else journalDrafts.set(k, { vibe, text, date })
+  })
+  // saved, skipped, cancelled, undone or deleted: the draft goes
+  const done = () => {
+    journalDrafts.delete(k)
+    onDone()
+  }
   const [confirm, setConfirm] = useState(false)
   const gone = () => {
     throw new Error('This play changed elsewhere. Try again.')
@@ -183,13 +207,13 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
     mutate(r.id, (latest) => ({ notes: saveJournal(latest, j.ref, { text, vibe, date: j.fresh ? undefined : date }) ?? gone() })).then((ok) => {
       if (!ok) return
       if (!j.fresh && date !== p.day && /^\d{4}-\d\d-\d\d$/.test(date)) hits.forEach((x) => saveGear(x.g.id, (g) => g && playMoved(g, x.k, date)))
-      onDone()
+      done()
     })
   const drop = () =>
     mutate(r.id, (latest) => ({ notes: deleteNote(latest, j.ref) ?? gone() })).then((ok) => {
       if (!ok) return
       hits.forEach((x) => saveGear(x.g.id, (g) => g && playOff(g, x.k, x.m)))
-      onDone()
+      done()
     })
 
   return (
@@ -236,7 +260,7 @@ function JournalEditor({ r, p, j, onDone }: { r: Rec; p: Play; j: Journal; onDon
         <Button size="sm" onClick={save}>
           Save
         </Button>
-        <Button size="sm" variant="ghost" onClick={onDone}>
+        <Button size="sm" variant="ghost" onClick={done}>
           {j.fresh ? 'Skip' : 'Cancel'}
         </Button>
         {j.fresh ? (
