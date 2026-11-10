@@ -89,8 +89,8 @@ export function SightingsView({ r }: { r: Rec }) {
                 <div>
                   <span className="font-medium">{at}</span> · <time dateTime={s.d} title={longDate(s.d)}>{agoText(s.d)}</time>
                 </div>
-                {(s.price || s.pressing || s.note) && (
-                  <div className="text-foreground-muted break-words">{[s.price && '$' + s.price, s.pressing, s.note].filter(Boolean).join(' · ')}</div>
+                {(s.price || s.pressing || s.note || s.bought) && (
+                  <div className="text-foreground-muted break-words">{[s.price && '$' + s.price, s.pressing, s.note, s.bought && 'bought here'].filter(Boolean).join(' · ')}</div>
                 )}
               </div>
               {canEdit && (

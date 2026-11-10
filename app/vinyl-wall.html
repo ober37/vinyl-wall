@@ -4231,7 +4231,7 @@ function movedCopy(r, ci) {
 var DAY = /^\d{4}-\d\d-\d\d$/;
 var text = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
 function sightingsOf(r) {
-	return (Array.isArray(r.sightings) ? r.sightings : []).filter((s) => !!s && typeof s === "object" && !!text(s.shop, 80) && DAY.test(String(s.d))).map((s, i) => {
+	return (Array.isArray(r.sightings) ? r.sightings : []).map((s, i) => [s, i]).filter((e) => !!e[0] && typeof e[0] === "object" && !!text(e[0].shop, 80) && DAY.test(String(e[0].d))).map(([s, i]) => {
 		const x = {
 			id: text(s.id, 40) || "g" + i,
 			shop: text(s.shop, 80),
@@ -4239,6 +4239,7 @@ function sightingsOf(r) {
 		};
 		const sid = text(s.shopId, 40);
 		if (sid) x.shopId = sid;
+		if (DAY.test(String(s.bought))) x.bought = String(s.bought);
 		for (const k of [
 			"price",
 			"pressing",
@@ -4258,8 +4259,31 @@ var agoText = (d, now = today()) => {
 };
 function recentSighting(r, now = today()) {
 	if (kindOf$1(r) !== "wish") return void 0;
-	const s = sightingsOf(r)[0];
+	const s = sightingsOf(r).find((x) => !x.bought);
 	return s && daysSince(s.d, now) <= 30 ? s : void 0;
+}
+var isAt = (s, shop) => s.shopId ? s.shopId === shop.id : s.shop.toLowerCase() === shop.name.toLowerCase();
+function sightingsAt(records, shop) {
+	return records.filter((r) => !r.deleted).flatMap((r) => sightingsOf(r).filter((s) => isAt(s, shop)).map((s) => ({
+		r,
+		s
+	}))).sort((a, b) => b.s.d.localeCompare(a.s.d));
+}
+function boughtPatch(r, name, list) {
+	const n = name.trim();
+	if (!n) return {};
+	const shop = list.find((x) => x.name.toLowerCase() === n.toLowerCase()) ?? { name: n };
+	const keep = Array.isArray(r.sightings) ? r.sightings : [];
+	const at = new Set(sightingsOf(r).filter((s) => !s.bought && isAt(s, shop)).map((s) => s.id));
+	if (!at.size) return {};
+	const t = today();
+	return { sightings: keep.map((x, i) => {
+		const o = x && typeof x === "object" ? x : {};
+		return at.has(text(o.id, 40) || "g" + i) ? {
+			...o,
+			bought: t
+		} : x;
+	}) };
 }
 function addSighting(r, s, list) {
 	const keep = Array.isArray(r.sightings) ? r.sightings : [];
@@ -5241,6 +5265,123 @@ function HangingSection() {
 		})
 	})] });
 }
+// src/settings/ShopSightings.tsx
+function ShopSightings({ shop }) {
+	const { records, canEdit } = useRuntime();
+	const [logging, setLogging] = useState(false);
+	const [msg, setMsg] = useState("");
+	const seen = sightingsAt(records, shop);
+	const wanted = wallOrder(records.filter((r) => !r.deleted && kindOf$1(r) === "wish"));
+	const canLog = canEdit && shop.kind === "local" && wanted.length > 0;
+	if (!seen.length && !canLog) return null;
+	return /* @__PURE__ */ jsxs(Fieldset, { children: [
+		/* @__PURE__ */ jsx(FieldsetLegend, { children: "Seen here" }),
+		seen.length > 0 ? /* @__PURE__ */ jsx("ul", {
+			className: "flex flex-col gap-2",
+			children: seen.map(({ r, s }) => /* @__PURE__ */ jsxs("li", {
+				className: `text-sm break-words ${s.bought || daysSince(s.d) > 30 ? "text-foreground-muted" : "text-foreground"}`,
+				children: [
+					/* @__PURE__ */ jsx("span", {
+						className: "font-medium",
+						children: r.title || "Untitled"
+					}),
+					r.artist ? " · " + r.artist : "",
+					" · ",
+					/* @__PURE__ */ jsx("time", {
+						dateTime: s.d,
+						title: longDate(s.d),
+						children: agoText(s.d)
+					}),
+					[
+						s.price && "$" + s.price,
+						s.pressing,
+						s.bought && "bought here"
+					].filter(Boolean).map((x) => " · " + x)
+				]
+			}, r.id + s.id))
+		}) : !logging && /* @__PURE__ */ jsx("p", {
+			className: "text-foreground-muted text-sm",
+			children: "Nothing yet. On a visit, log the records you want that they had."
+		}),
+		msg && /* @__PURE__ */ jsx("p", {
+			role: "status",
+			className: "text-foreground-muted text-sm",
+			children: msg
+		}),
+		canLog && (logging ? /* @__PURE__ */ jsx(ISaw, {
+			shop,
+			wanted,
+			onDone: (m) => {
+				setLogging(false);
+				setMsg(m);
+			}
+		}) : /* @__PURE__ */ jsx(Button, {
+			size: "sm",
+			variant: "outline",
+			className: "self-start",
+			onClick: () => (setMsg(""), setLogging(true)),
+			children: "I saw…"
+		}))
+	] });
+}
+function ISaw({ shop, wanted, onDone }) {
+	const { mutate } = useRuntime();
+	const [picked, setPicked] = useState([]);
+	const [d, setD] = useState(today());
+	const [busy, setBusy] = useState(false);
+	const save = async () => {
+		setBusy(true);
+		let n = 0;
+		for (const id of picked) if (await mutate(id, (latest) => addSighting(latest, {
+			shop: shop.name,
+			d
+		}, [shop]))) n++;
+		setBusy(false);
+		onDone(n ? `Logged ${n} record${n === 1 ? "" : "s"} seen at ${shop.name}.` : "");
+	};
+	return /* @__PURE__ */ jsxs("div", {
+		className: "flex flex-col gap-4",
+		children: [
+			/* @__PURE__ */ jsxs("div", {
+				role: "group",
+				"aria-labelledby": "iSawQ",
+				className: "flex flex-col gap-2",
+				children: [/* @__PURE__ */ jsx("p", {
+					id: "iSawQ",
+					className: "text-foreground-muted text-sm",
+					children: "Which records you want did they have?"
+				}), wanted.map((r) => /* @__PURE__ */ jsxs("label", {
+					className: "text-foreground flex items-start gap-2 text-sm break-words",
+					children: [/* @__PURE__ */ jsx(Checkbox, {
+						checked: picked.includes(r.id),
+						onCheckedChange: (v) => setPicked((p) => v ? [...p, r.id] : p.filter((x) => x !== r.id))
+					}), /* @__PURE__ */ jsxs("span", { children: [r.title || "Untitled", r.artist && /* @__PURE__ */ jsxs("span", {
+						className: "text-foreground-muted",
+						children: [" · ", r.artist]
+					})] })]
+				}, r.id))]
+			}),
+			/* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: "When" }), /* @__PURE__ */ jsx(DateField, {
+				value: toDate(d),
+				onValueChange: (x) => setD(fromDate(x) || d)
+			})] }),
+			/* @__PURE__ */ jsxs("div", {
+				className: "flex gap-3",
+				children: [/* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					disabled: busy || !picked.length,
+					onClick: save,
+					children: picked.length > 1 ? `Log ${picked.length} records` : "Log it"
+				}), /* @__PURE__ */ jsx(Button, {
+					size: "sm",
+					variant: "ghost",
+					onClick: () => onDone(""),
+					children: "Cancel"
+				})]
+			})
+		]
+	});
+}
 // src/settings/Shops.tsx
 var GROUPS = [
 	["local", "Local shops"],
@@ -5299,6 +5440,8 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 		schedule();
 	};
 	const where = shopWhere(shop);
+	const { records } = useRuntime();
+	const leads = sightingsAt(records, shop).filter(({ r, s }) => !s.bought && recentSighting(r)?.id === s.id).length;
 	const missing = d.kind === "local" && !(d.place.trim() && d.phone.trim() && d.about.trim());
 	const field = (k, label, props = {}) => /* @__PURE__ */ jsxs(Field, { children: [/* @__PURE__ */ jsx(FieldLabel, { children: label }), /* @__PURE__ */ jsx(Input, {
 		value: d[k],
@@ -5312,21 +5455,32 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 			className: "group flex w-full cursor-pointer items-baseline gap-3 rounded-md text-start outline-offset-2 focus-visible:outline-2 focus-visible:outline-(--focus-ring)",
 			children: [/* @__PURE__ */ jsxs("span", {
 				className: "min-w-0 flex-1 text-sm break-words",
-				children: [/* @__PURE__ */ jsx("span", {
-					className: "text-foreground-intense",
-					children: shop.name
-				}), where && /* @__PURE__ */ jsxs("span", {
-					className: "text-foreground-muted",
-					children: [" · ", where]
-				})]
+				children: [
+					/* @__PURE__ */ jsx("span", {
+						className: "text-foreground-intense",
+						children: shop.name
+					}),
+					where && /* @__PURE__ */ jsxs("span", {
+						className: "text-foreground-muted",
+						children: [" · ", where]
+					}),
+					leads > 0 && /* @__PURE__ */ jsxs("span", {
+						className: "text-foreground-muted",
+						children: [
+							" · ",
+							leads,
+							" seen"
+						]
+					})
+				]
 			}), /* @__PURE__ */ jsxs("span", {
 				className: "text-primary flex shrink-0 items-center gap-1 self-center text-sm",
 				children: [open ? "Done" : "Edit", /* @__PURE__ */ jsx(Chevron, {})]
 			})]
-		}), /* @__PURE__ */ jsx(CollapsibleContent, {
-			className: "-mx-4 px-4 transition-none",
-			children: /* @__PURE__ */ jsxs("div", {
-				className: "flex flex-col gap-4 pt-4 pb-2",
+		}), /* @__PURE__ */ jsxs(CollapsibleContent, {
+			className: "-mx-4 flex flex-col gap-8 px-4 pt-4 pb-2 transition-none",
+			children: [/* @__PURE__ */ jsx(ShopSightings, { shop }), /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-4",
 				children: [
 					/* @__PURE__ */ jsx("span", {
 						role: "status",
@@ -5376,7 +5530,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 						children: "Remove this shop"
 					})
 				]
-			})
+			})]
 		})]
 	});
 }
@@ -8436,12 +8590,13 @@ function SightingsView({ r }) {
 							title: longDate(s.d),
 							children: agoText(s.d)
 						})
-					] }), (s.price || s.pressing || s.note) && /* @__PURE__ */ jsx("div", {
+					] }), (s.price || s.pressing || s.note || s.bought) && /* @__PURE__ */ jsx("div", {
 						className: "text-foreground-muted break-words",
 						children: [
 							s.price && "$" + s.price,
 							s.pressing,
-							s.note
+							s.note,
+							s.bought && "bought here"
 						].filter(Boolean).join(" · ")
 					})]
 				}), canEdit && /* @__PURE__ */ jsx(Button, {
@@ -8457,7 +8612,7 @@ function SightingsView({ r }) {
 }
 // src/sheet/StatusActions.tsx
 function StatusActions({ r, onMoved }) {
-	const { mutate } = useRuntime();
+	const { mutate, settings } = useRuntime();
 	const [pick, setPick] = useState(null);
 	const [ask, setAsk] = useState(null);
 	const [ci, setCi] = useState(0);
@@ -8470,7 +8625,10 @@ function StatusActions({ r, onMoved }) {
 		const ok = await mutate(r.id, (latest) => {
 			const m = movePatch(latest, to, det, ci);
 			msg = m?.msg || "";
-			return m?.patch ?? null;
+			return m && {
+				...m.patch,
+				...to === "own" && det ? boughtPatch(latest, det.shop, shopsOf(settings)) : {}
+			};
 		});
 		setBusy(false);
 		setAsk(null);
@@ -8505,10 +8663,7 @@ function StatusActions({ r, onMoved }) {
 		shopLabel: ask === "own" ? "Bought from" : "From",
 		bought: ask === "own",
 		hosts: buyHosts(movedCopy(r, ci).buyLinks),
-		init: {
-			paid: String(r.paid || ""),
-			shop: String(r.shop || "")
-		},
+		init: prefill(r, shopsOf(settings)),
 		busy,
 		onSave: (det) => move(ask, det),
 		onCancel: () => setAsk(null)
@@ -8528,13 +8683,20 @@ function StatusActions({ r, onMoved }) {
 				children: "Got it"
 			}),
 			/* @__PURE__ */ jsx(Button, {
-				variant: "ghost",
+				variant: "outline",
 				disabled: busy,
 				onClick: () => setSeen(true),
 				children: "Seen it"
 			})
 		]
 	});
+}
+function prefill(r, list) {
+	const seen = recentSighting(r);
+	return {
+		paid: String(r.paid || !r.shop && seen?.price || ""),
+		shop: String(r.shop || (seen ? seenAt(seen, list) : ""))
+	};
 }
 function PaidForm({ shopLabel, bought, hosts, init, busy, onSave, onCancel }) {
 	const { settings, saveSettings } = useRuntime();

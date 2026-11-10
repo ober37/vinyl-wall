@@ -11,6 +11,8 @@ import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
 import { Chevron } from '../sheet/Links'
 import { Segmented } from '../sheet/Segmented'
+import { recentSighting, sightingsAt } from '../model/sightings'
+import { ShopSightings } from './ShopSightings'
 
 const GROUPS: [ShopKind, string][] = [
   ['local', 'Local shops'],
@@ -56,6 +58,9 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
     schedule()
   }
   const where = shopWhere(shop)
+  // wanted records seen here lately and not bought, counted on the row (#152)
+  const { records } = useRuntime()
+  const leads = sightingsAt(records, shop).filter(({ r, s }) => !s.bought && recentSighting(r)?.id === s.id).length
   // what the chat can look up for a local shop: where it is, its phone and a line about it (its search is found for it)
   const missing = d.kind === 'local' && !(d.place.trim() && d.phone.trim() && d.about.trim())
   const field = (k: keyof Draft, label: string, props: React.ComponentProps<typeof Input> = {}) => (
@@ -70,6 +75,7 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
         <span className="min-w-0 flex-1 text-sm break-words">
           <span className="text-foreground-intense">{shop.name}</span>
           {where && <span className="text-foreground-muted"> · {where}</span>}
+          {leads > 0 && <span className="text-foreground-muted"> · {leads} seen</span>}
         </span>
         <span className="text-primary flex shrink-0 items-center gap-1 self-center text-sm">
           {open ? 'Done' : 'Edit'}
@@ -77,8 +83,10 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
         </span>
       </CollapsibleTrigger>
       {/* room for a focused ring, which the panel would otherwise clip: as wide as Remove this shop pulls out (-ms-3) */}
-      <CollapsibleContent className="-mx-4 px-4 transition-none">
-        <div className="flex flex-col gap-4 pt-4 pb-2">
+      <CollapsibleContent className="-mx-4 flex flex-col gap-8 px-4 pt-4 pb-2 transition-none">
+        {/* what was seen here, a section of its own above the shop's details (#152) */}
+        <ShopSightings shop={shop} />
+        <div className="flex flex-col gap-4">
           <span role="status" className="text-foreground-muted -mb-2 text-xs empty:hidden">
             {saved}
           </span>

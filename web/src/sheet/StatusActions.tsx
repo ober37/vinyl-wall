@@ -7,7 +7,8 @@ import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
 import { buyHosts, pickable, wantCopies } from '../model/copies'
 import { arrivedPatch, gotCopyPatch, orderCopyPatch } from '../model/copyOrders'
-import { atShow, sameSite, shopOf, shopSite, shopsOf, shopSuggest } from '../model/shops'
+import { atShow, sameSite, shopOf, shopSite, shopsOf, shopSuggest, type Shop } from '../model/shops'
+import { boughtPatch, recentSighting, seenAt } from '../model/sightings'
 import { movedCopy, movePatch, type Paid } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
@@ -18,7 +19,7 @@ import { Tip } from '../wall/Tip'
 // View mode's status buttons on the hunt: Ordered it / Got it (asking which copy when it hunts several, then what was
 // paid), and Seen it, which leaves it on the hunt (#152). An order's It arrived is in its fold on the Order tab (#139)
 export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) => void }) {
-  const { mutate } = useRuntime()
+  const { mutate, settings } = useRuntime()
   const [pick, setPick] = useState<'ordered' | 'own' | null>(null)
   const [ask, setAsk] = useState<'ordered' | 'own' | null>(null)
   const [ci, setCi] = useState(0)
@@ -33,7 +34,8 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     const ok = await mutate(r.id, (latest) => {
       const m = movePatch(latest, to, det, ci)
       msg = m?.msg || ''
-      return m?.patch ?? null
+      // got it where it was seen: that sighting was bought (#152)
+      return m && { ...m.patch, ...(to === 'own' && det ? boughtPatch(latest, det.shop, shopsOf(settings)) : {}) }
     })
     setBusy(false)
     setAsk(null)
@@ -79,7 +81,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
         shopLabel={ask === 'own' ? 'Bought from' : 'From'}
         bought={ask === 'own'}
         hosts={buyHosts(movedCopy(r, ci).buyLinks)}
-        init={{ paid: String(r.paid || ''), shop: String(r.shop || '') }}
+        init={prefill(r, shopsOf(settings))}
         busy={busy}
         onSave={(det) => move(ask, det)}
         onCancel={() => setAsk(null)}
@@ -94,11 +96,17 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
       <Button variant="outline" disabled={busy} onClick={() => start('own')}>
         Got it
       </Button>
-      <Button variant="ghost" disabled={busy} onClick={() => setSeen(true)}>
+      <Button variant="outline" disabled={busy} onClick={() => setSeen(true)}>
         Seen it
       </Button>
     </div>
   )
+}
+
+// the paid form starts from the record's shop and price, else where it was seen lately and the price seen there (#152)
+function prefill(r: Rec, list: Shop[]) {
+  const seen = recentSighting(r)
+  return { paid: String(r.paid || (!r.shop && seen?.price) || ''), shop: String(r.shop || (seen ? seenAt(seen, list) : '')) }
 }
 
 // What did you pay, and where from: a copy sold in several places asks which one it came from; one with a single link

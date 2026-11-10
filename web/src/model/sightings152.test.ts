@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { hangTag } from './copyOrders'
 import { fillPatch, importable } from './library'
 import type { Rec } from './record'
-import { addSighting, agoText, recentSighting, removeSighting, seenAt, sightingsOf } from './sightings'
+import { addSighting, agoText, boughtPatch, recentSighting, removeSighting, seenAt, sightingsAt, sightingsOf } from './sightings'
 import type { Shop } from './shops'
 
 const NS: Shop = { id: 'ns', name: 'Northside', kind: 'local' }
@@ -53,5 +53,24 @@ describe('sightings', () => {
     expect(importable({ title: 'Hunt', sightings: [{ id: 'a', shop: 'A', d: '2026-01-01' }] })).toHaveProperty('sightings')
     const p = fillPatch({ ...want, sightings: [{ id: 'a', shop: 'A', d: '2026-01-01' }] }, { title: 'Hunt', artist: 'Band', sightings: [{ id: 'a', shop: 'A2', d: '2026-01-01' }, { id: 'b', shop: 'B', d: '2026-02-01' }] })
     expect(p.sightings).toEqual([{ id: 'a', shop: 'A', d: '2026-01-01' }, { id: 'b', shop: 'B', d: '2026-02-01' }])
+  })
+
+  it("lists a shop's sightings across records, newest first, by id (renamed or not) or by name when logged without one", () => {
+    const recs: Rec[] = [
+      { ...want, id: 'a', sightings: [{ id: '1', shopId: 'ns', shop: 'Old name', d: day(5) }, { id: '2', shop: 'Corner', d: day(1) }] },
+      { ...want, id: 'b', sightings: [{ id: '3', shop: 'northside', d: day(2) }] },
+      { ...want, id: 'c', deleted: true, sightings: [{ id: '4', shopId: 'ns', shop: 'Northside', d: day(0) }] },
+    ]
+    expect(sightingsAt(recs, NS).map(({ r, s }) => r.id + s.id)).toEqual(['b3', 'a1'])
+  })
+
+  it('marks the sightings at the shop it was bought from as bought, and those are no longer a lead', () => {
+    const r = { ...want, sightings: [{ id: '1', shopId: 'ns', shop: 'Old name', d: day(2) }, { shop: 'Corner', d: day(3) }] }
+    const p = boughtPatch(r, 'Northside', [NS])
+    expect(p.sightings).toEqual([expect.objectContaining({ id: '1', bought: expect.any(String) }), { shop: 'Corner', d: day(3) }])
+    // one written in chat without an id, at a shop not on the list, goes by its name
+    expect(boughtPatch(r, 'corner', [NS]).sightings?.[1]).toMatchObject({ shop: 'Corner', bought: expect.any(String) })
+    expect(boughtPatch(r, 'Elsewhere', [NS])).toEqual({})
+    expect(recentSighting({ ...r, ...p })?.shop).toBe('Corner')
   })
 })
