@@ -2,7 +2,7 @@
 // matrix, discogsId, grades, paid, shop, shopUrl, acquired, barcodes), so Discogs sync and older walls read it as before;
 // any others are in ownedCopies, each with the same fields by the same names (name for copyName), in the order they came.
 import { notesOf } from './notes'
-import { buyHosts, copyAlbum, relTracks, wantCopies, type Barcodes, type ReleaseTracks } from './copies'
+import { buyHosts, copyAlbum, linkFor, relTracks, wantCopies, type Barcodes, type ReleaseTracks } from './copies'
 import { kindOf, pressingText, today, type Rec } from './record'
 
 export type OwnCopy = {
@@ -112,7 +112,7 @@ export const gradeShort = (c: Rec) => [c.mediaGrade, c.sleeveGrade].filter(Boole
 export function gotPatch(
   r: Rec,
   ci: number,
-  det: { paid: string; shop: string; shopUrl?: string },
+  det: { paid: string; shop: string; shopUrl?: string; sealed?: boolean },
 ): { patch: Record<string, unknown>; msg: string } | null {
   // as wantCopies reads them, so ci points at the same one
   const more = (Array.isArray(r.moreCopies) ? r.moreCopies : []).filter((x) => !!obj(x))
@@ -130,8 +130,9 @@ export function gotPatch(
     ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
     paid: det.paid,
     shop: det.shop,
-    shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : ''),
+    shopUrl: det.shopUrl || linkFor(L, det.shop),
     acquired: today(),
+    ...(det.sealed ? { mediaGrade: 'M', sleeveGrade: 'M' } : {}),
   }
   const said = [det.paid ? '$' + det.paid : '', det.shop ? 'from ' + det.shop : ''].filter(Boolean).join(' ')
   const notes = notesOf(r)

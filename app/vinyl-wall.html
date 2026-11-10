@@ -769,6 +769,12 @@ function buyHosts(L) {
 		return [seen[h] > 1 ? `${h} (${seen[h]})` : h, u];
 	});
 }
+function linkFor(L, shop) {
+	if (L.length !== 1) return "";
+	const name = shop.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+	const site = L[0][0].replace(/\.[a-z]+$/i, "").toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+	return !name || name.includes(site) || site.includes(name) ? L[0][1] : "";
+}
 var AUTO_MATCH = [
 	"master main release",
 	"vinyl: master main release",
@@ -800,6 +806,16 @@ function pickPatch(r, ci) {
 	if (C.length < 2) return {};
 	const k = Math.max(0, Math.min(C.length - 1, ci | 0));
 	const c = C[k];
+	const auto = AUTO_MATCH.includes(String(r.discogsMatch));
+	const guessed = auto && copyHas(wantCopies(r)[0]);
+	const aside = C.map((x, j) => {
+		if (j || !guessed) return x;
+		const { barcodes: _, ...rest } = x;
+		return {
+			...rest,
+			discogsId: ""
+		};
+	});
 	return {
 		copyName: c.name,
 		pressing: c.pressing,
@@ -810,7 +826,8 @@ function pickPatch(r, ci) {
 		buyLinks: c.buyLinks,
 		releaseDate: c.releaseDate,
 		...barsOf(c),
-		moreCopies: C.filter((_, j) => j !== k)
+		...k && auto ? { discogsMatch: "" } : {},
+		moreCopies: aside.filter((x, j) => j !== k && copyHas(x))
 	};
 }
 // src/model/notes.ts
@@ -959,8 +976,12 @@ function gotPatch(r, ci, det) {
 		...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 		paid: det.paid,
 		shop: det.shop,
-		shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : ""),
-		acquired: today()
+		shopUrl: det.shopUrl || linkFor(L, det.shop),
+		acquired: today(),
+		...det.sealed ? {
+			mediaGrade: "M",
+			sleeveGrade: "M"
+		} : {}
 	};
 	const said = [det.paid ? "$" + det.paid : "", det.shop ? "from " + det.shop : ""].filter(Boolean).join(" ");
 	const notes = notesOf(r);
@@ -3255,11 +3276,30 @@ function unlistedShops(records, list) {
 	}
 	return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 }
+var SMALL = /* @__PURE__ */ new Set([
+	"in",
+	"the",
+	"and",
+	"at",
+	"of",
+	"on"
+]);
+function wordsMatch(s, typed) {
+	const w = words$1(typed).filter((x) => !SMALL.has(x));
+	const has = [...words$1(s.name), ...words$1(s.place)];
+	return w.length > 0 && w.every((x, i) => has.some((h) => h === x || i === w.length - 1 && h.startsWith(x)));
+}
 function shopSuggest(list, typed) {
 	const q = typed.trim().toLowerCase();
-	if (!q || list.some((s) => s.name.toLowerCase() === q)) return [];
+	if (!q) return shopOrder(list).map((s) => s.name);
+	if (list.some((s) => s.name.toLowerCase() === q)) return [];
 	const hits = shopOrder(list.filter((s) => s.name.toLowerCase().includes(q)));
-	return [...hits.filter((s) => s.name.toLowerCase().startsWith(q)), ...hits.filter((s) => !s.name.toLowerCase().startsWith(q))].slice(0, 5).map((s) => s.name);
+	const more = shopOrder(list.filter((s) => !s.name.toLowerCase().includes(q) && wordsMatch(s, typed)));
+	return [
+		...hits.filter((s) => s.name.toLowerCase().startsWith(q)),
+		...hits.filter((s) => !s.name.toLowerCase().startsWith(q)),
+		...more
+	].slice(0, 5).map((s) => s.name);
 }
 function shopSite(list, name) {
 	const s = list.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
@@ -4131,6 +4171,12 @@ function movePatch(r, to, det, ci) {
 			t: said ? "Found it · " + said : "Found it. Moved to the wall."
 		});
 		msg = "Moved to the wall. Acquired today.";
+		const links = patch.buyLinks ?? r.buyLinks;
+		if (Array.isArray(links) && links.length) patch.buyLinks = [];
+		if (det?.sealed) Object.assign(patch, {
+			mediaGrade: "M",
+			sleeveGrade: "M"
+		});
 	}
 	if (to === "ordered") {
 		Object.assign(patch, {
@@ -4151,10 +4197,10 @@ function movePatch(r, to, det, ci) {
 		}
 	}
 	if (from === "wish" && to !== "wish") {
-		const L = buyHosts(movedCopy(r, ci).buyLinks);
+		const link = linkFor(buyHosts(movedCopy(r, ci).buyLinks), det?.shop ?? String(r.shop || ""));
 		const had = "shopUrl" in patch ? patch.shopUrl : r.shopUrl;
 		if (det?.shopUrl) patch.shopUrl = det.shopUrl;
-		else if (L.length === 1 && !had) patch.shopUrl = L[0][1];
+		else if (link && !had) patch.shopUrl = link;
 	}
 	if (from === "wish" && to !== "wish") {
 		const rd = movedCopy(r, ci).releaseDate;
@@ -4264,7 +4310,7 @@ function orderCopyPatch(r, ci, det) {
 		eta: pre ? c.releaseDate : "",
 		paid: det.paid,
 		shop: det.shop,
-		shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : "")
+		shopUrl: det.shopUrl || linkFor(L, det.shop)
 	};
 	const notes = notesOf(r);
 	notes.push({
@@ -4314,6 +4360,7 @@ function swapIn(r, ci, det, note) {
 			shop: o.shop,
 			shopUrl: o.shopUrl,
 			acquired: o.acquired,
+			buyLinks: [],
 			moreCopies: [leadAsCopy(r, true), ...more.filter((_, j) => j !== ci - 1)],
 			notes
 		},
@@ -4325,11 +4372,16 @@ function gotCopyPatch(r, ci, det) {
 	const c = wantCopies(r)[ci];
 	if (kindOf$1(r) !== "ordered" || ci < 1 || !c || ci > rawMore(r).length || copyOrdered(c)) return null;
 	const L = buyHosts(c.buyLinks);
+	const m = swapIn(r, ci, {
+		...det,
+		shopUrl: det.shopUrl || linkFor(L, det.shop)
+	}, said(det) ? "Found it · " + said(det) : "Found it. Moved to the wall.");
+	if (det.sealed) Object.assign(m.patch, {
+		mediaGrade: "M",
+		sleeveGrade: "M"
+	});
 	return {
-		...swapIn(r, ci, {
-			...det,
-			shopUrl: det.shopUrl || (L.length === 1 ? L[0][1] : "")
-		}, said(det) ? "Found it · " + said(det) : "Found it. Moved to the wall."),
+		...m,
 		msg: "Moved to the wall. Your order is still on the way."
 	};
 }
@@ -6486,6 +6538,7 @@ function ShopInput({ value, onChange, onPick, placeholder }) {
 		},
 		open: open && names.length > 0,
 		onOpenChange: setOpen,
+		openOnInputClick: true,
 		children: [/* @__PURE__ */ jsx(AutocompleteInput, { placeholder }), /* @__PURE__ */ jsx(AutocompleteContent, { children: /* @__PURE__ */ jsx(AutocompleteList, { children: (n) => /* @__PURE__ */ jsx(AutocompleteItem, {
 			value: n,
 			children: n
@@ -8204,6 +8257,7 @@ function StatusActions({ r, onMoved }) {
 	});
 	if (ask) return /* @__PURE__ */ jsx(PaidForm, {
 		shopLabel: ask === "own" ? "Bought from" : "From",
+		bought: ask === "own",
 		hosts: buyHosts(movedCopy(r, ci).buyLinks),
 		init: {
 			paid: String(r.paid || ""),
@@ -8227,19 +8281,31 @@ function StatusActions({ r, onMoved }) {
 		})]
 	});
 }
-function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }) {
-	const { settings } = useRuntime();
+function PaidForm({ shopLabel, bought, hosts, init, busy, onSave, onCancel }) {
+	const { settings, saveSettings } = useRuntime();
 	const [paid, setPaid] = useState(init.paid);
 	const [shop, setShop] = useState(init.shop);
 	const [url, setUrl] = useState("");
+	const [sealed, setSealed] = useState(false);
+	const [add, setAdd] = useState(false);
+	const list = shopsOf(settings);
+	const name = shop.trim();
+	const unlisted = bought && !!name && !list.some((s) => s.name.toLowerCase() === name.toLowerCase()) && !shopSuggest(list, name).length && !atShow(name);
 	return /* @__PURE__ */ jsx("form", {
 		onSubmit: (e) => {
 			e.preventDefault();
-			const site = url || (hosts.length ? "" : shopSite(shopsOf(settings), shop));
+			const listed = shopSite(list, name);
+			const site = url || (hosts.length === 1 && sameSite(hosts[0][1], listed) ? hosts[0][1] : listed);
+			if (unlisted && add) saveSettings({ shops: [...list, {
+				id: Math.random().toString(36).slice(2, 12),
+				name: name.slice(0, 80),
+				kind: "local"
+			}] });
 			onSave({
 				paid: paid.trim().replace(/^\$\s*/, ""),
-				shop: shop.trim(),
-				...site ? { shopUrl: site } : {}
+				shop: name,
+				...site ? { shopUrl: site } : {},
+				...bought && sealed ? { sealed } : {}
 			});
 		},
 		children: /* @__PURE__ */ jsxs(Fieldset, { children: [
@@ -8260,6 +8326,27 @@ function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }) {
 					onChange: setShop,
 					placeholder: "e.g. Rough Trade"
 				})] })]
+			}),
+			bought && /* @__PURE__ */ jsxs("div", {
+				className: "flex flex-col gap-3",
+				children: [unlisted && /* @__PURE__ */ jsxs("label", {
+					className: "text-foreground flex items-center gap-2 text-sm",
+					children: [
+						/* @__PURE__ */ jsx(Checkbox, {
+							checked: add,
+							onCheckedChange: (v) => setAdd(!!v)
+						}),
+						"Add ",
+						name,
+						" to your shops"
+					]
+				}), /* @__PURE__ */ jsxs("label", {
+					className: "text-foreground flex items-center gap-2 text-sm",
+					children: [/* @__PURE__ */ jsx(Checkbox, {
+						checked: sealed,
+						onCheckedChange: (v) => setSealed(!!v)
+					}), "New, sealed (graded Mint)"]
+				})]
 			}),
 			hosts.length > 1 && /* @__PURE__ */ jsxs("div", {
 				role: "group",
@@ -8338,6 +8425,7 @@ function CopyActions({ r, ci, onMoved, onOrdered }) {
 	};
 	return /* @__PURE__ */ jsx(PaidForm, {
 		shopLabel: ask === "own" ? "Bought from" : "From",
+		bought: ask === "own",
 		hosts: buyHosts(wantCopies(r)[ci]?.buyLinks ?? []),
 		init: {
 			paid: "",

@@ -1,11 +1,12 @@
 // Moving a record between owned, ordered and wanted, as moveStatus in app/vinyl-wall.html does it: each move writes the
 // status, a dated note, and the dates and order state that go with it.
 import { notesOf } from './notes'
-import { buyHosts, pickable, pickPatch, wantCopies } from './copies'
+import { buyHosts, linkFor, pickable, pickPatch, wantCopies } from './copies'
 import { kindOf, today, type Kind, type Rec } from './record'
 
-// shopUrl: one of the copy's links, picked as where it came from
-export type Paid = { paid: string; shop: string; shopUrl?: string }
+// shopUrl: one of the copy's links, picked as where it came from (or the website of the shop on your list); sealed: bought
+// new and sealed, so graded Mint (#151)
+export type Paid = { paid: string; shop: string; shopUrl?: string; sealed?: boolean }
 
 // what a move writes, from the latest copy of the record; null when it's already there. ci is the copy picked from a hunt
 // with several (see pickable)
@@ -24,6 +25,10 @@ export function movePatch(r: Rec, to: Kind, det?: Paid, ci?: number): { patch: R
       notes.push({ d: t, t: 'Arrived' + (r.shop ? ' from ' + r.shop : '') + '. Hung it on the wall.' })
     } else notes.push({ d: t, t: said ? 'Found it · ' + said : 'Found it. Moved to the wall.' })
     msg = 'Moved to the wall. Acquired today.'
+    // where to buy it is no use once it's yours (#151)
+    const links = patch.buyLinks ?? r.buyLinks
+    if (Array.isArray(links) && links.length) patch.buyLinks = []
+    if (det?.sealed) Object.assign(patch, { mediaGrade: 'M', sleeveGrade: 'M' })
   }
   if (to === 'ordered') {
     Object.assign(patch, { orderStatus: 'ordered', orderDate: t })
@@ -38,12 +43,12 @@ export function movePatch(r: Rec, to: Kind, det?: Paid, ci?: number): { patch: R
       if (r.shopUrl) patch.shopUrl = ''
     }
   }
-  // the copy's link becomes the shop's website when there isn't one: the one picked, else its only one
+  // the copy's link becomes the shop's website when there isn't one: the one picked, else its only one when it's that shop's
   if (from === 'wish' && to !== 'wish') {
-    const L = buyHosts(movedCopy(r, ci).buyLinks)
+    const link = linkFor(buyHosts(movedCopy(r, ci).buyLinks), det?.shop ?? String(r.shop || ''))
     const had = 'shopUrl' in patch ? patch.shopUrl : r.shopUrl
     if (det?.shopUrl) patch.shopUrl = det.shopUrl
-    else if (L.length === 1 && !had) patch.shopUrl = L[0][1]
+    else if (link && !had) patch.shopUrl = link
   }
   // a pre-order's release date becomes the order's expected date; the copy keeps no date of its own once it's had (#75)
   if (from === 'wish' && to !== 'wish') {

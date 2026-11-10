@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { Button } from '@appica/ui-react/button'
+import { Checkbox } from '@appica/ui-react/checkbox'
 import { Field, FieldLabel } from '@appica/ui-react/field'
 import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { kindOf, type Rec } from '../model/record'
 import { buyHosts, pickable, wantCopies } from '../model/copies'
 import { arrivedPatch, gotCopyPatch, orderCopyPatch } from '../model/copyOrders'
-import { shopOf, shopSite, shopsOf } from '../model/shops'
+import { atShow, sameSite, shopOf, shopSite, shopsOf, shopSuggest } from '../model/shops'
 import { movedCopy, movePatch, type Paid } from '../model/status'
 import { useRuntime } from '../runtime/runtime'
 import { CopyPicker } from './Copies'
@@ -63,6 +64,7 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
     return (
       <PaidForm
         shopLabel={ask === 'own' ? 'Bought from' : 'From'}
+        bought={ask === 'own'}
         hosts={buyHosts(movedCopy(r, ci).buyLinks)}
         init={{ paid: String(r.paid || ''), shop: String(r.shop || '') }}
         busy={busy}
@@ -84,26 +86,36 @@ export function StatusActions({ r, onMoved }: { r: Rec; onMoved: (msg: string) =
 }
 
 // What did you pay, and where from: a copy sold in several places asks which one it came from; one with a single link
-// uses it without asking (the move does)
-export function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }: {
+// uses it without asking (the move does). Bought (in hand, not on order): it can be new and sealed, and a shop not on your
+// list can be added to it (#151)
+export function PaidForm({ shopLabel, bought, hosts, init, busy, onSave, onCancel }: {
   shopLabel: string
+  bought?: boolean
   hosts: [string, string][]
   init: { paid: string; shop: string }
   busy: boolean
   onSave: (det: Paid) => void
   onCancel: () => void
 }) {
-  const { settings } = useRuntime()
+  const { settings, saveSettings } = useRuntime()
   const [paid, setPaid] = useState(init.paid)
   const [shop, setShop] = useState(init.shop)
   const [url, setUrl] = useState('')
+  const [sealed, setSealed] = useState(false)
+  const [add, setAdd] = useState(false)
+  const list = shopsOf(settings)
+  const name = shop.trim()
+  // a shop that's on neither your list nor its suggestions, and not a show's merch booth (#117)
+  const unlisted = bought && !!name && !list.some((s) => s.name.toLowerCase() === name.toLowerCase()) && !shopSuggest(list, name).length && !atShow(name)
   return (
     <form
       onSubmit={(e) => {
         e.preventDefault()
-        // with no link of the copy's to go by, a shop on your list gives its website (#99)
-        const site = url || (hosts.length ? '' : shopSite(shopsOf(settings), shop))
-        onSave({ paid: paid.trim().replace(/^\$\s*/, ''), shop: shop.trim(), ...(site ? { shopUrl: site } : {}) })
+        // a shop on your list gives its website (#99), unless the copy's only link is a page on it (#151)
+        const listed = shopSite(list, name)
+        const site = url || (hosts.length === 1 && sameSite(hosts[0][1], listed) ? hosts[0][1] : listed)
+        if (unlisted && add) saveSettings({ shops: [...list, { id: Math.random().toString(36).slice(2, 12), name: name.slice(0, 80), kind: 'local' }] })
+        onSave({ paid: paid.trim().replace(/^\$\s*/, ''), shop: name, ...(site ? { shopUrl: site } : {}), ...(bought && sealed ? { sealed } : {}) })
       }}
     >
       <Fieldset>
@@ -118,6 +130,20 @@ export function PaidForm({ shopLabel, hosts, init, busy, onSave, onCancel }: {
             <ShopInput value={shop} onChange={setShop} placeholder="e.g. Rough Trade" />
           </Field>
         </div>
+        {bought && (
+          <div className="flex flex-col gap-3">
+            {unlisted && (
+              <label className="text-foreground flex items-center gap-2 text-sm">
+                <Checkbox checked={add} onCheckedChange={(v) => setAdd(!!v)} />
+                Add {name} to your shops
+              </label>
+            )}
+            <label className="text-foreground flex items-center gap-2 text-sm">
+              <Checkbox checked={sealed} onCheckedChange={(v) => setSealed(!!v)} />
+              New, sealed (graded Mint)
+            </label>
+          </div>
+        )}
         {hosts.length > 1 && (
           <div role="group" aria-labelledby="fromQ" className="flex flex-col gap-2">
             <p id="fromQ" className="text-foreground-muted text-sm">
@@ -194,6 +220,7 @@ export function CopyActions({ r, ci, onMoved, onOrdered }: { r: Rec; ci: number;
   return (
     <PaidForm
       shopLabel={ask === 'own' ? 'Bought from' : 'From'}
+      bought={ask === 'own'}
       hosts={buyHosts(wantCopies(r)[ci]?.buyLinks ?? [])}
       init={{ paid: '', shop: '' }}
       busy={busy}

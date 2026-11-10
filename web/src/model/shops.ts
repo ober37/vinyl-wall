@@ -196,13 +196,25 @@ export function unlistedShops(records: Rec[], list: Shop[]): { name: string; url
   return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
 }
 
+// a shop typed another way (#151): each word typed, but small ones, is one of its name's or place's (the last one maybe
+// only begun), so "Northside Trading Lakeview" finds "Northside Trading Post in Lakeview, IL"
+const SMALL = new Set(['in', 'the', 'and', 'at', 'of', 'on'])
+function wordsMatch(s: Shop, typed: string): boolean {
+  const w = words(typed).filter((x) => !SMALL.has(x))
+  const has = [...words(s.name), ...words(s.place)]
+  return w.length > 0 && w.every((x, i) => has.some((h) => h === x || (i === w.length - 1 && h.startsWith(x))))
+}
+
 // the shops to suggest where a record came from (#99): up to 5 whose name has what's typed, those starting with it first,
-// then in Search elsewhere's order; none before anything's typed or once it's a shop's name exactly
+// then in Search elsewhere's order, then those it names another way (#151); every shop in that order before anything's
+// typed, none once it's a shop's name exactly
 export function shopSuggest(list: Shop[], typed: string): string[] {
   const q = typed.trim().toLowerCase()
-  if (!q || list.some((s) => s.name.toLowerCase() === q)) return []
+  if (!q) return shopOrder(list).map((s) => s.name)
+  if (list.some((s) => s.name.toLowerCase() === q)) return []
   const hits = shopOrder(list.filter((s) => s.name.toLowerCase().includes(q)))
-  return [...hits.filter((s) => s.name.toLowerCase().startsWith(q)), ...hits.filter((s) => !s.name.toLowerCase().startsWith(q))].slice(0, 5).map((s) => s.name)
+  const more = shopOrder(list.filter((s) => !s.name.toLowerCase().includes(q) && wordsMatch(s, typed)))
+  return [...hits.filter((s) => s.name.toLowerCase().startsWith(q)), ...hits.filter((s) => !s.name.toLowerCase().startsWith(q)), ...more].slice(0, 5).map((s) => s.name)
 }
 
 // the website a shop picked where a record came from fills in (#99): a listed shop's, not a marketplace's (its link is
