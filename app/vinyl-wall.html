@@ -882,6 +882,7 @@ var TEXT = [
 	"mediaGrade",
 	"sleeveGrade",
 	"paid",
+	"budget",
 	"shop",
 	"shopUrl",
 	"acquired",
@@ -903,6 +904,7 @@ var emptyOwned = () => ({
 	mediaGrade: "",
 	sleeveGrade: "",
 	paid: "",
+	budget: "",
 	shop: "",
 	shopUrl: "",
 	acquired: "",
@@ -975,6 +977,7 @@ function gotPatch(r, ci, det) {
 		...c.barcodes ? { barcodes: c.barcodes } : {},
 		...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 		paid: det.paid,
+		budget: c.budget,
 		shop: det.shop,
 		shopUrl: det.shopUrl || linkFor(L, det.shop),
 		acquired: today(),
@@ -1131,6 +1134,7 @@ function toForm(r) {
 		pressing: pressingText(r),
 		acquired: s(r.acquired),
 		paid: s(r.paid),
+		budget: s(r.budget),
 		shop: s(r.shop),
 		shopUrl: s(r.shopUrl),
 		mediaGrade: s(r.mediaGrade),
@@ -3561,6 +3565,7 @@ var STATUS_FIELDS = {
 	own: [
 		"acquired",
 		"paid",
+		"budget",
 		"shop",
 		"shopUrl",
 		"mediaGrade",
@@ -4339,6 +4344,7 @@ var owned = (c, det) => ({
 	...c.barcodes ? { barcodes: c.barcodes } : {},
 	...c.releaseTracks ? { releaseTracks: c.releaseTracks } : {},
 	paid: det.paid || "",
+	budget: c.budget,
 	shop: det.shop || "",
 	shopUrl: det.shopUrl || "",
 	acquired: today()
@@ -6667,6 +6673,20 @@ function OwnedFields({ form, set, discogs, auto, focus, album }) {
 				...p
 			}),
 			/* @__PURE__ */ jsx(Paid, { ...p }),
+			/* @__PURE__ */ jsxs(Field, {
+				className: "sm:col-start-2",
+				children: [/* @__PURE__ */ jsx(FieldLabel, { children: "Budget" }), /* @__PURE__ */ jsx(Input, {
+					value: form.budget ?? "",
+					onChange: (e) => set("budget", e.target.value),
+					inputMode: "decimal",
+					placeholder: "e.g. 60",
+					startSlot: /* @__PURE__ */ jsx("span", {
+						"aria-hidden": "true",
+						children: "$"
+					}),
+					className: "font-mono placeholder:font-sans"
+				})]
+			}),
 			/* @__PURE__ */ jsx(ShopField, {
 				label: "Bought from",
 				placeholder: "e.g. a local record shop",
@@ -6725,6 +6745,7 @@ var OWN_FORM = {
 	mediaGrade: "mediaGrade",
 	sleeveGrade: "sleeveGrade",
 	paid: "paid",
+	budget: "budget",
 	shop: "shop",
 	shopUrl: "shopUrl",
 	acquired: "acquired",
@@ -9085,10 +9106,11 @@ function copyFacts(r, shops) {
 		children: p
 	})]);
 	const from = shopFrom(r, shopShown(r, shops));
+	const paid = r.paid ? "$" + r.paid + (r.budget ? ` (budget $${r.budget})` : "") : "";
 	const bought = [
 		r.acquired ? playDate(r.acquired) : "",
 		from.name,
-		r.paid ? "$" + r.paid : ""
+		paid
 	].filter(Boolean);
 	if (bought.length) f.push(["Bought", /* @__PURE__ */ jsxs(Fragment$1, { children: [bought.map((b, i) => /* @__PURE__ */ jsxs("span", { children: [i ? " · " : "", b] }, i)), from.reach] })]);
 	const g = gradeText(r);
@@ -17157,6 +17179,10 @@ runtime().then((claude) => createRoot(document.getElementById("root")).render(/*
 
     .sm\:col-start-1 {
       grid-column-start: 1;
+    }
+
+    .sm\:col-start-2 {
+      grid-column-start: 2;
     }
 
     .sm\:col-start-3 {

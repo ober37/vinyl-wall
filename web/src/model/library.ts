@@ -242,7 +242,7 @@ const statusOf = (d: Data) => (d.status === 'wish' ? 'wish' : d.status === 'orde
 const ALBUM_FIELDS = ['title', 'artist', 'year', 'label', 'catalog', 'pressing', 'matrix', 'runtime', 'why']
 // prettier-ignore
 const STATUS_FIELDS: Record<string, string[]> = {
-  own: ['acquired', 'paid', 'shop', 'shopUrl', 'mediaGrade', 'sleeveGrade'],
+  own: ['acquired', 'paid', 'budget', 'shop', 'shopUrl', 'mediaGrade', 'sleeveGrade'],
   ordered: ['copyName', 'paid', 'shop', 'shopUrl', 'orderDate', 'orderStatus', 'eta', 'orderNum', 'carrier', 'tracking', 'orderNotes'],
   wish: ['copyName', 'budget', 'buyLinks', 'releaseDate'],
 }

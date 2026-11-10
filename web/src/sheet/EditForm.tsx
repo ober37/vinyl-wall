@@ -200,6 +200,18 @@ function OwnedFields({ form, set, discogs, auto, focus, album }: {
       </Field>
       <DateIn k="acquired" label="Bought on" {...p} />
       <Paid {...p} />
+      {/* what it was bought against (#156), under Paid to compare */}
+      <Field className="sm:col-start-2">
+        <FieldLabel>Budget</FieldLabel>
+        <Input
+          value={form.budget ?? ''}
+          onChange={(e) => set('budget', e.target.value)}
+          inputMode="decimal"
+          placeholder="e.g. 60"
+          startSlot={<span aria-hidden="true">$</span>}
+          className="font-mono placeholder:font-sans"
+        />
+      </Field>
       <ShopField label="Bought from" placeholder="e.g. a local record shop" {...p} />
       <ShopUrl placeholder="e.g. https://www.roughtrade.com" {...p} />
       <Grade k="mediaGrade" label="Vinyl" {...p} />
@@ -216,7 +228,7 @@ function OwnedFields({ form, set, discogs, auto, focus, album }: {
 // an owned copy after the first as the form's fields, so OwnedFields edits it as it does the first
 const OWN_FORM: Record<Exclude<keyof OwnCopy, 'discogsId' | 'barcodes' | 'releaseTracks'>, Key> = {
   name: 'copyName', pressing: 'pressing', label: 'label', catalog: 'catalog', matrix: 'matrix', mediaGrade: 'mediaGrade', sleeveGrade: 'sleeveGrade',
-  paid: 'paid', shop: 'shop', shopUrl: 'shopUrl', acquired: 'acquired', runtime: 'runtime',
+  paid: 'paid', budget: 'budget', shop: 'shop', shopUrl: 'shopUrl', acquired: 'acquired', runtime: 'runtime',
 }
 const asForm = (c: OwnCopy): Form => ({
   title: '', artist: '', why: '', year: '', runtime: '', discogsId: c.discogsId,

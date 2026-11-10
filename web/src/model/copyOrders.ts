@@ -107,7 +107,7 @@ const owned = (c: Copy, det: { paid?: string; shop?: string; shopUrl?: string })
   name: c.name, pressing: c.pressing, label: c.label, catalog: c.catalog, discogsId: c.discogsId,
   ...(c.barcodes ? { barcodes: c.barcodes } : {}),
   ...(c.releaseTracks ? { releaseTracks: c.releaseTracks } : {}),
-  paid: det.paid || '', shop: det.shop || '', shopUrl: det.shopUrl || '',
+  paid: det.paid || '', budget: c.budget, shop: det.shop || '', shopUrl: det.shopUrl || '',
   acquired: today(),
 })
 

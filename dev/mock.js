@@ -60,8 +60,10 @@ const data={
   // #151: a hunt whose first copy is the sync's guess, its second sold online; an owned record still wanting a copy sold online
   r7:{title:"In Rainbows",artist:"Radiohead",year:"2007",status:"wish",priority:2,discogsId:1180042,discogsMatch:"vinyl: earliest original pressing",pressing:"2007 original",budget:"60",
    moreCopies:[{name:"Anniversary",pressing:"2026 anniversary reissue",budget:"35",buyLinks:["https://www.bigvinyl.example/products/in-rainbows-anniversary"]}],notes:[],added:7},
-  r8:{title:"Rumours",artist:"Fleetwood Mac",year:"1977",status:"own",runtime:39,
-   moreCopies:[{name:"Half-speed",pressing:"2024 half-speed",budget:"45",buyLinks:["https://www.bigvinyl.example/products/rumours-half-speed"]}],notes:[],added:8}}};
+  // #156: what it was paid against its budget, and a copy on order with a budget of its own
+  r8:{title:"Rumours",artist:"Fleetwood Mac",year:"1977",status:"own",runtime:39,acquired:"2025-06-14",paid:"22",budget:"25",shop:"Rough Trade",
+   moreCopies:[{name:"Half-speed",pressing:"2024 half-speed",budget:"45",buyLinks:["https://www.bigvinyl.example/products/rumours-half-speed"]},
+    {name:"Japan",pressing:"1977 Japan pressing",budget:"50",orderStatus:"shipped",orderDate:day(6),paid:"48",shop:"Rough Trade"}],notes:[],added:8}}};
 if(q.get("data")){try{const x=new XMLHttpRequest();x.open("GET",q.get("data"),false);x.send();const snap=JSON.parse(x.responseText);
   for(const c of ["settings","setups","gear","records","artists"]) if(snap[c]) data[c]=snap[c]; data.settings.site=data.settings.site||{};}catch(e){console.warn("Couldn't load snapshot",e)}}
 const site=data.settings.site;

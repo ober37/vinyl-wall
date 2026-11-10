@@ -30,7 +30,9 @@ function copyFacts(r: Rec, shops: Shop[]): [string, React.ReactNode][] {
   const p = pressingText(r)
   if (p) f.push(['Pressing', <span className="whitespace-pre-line">{p}</span>])
   const from = shopFrom(r, shopShown(r, shops))
-  const bought = [r.acquired ? playDate(r.acquired) : '', from.name, r.paid ? '$' + r.paid : ''].filter(Boolean)
+  // what was paid, beside the budget it was bought against (#156)
+  const paid = r.paid ? '$' + r.paid + (r.budget ? ` (budget $${r.budget})` : '') : ''
+  const bought = [r.acquired ? playDate(r.acquired) : '', from.name, paid].filter(Boolean)
   if (bought.length)
     f.push([
       'Bought',
