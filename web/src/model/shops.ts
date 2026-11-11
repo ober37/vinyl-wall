@@ -19,6 +19,11 @@ export type Shop = {
   phone?: string
   email?: string
   about?: string
+  // a local shop's website, phone or address the background task found (#155): which, and from where; siteTried: when
+  // it last found none (tried again after SITE_RETRY_DAYS); siteRejected: websites the owner said weren't this shop
+  found?: { by: string[]; keys: string[] }
+  siteTried?: number
+  siteRejected?: string[]
 }
 
 export const KINDS: [ShopKind, string][] = [
@@ -57,6 +62,11 @@ export function shopsOf(settings: Record<string, unknown>): Shop[] {
           const v = text(s[k], k === 'about' ? 400 : 120)
           if (v) shop[k] = v
         }
+      const f = s.found as { by?: unknown; keys?: unknown } | undefined
+      const strs = (a: unknown) => (Array.isArray(a) ? a.filter((x): x is string => typeof x === 'string') : [])
+      if (f && typeof f === 'object' && strs(f.keys).length) shop.found = { by: strs(f.by), keys: strs(f.keys) }
+      if (typeof s.siteTried === 'number') shop.siteTried = s.siteTried
+      if (strs(s.siteRejected).length) shop.siteRejected = strs(s.siteRejected)
       return shop
     })
 }
@@ -225,3 +235,44 @@ export function shopSite(list: Shop[], name: string): string {
 }
 // whether a record's link is at a shop's website (a product page there), and so stays when that shop is picked
 export const sameSite = (a: unknown, b: unknown) => !!host(shopHref(a)) && host(shopHref(a)) === host(shopHref(b))
+
+// Finding a local shop's website (#155), as app/tools/shop_site.py does it: the town to look it up in (its address's
+// city, else "<town>, <ST>" ending its name), and whether the background task should try now
+export const SITE_RETRY_DAYS = 30
+const STREET = /^\d+\w*\s+.*?\b(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|way|ln|lane|ct|court|pl|place|pkwy|parkway|hwy|highway|route|rte|ter|terrace|cir|circle|sq|square|trl|trail)\.?\s+(.+)$/i
+export function townOf(s: Shop): string {
+  let parts = (s.place || '').split(',').map((x) => x.trim()).filter(Boolean)
+  if (parts.length && /^(usa?|united states)$/i.test(parts[parts.length - 1])) parts = parts.slice(0, -1)
+  if (parts.length >= 2) {
+    const state = parts[parts.length - 1].replace(/\s*\d[\d-]*$/, '').trim()
+    let city = parts[parts.length - 2]
+    city = STREET.exec(city)?.[1] ?? city
+    if (city && !/^\d/.test(city)) return [city === city.toLowerCase() ? city.replace(/\b\w/g, (c) => c.toUpperCase()) : city, state].filter(Boolean).join(', ')
+  } else if (parts.length === 1 && !/\d/.test(parts[0])) return parts[0]
+  return /\s+in\s+([^,]+,\s*[A-Z]{2})$/.exec(s.name)?.[1] ?? ''
+}
+export const siteDue = (s: Shop, now = Date.now()) =>
+  s.kind === 'local' && !s.url && !!townOf(s) && (s.siteTried === undefined || now - s.siteTried > SITE_RETRY_DAYS * 864e5)
+const SOURCE: Record<string, string> = { osm: 'OpenStreetMap', rsd: 'Record Store Day', web: 'a web search' }
+// "OpenStreetMap and Record Store Day": where what was found came from (OpenStreetMap's data needs its credit)
+export const foundFrom = (f: { by: string[] }) => f.by.map((b) => SOURCE[b]).filter(Boolean).join(' and ') || 'the web'
+// Not this shop: what was found is cleared (and the search link found from that website), the website isn't suggested
+// again, and the next try waits SITE_RETRY_DAYS
+export function notThisShop(s: Shop, now = Date.now()): Shop {
+  const n: Shop = { ...s }
+  const keys = s.found?.keys ?? []
+  for (const k of keys) delete (n as Record<string, unknown>)[k]
+  if (keys.includes('url')) {
+    for (const k of ['search', 'upc', 'shopify', 'searchTried'] as const) delete n[k]
+    let h = ''
+    try {
+      h = new URL(s.url || '').hostname.replace(/^www\./, '')
+    } catch {
+      /* no website to remember */
+    }
+    if (h) n.siteRejected = [...new Set([...(s.siteRejected ?? []), h])]
+  }
+  delete n.found
+  n.siteTried = now
+  return n
+}

@@ -6,6 +6,7 @@ import type { Gear, Setup } from '../model/gear'
 import type { Rec } from '../model/record'
 import { siteOf, type Site } from '../model/site'
 import { aboutPending, pendingParts, pendingWork, runActive, runEnds, syncing, type Settings } from '../model/task'
+import { shopsOf, siteDue } from '../model/shops'
 
 type Db = ClaudeCapabilityMap['db']
 type Mcp = ClaudeCapabilityMap['mcp']
@@ -283,7 +284,7 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [settings, quiet])
 
-  // records waiting for album info start the task on their own at most every 30 minutes across reloads; a sync or a
+  // records waiting for album info (or a shop for its website) start the task on their own at most every 30 minutes across reloads; a sync or a
   // lookup asked for elsewhere (chat, another device: needsEnrich) has its own clock, at most every 5 minutes, and waits
   // the usual 20 seconds, so the page's own edits still finish first (#77, #112)
   const [syncDue, setSyncDue] = useState(0)
@@ -304,6 +305,11 @@ export function RuntimeProvider({ claude, children }: { claude: Window['claude']
       }
     }
     if (records.some((r) => !r.deleted && !r.example && aboutPending(r)) && since('vw-lookup') >= 30 * 60000) {
+      mark('vw-lookup')
+      return void fireTask()
+    }
+    // a local shop waiting for its website (#155), on the same clock as album info
+    if (Array.isArray(settings.shops) && shopsOf(settings).some((x) => siteDue(x)) && since('vw-lookup') >= 30 * 60000) {
       mark('vw-lookup')
       return void fireTask()
     }

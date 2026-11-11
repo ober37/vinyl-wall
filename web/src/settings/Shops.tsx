@@ -6,7 +6,7 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { useDebouncedSave } from '../gear/useDebouncedSave'
-import { KINDS, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
+import { foundFrom, KINDS, notThisShop, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
 import { Chevron } from '../sheet/Links'
@@ -37,6 +37,11 @@ function fromDraft(d: Draft, was: Shop): Shop {
   if (hostOf(s.url) === hostOf(was.url))
     for (const k of ['search', 'upc', 'shopify', 'searchTried'] as const) if (was[k] !== undefined) Object.assign(s, { [k]: was[k] })
   if (d.kind === 'local') for (const k of ['place', 'phone', 'email', 'about'] as const) if (d[k].trim()) s[k] = d[k].trim()
+  // what the background task found stays marked while it's as found (#155); a field you change is yours
+  const keys = (was.found?.keys ?? []).filter((k) => (k === 'url' ? !!s.url && hostOf(s.url) === hostOf(was.url) : (s as Record<string, unknown>)[k] === (was as Record<string, unknown>)[k]))
+  if (keys.length) s.found = { by: was.found!.by, keys }
+  if (was.siteTried !== undefined) s.siteTried = was.siteTried
+  if (was.siteRejected) s.siteRejected = was.siteRejected
   return s
 }
 
@@ -97,6 +102,26 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
             <FieldLabel>{d.kind === 'local' ? 'Web store' : 'Website'}</FieldLabel>
             <Input value={d.url} inputMode="url" placeholder="shop.example.com" onChange={(e) => set('url', e.target.value)} />
             {badSite(d.url) && <FieldDescription>{SITE_HINT}</FieldDescription>}
+            {shop.found && (
+              // what the background task found (#155), and from where: OpenStreetMap's data needs its credit
+              <div className="flex flex-wrap items-baseline gap-x-3 text-sm">
+                <span className="text-foreground-muted">
+                  {shop.found.keys.includes('url') ? 'Website' : 'Details'} found automatically from {foundFrom(shop.found)}.
+                </span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="-ms-3"
+                  onClick={() => {
+                    const n = notThisShop(shop)
+                    setD(draftOf(n))
+                    save(n)
+                  }}
+                >
+                  Not this shop
+                </Button>
+              </div>
+            )}
           </Field>
           {d.kind === 'local' && (
             <>

@@ -225,9 +225,11 @@ describe('Settings → Shops', () => {
     expect(skill).toMatch(/When you save a `search`, write the shop without `searchTried`/)
     expect(skill).toMatch(/\*\*Re-checking a shop's search:\*\*/)
     const task = readFileSync(`${import.meta.dirname}/../../../tasks/background-task.md`, 'utf8')
-    expect(task).toMatch(/path "tools\/shop_search\.py"/)
+    // with shop_site.py, which finds a local shop's website first (#155)
+    expect(task).toMatch(/paths "tools\/shop_site\.py" and "tools\/shop_search\.py"/)
     const setup = readFileSync(`${import.meta.dirname}/../../../SETUP.md`, 'utf8')
     expect(setup).toMatch(/"tools\/shop_search\.py": \{"from": "app\/tools\/shop_search\.py"/)
+    expect(setup).toMatch(/"tools\/shop_site\.py": \{"from": "app\/tools\/shop_site\.py"/)
   })
 
   it('drops what was found for a shop when its website changes, so it is found again', async () => {

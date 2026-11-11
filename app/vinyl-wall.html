@@ -1001,6 +1001,289 @@ function gotPatch(r, ci, det) {
 		msg: "Added to your copies. Bought today."
 	};
 }
+// src/model/shops.ts
+var KINDS = [
+	["local", "Local"],
+	["online", "Online"],
+	["market", "Marketplace"]
+];
+var DEFAULT_SHOPS = [
+	{
+		id: "revolver",
+		name: "Revolver",
+		kind: "online",
+		url: "https://shop.revolvermag.com/",
+		search: "https://shop.revolvermag.com/search?q={q}",
+		shopify: true
+	},
+	{
+		id: "amazon",
+		name: "Amazon",
+		kind: "online",
+		url: "https://www.amazon.com/",
+		search: "https://www.amazon.com/s?k={q}%20vinyl&i=popular"
+	},
+	{
+		id: "discogs",
+		name: "Discogs Marketplace",
+		kind: "market",
+		url: "https://www.discogs.com/sell",
+		search: "https://www.discogs.com/sell/list?q={q}&format=Vinyl"
+	},
+	{
+		id: "ebay",
+		name: "eBay",
+		kind: "market",
+		url: "https://www.ebay.com/",
+		search: "https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985"
+	}
+];
+var https = (v) => /^https:\/\/[^\s]+$/i.test(String(v || "").trim()) ? String(v).trim() : "";
+var text$1 = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
+function shopsOf(settings) {
+	if (!Array.isArray(settings.shops)) return DEFAULT_SHOPS;
+	return settings.shops.filter((s) => !!s && typeof s === "object" && !!text$1(s.name, 80)).map((s, i) => {
+		const kind = KINDS.some(([k]) => k === s.kind) ? s.kind : "online";
+		const shop = {
+			id: text$1(s.id, 40) || "s" + i,
+			name: text$1(s.name, 80),
+			kind
+		};
+		const url = https(s.url);
+		const search = https(s.search);
+		if (url) shop.url = url;
+		if (search.includes("{q}")) shop.search = search;
+		const upc = https(s.upc);
+		if (upc.includes("{upc}")) shop.upc = upc;
+		if (s.shopify === true) shop.shopify = true;
+		if (typeof s.searchTried === "number") shop.searchTried = s.searchTried;
+		if (kind === "local") for (const k of [
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) {
+			const v = text$1(s[k], k === "about" ? 400 : 120);
+			if (v) shop[k] = v;
+		}
+		const f = s.found;
+		const strs = (a) => Array.isArray(a) ? a.filter((x) => typeof x === "string") : [];
+		if (f && typeof f === "object" && strs(f.keys).length) shop.found = {
+			by: strs(f.by),
+			keys: strs(f.keys)
+		};
+		if (typeof s.siteTried === "number") shop.siteTried = s.siteTried;
+		if (strs(s.siteRejected).length) shop.siteRejected = strs(s.siteRejected);
+		return shop;
+	});
+}
+function siteUrl(v) {
+	const t = v.trim();
+	if (!t) return "";
+	try {
+		const u = new URL(/^[a-z]+:/i.test(t) ? t : "https://" + t);
+		return (u.protocol === "https:" || u.protocol === "http:") && /^([a-z\d-]+\.)+[a-z]{2,}$/i.test(u.hostname) ? u.href : "";
+	} catch {
+		return "";
+	}
+}
+function shopLink(s, r) {
+	const q = `${r.artist || ""} ${r.title || ""}`.trim();
+	if (s.search) return s.search.replace("{q}", encodeURIComponent(q));
+	if (!s.url) return "";
+	return "https://www.google.com/search?q=" + encodeURIComponent(`${new URL(s.url).hostname.replace(/^www\./, "")} ${q}`);
+}
+var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
+var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
+var mailLink = (s) => s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? "mailto:" + s.email : "";
+var reachOf = (s) => s.kind === "local" ? [
+	["Call", telLink(s)],
+	["Email", mailLink(s)],
+	["Map", mapLink(s)]
+].filter(([, u]) => u) : [];
+function shopWhere(s) {
+	if (s.kind === "local" && s.place) {
+		const p = s.place.split(",").map((x) => x.trim()).filter(Boolean);
+		return p.length > 2 ? p[p.length - 2] : p.length > 1 ? p[p.length - 1] : p[0];
+	}
+	try {
+		return new URL(s.url || s.search || "").hostname.replace(/^www\./, "");
+	} catch {
+		return "";
+	}
+}
+var rank = (s) => s.kind === "local" ? s.url || s.search ? 0 : 1 : s.kind === "online" ? 2 : 3;
+var shopOrder = (list) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
+var discogsReleases = (r) => `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`;
+function mergeShops(wall, file) {
+	const list = wall.map((s) => ({ ...s }));
+	let added = 0;
+	let filled = 0;
+	for (const f of file) {
+		const s = list.find((x) => x.name.toLowerCase() === f.name.toLowerCase());
+		if (!s) {
+			list.push(f);
+			added++;
+			continue;
+		}
+		let more = false;
+		for (const k of [
+			"url",
+			"search",
+			"upc",
+			"shopify",
+			"place",
+			"phone",
+			"email",
+			"about"
+		]) if (f[k] && !s[k] && (s.kind === "local" || ![
+			"place",
+			"phone",
+			"email",
+			"about"
+		].includes(k))) {
+			s[k] = f[k];
+			more = true;
+		}
+		if (more) filled++;
+	}
+	return {
+		list,
+		added,
+		filled
+	};
+}
+function shopLine(line, list) {
+	const i = line.indexOf(": ");
+	if (i < 0) return {
+		name: "",
+		rest: line
+	};
+	const name = line.slice(0, i);
+	return {
+		shop: list.find((s) => s.name.toLowerCase() === name.trim().toLowerCase()),
+		name,
+		rest: line.slice(i + 2)
+	};
+}
+var host = (u) => {
+	try {
+		return new URL(String(u || "")).hostname.replace(/^www\./, "").toLowerCase();
+	} catch {
+		return "";
+	}
+};
+var words$1 = (v) => String(v || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+var sameName = (s, name) => {
+	const n = words$1(s.name);
+	const w = words$1(name);
+	if (w.length < n.length || n.some((x, i) => w[i] !== x)) return false;
+	const place = new Set(words$1(s.place));
+	return w.slice(n.length).every((x) => place.has(x));
+};
+function shopOf(r, list) {
+	const name = String(r.shop || "").trim();
+	const h = host(shopHref(r.shopUrl));
+	const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : [];
+	if (same.length === 1) return same[0];
+	if (!name) return void 0;
+	const pool = same.length ? same : list;
+	return pool.find((s) => s.name.toLowerCase() === name.toLowerCase()) || pool.find((s) => sameName(s, name));
+}
+var shopShown = (r, list) => {
+	const s = shopOf(r, list);
+	return s && s.kind !== "market" ? s : void 0;
+};
+var atShow = (shop) => /\b(merch|tour|concert|festival|show)\b/i.test(String(shop || ""));
+function unlistedShops(records, list) {
+	const by = /* @__PURE__ */ new Map();
+	for (const r of records) {
+		if (r.deleted || r.example || kindOf$1(r) === "wish" || atShow(r.shop) || shopOf(r, list)) continue;
+		const href = shopHref(r.shopUrl);
+		const name = String(r.shop || "").trim() || host(href);
+		if (!name) continue;
+		const k = name.toLowerCase();
+		const e = by.get(k) || {
+			name,
+			url: "",
+			count: 0
+		};
+		e.count++;
+		if (!e.url && siteUrl(href)) e.url = new URL(href).origin + "/";
+		by.set(k, e);
+	}
+	return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+var SMALL = /* @__PURE__ */ new Set([
+	"in",
+	"the",
+	"and",
+	"at",
+	"of",
+	"on"
+]);
+function wordsMatch(s, typed) {
+	const w = words$1(typed).filter((x) => !SMALL.has(x));
+	const has = [...words$1(s.name), ...words$1(s.place)];
+	return w.length > 0 && w.every((x, i) => has.some((h) => h === x || i === w.length - 1 && h.startsWith(x)));
+}
+function shopSuggest(list, typed) {
+	const q = typed.trim().toLowerCase();
+	if (!q) return shopOrder(list).map((s) => s.name);
+	if (list.some((s) => s.name.toLowerCase() === q)) return [];
+	const hits = shopOrder(list.filter((s) => s.name.toLowerCase().includes(q)));
+	const more = shopOrder(list.filter((s) => !s.name.toLowerCase().includes(q) && wordsMatch(s, typed)));
+	return [
+		...hits.filter((s) => s.name.toLowerCase().startsWith(q)),
+		...hits.filter((s) => !s.name.toLowerCase().startsWith(q)),
+		...more
+	].slice(0, 5).map((s) => s.name);
+}
+function shopSite(list, name) {
+	const s = list.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
+	return s && s.kind !== "market" ? s.url || "" : "";
+}
+var sameSite = (a, b) => !!host(shopHref(a)) && host(shopHref(a)) === host(shopHref(b));
+var STREET = /^\d+\w*\s+.*?\b(?:st|street|ave|avenue|rd|road|blvd|boulevard|dr|drive|way|ln|lane|ct|court|pl|place|pkwy|parkway|hwy|highway|route|rte|ter|terrace|cir|circle|sq|square|trl|trail)\.?\s+(.+)$/i;
+function townOf(s) {
+	let parts = (s.place || "").split(",").map((x) => x.trim()).filter(Boolean);
+	if (parts.length && /^(usa?|united states)$/i.test(parts[parts.length - 1])) parts = parts.slice(0, -1);
+	if (parts.length >= 2) {
+		const state = parts[parts.length - 1].replace(/\s*\d[\d-]*$/, "").trim();
+		let city = parts[parts.length - 2];
+		city = STREET.exec(city)?.[1] ?? city;
+		if (city && !/^\d/.test(city)) return [city === city.toLowerCase() ? city.replace(/\b\w/g, (c) => c.toUpperCase()) : city, state].filter(Boolean).join(", ");
+	} else if (parts.length === 1 && !/\d/.test(parts[0])) return parts[0];
+	return /\s+in\s+([^,]+,\s*[A-Z]{2})$/.exec(s.name)?.[1] ?? "";
+}
+var siteDue = (s, now = Date.now()) => s.kind === "local" && !s.url && !!townOf(s) && (s.siteTried === void 0 || now - s.siteTried > 2592e6);
+var SOURCE = {
+	osm: "OpenStreetMap",
+	rsd: "Record Store Day",
+	web: "a web search"
+};
+var foundFrom = (f) => f.by.map((b) => SOURCE[b]).filter(Boolean).join(" and ") || "the web";
+function notThisShop(s, now = Date.now()) {
+	const n = { ...s };
+	const keys = s.found?.keys ?? [];
+	for (const k of keys) delete n[k];
+	if (keys.includes("url")) {
+		for (const k of [
+			"search",
+			"upc",
+			"shopify",
+			"searchTried"
+		]) delete n[k];
+		let h = "";
+		try {
+			h = new URL(s.url || "").hostname.replace(/^www\./, "");
+		} catch {}
+		if (h) n.siteRejected = [.../* @__PURE__ */ new Set([...s.siteRejected ?? [], h])];
+	}
+	delete n.found;
+	n.siteTried = now;
+	return n;
+}
 var WAITS = [
 	0,
 	864e5,
@@ -1028,6 +1311,8 @@ function pendingParts(records, s, fresh, now = Date.now()) {
 	const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length;
 	if (now - (s.update?.checkedMs || 0) > 864e5) w.push("check for a newer release (Part E)");
 	if (sync && dz.status === "ok") w.push(`sync ${sync} record${sync > 1 ? "s" : ""} to Discogs (Part C)`);
+	const sites = Array.isArray(s.shops) ? shopsOf(s).filter((x) => siteDue(x, now)).length : 0;
+	if (sites) w.push(`find the website of ${sites} local shop${sites > 1 ? "s" : ""} (Part S)`);
 	return w;
 }
 function pendingWork(records, s) {
@@ -1502,6 +1787,11 @@ function RuntimeProvider({ claude, children }) {
 			} catch {}
 		};
 		if (records.some((r) => !r.deleted && !r.example && aboutPending(r)) && since("vw-lookup") >= 18e5) {
+			mark("vw-lookup");
+			fireTask();
+			return;
+		}
+		if (Array.isArray(settings.shops) && shopsOf(settings).some((x) => siteDue(x)) && since("vw-lookup") >= 18e5) {
 			mark("vw-lookup");
 			fireTask();
 			return;
@@ -3075,241 +3365,6 @@ async function shrinkImage(file, max, quality, api = browser) {
 		return file;
 	}
 }
-// src/model/shops.ts
-var KINDS = [
-	["local", "Local"],
-	["online", "Online"],
-	["market", "Marketplace"]
-];
-var DEFAULT_SHOPS = [
-	{
-		id: "revolver",
-		name: "Revolver",
-		kind: "online",
-		url: "https://shop.revolvermag.com/",
-		search: "https://shop.revolvermag.com/search?q={q}",
-		shopify: true
-	},
-	{
-		id: "amazon",
-		name: "Amazon",
-		kind: "online",
-		url: "https://www.amazon.com/",
-		search: "https://www.amazon.com/s?k={q}%20vinyl&i=popular"
-	},
-	{
-		id: "discogs",
-		name: "Discogs Marketplace",
-		kind: "market",
-		url: "https://www.discogs.com/sell",
-		search: "https://www.discogs.com/sell/list?q={q}&format=Vinyl"
-	},
-	{
-		id: "ebay",
-		name: "eBay",
-		kind: "market",
-		url: "https://www.ebay.com/",
-		search: "https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985"
-	}
-];
-var https = (v) => /^https:\/\/[^\s]+$/i.test(String(v || "").trim()) ? String(v).trim() : "";
-var text$1 = (v, n) => typeof v === "string" ? v.trim().slice(0, n) : "";
-function shopsOf(settings) {
-	if (!Array.isArray(settings.shops)) return DEFAULT_SHOPS;
-	return settings.shops.filter((s) => !!s && typeof s === "object" && !!text$1(s.name, 80)).map((s, i) => {
-		const kind = KINDS.some(([k]) => k === s.kind) ? s.kind : "online";
-		const shop = {
-			id: text$1(s.id, 40) || "s" + i,
-			name: text$1(s.name, 80),
-			kind
-		};
-		const url = https(s.url);
-		const search = https(s.search);
-		if (url) shop.url = url;
-		if (search.includes("{q}")) shop.search = search;
-		const upc = https(s.upc);
-		if (upc.includes("{upc}")) shop.upc = upc;
-		if (s.shopify === true) shop.shopify = true;
-		if (typeof s.searchTried === "number") shop.searchTried = s.searchTried;
-		if (kind === "local") for (const k of [
-			"place",
-			"phone",
-			"email",
-			"about"
-		]) {
-			const v = text$1(s[k], k === "about" ? 400 : 120);
-			if (v) shop[k] = v;
-		}
-		return shop;
-	});
-}
-function siteUrl(v) {
-	const t = v.trim();
-	if (!t) return "";
-	try {
-		const u = new URL(/^[a-z]+:/i.test(t) ? t : "https://" + t);
-		return (u.protocol === "https:" || u.protocol === "http:") && /^([a-z\d-]+\.)+[a-z]{2,}$/i.test(u.hostname) ? u.href : "";
-	} catch {
-		return "";
-	}
-}
-function shopLink(s, r) {
-	const q = `${r.artist || ""} ${r.title || ""}`.trim();
-	if (s.search) return s.search.replace("{q}", encodeURIComponent(q));
-	if (!s.url) return "";
-	return "https://www.google.com/search?q=" + encodeURIComponent(`${new URL(s.url).hostname.replace(/^www\./, "")} ${q}`);
-}
-var mapLink = (s) => s.place ? "https://www.google.com/maps/search/?api=1&query=" + encodeURIComponent(`${s.name} ${s.place}`) : "";
-var telLink = (s) => s.phone && /\d/.test(s.phone) ? "tel:" + s.phone.replace(/[^\d+]/g, "") : "";
-var mailLink = (s) => s.email && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s.email) ? "mailto:" + s.email : "";
-var reachOf = (s) => s.kind === "local" ? [
-	["Call", telLink(s)],
-	["Email", mailLink(s)],
-	["Map", mapLink(s)]
-].filter(([, u]) => u) : [];
-function shopWhere(s) {
-	if (s.kind === "local" && s.place) {
-		const p = s.place.split(",").map((x) => x.trim()).filter(Boolean);
-		return p.length > 2 ? p[p.length - 2] : p.length > 1 ? p[p.length - 1] : p[0];
-	}
-	try {
-		return new URL(s.url || s.search || "").hostname.replace(/^www\./, "");
-	} catch {
-		return "";
-	}
-}
-var rank = (s) => s.kind === "local" ? s.url || s.search ? 0 : 1 : s.kind === "online" ? 2 : 3;
-var shopOrder = (list) => [...list].sort((a, b) => rank(a) - rank(b) || a.name.localeCompare(b.name));
-var discogsReleases = (r) => `https://www.discogs.com/search/?q=${encodeURIComponent(`${r.artist} ${r.title}`)}&type=all&format_exact=Vinyl`;
-function mergeShops(wall, file) {
-	const list = wall.map((s) => ({ ...s }));
-	let added = 0;
-	let filled = 0;
-	for (const f of file) {
-		const s = list.find((x) => x.name.toLowerCase() === f.name.toLowerCase());
-		if (!s) {
-			list.push(f);
-			added++;
-			continue;
-		}
-		let more = false;
-		for (const k of [
-			"url",
-			"search",
-			"upc",
-			"shopify",
-			"place",
-			"phone",
-			"email",
-			"about"
-		]) if (f[k] && !s[k] && (s.kind === "local" || ![
-			"place",
-			"phone",
-			"email",
-			"about"
-		].includes(k))) {
-			s[k] = f[k];
-			more = true;
-		}
-		if (more) filled++;
-	}
-	return {
-		list,
-		added,
-		filled
-	};
-}
-function shopLine(line, list) {
-	const i = line.indexOf(": ");
-	if (i < 0) return {
-		name: "",
-		rest: line
-	};
-	const name = line.slice(0, i);
-	return {
-		shop: list.find((s) => s.name.toLowerCase() === name.trim().toLowerCase()),
-		name,
-		rest: line.slice(i + 2)
-	};
-}
-var host = (u) => {
-	try {
-		return new URL(String(u || "")).hostname.replace(/^www\./, "").toLowerCase();
-	} catch {
-		return "";
-	}
-};
-var words$1 = (v) => String(v || "").toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
-var sameName = (s, name) => {
-	const n = words$1(s.name);
-	const w = words$1(name);
-	if (w.length < n.length || n.some((x, i) => w[i] !== x)) return false;
-	const place = new Set(words$1(s.place));
-	return w.slice(n.length).every((x) => place.has(x));
-};
-function shopOf(r, list) {
-	const name = String(r.shop || "").trim();
-	const h = host(shopHref(r.shopUrl));
-	const same = h ? list.filter((s) => host(s.url) === h || host(s.search) === h) : [];
-	if (same.length === 1) return same[0];
-	if (!name) return void 0;
-	const pool = same.length ? same : list;
-	return pool.find((s) => s.name.toLowerCase() === name.toLowerCase()) || pool.find((s) => sameName(s, name));
-}
-var shopShown = (r, list) => {
-	const s = shopOf(r, list);
-	return s && s.kind !== "market" ? s : void 0;
-};
-var atShow = (shop) => /\b(merch|tour|concert|festival|show)\b/i.test(String(shop || ""));
-function unlistedShops(records, list) {
-	const by = /* @__PURE__ */ new Map();
-	for (const r of records) {
-		if (r.deleted || r.example || kindOf$1(r) === "wish" || atShow(r.shop) || shopOf(r, list)) continue;
-		const href = shopHref(r.shopUrl);
-		const name = String(r.shop || "").trim() || host(href);
-		if (!name) continue;
-		const k = name.toLowerCase();
-		const e = by.get(k) || {
-			name,
-			url: "",
-			count: 0
-		};
-		e.count++;
-		if (!e.url && siteUrl(href)) e.url = new URL(href).origin + "/";
-		by.set(k, e);
-	}
-	return [...by.values()].sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
-}
-var SMALL = /* @__PURE__ */ new Set([
-	"in",
-	"the",
-	"and",
-	"at",
-	"of",
-	"on"
-]);
-function wordsMatch(s, typed) {
-	const w = words$1(typed).filter((x) => !SMALL.has(x));
-	const has = [...words$1(s.name), ...words$1(s.place)];
-	return w.length > 0 && w.every((x, i) => has.some((h) => h === x || i === w.length - 1 && h.startsWith(x)));
-}
-function shopSuggest(list, typed) {
-	const q = typed.trim().toLowerCase();
-	if (!q) return shopOrder(list).map((s) => s.name);
-	if (list.some((s) => s.name.toLowerCase() === q)) return [];
-	const hits = shopOrder(list.filter((s) => s.name.toLowerCase().includes(q)));
-	const more = shopOrder(list.filter((s) => !s.name.toLowerCase().includes(q) && wordsMatch(s, typed)));
-	return [
-		...hits.filter((s) => s.name.toLowerCase().startsWith(q)),
-		...hits.filter((s) => !s.name.toLowerCase().startsWith(q)),
-		...more
-	].slice(0, 5).map((s) => s.name);
-}
-function shopSite(list, name) {
-	const s = list.find((x) => x.name.toLowerCase() === name.trim().toLowerCase());
-	return s && s.kind !== "market" ? s.url || "" : "";
-}
-var sameSite = (a, b) => !!host(shopHref(a)) && host(shopHref(a)) === host(shopHref(b));
 // src/model/library.ts
 var nowUTC = () => (/* @__PURE__ */ new Date()).toISOString().slice(0, 16).replace("T", " ") + " UTC";
 var libNorm = (s) => String(s || "").toLowerCase().replace(/\s*\(\d+\)|\*/g, "").replace(/&/g, " and ").split(/[^a-z0-9]+/).filter((w) => w && w !== "the").join("");
@@ -5424,6 +5479,13 @@ function fromDraft(d, was) {
 			"about"
 		]) if (d[k].trim()) s[k] = d[k].trim();
 	}
+	const keys = (was.found?.keys ?? []).filter((k) => k === "url" ? !!s.url && hostOf(s.url) === hostOf(was.url) : s[k] === was[k]);
+	if (keys.length) s.found = {
+		by: was.found.by,
+		keys
+	};
+	if (was.siteTried !== void 0) s.siteTried = was.siteTried;
+	if (was.siteRejected) s.siteRejected = was.siteRejected;
 	return s;
 }
 function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
@@ -5506,7 +5568,29 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }) {
 							placeholder: "shop.example.com",
 							onChange: (e) => set("url", e.target.value)
 						}),
-						badSite(d.url) && /* @__PURE__ */ jsx(FieldDescription, { children: SITE_HINT })
+						badSite(d.url) && /* @__PURE__ */ jsx(FieldDescription, { children: SITE_HINT }),
+						shop.found && /* @__PURE__ */ jsxs("div", {
+							className: "flex flex-wrap items-baseline gap-x-3 text-sm",
+							children: [/* @__PURE__ */ jsxs("span", {
+								className: "text-foreground-muted",
+								children: [
+									shop.found.keys.includes("url") ? "Website" : "Details",
+									" found automatically from ",
+									foundFrom(shop.found),
+									"."
+								]
+							}), /* @__PURE__ */ jsx(Button, {
+								size: "sm",
+								variant: "ghost",
+								className: "-ms-3",
+								onClick: () => {
+									const n = notThisShop(shop);
+									setD(draftOf(n));
+									save(n);
+								},
+								children: "Not this shop"
+							})]
+						})
 					] }),
 					d.kind === "local" && /* @__PURE__ */ jsxs(Fragment$1, { children: [
 						field("place", "Address"),

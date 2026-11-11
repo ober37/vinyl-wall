@@ -1,6 +1,7 @@
 // The background task's side of the page, as in app/vinyl-wall.html: what's waiting for it (sent as the start message),
 // whether a run is under way, and the update check.
 import type { Rec } from './record'
+import { shopsOf, siteDue } from './shops'
 
 export type Settings = Record<string, unknown> & {
   taskId?: string
@@ -49,6 +50,9 @@ export function pendingParts(records: Rec[], s: Settings, fresh: boolean, now = 
   const sync = records.filter((r) => !r.example && (r.needsSync || r.deleted || !r.discogsSync)).length
   if (now - (s.update?.checkedMs || 0) > 24 * 3600000) w.push('check for a newer release (Part E)')
   if (sync && dz.status === 'ok') w.push(`sync ${sync} record${sync > 1 ? 's' : ''} to Discogs (Part C)`)
+  // a local shop added by name and town waits for its website (#155)
+  const sites = Array.isArray(s.shops) ? shopsOf(s).filter((x) => siteDue(x, now)).length : 0
+  if (sites) w.push(`find the website of ${sites} local shop${sites > 1 ? 's' : ''} (Part S)`)
   return w
 }
 export function pendingWork(records: Rec[], s: Settings): string {
