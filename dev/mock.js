@@ -12,7 +12,9 @@ const day=n=>{const t=new Date(now-n*864e5);return new Date(t-t.getTimezoneOffse
 const data={
  settings:{site:{title:"My Vinyl Wall",url:"https://claude.ai/artifact/preview",bg:{kind:"preset",preset:"listening"},discogs:{},
   // #151: a local shop to buy at in person, beside an online one
-  shops:[{id:"ns",name:"Northside Trading Post in Lakeview, IL",kind:"local",url:"https://northsidetrading.example/",place:"Lakeview, IL"},{id:"rt",name:"Rough Trade",kind:"online",url:"https://www.roughtrade.com/"}]}},
+  shops:[{id:"ns",name:"Northside Trading Post in Lakeview, IL",kind:"local",url:"https://northsidetrading.example/",place:"Lakeview, IL"},{id:"rt",name:"Rough Trade",kind:"online",url:"https://www.roughtrade.com/"},
+   // #155: a local shop added with just its name and town, for Find its website with Claude
+   {id:"cg",name:"Corner Groove Records",kind:"local",place:"Lakeview, IL"}]}},
  setups:{den:{name:"Den",note:"",added:1},living:{name:"Living room",note:"Main hi-fi",added:2}},
  // About info the background task (Part L) writes: one doc per artist, shared by that artist's records. Sample links only.
  artists:{
