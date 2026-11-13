@@ -6,7 +6,8 @@ import { Fieldset, FieldsetLegend } from '@appica/ui-react/fieldset'
 import { Input } from '@appica/ui-react/input'
 import { Textarea } from '@appica/ui-react/textarea'
 import { useDebouncedSave } from '../gear/useDebouncedSave'
-import { KINDS, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
+import { fillPrompt, KINDS, shopsOf, shopWhere, siteUrl, unlistedShops, type Shop, type ShopKind } from '../model/shops'
+import { CopyStatus, useCopy } from '../sheet/ResearchTab'
 import { useRuntime } from '../runtime/runtime'
 import { Confirm } from '../sheet/Confirm'
 import { Chevron } from '../sheet/Links'
@@ -59,10 +60,12 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
   }
   const where = shopWhere(shop)
   // wanted records seen here lately and not bought, counted on the row (#152)
-  const { records } = useRuntime()
+  const { records, settings } = useRuntime()
   const leads = sightingsAt(records, shop).filter(({ r, s }) => !s.bought && recentSighting(r)?.id === s.id).length
-  // what the chat can look up for a local shop: where it is, its phone and a line about it (its search is found for it)
-  const missing = d.kind === 'local' && !(d.place.trim() && d.phone.trim() && d.about.trim())
+  // what the chat can look up for a local shop: its website, where it is, its phone and a line about it (its search is
+  // found for it)
+  const missing = d.kind === 'local' && !(d.url.trim() && d.place.trim() && d.phone.trim() && d.about.trim())
+  const { copied, copy } = useCopy()
   const field = (k: keyof Draft, label: string, props: React.ComponentProps<typeof Input> = {}) => (
     <Field>
       <FieldLabel>{label}</FieldLabel>
@@ -90,7 +93,22 @@ function ShopRow({ shop, open, onOpenChange, save, onRemove }: {
           <span role="status" className="text-foreground-muted -mb-2 text-xs empty:hidden">
             {saved}
           </span>
-          {missing && <p className="text-foreground-muted text-sm">Your Claude chat can fill in the missing details.</p>}
+          {missing && (
+            // a local shop added with just its name: the Claude chat finds its website and the rest (#155)
+            <div className="flex flex-col gap-2">
+              <p className="text-foreground-muted text-sm">Your Claude chat can fill in the missing details.</p>
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => copy('fill', fillPrompt(shop, settings.url), 'Copied. Paste it into Claude.')}
+                >
+                  {shop.url ? 'Fill in with Claude' : 'Find its website with Claude'}
+                </Button>
+                {copied && <CopyStatus c={copied} />}
+              </div>
+            </div>
+          )}
           {field('name', 'Name', { maxLength: 80 })}
           <Segmented label="Kind" value={d.kind} options={KINDS} onChange={(v) => set('kind', v)} />
           <Field>

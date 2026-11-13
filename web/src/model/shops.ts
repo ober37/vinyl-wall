@@ -225,3 +225,15 @@ export function shopSite(list: Shop[], name: string): string {
 }
 // whether a record's link is at a shop's website (a product page there), and so stays when that shop is picked
 export const sameSite = (a: unknown, b: unknown) => !!host(shopHref(a)) && host(shopHref(a)) === host(shopHref(b))
+
+// Find its website with Claude (#155): the request a Claude chat fills a shop in from, with the vinyl-wall skill's
+// "Filling in a shop" (only the empty fields; what was typed stays)
+export function fillPrompt(s: Shop, wallUrl: unknown): string {
+  const url = /^https:\/\//.test(String(wallUrl || '')) ? String(wallUrl) : ''
+  return [
+    'Fill in a shop on my Vinyl Wall',
+    `Shop: "${s.name}" (shop ${s.id})${s.place ? ', ' + s.place : ''}`,
+    ...(url ? [`Wall: ${url}`] : []),
+    `Use the vinyl-wall skill: ${s.url ? '' : 'find its website, then '}fill in what's missing and leave what I typed as it is.`,
+  ].join('\n')
+}

@@ -16,7 +16,7 @@ import { link } from './Links'
 
 // The prompt for Claude, copied; when the clipboard is blocked it shows selected, to copy by hand
 type Copied = { key: string; msg: string; text?: string }
-function useCopy() {
+export function useCopy() {
   const [copied, setCopied] = useState<Copied | null>(null)
   const copy = async (key: string, text: string, done: string) => {
     try {
@@ -28,7 +28,7 @@ function useCopy() {
   }
   return { copied, copy }
 }
-function CopyStatus({ c }: { c: Copied | null }) {
+export function CopyStatus({ c }: { c: Copied | null }) {
   return (
     <>
       <span role="status" className="text-foreground-muted text-xs">
