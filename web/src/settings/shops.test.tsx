@@ -53,7 +53,7 @@ afterEach(() => localStorage.clear())
 
 describe('shops: the data', () => {
   it('starts with the defaults, and keeps an edited list exactly, even an empty one', () => {
-    expect(shopsOf({}).map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Discogs Marketplace', 'eBay'])
+    expect(shopsOf({}).map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Rare Vinyl', 'Discogs Marketplace', 'eBay'])
     expect(shopsOf({ shops: [] })).toEqual([])
     expect(shopsOf({ shops: [RECKLESS] })).toEqual([RECKLESS])
   })
@@ -82,7 +82,7 @@ describe('shops: the data', () => {
 
   it('orders local shops with a web store, local without, online, then marketplaces', () => {
     expect(shopOrder([...DEFAULT_SHOPS, RECKLESS, DUSTY]).map((s) => s.name)).toEqual([
-      'Dusty Groove', 'Reckless Records', 'Amazon', 'Revolver', 'Discogs Marketplace', 'eBay',
+      'Dusty Groove', 'Reckless Records', 'Amazon', 'Rare Vinyl', 'Revolver', 'Discogs Marketplace', 'eBay',
     ])
     expect(shopWhere(RECKLESS)).toBe('Chicago')
     expect(shopWhere(DEFAULT_SHOPS[1])).toBe('amazon.com')
@@ -99,7 +99,7 @@ describe('shops: the data', () => {
     expect(lookPatch({ shops: [RECKLESS, { name: '' }] }, null).shops).toEqual([RECKLESS])
     expect(lookPatch({}, null).shops).toBeUndefined()
     // every kind, and what the chat found, round-trips
-    const all = [RECKLESS, DUSTY, { ...DEFAULT_SHOPS[0], shopify: true }, DEFAULT_SHOPS[3], { id: 'sr', name: 'Siren Records', kind: 'local', upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }]
+    const all = [RECKLESS, DUSTY, { ...DEFAULT_SHOPS[0], shopify: true }, DEFAULT_SHOPS[4], { id: 'sr', name: 'Siren Records', kind: 'local', upc: 'https://sirenrecordsmchenry.com/UPC/{upc}' }]
     const out = exportFile({ records: [], gear: [], setups: [], artists: [], settings: { shops: all }, app: 'x' })
     expect(lookPatch(JSON.parse(JSON.stringify(out)).settings.site, null).shops).toEqual(all)
   })
@@ -125,7 +125,7 @@ describe('shops: importing into a wall with records', () => {
     expect(p.shops).toEqual({ added: 1, filled: 0 })
     expect(planSummary(p)).toBe('Adds 1 shop.')
     expect(doneMessage(p, [])).toBe('Added 1 shop.')
-    expect(shopsFrom({}, p.site)!.list.map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Discogs Marketplace', 'eBay', 'Siren Records'])
+    expect(shopsFrom({}, p.site)!.list.map((s) => s.name)).toEqual(['Revolver', 'Amazon', 'Rare Vinyl', 'Discogs Marketplace', 'eBay', 'Siren Records'])
     const q = planImport(file([siren], { r2: { title: 'Vs.', artist: 'Pearl Jam' } }), { ...wall, settings: { shops: [{ ...siren, phone: '' }] } }) as Plan
     expect(planSummary(q)).toBe('Adds 1 record. Fills in missing details on 1 shop you already have.')
     expect(doneMessage(q, [])).toBe('Added 1 record. Filled in missing details on 1 shop.')
@@ -138,7 +138,7 @@ describe('shops: importing into a wall with records', () => {
 
 describe('Search elsewhere', () => {
   it('lists every pressing on Discogs, then your shops under their kind, a local shop without a web store with Call · Email · Map', async () => {
-    const { user } = setup({ shops: [DEFAULT_SHOPS[3], RECKLESS, DUSTY] }, hunt)
+    const { user } = setup({ shops: [DEFAULT_SHOPS[4], RECKLESS, DUSTY] }, hunt)
     await openRecord(user, 'Revolver')
     await user.click(screen.getByRole('tab', { name: 'Search' }))
     const names = linkNames()
@@ -193,16 +193,16 @@ describe('Settings → Shops', () => {
     await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), 'Reckless Records')
     await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'reckless.com')
     await user.click(within(sheet).getByRole('button', { name: 'Add shop' }))
-    await waitFor(() => expect((site().shops as Shop[]).length).toBe(5))
+    await waitFor(() => expect((site().shops as Shop[]).length).toBe(6))
     // a website makes it online, unless a kind is picked
-    expect((site().shops as Shop[])[4]).toMatchObject({ name: 'Reckless Records', kind: 'online', url: 'https://reckless.com/' })
+    expect((site().shops as Shop[])[5]).toMatchObject({ name: 'Reckless Records', kind: 'online', url: 'https://reckless.com/' })
     await user.click(within(sheet).getByRole('button', { name: '+ Add a shop' }))
     await user.type(within(sheet).getByRole('textbox', { name: 'Name' }), 'Dusty Groove')
     await user.click(within(sheet).getByRole('button', { name: 'Local' }))
     await user.type(within(sheet).getByRole('textbox', { name: 'Website' }), 'dustygroove.com')
     await user.click(within(sheet).getByRole('button', { name: 'Add shop' }))
-    await waitFor(() => expect((site().shops as Shop[]).length).toBe(6))
-    expect((site().shops as Shop[])[5]).toMatchObject({ name: 'Dusty Groove', kind: 'local' })
+    await waitFor(() => expect((site().shops as Shop[]).length).toBe(7))
+    expect((site().shops as Shop[])[6]).toMatchObject({ name: 'Dusty Groove', kind: 'local' })
     expect(within(sheet).getByRole('group', { name: 'Local shops' })).toBeTruthy()
   })
 
@@ -448,7 +448,7 @@ describe('shops: suggested as you type', () => {
   it('suggests names with what is typed, those starting with it first, up to 5, none when exact, all before typing (#151)', () => {
     expect(shopSuggest(list, '')).toHaveLength(list.length)
     expect(shopSuggest(list, 'siren records')).toEqual([])
-    expect(shopSuggest(list, 're')).toEqual(['Reckless Records', 'Revolver', 'Siren Records'])
+    expect(shopSuggest(list, 're')).toEqual(['Reckless Records', 'Revolver', 'Siren Records', 'Rare Vinyl'])
     expect(shopSuggest(list, 'o')).toHaveLength(5)
     expect(shopSuggest(list, 'zzz')).toEqual([])
   })

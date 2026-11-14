@@ -29,6 +29,7 @@ export const KINDS: [ShopKind, string][] = [
 export const DEFAULT_SHOPS: Shop[] = [
   { id: 'revolver', name: 'Revolver', kind: 'online', url: 'https://shop.revolvermag.com/', search: 'https://shop.revolvermag.com/search?q={q}', shopify: true },
   { id: 'amazon', name: 'Amazon', kind: 'online', url: 'https://www.amazon.com/', search: 'https://www.amazon.com/s?k={q}%20vinyl&i=popular' },
+  { id: 'rarevinyl', name: 'Rare Vinyl', kind: 'online', url: 'https://us.rarevinyl.com/', search: 'https://us.rarevinyl.com/search?q={q}', shopify: true },
   { id: 'discogs', name: 'Discogs Marketplace', kind: 'market', url: 'https://www.discogs.com/sell', search: 'https://www.discogs.com/sell/list?q={q}&format=Vinyl' },
   { id: 'ebay', name: 'eBay', kind: 'market', url: 'https://www.ebay.com/', search: 'https://www.ebay.com/sch/i.html?_nkw={q}%20vinyl%20LP&_sacat=176985' },
 ]
